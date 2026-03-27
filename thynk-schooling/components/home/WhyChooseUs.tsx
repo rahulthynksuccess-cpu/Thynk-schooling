@@ -1,61 +1,109 @@
 'use client'
-import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { useInView } from 'react-intersection-observer'
 import { Sparkles, ShieldCheck, PhoneCall, Zap, Map, GitCompare, HeartHandshake, BarChart3 } from 'lucide-react'
 
 const FEATURES = [
-  { icon: Sparkles,       title: 'AI Recommendations',      desc: 'ML model matches your child\'s profile to recommend best-fit schools instantly.',               badge: 'Smart',      accent: '#D4AF37' },
-  { icon: ShieldCheck,    title: '100% Verified Schools',   desc: 'Every school manually verified. Real photos, accurate fees, genuine reviews — no fakes.',         badge: 'Trusted',    accent: '#7DC28F' },
-  { icon: PhoneCall,      title: 'Free 1-on-1 Counselling', desc: 'Expert education counsellors available Mon–Sat, 9 AM to 7 PM. Completely free.',                badge: 'Free',       accent: '#D4AF37' },
-  { icon: Zap,            title: 'Instant OTP Registration', desc: 'Register in 30 seconds with just your mobile number. No email required.',                       badge: 'Fast',       accent: '#7DC28F' },
-  { icon: Map,            title: 'Interactive School Map',  desc: 'Find schools near you on a live map. Filter by distance, board, and class range.',               badge: 'Visual',     accent: '#D4AF37' },
-  { icon: GitCompare,     title: 'Side-by-Side Compare',    desc: 'Compare up to 4 schools on fees, facilities, ratings and board simultaneously.',                  badge: 'Smart',      accent: '#7DC28F' },
-  { icon: HeartHandshake, title: 'Common Application',      desc: 'Fill once, apply anywhere. Your child\'s profile saved and reused across all schools.',           badge: 'Convenient', accent: '#D4AF37' },
-  { icon: BarChart3,      title: 'Real-Time Tracking',      desc: 'Track every application from submission to admission in your parent dashboard.',                  badge: 'Live',       accent: '#7DC28F' },
+  {
+    icon: Sparkles,
+    title: 'AI-Powered Recommendations',
+    desc: 'Our ML model matches your child's profile, learning style, and your preferences to recommend the best-fit schools.',
+    badge: 'Smart',
+    badgeClass: 'badge-orange',
+  },
+  {
+    icon: ShieldCheck,
+    title: '100% Verified Schools',
+    desc: 'Every school is manually verified by our team. Real photos, accurate fees, and genuine reviews — no fake listings.',
+    badge: 'Trusted',
+    badgeClass: 'badge-green',
+  },
+  {
+    icon: PhoneCall,
+    title: 'Free 1-on-1 Counselling',
+    desc: 'Book a free session with our expert education counsellors. Available Mon–Sat, 9 AM to 7 PM.',
+    badge: 'Free',
+    badgeClass: 'badge-blue',
+  },
+  {
+    icon: Zap,
+    title: 'Instant OTP Registration',
+    desc: 'No long forms. Register in 30 seconds with just your mobile number — no email required.',
+    badge: 'Fast',
+    badgeClass: 'badge-purple',
+  },
+  {
+    icon: Map,
+    title: 'Interactive School Map',
+    desc: 'See schools near you on an interactive map. Filter by distance, board, and class range.',
+    badge: 'Visual',
+    badgeClass: 'badge-orange',
+  },
+  {
+    icon: GitCompare,
+    title: 'Side-by-Side Comparison',
+    desc: 'Compare up to 4 schools simultaneously across fees, facilities, ratings, board, and more.',
+    badge: 'Smart',
+    badgeClass: 'badge-blue',
+  },
+  {
+    icon: HeartHandshake,
+    title: 'Common Application Form',
+    desc: 'Fill once, apply anywhere. Your child\'s profile is saved and reused across all school applications.',
+    badge: 'Convenient',
+    badgeClass: 'badge-green',
+  },
+  {
+    icon: BarChart3,
+    title: 'Real-Time Status Tracking',
+    desc: 'Track every application\'s progress from submission to admission — all in your parent dashboard.',
+    badge: 'Live',
+    badgeClass: 'badge-orange',
+  },
 ]
 
 export function WhyChooseUs() {
-  const ref    = useRef(null)
-  const inView = useInView(ref, { once: true, amount: 0.1 })
+  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 })
 
   return (
     <section ref={ref} className="section">
       <div className="container-xl mx-auto">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={inView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6 }}
-          className="text-center mb-16">
-          <div className="section-eyebrow justify-center">Why Thynk Schooling</div>
-          <h2 className="section-title text-6xl mb-4">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <span className="badge-orange mb-4 inline-flex">Why Thynk Schooling</span>
+          <h2 className="section-title mb-4">
             Everything You Need,<br />
-            <span className="text-gold-gradient italic">Nothing You Don&apos;t</span>
+            <span className="text-gradient">Nothing You Don't</span>
           </h2>
-          <p className="section-sub max-w-xl mx-auto">Built specifically for the Indian school admission journey — from nursery to Class 12.</p>
+          <p className="section-sub max-w-xl mx-auto">
+            Built specifically for the Indian school admission journey — from nursery to Class 12.
+          </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {FEATURES.map((f, i) => {
             const Icon = f.icon
             return (
-              <motion.div key={f.title}
-                initial={{ opacity: 0, y: 28 }}
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, y: 30 }}
                 animate={inView ? { opacity: 1, y: 0 } : {}}
                 transition={{ delay: i * 0.07, duration: 0.5 }}
-                className="card-hover p-6 flex flex-col gap-4 group relative overflow-hidden">
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                  style={{ background: 'linear-gradient(135deg, rgba(212,175,55,0.04) 0%, transparent 60%)' }} />
-                <div className="flex items-start justify-between relative">
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-                    style={{ background: `${f.accent}12`, border: `1px solid ${f.accent}20` }}>
-                    <Icon className="w-5 h-5" style={{ color: f.accent }} />
+                className="card-hover p-6 flex flex-col gap-4 group"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/20 transition-colors">
+                    <Icon className="w-6 h-6 text-orange-400" />
                   </div>
-                  <span className="text-xs font-medium px-2.5 py-1 rounded-full"
-                    style={{ background: `${f.accent}10`, color: f.accent, border: `1px solid ${f.accent}20`, fontFamily: 'DM Sans' }}>
-                    {f.badge}
-                  </span>
+                  <span className={f.badgeClass}>{f.badge}</span>
                 </div>
-                <div className="relative">
-                  <h3 className="font-serif font-bold text-base mb-2 transition-colors duration-200 group-hover:text-gold-300"
-                    style={{ color: '#F0EDD8' }}>{f.title}</h3>
-                  <p className="text-sm leading-relaxed" style={{ color: 'rgba(240,237,216,0.5)', fontFamily: 'DM Sans', fontWeight: 300 }}>{f.desc}</p>
+                <div>
+                  <h3 className="font-display font-bold text-white text-base mb-2">{f.title}</h3>
+                  <p className="font-body text-navy-300 text-sm leading-relaxed">{f.desc}</p>
                 </div>
               </motion.div>
             )

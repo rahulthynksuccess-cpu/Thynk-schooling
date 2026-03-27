@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-
-  // ── Env vars explicitly passed to the browser ──────────────────
-  // NEXT_PUBLIC_* vars are auto-exposed by Next.js
-  // Non-public vars listed here are server-only (API routes only)
+  experimental: {
+    missingSuspenseWithCSRBailout: false,
+  },
   env: {
     NEXT_PUBLIC_APP_NAME:        process.env.NEXT_PUBLIC_APP_NAME        || 'Thynk Schooling',
     NEXT_PUBLIC_APP_URL:         process.env.NEXT_PUBLIC_APP_URL         || 'http://localhost:3000',
@@ -15,8 +14,6 @@ const nextConfig = {
     NEXT_PUBLIC_S3_HOSTNAME:     process.env.NEXT_PUBLIC_S3_HOSTNAME     || '',
     NEXT_PUBLIC_GOOGLE_MAPS_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY || '',
   },
-
-  // ── Images ─────────────────────────────────────────────────────
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -26,18 +23,11 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
-
-  // ── Build settings ─────────────────────────────────────────────
   compress:        true,
   poweredByHeader: false,
   reactStrictMode: true,
-
-  // Skip type & lint errors during QA build (remove before go-live)
-  eslint:     { ignoreDuringBuilds: true },
-  typescript: { ignoreBuildErrors:  true },
-
-  // Hostinger: set BUILD_OUTPUT=standalone in env panel
+  eslint:          { ignoreDuringBuilds: true },
+  typescript:      { ignoreBuildErrors: true },
   output: process.env.BUILD_OUTPUT === 'standalone' ? 'standalone' : undefined,
 }
-
 module.exports = nextConfig
