@@ -1,2 +1,1 @@
-# Thynk-schooling
-Admission website
+
