@@ -10,8 +10,6 @@ import { CounsellingSlot } from '@/types'
 import { clsx } from 'clsx'
 import toast from 'react-hot-toast'
 
-export const metadata = { title: 'Free Counselling — Thynk Schooling' }
-
 const CONCERNS = [
   'Which board to choose (CBSE/ICSE/IB)',
   'School shortlisting in my city',
