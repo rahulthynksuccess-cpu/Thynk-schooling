@@ -7,7 +7,7 @@ const FEATURES = [
   {
     icon: Sparkles,
     title: 'AI-Powered Recommendations',
-    desc: 'Our ML model matches your child's profile, learning style, and your preferences to recommend the best-fit schools.',
+    desc: "Our ML model matches your child's profile, learning style, and your preferences to recommend the best-fit schools.",
     badge: 'Smart',
     badgeClass: 'badge-orange',
   },
