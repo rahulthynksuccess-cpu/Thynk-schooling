@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, X, ChevronDown, GraduationCap, Bell, LogOut, User, LayoutDashboard } from 'lucide-react'
+import { Menu, X, ChevronDown, GraduationCap, Bell, LogOut, LayoutDashboard, User } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 
-const NAV_LINKS = [
+const NAV = [
   { label: 'Find Schools', href: '/schools' },
   { label: 'Compare',      href: '/compare' },
   { label: 'Counselling',  href: '/counselling' },
@@ -22,103 +22,87 @@ export function Navbar() {
   const { user, isAuthenticated, logout } = useAuthStore()
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
+    const fn = () => setScrolled(window.scrollY > 24)
+    window.addEventListener('scroll', fn, { passive: true })
+    return () => window.removeEventListener('scroll', fn)
   }, [])
 
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
-  const dashboardHref =
+  const dashHref =
     user?.role === 'school_admin' ? '/dashboard/school' :
     user?.role === 'super_admin'  ? '/admin/settings'   : '/dashboard/parent'
 
   return (
     <>
-      <header
-        className={clsx(
-          'fixed top-0 left-0 right-0 z-50 transition-all duration-300',
-          scrolled
-            ? 'glass border-b border-surface-border shadow-lg'
-            : 'bg-transparent'
-        )}
-      >
-        <div className="container-xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 lg:h-18">
+      <header className={clsx(
+        'fixed top-0 left-0 right-0 z-50 transition-all duration-500',
+        scrolled
+          ? 'glass border-b border-[rgba(212,175,55,0.12)] shadow-[0_4px_32px_rgba(0,0,0,0.4)]'
+          : 'bg-transparent'
+      )}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-10">
+          <div className="flex items-center justify-between h-18 py-4">
 
             {/* Logo */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-orange-sm group-hover:shadow-orange transition-shadow">
-                <GraduationCap className="w-5 h-5 text-white" />
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center relative overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, #1E4D2B, #276338)', border: '1px solid rgba(212,175,55,0.3)', boxShadow: '0 0 16px rgba(212,175,55,0.15)' }}>
+                <GraduationCap className="w-5 h-5 text-gold-400" style={{ color: '#E0C55A' }} />
               </div>
-              <span className="font-display font-bold text-lg text-white">
-                Thynk<span className="text-orange-500">Schooling</span>
-              </span>
+              <div className="font-serif font-bold text-xl" style={{ color: '#F0EDD8', letterSpacing: '-0.01em' }}>
+                Thynk<span style={{ color: '#D4AF37' }}>Schooling</span>
+              </div>
             </Link>
 
-            {/* Desktop Nav */}
+            {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-8">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={clsx(
-                    'nav-link pb-0.5',
-                    pathname.startsWith(link.href) && 'text-white after:w-full'
-                  )}
-                >
-                  {link.label}
+              {NAV.map(l => (
+                <Link key={l.href} href={l.href}
+                  className={clsx('nav-link', pathname.startsWith(l.href) && '!text-[#F0EDD8] after:!w-full')}>
+                  {l.label}
                 </Link>
               ))}
             </nav>
 
-            {/* Desktop Actions */}
+            {/* Actions */}
             <div className="hidden lg:flex items-center gap-3">
               {isAuthenticated && user ? (
                 <div className="flex items-center gap-3">
-                  <Link href="/notifications" className="relative p-2 rounded-xl hover:bg-surface-hover transition-colors">
-                    <Bell className="w-5 h-5 text-navy-300" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse-dot" />
-                  </Link>
-                  {/* Profile dropdown */}
+                  <button className="relative p-2 rounded-xl transition-colors hover:bg-[rgba(255,255,255,0.05)]">
+                    <Bell className="w-5 h-5" style={{ color: 'rgba(240,237,216,0.5)' }} />
+                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full animate-pulse-dot"
+                      style={{ background: '#D4AF37' }} />
+                  </button>
                   <div className="relative">
-                    <button
-                      onClick={() => setProfileOpen(!profileOpen)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface-hover transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center">
-                        {user.avatarUrl
-                          ? <img src={user.avatarUrl} alt={user.fullName || ''} className="w-full h-full rounded-full object-cover" />
-                          : <span className="font-display font-bold text-orange-400 text-sm">
-                              {(user.fullName || user.phone)?.[0]?.toUpperCase()}
-                            </span>
-                        }
+                    <button onClick={() => setProfileOpen(!profileOpen)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors hover:bg-[rgba(255,255,255,0.05)]">
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center font-display font-bold text-sm"
+                        style={{ background: 'rgba(212,175,55,0.15)', border: '1px solid rgba(212,175,55,0.25)', color: '#D4AF37' }}>
+                        {(user.fullName || user.phone)?.[0]?.toUpperCase()}
                       </div>
-                      <span className="font-display font-semibold text-sm text-white max-w-[120px] truncate">
+                      <span className="text-sm font-medium max-w-[100px] truncate" style={{ color: '#F0EDD8', fontFamily: 'DM Sans' }}>
                         {user.fullName || user.phone}
                       </span>
-                      <ChevronDown className={clsx('w-4 h-4 text-navy-300 transition-transform', profileOpen && 'rotate-180')} />
+                      <ChevronDown className={clsx('w-4 h-4 transition-transform', profileOpen && 'rotate-180')}
+                        style={{ color: 'rgba(240,237,216,0.4)' }} />
                     </button>
                     <AnimatePresence>
                       {profileOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 top-full mt-2 w-52 card py-1 z-50"
-                        >
-                          <Link href={dashboardHref} className="flex items-center gap-3 px-4 py-2.5 text-sm text-navy-200 hover:text-white hover:bg-surface-hover transition-colors">
+                        <motion.div initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 8, scale: 0.95 }} transition={{ duration: 0.15 }}
+                          className="absolute right-0 top-full mt-2 w-52 card py-1 z-50">
+                          <Link href={dashHref} className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[rgba(255,255,255,0.04)]"
+                            style={{ color: 'rgba(240,237,216,0.7)' }}>
                             <LayoutDashboard className="w-4 h-4" /> Dashboard
                           </Link>
-                          <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-navy-200 hover:text-white hover:bg-surface-hover transition-colors">
+                          <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[rgba(255,255,255,0.04)]"
+                            style={{ color: 'rgba(240,237,216,0.7)' }}>
                             <User className="w-4 h-4" /> My Profile
                           </Link>
-                          <div className="border-t border-surface-border my-1" />
-                          <button
-                            onClick={logout}
-                            className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                          >
+                          <div className="border-t border-[#1E4D2B] my-1" />
+                          <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors hover:bg-[rgba(239,68,68,0.08)]"
+                            style={{ color: '#F87171' }}>
                             <LogOut className="w-4 h-4" /> Logout
                           </button>
                         </motion.div>
@@ -128,68 +112,52 @@ export function Navbar() {
                 </div>
               ) : (
                 <>
-                  <Link href="/login"    className="btn-ghost">Login</Link>
-                  <Link href="/register" className="btn-primary">Get Started Free</Link>
+                  <Link href="/login" className="btn-ghost">Login</Link>
+                  <Link href="/register" className="btn-gold text-sm px-5 py-2.5">Get Started Free</Link>
                 </>
               )}
             </div>
 
             {/* Mobile hamburger */}
-            <button
-              className="lg:hidden p-2 rounded-xl hover:bg-surface-hover transition-colors"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Toggle menu"
-            >
+            <button className="lg:hidden p-2 rounded-xl transition-colors hover:bg-[rgba(255,255,255,0.05)]"
+              onClick={() => setMobileOpen(!mobileOpen)}>
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu */}
+      {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="fixed top-16 left-0 right-0 z-40 glass border-b border-surface-border overflow-hidden"
-          >
-            <div className="px-4 py-6 flex flex-col gap-1">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="px-4 py-3 rounded-xl text-navy-200 hover:text-white hover:bg-surface-hover font-display font-semibold transition-colors"
-                >
-                  {link.label}
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25 }}
+            className="fixed top-16 left-0 right-0 z-40 glass border-b border-[rgba(212,175,55,0.12)] overflow-hidden">
+            <div className="px-6 py-6 flex flex-col gap-1">
+              {NAV.map(l => (
+                <Link key={l.href} href={l.href}
+                  className="px-4 py-3 rounded-xl text-sm font-medium transition-all"
+                  style={{ color: 'rgba(240,237,216,0.65)', fontFamily: 'DM Sans' }}
+                  onMouseEnter={e => { (e.target as HTMLElement).style.color = '#F0EDD8'; (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
+                  onMouseLeave={e => { (e.target as HTMLElement).style.color = 'rgba(240,237,216,0.65)'; (e.target as HTMLElement).style.background = 'transparent' }}>
+                  {l.label}
                 </Link>
               ))}
-              <div className="border-t border-surface-border mt-3 pt-3 flex flex-col gap-2">
-                {isAuthenticated ? (
-                  <>
-                    <Link href={dashboardHref} className="btn-secondary w-full justify-center">Dashboard</Link>
-                    <button onClick={logout} className="btn-ghost text-red-400 w-full justify-center">Logout</button>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/login"    className="btn-secondary w-full justify-center">Login</Link>
-                    <Link href="/register" className="btn-primary  w-full justify-center">Get Started Free</Link>
-                  </>
-                )}
+              <div className="border-t border-[#1E4D2B] mt-3 pt-3 flex flex-col gap-2">
+                {isAuthenticated
+                  ? <Link href={dashHref} className="btn-forest text-center justify-center">Dashboard</Link>
+                  : <>
+                      <Link href="/login"    className="btn-forest text-center justify-center">Login</Link>
+                      <Link href="/register" className="btn-gold text-center justify-center">Get Started Free</Link>
+                    </>
+                }
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Overlay */}
       {(mobileOpen || profileOpen) && (
-        <div
-          className="fixed inset-0 z-30"
-          onClick={() => { setMobileOpen(false); setProfileOpen(false) }}
-        />
+        <div className="fixed inset-0 z-30" onClick={() => { setMobileOpen(false); setProfileOpen(false) }} />
       )}
     </>
   )
