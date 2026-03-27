@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 'use client'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
