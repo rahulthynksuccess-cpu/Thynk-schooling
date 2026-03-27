@@ -1,15 +1,7 @@
 'use client'
-import { motion } from 'framer-motion'
-import { useInView } from 'react-intersection-observer'
+import { useRef } from 'react'
+import { motion, useInView } from 'framer-motion'
 import { School, Users, Star, CheckCircle } from 'lucide-react'
-
-const STATS = [
-  { icon: School,        value: '12,000+', label: 'Verified Schools',   color: 'text-orange-400' },
-  { icon: Users,         value: '1 Lakh+', label: 'Happy Parents',      color: 'text-blue-400' },
-  { icon: MapPin2,       value: '35+',     label: 'Indian Cities',      color: 'text-green-400' },
-  { icon: CheckCircle,   value: '98%',     label: 'Satisfaction Rate',  color: 'text-purple-400' },
-  { icon: Star,          value: '4.8★',   label: 'Average Rating',     color: 'text-yellow-400' },
-]
 
 function MapPin2({ className }: { className?: string }) {
   return (
@@ -20,8 +12,17 @@ function MapPin2({ className }: { className?: string }) {
   )
 }
 
+const STATS = [
+  { icon: School,      value: '12,000+', label: 'Verified Schools',  color: 'text-orange-400' },
+  { icon: Users,       value: '1 Lakh+', label: 'Happy Parents',     color: 'text-blue-400'   },
+  { icon: MapPin2,     value: '35+',     label: 'Indian Cities',     color: 'text-green-400'  },
+  { icon: CheckCircle, value: '98%',     label: 'Satisfaction Rate', color: 'text-purple-400' },
+  { icon: Star,        value: '4.8★',   label: 'Average Rating',    color: 'text-yellow-400' },
+]
+
 export function StatsBar() {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.2 })
+  const ref   = useRef(null)
+  const inView = useInView(ref, { once: true, amount: 0.2 })
 
   return (
     <section ref={ref} className="py-12 border-y border-surface-border bg-surface-card/50">
@@ -37,7 +38,7 @@ export function StatsBar() {
                 transition={{ delay: i * 0.1, duration: 0.5 }}
                 className="flex flex-col items-center text-center lg:px-6 gap-2"
               >
-                <div className={`w-10 h-10 rounded-xl bg-navy-800 flex items-center justify-center mb-1`}>
+                <div className="w-10 h-10 rounded-xl bg-navy-800 flex items-center justify-center mb-1">
                   <Icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
                 <div className={`font-display font-bold text-3xl ${stat.color}`}>{stat.value}</div>
