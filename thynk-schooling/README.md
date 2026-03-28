@@ -1,6 +1,6 @@
 # 🎓 Thynk Schooling — School Admission Portal
 
-**Version 2.0 | March 2026**
+**Version 2.0 | 29 March 2026**
 
 India's most comprehensive school admission platform — connecting 1 lakh+ parents with 12,000+ verified schools across 35+ Indian cities.
 
