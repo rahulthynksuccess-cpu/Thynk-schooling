@@ -553,14 +553,14 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
         <CP label="Background"    k="citiesBg"               t={t} onChange={onChange} />
         <CP label="Title colour"  k="citiesTitleColor"       t={t} onChange={onChange} />
-        <NP label="Title size"    k="citiesTitleSize"        t={t} onChange={onChange} min={24} max={80} />
+        <SR label="Title size"    k="citiesTitleSize"        t={t} onChange={onChange} min={24} max={80} />
       </div>
     )
     case 'counsel-cta': return (
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
         <CP label="Background"    k="counselCtaBg"           t={t} onChange={onChange} />
         <CP label="H2 colour"     k="counselCtaH2Color"      t={t} onChange={onChange} />
-        <NP label="H2 size"       k="counselCtaH2Size"       t={t} onChange={onChange} min={24} max={80} />
+        <SR label="H2 size"       k="counselCtaH2Size"       t={t} onChange={onChange} min={24} max={80} />
       </div>
     )
     case 'for-schools': return (
@@ -579,7 +579,7 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
         <CP label="Background"    k="aboutBg"                t={t} onChange={onChange} />
         <CP label="H1 colour"     k="aboutH1Color"           t={t} onChange={onChange} />
-        <NP label="H1 size"       k="aboutH1Size"            t={t} onChange={onChange} min={24} max={80} />
+        <SR label="H1 size"       k="aboutH1Size"            t={t} onChange={onChange} min={24} max={80} />
       </div>
     )
     case 'admin-overview': return (
@@ -587,7 +587,7 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
         <CP label="Page background"   k="adminBg"                 t={t} onChange={onChange} />
         <CP label="Card background"   k="adminCardBg"             t={t} onChange={onChange} />
         <CP label="Heading colour"    k="adminHeadingColor"       t={t} onChange={onChange} />
-        <NP label="Heading size"      k="adminHeadingSize"        t={t} onChange={onChange} min={16} max={40} />
+        <SR label="Heading size"      k="adminHeadingSize"        t={t} onChange={onChange} min={16} max={40} />
       </div>
     )
     case 'admin-style': return (
@@ -825,7 +825,7 @@ export default function AdminThemePage() {
               <div style={{ width:8, height:8, borderRadius:'50%', background:'#FF5F56' }} />
               <div style={{ width:8, height:8, borderRadius:'50%', background:'#FFBD2E' }} />
               <div style={{ width:8, height:8, borderRadius:'50%', background:'#27C93F' }} />
-              <div style={{ flex:1, background:'#fff', borderRadius:'4px', padding:'2px 10px', fontSize:'11px', color:'#999', fontFamily:'monospace' }}>localhost:3000{PAGES[activePage]?.url || '/'}</div>
+              <div style={{ flex:1, background:'#fff', borderRadius:'4px', padding:'2px 10px', fontSize:'11px', color:'#999', fontFamily:'monospace' }}>{typeof window!=='undefined'?window.location.host:''}{PAGES[activePage]?.url || '/'}</div>
             </div>
             <iframe
               key={PAGES[activePage]?.url}

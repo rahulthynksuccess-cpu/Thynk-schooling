@@ -538,7 +538,7 @@ export default function AdminContentPage() {
       </div>
 
       {/* 3-col layout */}
-      <div style={{ display:'grid', gridTemplateColumns:'200px 1fr', gap:'14px', alignItems:'start' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'200px 1fr 280px', gap:'14px', alignItems:'start' }}>
 
         {/* Left sidebar */}
         <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', position:'sticky', top:'80px' }}>
@@ -573,6 +573,26 @@ export default function AdminContentPage() {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Live Preview */}
+        <div style={{ position:'sticky', top:'80px' }}>
+          <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden' }}>
+            <div style={{ padding:'10px 14px', borderBottom:'1px solid rgba(13,17,23,0.07)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+              <span style={{ fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase' as const, color:'#A0ADB8', fontFamily:'Inter,sans-serif' }}>Live Preview</span>
+              <a href="/" target="_blank" rel="noreferrer" style={{ fontSize:'11px', color:'#B8860B', textDecoration:'none', fontFamily:'Inter,sans-serif', fontWeight:600 }}>Open site ↗</a>
+            </div>
+            <div style={{ background:'#f0f0f0', padding:'6px 10px', display:'flex', gap:'5px', borderBottom:'1px solid rgba(13,17,23,0.07)', alignItems:'center' }}>
+              <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF5F56' }} />
+              <div style={{ width:7, height:7, borderRadius:'50%', background:'#FFBD2E' }} />
+              <div style={{ width:7, height:7, borderRadius:'50%', background:'#27C93F' }} />
+              <div style={{ flex:1, background:'#fff', borderRadius:'3px', padding:'2px 8px', fontSize:'10px', color:'#999', fontFamily:'monospace', marginLeft:'4px' }}>thynkschooling.in</div>
+            </div>
+            <iframe src="/" style={{ width:'100%', height:'540px', border:'none', display:'block' }} title="Site Preview" />
+          </div>
+          <p style={{ fontSize:'11px', color:'#A0ADB8', fontFamily:'Inter,sans-serif', textAlign:'center' as const, marginTop:'8px', lineHeight:1.5 }}>
+            Push to Site → changes appear here on reload
+          </p>
         </div>
       </div>
     </AdminLayout>
