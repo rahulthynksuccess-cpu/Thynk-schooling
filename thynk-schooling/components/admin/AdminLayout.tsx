@@ -41,7 +41,8 @@ const NAV_GROUPS = [
     label: 'Platform',
     items: [
       { icon: Settings, label: 'Settings',      href: '/admin/settings',      color: '#7A6A52' },
-      { icon: Palette,  label: 'Theme',         href: '/admin/theme',         color: '#7A6A52' },
+      { icon: Palette,  label: 'Theme',         href: '/admin/integrations', label:'Integrations' },
+  { href:'/admin/theme',         color: '#7A6A52' },
       { icon: FileText, label: 'Page Content',  href: '/admin/content',       color: '#7A6A52' },
       { icon: Bell,     label: 'Notifications', href: '/admin/notifications', color: '#7A6A52' },
     ],

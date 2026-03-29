@@ -165,6 +165,112 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
+    label: 'Cities Section', icon: '🏙️', contentKey: 'cities',
+    sections: [
+      { id: 'cities', label: 'Top Cities Section',
+        fields: [
+          { id:'citiesTitle',   label:'Section title',      type:'text',     default:'Schools in Your City' },
+          { id:'citiesSub',     label:'Subtitle',           type:'textarea', default:'Find top schools in 35+ Indian cities — all verified, all real.' },
+          { id:'citiesCtaText', label:'View all link text', type:'text',     default:'View all 35+ cities' },
+          { id:'citiesBg',      label:'Background',         type:'color',    default:'#F5F0E8', cssVar:'--cities-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Counselling CTA', icon: '📞', contentKey: 'counselling-cta',
+    sections: [
+      { id: 'counsel-cta', label: 'Counselling CTA Section',
+        fields: [
+          { id:'ctaH2Line1',   label:'Headline line 1',      type:'text',     default:'Talk to an Expert' },
+          { id:'ctaH2Line2',   label:'Headline italic',       type:'text',     default:'Education Counsellor' },
+          { id:'ctaDesc',      label:'Description',           type:'textarea', default:'Confused about which board to choose? Our experts help 500+ families every month at absolutely zero cost.' },
+          { id:'ctaBenefit1',  label:'Benefit 1',             type:'text',     default:'CBSE vs ICSE vs IB — which board suits your child' },
+          { id:'ctaBenefit2',  label:'Benefit 2',             type:'text',     default:'School shortlisting by budget, location & values' },
+          { id:'ctaBenefit3',  label:'Benefit 3',             type:'text',     default:'Admission documents checklist & timelines' },
+          { id:'ctaBookBtn',   label:'Book button text',      type:'text',     default:'Book Now — It's Free' },
+          { id:'ctaBg',        label:'Section background',    type:'color',    default:'#FAF7F2', cssVar:'--counsel-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'For Schools CTA', icon: '🏫', contentKey: 'for-schools',
+    sections: [
+      { id: 'schools-cta', label: 'For Schools Section',
+        fields: [
+          { id:'fsTitle',   label:'Headline',            type:'text',     default:'List Free. Buy Only What You Want.' },
+          { id:'fsDesc',    label:'Description',         type:'textarea', default:'Parents applying through Thynk Schooling become leads. See masked info first.' },
+          { id:'fsBtn1',    label:'Primary button text', type:'text',     default:'List Your School Free' },
+          { id:'fsBtn2',    label:'Secondary button',    type:'text',     default:'View Pricing Plans' },
+          { id:'fsBg',      label:'Background',          type:'color',    default:'#FAF7F2', cssVar:'--for-schools-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Testimonials', icon: '⭐', contentKey: 'testimonials',
+    sections: [
+      { id: 'testimonials', label: 'Testimonials Section',
+        fields: [
+          { id:'testTitle',    label:'Section title',        type:'text',     default:'Trusted by 1 Lakh+ Parents' },
+          { id:'testBg',       label:'Background',           type:'color',    default:'#F5F0E8', cssVar:'--testimonials-bg' },
+          { id:'test1Name',    label:'Testimonial 1 — Name', type:'text',     default:'Priya Sharma' },
+          { id:'test1Role',    label:'Testimonial 1 — Role', type:'text',     default:'Parent, Delhi' },
+          { id:'test1Quote',   label:'Testimonial 1 — Quote',type:'textarea', default:'Found the perfect CBSE school in 3 days. The AI recommendations were spot on!' },
+          { id:'test2Name',    label:'Testimonial 2 — Name', type:'text',     default:'Rahul Mehta' },
+          { id:'test2Role',    label:'Testimonial 2 — Role', type:'text',     default:'Parent, Mumbai' },
+          { id:'test2Quote',   label:'Testimonial 2 — Quote',type:'textarea', default:'The counsellor saved us months of research. Got our daughter into her dream school.' },
+          { id:'test3Name',    label:'Testimonial 3 — Name', type:'text',     default:'Anita Desai' },
+          { id:'test3Role',    label:'Testimonial 3 — Role', type:'text',     default:'Parent, Pune' },
+          { id:'test3Quote',   label:'Testimonial 3 — Quote',type:'textarea', default:'Compared 12 schools side by side. Never thought finding a school could be this simple.' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Blog Preview', icon: '📝', contentKey: 'blog-preview',
+    sections: [
+      { id: 'blog', label: 'Blog Preview Section',
+        fields: [
+          { id:'blogTitle',   label:'Section title',   type:'text',  default:'Admission Insights' },
+          { id:'blogCtaText', label:'View all button', type:'text',  default:'Read All Articles →' },
+          { id:'blogBg',      label:'Background',      type:'color', default:'#FAF7F2', cssVar:'--blog-preview-bg' },
+          { id:'blog1Title',  label:'Article 1 title', type:'text',  default:'CBSE vs ICSE vs IB: Which Board is Right for Your Child?' },
+          { id:'blog2Title',  label:'Article 2 title', type:'text',  default:'How to Choose the Right School: 10 Questions to Ask' },
+          { id:'blog3Title',  label:'Article 3 title', type:'text',  default:'Top 10 Boarding Schools in India 2026' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'School Profile Page', icon: '📋', contentKey: 'school-profile',
+    sections: [
+      { id: 'school-profile', label: 'School Profile Page',
+        fields: [
+          { id:'spBg',        label:'Page background',    type:'color', default:'#FAF7F2', cssVar:'--profile-page-bg' },
+          { id:'spCardBg',    label:'Card background',    type:'color', default:'#ffffff', cssVar:'--profile-card-bg' },
+          { id:'spNameColor', label:'School name colour', type:'color', default:'#0D1117', cssVar:'--profile-name-color' },
+          { id:'spNameSize',  label:'School name size',   type:'size',  default:'36', cssVar:'--profile-name-size', min:20, max:56 },
+          { id:'spMetaColor', label:'Meta text colour',   type:'color', default:'#718096', cssVar:'--profile-meta-color' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Dashboard', icon: '📊', contentKey: 'dashboard',
+    sections: [
+      { id: 'dashboard', label: 'Dashboard Pages',
+        fields: [
+          { id:'dashBg',       label:'Background',          type:'color', default:'#FAF7F2', cssVar:'--dashboard-bg' },
+          { id:'dashCardBg',   label:'Card background',     type:'color', default:'#ffffff', cssVar:'--dashboard-card-bg' },
+          { id:'dashHeadingColor',label:'Heading colour',   type:'color', default:'#0D1117', cssVar:'--dashboard-heading-color' },
+          { id:'dashHeadingSize', label:'Heading size',     type:'size',  default:'28', cssVar:'--dashboard-heading-size', min:18, max:48 },
+        ],
+      },
+    ],
+  },
+  {
     label: 'Global Buttons', icon: '🔘', contentKey: 'buttons',
     sections: [
       {
@@ -298,34 +404,29 @@ export default function AdminContentPage() {
 
   const pushAll = async () => {
     setPushing(true)
+    const token = typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') || '' : ''
+    const save = async (key: string, value: any) => {
+      const res = await fetch('/api/admin/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ key, value }),
+      })
+      if (!res.ok) throw new Error(`Save failed for ${key}`)
+    }
     try {
-      // Save CSS vars
       const css = buildCSSVars(values)
-      if (css) {
-        await apiPost('/admin/content', { key: 'content.css', value: css })
-        // Also save to site_settings for layout.tsx injection
-        await fetch('/api/admin/content', {
-          method: 'POST',
-          headers: { 'Content-Type':'application/json', Authorization: `Bearer ${localStorage.getItem('ts_token') || ''}` },
-          body: JSON.stringify({ key: 'content.css', value: css })
-        })
-      }
-
-      // Save each page group's text content
+      if (css) await save('content.css', css)
       for (const page of PAGES) {
         const pageValues: Record<string,string> = {}
         page.sections.forEach(s => s.fields.forEach(f => {
-          if (values[f.id] !== undefined) pageValues[f.id] = values[f.id]
+          if (values[f.id] !== undefined && values[f.id] !== '') pageValues[f.id] = values[f.id]
         }))
-        if (Object.keys(pageValues).length > 0) {
-          await apiPost('/admin/content', { key: page.contentKey, value: pageValues })
-        }
+        if (Object.keys(pageValues).length > 0) await save(page.contentKey, pageValues)
       }
-
       setSavedGroups({})
       setDirtyGroups({})
       toast.success('🚀 All changes live on site!')
-    } catch { toast.error('Push failed') }
+    } catch (e: any) { toast.error(e.message || 'Push failed') }
     setPushing(false)
   }
 

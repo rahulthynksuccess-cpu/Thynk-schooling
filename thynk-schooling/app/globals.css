@@ -261,3 +261,54 @@
 }
 .log-line:hover { background: rgba(13,17,23,0.02); }
 .log-line:last-child { border-bottom: none; }
+
+/* ── Mobile Responsiveness ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .container { padding: 0 16px !important; }
+  
+  /* Hero section */
+  section[style*="min-height: 95vh"] { padding-top: 80px !important; min-height: auto !important; }
+  
+  /* Grids → single column on mobile */
+  div[style*="grid-template-columns: repeat(4"] { grid-template-columns: repeat(2,1fr) !important; }
+  div[style*="grid-template-columns: repeat(5"] { grid-template-columns: repeat(2,1fr) !important; }
+  div[style*="grid-template-columns: repeat(3"] { grid-template-columns: 1fr !important; }
+  div[style*="grid-template-columns: 1fr 300px"] { grid-template-columns: 1fr !important; }
+  div[style*="grid-template-columns: 1fr 320px"] { grid-template-columns: 1fr !important; }
+  div[style*="gridTemplateColumns: '1fr 300px'"] { grid-template-columns: 1fr !important; }
+  
+  /* Search bar */
+  form[style*="max-width: 520px"] { max-width: 100% !important; }
+  div[style*="max-width: 520px"] { max-width: 100% !important; }
+  
+  /* School cards grid */
+  div[style*="repeat(auto-fill,minmax(300px"] { grid-template-columns: 1fr !important; }
+  div[style*="repeat(auto-fill, minmax(300px"] { grid-template-columns: 1fr !important; }
+  
+  /* Admin layout */
+  aside[style*="width: 240px"] { display: none; }
+  
+  /* Stats grid */
+  div[style*="grid-template-columns: repeat(5,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
+  
+  /* Padding reductions */
+  section { padding-left: 16px !important; padding-right: 16px !important; }
+  div[style*="padding: '0 48px'"] { padding: 0 16px !important; }
+  div[style*="padding: '0 5%'"] { padding: 0 16px !important; }
+  
+  /* Typography */
+  h1[style*="font-size: clamp"] { font-size: clamp(28px, 8vw, 56px) !important; }
+  .section-title { font-size: clamp(28px, 7vw, 48px) !important; }
+  
+  /* Counselling CTA */
+  div[style*="padding: '64px 72px'"] { padding: 32px 20px !important; flex-direction: column !important; }
+  
+  /* Footer */
+  div[style*="grid-template-columns: repeat(auto-fit,minmax(180px"] { grid-template-columns: 1fr 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  div[style*="grid-template-columns: repeat(2,1fr)"] { grid-template-columns: 1fr !important; }
+  div[style*="repeat(6,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
+  .stat-number { font-size: 28px !important; }
+}

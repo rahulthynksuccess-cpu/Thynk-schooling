@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { RotateCcw, Loader2, Globe, Eye, ChevronRight } from 'lucide-react'
-import { apiGet, apiPost } from '@/lib/api'
+import { apiGet } from '@/lib/api'
 import toast from 'react-hot-toast'
 
 /* ─── Default theme (Ivory & Gold) ─── */
@@ -658,7 +658,16 @@ export default function AdminThemePage() {
   }, [savedData])
 
   const saveMutation = useMutation({
-    mutationFn: () => apiPost('/admin/theme', { theme }),
+    mutationFn: async () => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') || '' : ''
+      const res = await fetch('/api/admin/theme', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ theme }),
+      })
+      if (!res.ok) throw new Error('Save failed')
+      return res.json()
+    },
     onSuccess: () => { toast.success('✅ Theme saved! Site updates in 60 seconds.'); setUnsaved(false) },
     onError: () => toast.error('Failed to save'),
   })
