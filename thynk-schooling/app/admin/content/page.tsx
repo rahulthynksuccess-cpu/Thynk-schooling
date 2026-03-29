@@ -104,7 +104,7 @@ const PAGES: PageGroup[] = [
       {
         id: 'footer', label: 'Footer',
         fields: [
-          { id:'tagline',       label:'Tagline',           type:'textarea',default:'India\'s most trusted school discovery platform.' },
+          { id:'tagline',       label:'Tagline',           type:'textarea',default:"India's most trusted school discovery platform." },
           { id:'copyright',     label:'Copyright text',    type:'text',    default:'© 2025 Thynk Schooling. All rights reserved.' },
           { id:'footerBg',      label:'Background',        type:'color',   cssVar:'--footer-bg',         default:'#0D1117' },
           { id:'footerTextColor',label:'Text colour',      type:'color',   cssVar:'--footer-text-color', default:'rgba(250,247,242,0.4)' },
@@ -188,7 +188,7 @@ const PAGES: PageGroup[] = [
           { id:'ctaBenefit1',  label:'Benefit 1',             type:'text',     default:'CBSE vs ICSE vs IB — which board suits your child' },
           { id:'ctaBenefit2',  label:'Benefit 2',             type:'text',     default:'School shortlisting by budget, location & values' },
           { id:'ctaBenefit3',  label:'Benefit 3',             type:'text',     default:'Admission documents checklist & timelines' },
-          { id:'ctaBookBtn',   label:'Book button text',      type:'text',     default:'Book Now — It's Free' },
+          { id:'ctaBookBtn',   label:'Book button text',      type:'text',     default:"Book Now — It's Free" },
           { id:'ctaBg',        label:'Section background',    type:'color',    default:'#FAF7F2', cssVar:'--counsel-bg' },
         ],
       },
@@ -266,6 +266,92 @@ const PAGES: PageGroup[] = [
           { id:'dashCardBg',   label:'Card background',     type:'color', default:'#ffffff', cssVar:'--dashboard-card-bg' },
           { id:'dashHeadingColor',label:'Heading colour',   type:'color', default:'#0D1117', cssVar:'--dashboard-heading-color' },
           { id:'dashHeadingSize', label:'Heading size',     type:'size',  default:'28', cssVar:'--dashboard-heading-size', min:18, max:48 },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Compare Page', icon: '⇌', contentKey: 'compare',
+    sections: [
+      { id:'compare', label:'Compare Page',
+        fields: [
+          { id:'compareTitle', label:'Page title',     type:'text',     default:'Compare Schools Side by Side' },
+          { id:'compareSub',   label:'Subtitle',       type:'textarea', default:'Select up to 4 schools and compare fees, board, facilities and more.' },
+          { id:'compareBg',    label:'Background',     type:'color',    default:'#FAF7F2', cssVar:'--compare-page-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Pricing Page', icon: '💰', contentKey: 'pricing',
+    sections: [
+      { id:'pricing', label:'Pricing Page',
+        fields: [
+          { id:'pricingTitle', label:'Page title',       type:'text',     default:'Simple, Transparent Pricing' },
+          { id:'pricingSub',   label:'Subtitle',         type:'textarea', default:'Buy only the leads you want. No monthly lock-ins, no hidden fees.' },
+          { id:'pricingBadge', label:'Badge text',       type:'text',     default:'Schools Only' },
+          { id:'pricingBg',    label:'Background',       type:'color',    default:'#FAF7F2', cssVar:'--pricing-page-bg' },
+          { id:'pricingCardBg',label:'Card background',  type:'color',    default:'#ffffff', cssVar:'--pricing-card-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Blog Page', icon: '📰', contentKey: 'blog',
+    sections: [
+      { id:'blog', label:'Blog / Articles Page',
+        fields: [
+          { id:'blogPageTitle', label:'Page title',    type:'text',     default:'Admission Insights & Guides' },
+          { id:'blogPageSub',   label:'Subtitle',      type:'textarea', default:'Expert advice on school selection, boards, admissions and more.' },
+          { id:'blogPageBg',    label:'Background',    type:'color',    default:'#FAF7F2', cssVar:'--blog-page-bg' },
+          { id:'blogCardBg',    label:'Card background',type:'color',   default:'#ffffff', cssVar:'--blog-card-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'About Page', icon: 'ℹ️', contentKey: 'about',
+    sections: [
+      { id:'about', label:'About Page',
+        fields: [
+          { id:'aboutTitle',   label:'Page title',      type:'text',     default:'About Thynk Schooling' },
+          { id:'aboutMission', label:'Mission statement',type:'textarea', default:"India's most trusted school discovery platform — connecting parents with the right schools." },
+          { id:'aboutVision',  label:'Vision statement', type:'textarea', default:'A world where every child finds the school that helps them thrive.' },
+          { id:'aboutBg',      label:'Background',       type:'color',    default:'#FAF7F2', cssVar:'--about-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Admin Panel', icon: '⚙️', contentKey: 'admin-panel',
+    sections: [
+      { id:'admin-overview', label:'Overview / Dashboard',
+        fields: [
+          { id:'adminWelcomeTitle', label:'Welcome message',      type:'text',     default:'Welcome back, Admin' },
+          { id:'adminWelcomeSub',   label:'Welcome subtitle',     type:'text',     default:'Here is what is happening today.' },
+        ],
+      },
+      { id:'admin-schools', label:'Schools Admin Page',
+        fields: [
+          { id:'adminSchoolsTitle', label:'Page title',           type:'text',     default:'Manage Schools' },
+          { id:'adminSchoolsSub',   label:'Subtitle',             type:'text',     default:'Review, approve and manage school listings.' },
+        ],
+      },
+      { id:'admin-leads', label:'Leads Admin Page',
+        fields: [
+          { id:'adminLeadsTitle',   label:'Page title',           type:'text',     default:'Manage Leads' },
+          { id:'adminLeadsSub',     label:'Subtitle',             type:'text',     default:'View and assign parent leads to schools.' },
+        ],
+      },
+      { id:'admin-style', label:'Admin Panel Styling',
+        fields: [
+          { id:'adminBg',           label:'Page background',      type:'color', cssVar:'--admin-bg',                  default:'#FAF7F2' },
+          { id:'adminSidebarBg',    label:'Sidebar background',   type:'color', cssVar:'--admin-sidebar-bg',          default:'#0D1117' },
+          { id:'adminSidebarActive',label:'Sidebar active item',  type:'color', cssVar:'--admin-sidebar-active',      default:'rgba(184,134,11,0.12)' },
+          { id:'adminSidebarColor', label:'Sidebar active colour', type:'color', cssVar:'--admin-sidebar-active-color',default:'#B8860B' },
+          { id:'adminCardBg',       label:'Card background',      type:'color', cssVar:'--admin-card-bg',             default:'#ffffff' },
+          { id:'adminHeadingColor', label:'Heading colour',       type:'color', cssVar:'--admin-heading-color',       default:'#0D1117' },
+          { id:'adminHeadingSize',  label:'Heading size',         type:'size',  cssVar:'--admin-heading-size',        default:'24', min:16, max:40 },
         ],
       },
     ],

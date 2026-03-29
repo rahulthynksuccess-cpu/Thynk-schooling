@@ -6,7 +6,7 @@ import {
   LayoutDashboard, School, Users, FileCheck, Star,
   TrendingUp, DollarSign, Package, Settings, Palette,
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
-  BarChart3, FileText, ChevronRight, ExternalLink
+  BarChart3, FileText, ChevronRight, ExternalLink, Mail
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -41,8 +41,8 @@ const NAV_GROUPS = [
     label: 'Platform',
     items: [
       { icon: Settings, label: 'Settings',      href: '/admin/settings',      color: '#7A6A52' },
-      { icon: Palette,  label: 'Theme',         href: '/admin/integrations', label:'Integrations' },
-  { href:'/admin/theme',         color: '#7A6A52' },
+      { icon: Palette,  label: 'Theme',         href: '/admin/theme',         color: '#7A6A52' },
+      { icon: Mail,     label: 'Integrations',  href: '/admin/integrations',  color: '#7A6A52' },
       { icon: FileText, label: 'Page Content',  href: '/admin/content',       color: '#7A6A52' },
       { icon: Bell,     label: 'Notifications', href: '/admin/notifications', color: '#7A6A52' },
     ],

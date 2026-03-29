@@ -139,6 +139,15 @@ const PAGES = [
   { label:'📝 Blog',            url: '/blog', sections:[{ key:'blog',        label:'Blog Page'        }]},
   { label:'🔐 Login / Register', url: '/login', sections:[{ key:'login',       label:'Login & Register' }]},
   { label:'📊 Dashboard',       url: '/dashboard/parent', sections:[{ key:'dashboard',   label:'Dashboard'        }]},
+  { label:'🏙️ Cities Section',  url: '/',  sections:[{ key:'cities',       label:'Cities Section'   }]},
+  { label:'📞 Counselling CTA', url: '/',  sections:[{ key:'counsel-cta',  label:'Counselling CTA'  }]},
+  { label:'🏫 For Schools CTA', url: '/',  sections:[{ key:'for-schools',  label:'For Schools CTA'  }]},
+  { label:'⭐ Testimonials',    url: '/',  sections:[{ key:'testimonials',  label:'Testimonials'     }]},
+  { label:'ℹ️ About Page',      url: '/about', sections:[{ key:'about',    label:'About Page'       }]},
+  { label:'⚙️ Admin Panel',     url: '/admin', sections:[
+    { key:'admin-overview', label:'Overview / Dashboard' },
+    { key:'admin-style',    label:'Admin Sidebar & Cards' },
+  ]},
 ]
 
 /* ─── Helpers ─── */
@@ -540,7 +549,54 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       </div>
     )
 
-    default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
+    case 'cities': return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+        <CP label="Background"    k="citiesBg"               t={t} onChange={onChange} />
+        <CP label="Title colour"  k="citiesTitleColor"       t={t} onChange={onChange} />
+        <NP label="Title size"    k="citiesTitleSize"        t={t} onChange={onChange} min={24} max={80} />
+      </div>
+    )
+    case 'counsel-cta': return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+        <CP label="Background"    k="counselCtaBg"           t={t} onChange={onChange} />
+        <CP label="H2 colour"     k="counselCtaH2Color"      t={t} onChange={onChange} />
+        <NP label="H2 size"       k="counselCtaH2Size"       t={t} onChange={onChange} min={24} max={80} />
+      </div>
+    )
+    case 'for-schools': return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+        <CP label="Background"    k="forSchoolsBg"           t={t} onChange={onChange} />
+        <CP label="Title colour"  k="forSchoolsTitleColor"   t={t} onChange={onChange} />
+      </div>
+    )
+    case 'testimonials': return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+        <CP label="Background"    k="testimonialsBg"         t={t} onChange={onChange} />
+        <CP label="Title colour"  k="testimonialsTitleColor" t={t} onChange={onChange} />
+      </div>
+    )
+    case 'about': return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+        <CP label="Background"    k="aboutBg"                t={t} onChange={onChange} />
+        <CP label="H1 colour"     k="aboutH1Color"           t={t} onChange={onChange} />
+        <NP label="H1 size"       k="aboutH1Size"            t={t} onChange={onChange} min={24} max={80} />
+      </div>
+    )
+    case 'admin-overview': return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+        <CP label="Page background"   k="adminBg"                 t={t} onChange={onChange} />
+        <CP label="Card background"   k="adminCardBg"             t={t} onChange={onChange} />
+        <CP label="Heading colour"    k="adminHeadingColor"       t={t} onChange={onChange} />
+        <NP label="Heading size"      k="adminHeadingSize"        t={t} onChange={onChange} min={16} max={40} />
+      </div>
+    )
+    case 'admin-style': return (
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+        <CP label="Sidebar background"    k="adminSidebarBg"          t={t} onChange={onChange} />
+        <CP label="Sidebar active colour" k="adminSidebarActiveColor" t={t} onChange={onChange} />
+      </div>
+    )
+        default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
   }
 }
 
