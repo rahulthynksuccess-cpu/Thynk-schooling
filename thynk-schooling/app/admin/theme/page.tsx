@@ -924,6 +924,17 @@ export default function AdminThemePage() {
               src={PAGES[activePage]?.url || '/'}
               style={{ width:'100%', height:'640px', border:'none', display:'block' }}
               title="Page Preview"
+              onLoad={() => {
+                // Re-send current theme vars after iframe finishes loading
+                setTimeout(() => {
+                  try {
+                    iframeRef.current?.contentWindow?.postMessage(
+                      { type: 'TS_THEME_VARS', cssText: buildThemeCssText(theme) },
+                      '*'
+                    )
+                  } catch (_) {}
+                }, 300)
+              }}
             />
           </div>
         </div>

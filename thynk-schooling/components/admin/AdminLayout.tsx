@@ -2,13 +2,41 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, School, Users, FileCheck, Star,
   TrendingUp, DollarSign, Package, Settings, Palette,
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
-  BarChart3, FileText, ChevronRight, ExternalLink, Mail
+  BarChart3, FileText, ChevronRight, ExternalLink, Mail,
+  AlertTriangle
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+
+function DBStatusBanner() {
+  const { data, isError } = useQuery({
+    queryKey: ['admin-db-health'],
+    queryFn: () => fetch('/api/admin/health').then(r => r.json()),
+    staleTime: 30_000,
+    retry: false,
+  })
+  if (!data || data.db === 'connected') return null
+  return (
+    <div style={{
+      marginBottom: 16, padding: '10px 16px', borderRadius: 10,
+      background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+      display: 'flex', alignItems: 'flex-start', gap: 10,
+    }}>
+      <AlertTriangle style={{ width: 16, height: 16, color: '#f87171', flexShrink: 0, marginTop: 1 }} />
+      <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12 }}>
+        <span style={{ color: '#f87171', fontWeight: 700 }}>Database unreachable. </span>
+        <span style={{ color: 'rgba(255,255,255,0.5)' }}>
+          Theme/content saves and dropdowns will not work. Fix: In Supabase Dashboard → Settings → Database → use the <strong style={{ color: 'rgba(255,255,255,0.8)' }}>Transaction pooler</strong> connection string (port 6543) as your DATABASE_URL.
+          {data.message && <><br /><code style={{ color: 'rgba(255,100,100,0.8)', fontSize: 11 }}>{data.message}</code></>}
+        </span>
+      </div>
+    </div>
+  )
+}
 
 const NAV_GROUPS = [
   {
@@ -255,6 +283,7 @@ export function AdminLayout({ children, title, subtitle }: {
 
         {/* Page content */}
         <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(12px, 3vw, 24px)', background: '#0A0F1A' }}>
+          <DBStatusBanner />
           {children}
         </main>
       </div>
