@@ -6,7 +6,6 @@ import { motion } from 'framer-motion'
 import { GraduationCap, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { apiPost } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { User } from '@/types'
 
@@ -22,10 +21,18 @@ export function LoginClient() {
   const [otpSent,  setOtpSent]  = useState(false)
 
   const loginMutation = useMutation({
-    mutationFn: () => apiPost<{ user: User; accessToken: string }>(
-      mode === 'password' ? '/auth/login-mobile' : '/auth/login-otp',
-      mode === 'password' ? { phone, password } : { phone, otp }
-    ),
+    mutationFn: async () => {
+      const endpoint = mode === 'password' ? '/api/auth/login-mobile' : '/api/auth/login-otp'
+      const body     = mode === 'password' ? { phone, password } : { phone, otp }
+      const res = await fetch(endpoint, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Login failed')
+      return data as { user: User; accessToken: string }
+    },
     onSuccess: (data) => {
       setUser(data.user)
       setAccessToken(data.accessToken)
@@ -38,13 +45,22 @@ export function LoginClient() {
       )
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      const msg = (err as Error)?.message
       toast.error(msg || 'Login failed. Please try again.')
     },
   })
 
   const sendOtpMutation = useMutation({
-    mutationFn: () => apiPost('/auth/send-otp', { phone }),
+    mutationFn: async () => {
+      const res = await fetch('/api/auth/send-otp', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message || 'Failed to send OTP')
+      return data
+    },
     onSuccess: () => { setOtpSent(true); toast.success('OTP sent to your mobile!') },
     onError: () => toast.error('Failed to send OTP. Try again.'),
   })

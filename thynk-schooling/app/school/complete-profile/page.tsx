@@ -9,7 +9,6 @@ import {
   MapPin, Phone, Mail, Globe, DollarSign, Users, School, Image,
   CheckCircle2, Building2
 } from 'lucide-react'
-import { apiPost, apiPut } from '@/lib/api'
 import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
@@ -62,9 +61,9 @@ export default function SchoolCompleteProfilePage() {
   }
 
   const saveMutation = useMutation({
-    mutationFn: () => apiPost('/schools/profile', formData),
+    mutationFn: () => fetch('/api/schools/profile',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)}).then(r=>r.json()),
     onSuccess: async () => {
-      await apiPut('/auth/complete-profile', { profileCompleted: true })
+      await fetch('/api/auth/complete-profile',{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileCompleted:true})})
       if (user) setUser({ ...user, profileCompleted: true })
       toast.success('School profile saved! 🎉')
       router.push('/dashboard/school')

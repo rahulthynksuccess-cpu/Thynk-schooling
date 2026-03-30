@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet, apiPut } from '@/lib/api'
 import { Search, Eye, CheckCircle, XCircle, Clock, Download } from 'lucide-react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -32,7 +31,7 @@ export default function AdminApplicationsPage() {
 
   const { data, isLoading } = useQuery<{ data: any[]; total: number }>({
     queryKey: ['admin-applications', tab, search, page],
-    queryFn: () => apiGet(`/admin/applications?${params}`),
+    queryFn: () => fetch(`/api/admin/applications?${params}`,{cache:'no-store'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -41,7 +40,7 @@ export default function AdminApplicationsPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiPut(`/admin/applications/${id}`, { status }),
+      fetch(`/api/admin/applications?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}).then(r=>r.json()),
     onSuccess: (_, { status }) => {
       toast.success(`Application ${status}`)
       qc.invalidateQueries({ queryKey: ['admin-applications'] })

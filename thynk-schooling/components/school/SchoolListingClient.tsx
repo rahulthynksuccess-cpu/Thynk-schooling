@@ -8,9 +8,28 @@ import {
   SlidersHorizontal, Search, MapPin, Star, BadgeCheck,
   GraduationCap, X, ChevronDown, LayoutGrid, List, ArrowUpDown
 } from 'lucide-react'
-import { apiGet } from '@/lib/api'
 import { useDropdown } from '@/hooks/useDropdown'
 import { School, SchoolSearchFilters, PaginatedResponse } from '@/types'
+
+async function fetchSchools(filters: SchoolSearchFilters): Promise<PaginatedResponse<School>> {
+  const params = new URLSearchParams()
+  if (filters.query)        params.set('query',          filters.query)
+  if (filters.city)         params.set('city',           filters.city)
+  if (filters.board?.length) params.set('board',         filters.board.join(','))
+  if (filters.schoolType)   params.set('type',           filters.schoolType)
+  if (filters.genderPolicy) params.set('gender_policy',  filters.genderPolicy)
+  if (filters.medium)       params.set('medium',         filters.medium)
+  if (filters.feeMin)       params.set('feeMin',         String(filters.feeMin))
+  if (filters.feeMax)       params.set('feeMax',         String(filters.feeMax))
+  if (filters.rating)       params.set('rating',         String(filters.rating))
+  if (filters.isFeatured)   params.set('isFeatured',     'true')
+  if (filters.page)         params.set('page',           String(filters.page))
+  if (filters.limit)        params.set('limit',          String(filters.limit))
+  if (filters.sortBy)       params.set('sortBy',         filters.sortBy)
+  const res = await fetch(`/api/schools?${params}`, { cache: 'no-store' })
+  if (!res.ok) return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 }
+  return res.json()
+}
 import { clsx } from 'clsx'
 
 // ── Skeleton ──────────────────────────────────────────────────
@@ -276,7 +295,7 @@ export function SchoolListingClient() {
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResponse<School>>({
     queryKey: ['schools', filters],
-    queryFn: () => apiGet<PaginatedResponse<School>>('/schools', filters),
+    queryFn: () => fetchSchools(filters),
     placeholderData: prev => prev,
     staleTime: 2 * 60 * 1000,
   })

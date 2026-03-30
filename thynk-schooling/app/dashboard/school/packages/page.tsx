@@ -4,7 +4,6 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Package, Zap, CheckCircle, Loader2, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { apiGet, apiPost } from '@/lib/api'
 import { LeadPackage, LeadCredits } from '@/types'
 import { config } from '@/lib/config'
 import toast from 'react-hot-toast'
@@ -15,18 +14,18 @@ declare global { interface Window { Razorpay: new (opts: object) => { open: () =
 export default function LeadPackagesPage() {
   const { data: packages, isLoading } = useQuery<LeadPackage[]>({
     queryKey: ['lead-packages'],
-    queryFn:  () => apiGet('/lead-packages'),
+    queryFn:  () => fetch('/api/lead-packages',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 10 * 60 * 1000,
   })
 
   const { data: credits } = useQuery<LeadCredits>({
     queryKey: ['lead-credits'],
-    queryFn:  () => apiGet('/lead-credits'),
+    queryFn:  () => fetch('/api/lead-credits',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
   })
 
   const buyMutation = useMutation({
     mutationFn: async (packageId: string) => {
-      const order = await apiPost<{ orderId: string; amount: number; currency: string }>(`/lead-packages/${packageId}/buy`)
+      const order = await fetch(`/api/lead-packages?id=${packageId}&action=buy`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>r.json())
       return new Promise<void>((resolve, reject) => {
         const rzp = new window.Razorpay({
           key:          config.razorpay.keyId,
@@ -37,7 +36,7 @@ export default function LeadPackagesPage() {
           description:  'Lead Credit Package',
           theme:        { color: '#FF5C00' },
           handler: async (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) => {
-            await apiPost('/lead-packages/verify-payment', response)
+            await fetch('/api/lead-packages?action=verify-payment',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(response)})
             resolve()
           },
           modal: { ondismiss: () => reject(new Error('Payment cancelled')) },

@@ -9,7 +9,6 @@ import {
   Monitor, BookOpen, UtensilsCrossed, Building2, Cross, Projector,
   Calendar, Users, GraduationCap, ChevronRight, ExternalLink
 } from 'lucide-react'
-import { apiGet } from '@/lib/api'
 import { School, Review } from '@/types'
 import { clsx } from 'clsx'
 
@@ -65,13 +64,13 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
 
   const { data: school, isLoading } = useQuery<School>({
     queryKey: ['school', slug],
-    queryFn:  () => apiGet<School>(`/schools/${slug}`),
+    queryFn:  () => fetch(`/api/schools/${slug}`,{cache:'no-store'}).then(r=>r.json()).then(d=>d.school??d),
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: reviews } = useQuery<{ data: Review[]; total: number }>({
     queryKey: ['school-reviews', slug],
-    queryFn:  () => apiGet(`/schools/${slug}/reviews?limit=5`),
+    queryFn:  () => fetch(`/api/schools/${slug}/reviews?limit=5`,{cache:'no-store'}).then(r=>r.ok?r.json():({reviews:[]})).catch(()=>({reviews:[]})),
     enabled: !!school,
     staleTime: 5 * 60 * 1000,
   })

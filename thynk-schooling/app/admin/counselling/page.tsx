@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet, apiPut } from '@/lib/api'
 import { Search, Phone, CheckCircle, Clock, Calendar } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -31,7 +30,7 @@ export default function AdminCounsellingPage() {
 
   const { data, isLoading } = useQuery<{ data: any[]; total: number }>({
     queryKey: ['admin-counselling', tab, search, page],
-    queryFn: () => apiGet(`/admin/counselling?${params}`),
+    queryFn: () => fetch(`/api/admin/counselling?${params}`,{cache:'no-store'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -40,7 +39,7 @@ export default function AdminCounsellingPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, status, notes }: { id: string; status: string; notes?: string }) =>
-      apiPut(`/admin/counselling/${id}`, { status, notes }),
+      fetch(`/api/admin/counselling?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status,notes})}).then(r=>r.json()),
     onSuccess: () => { toast.success('Session updated!'); qc.invalidateQueries({ queryKey: ['admin-counselling'] }) },
     onError: () => toast.error('Update failed'),
   })

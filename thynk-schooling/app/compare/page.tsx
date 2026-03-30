@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { apiGet } from '@/lib/api'
 import { School } from '@/types'
 import { Search, X, Star, MapPin, BadgeCheck, ArrowRight, Plus } from 'lucide-react'
 import Link from 'next/link'
@@ -45,7 +44,7 @@ export default function ComparePage() {
 
   const { data, isLoading } = useQuery<{ data: School[] }>({
     queryKey: ['compare-search', query],
-    queryFn: () => apiGet(`/schools?q=${query}&limit=8`),
+    queryFn: () => fetch(`/api/schools?query=${query}&limit=8`,{cache:'no-store'}).then(r=>r.json()).then(d=>d.data??[]),
     enabled: query.length > 1,
     staleTime: 30000,
   })

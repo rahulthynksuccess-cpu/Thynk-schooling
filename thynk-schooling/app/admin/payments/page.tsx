@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet } from '@/lib/api'
 import { Search, Download, IndianRupee } from 'lucide-react'
 import { motion } from 'framer-motion'
 
@@ -29,7 +28,7 @@ export default function AdminPaymentsPage() {
 
   const { data, isLoading } = useQuery<{ data: any[]; total: number; totalAmount: number; todayAmount: number }>({
     queryKey: ['admin-payments', tab, search, page],
-    queryFn: () => apiGet(`/admin/payments?${params}`),
+    queryFn: () => fetch(`/api/admin/payments?${params}`,{cache:'no-store'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 

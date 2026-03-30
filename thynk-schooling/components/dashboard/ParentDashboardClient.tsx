@@ -8,7 +8,6 @@ import {
   Plus, ArrowRight, ChevronRight, Sparkles, Star, MapPin, BookOpen
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { apiGet } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { Student, Application, School } from '@/types'
 import { useState } from 'react'
@@ -81,25 +80,25 @@ export function ParentDashboardClient() {
 
   const { data: children, isLoading: childrenLoading } = useQuery<Student[]>({
     queryKey: ['parent-children'],
-    queryFn:  () => apiGet('/students'),
+    queryFn:  () => fetch('/api/students',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: applications, isLoading: appsLoading } = useQuery<{ data: Application[] }>({
     queryKey: ['parent-applications'],
-    queryFn:  () => apiGet('/applications?limit=5'),
+    queryFn:  () => fetch('/api/applications?limit=5',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
   const { data: savedSchools } = useQuery<{ data: School[] }>({
     queryKey: ['parent-saved-schools'],
-    queryFn:  () => apiGet('/saved-schools?limit=4'),
+    queryFn:  () => fetch('/api/saved-schools?limit=4',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: recommendations } = useQuery<{ data: School[] }>({
     queryKey: ['parent-recommendations'],
-    queryFn:  () => apiGet('/recommendations?limit=4'),
+    queryFn:  () => fetch('/api/recommendations?limit=4',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 10 * 60 * 1000,
   })
 

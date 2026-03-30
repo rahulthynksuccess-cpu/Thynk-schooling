@@ -1,20 +1,7 @@
 export const dynamic = "force-dynamic"
 import { NextRequest } from 'next/server'
 import db from '@/lib/db'
-import { verifyAccessToken } from '@/lib/auth'
-
-function guard(req: NextRequest) {
-  try {
-    const h = req.headers.get('authorization') || ''
-    const token = h.replace('Bearer ', '')
-    const p = verifyAccessToken(token) as any
-    return p?.role === 'super_admin' ? p : null
-  } catch { return null }
-}
-
 export async function GET(req: NextRequest) {
-  if (!guard(req)) return Response.json({ message: 'Forbidden' }, { status: 403 })
-
   const { searchParams } = new URL(req.url)
   const role     = searchParams.get('role')
   const isActive = searchParams.get('isActive')

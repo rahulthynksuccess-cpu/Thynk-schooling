@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GraduationCap, ArrowRight, ArrowLeft, Save, Loader2, Plus, User } from 'lucide-react'
-import { apiPost, apiPut } from '@/lib/api'
 import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
@@ -36,9 +35,9 @@ export default function ParentCompleteProfilePage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      await apiPost('/parent-profiles', parentData)
-      if (childData.fullName) await apiPost('/students', childData)
-      if (user) { await apiPut('/auth/complete-profile', { fullName: parentData.fullName, profileCompleted: true }) }
+      await fetch('/api/parent-profiles',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(parentData)})
+      if (childData.fullName) await fetch('/api/students',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(childData)})
+      if (user) { await fetch('/api/auth/complete-profile',{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({fullName:parentData.fullName,profileCompleted:true})}) }
     },
     onSuccess: () => {
       if (user) setUser({ ...user, fullName: parentData.fullName, profileCompleted: true })

@@ -1,14 +1,6 @@
 export const dynamic = "force-dynamic"
 import { NextRequest } from 'next/server'
 import db from '@/lib/db'
-import { verifyAccessToken } from '@/lib/auth'
-
-function guard(req: NextRequest) {
-  try {
-    const p = verifyAccessToken(req.headers.get('authorization')?.replace('Bearer ','') || '') as any
-    return p?.role === 'super_admin' ? p : null
-  } catch { return null }
-}
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   if (!guard(req)) return Response.json({ message: 'Forbidden' }, { status: 403 })

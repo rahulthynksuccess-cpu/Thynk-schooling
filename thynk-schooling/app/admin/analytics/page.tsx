@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic'
 import { useQuery } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet } from '@/lib/api'
 import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, Users, School, DollarSign, Eye } from 'lucide-react'
 
@@ -30,7 +29,7 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 export default function AdminAnalyticsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-analytics'],
-    queryFn: () => apiGet('/admin/analytics'),
+    queryFn: () => fetch('/api/admin/analytics',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 5 * 60 * 1000,
   })
 

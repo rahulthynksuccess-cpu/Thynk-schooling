@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { apiPost } from '@/lib/api'
 import { motion } from 'framer-motion'
 import { Phone, Clock, CheckCircle, Star, Calendar, MessageSquare, Users, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -32,7 +31,7 @@ export default function CounsellingPage() {
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
   const mutation = useMutation({
-    mutationFn: () => apiPost('/counselling/book', form),
+    mutationFn: () => fetch('/api/counselling/book',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)}).then(r=>r.json()),
     onSuccess: () => {
       toast.success('Session booked! Our counsellor will call you within 2 hours.')
       setForm({ name: '', phone: '', city: '', childAge: '', concern: '' })

@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useQuery } from '@tanstack/react-query'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { apiGet } from '@/lib/api'
 import { Check, ArrowRight, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -100,7 +99,7 @@ const FAQ = [
 export default function PricingPage() {
   const { data: packages } = useQuery<LeadPackage[]>({
     queryKey: ['lead-packages'],
-    queryFn: () => apiGet('/lead-packages'),
+    queryFn: () => fetch('/api/lead-packages',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 10 * 60 * 1000,
   })
 

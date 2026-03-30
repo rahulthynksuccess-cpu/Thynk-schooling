@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic"
 import { NextRequest } from 'next/server'
 import db from '@/lib/db'
-import { verifyAccessToken } from '@/lib/auth'
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {

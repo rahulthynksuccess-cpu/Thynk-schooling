@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet, apiPut } from '@/lib/api'
 import { motion } from 'framer-motion'
 import { Search, CheckCircle, XCircle, Eye, MapPin, Star, Filter } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -43,7 +42,7 @@ export default function AdminSchoolsPage() {
 
   const { data, isLoading } = useQuery<{ data: AdminSchool[]; total: number }>({
     queryKey: ['admin-schools', tab, search, page],
-    queryFn: () => apiGet(`/admin/schools?${params.toString()}`),
+    queryFn: () => fetch(`/api/admin/schools?${params.toString()}`,{cache:'no-store'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -54,21 +53,21 @@ export default function AdminSchoolsPage() {
 
   const verifyMutation = useMutation({
     mutationFn: ({ id, isVerified }: { id: string; isVerified: boolean }) =>
-      apiPut(`/admin/schools/${id}`, { isVerified }),
+      fetch(`/api/admin/schools?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isVerified})}).then(r=>r.json()),
     onSuccess: (_, { isVerified }) => { toast.success(isVerified ? 'School verified!' : 'Verification removed.'); invalidate() },
     onError: () => toast.error('Action failed.'),
   })
 
   const featureMutation = useMutation({
     mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) =>
-      apiPut(`/admin/schools/${id}`, { isFeatured }),
+      fetch(`/api/admin/schools?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isFeatured})}).then(r=>r.json()),
     onSuccess: (_, { isFeatured }) => { toast.success(isFeatured ? 'School featured!' : 'Removed from featured.'); invalidate() },
     onError: () => toast.error('Action failed.'),
   })
 
   const toggleActiveMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiPut(`/admin/schools/${id}`, { isActive }),
+      fetch(`/api/admin/schools?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive})}).then(r=>r.json()),
     onSuccess: () => { toast.success('Status updated.'); invalidate() },
   })
 

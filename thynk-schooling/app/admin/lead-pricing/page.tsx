@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet, apiPut } from '@/lib/api'
 import { Save, Loader2, DollarSign, Info } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
@@ -26,7 +25,7 @@ export default function LeadPricingPage() {
 
   const { data, isLoading } = useQuery<PricingConfig>({
     queryKey: ['admin-lead-pricing'],
-    queryFn: () => apiGet('/admin/lead-pricing-defaults'),
+    queryFn: () => fetch('/api/admin/lead-pricing-defaults',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 5 * 60 * 1000,
   })
 
@@ -45,7 +44,7 @@ export default function LeadPricingPage() {
   }
 
   const mutation = useMutation({
-    mutationFn: () => apiPut('/admin/lead-pricing-defaults', form),
+    mutationFn: () => fetch('/api/admin/lead-pricing-defaults',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(form)}).then(r=>r.json()),
     onSuccess: () => {
       toast.success('Lead pricing updated successfully!')
       queryClient.invalidateQueries({ queryKey: ['admin-lead-pricing'] })

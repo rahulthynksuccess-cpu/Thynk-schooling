@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic'
 import { useQuery } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet } from '@/lib/api'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { School, Users, TrendingUp, DollarSign, FileCheck, Star, ArrowRight, Clock, CheckCircle, XCircle } from 'lucide-react'
@@ -43,7 +42,7 @@ function StatCard({ icon: Icon, label, value, sub, color, delay, href }: {
 export default function AdminDashboardPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-overview'],
-    queryFn: () => apiGet('/admin/overview'),
+    queryFn: () => fetch('/api/admin/overview',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 

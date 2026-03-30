@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, useInView } from 'framer-motion'
 import Link from 'next/link'
 import { Star, MapPin, BadgeCheck, GraduationCap, ArrowRight } from 'lucide-react'
-import { apiGet } from '@/lib/api'
 import { School } from '@/types'
 
 function Skeleton() {
@@ -74,7 +73,7 @@ export function FeaturedSchools() {
   const inView = useInView(ref, { once:true, amount:.1 })
   const { data, isLoading } = useQuery<{ data: School[] }>({
     queryKey: ['featured-schools'],
-    queryFn: () => apiGet('/schools?isFeatured=true&limit=8&sortBy=rating'),
+    queryFn: () => fetch('/api/schools?isFeatured=true&limit=8',{cache:'no-store'}).then(r=>r.json()).then(d=>d.data??[]),
     enabled: inView, staleTime: 5*60*1000,
   })
   const schools = data?.data ?? []

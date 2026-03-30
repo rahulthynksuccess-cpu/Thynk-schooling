@@ -481,35 +481,67 @@ export default function AdminContentPage() {
     }
   }, [activeGroup])
 
-  const saveGroup = () => {
-    setSavedGroups(p => ({ ...p, [activeGroup]: true }))
-    setDirtyGroups(p => ({ ...p, [activeGroup]: false }))
-    toast.success(`✅ "${activeGroup}" saved — push when ready`)
+  const saveGroup = async () => {
+    if (!dirtyGroups[activeGroup]) return
+    setPushing(true)
+    try {
+      const saveToDB = async (key: string, value: any) => {
+        const res = await fetch('/api/admin/content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json.error || `Save failed for ${key}`)
+      }
+
+      // Save CSS vars
+      const css = buildCSSVars(values)
+      if (css) await saveToDB('content.css', css)
+
+      // Save content fields for active group only
+      const activePage = PAGES.find(p => p.label === activeGroup)
+      if (activePage) {
+        const pageValues: Record<string,string> = {}
+        activePage.sections.forEach(s => s.fields.forEach(f => {
+          if (values[f.id] !== undefined && values[f.id] !== '') pageValues[f.id] = values[f.id]
+        }))
+        if (Object.keys(pageValues).length > 0) await saveToDB(activePage.contentKey, pageValues)
+      }
+
+      setSavedGroups(p => ({ ...p, [activeGroup]: true }))
+      setDirtyGroups(p => ({ ...p, [activeGroup]: false }))
+      toast.success(`✅ "${activeGroup}" saved to site!`)
+    } catch (e: any) {
+      toast.error(e.message || 'Save failed')
+    }
+    setPushing(false)
   }
 
   const pushAll = async () => {
     setPushing(true)
-    const save = async (key: string, value: any) => {
-      const res = await fetch('/api/admin/content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, value }),
-      })
-      if (!res.ok) throw new Error(`Save failed for ${key}`)
-    }
     try {
+      const saveToDB = async (key: string, value: any) => {
+        const res = await fetch('/api/admin/content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key, value }),
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(json.error || `Save failed for ${key}`)
+      }
       const css = buildCSSVars(values)
-      if (css) await save('content.css', css)
+      if (css) await saveToDB('content.css', css)
       for (const page of PAGES) {
         const pageValues: Record<string,string> = {}
         page.sections.forEach(s => s.fields.forEach(f => {
           if (values[f.id] !== undefined && values[f.id] !== '') pageValues[f.id] = values[f.id]
         }))
-        if (Object.keys(pageValues).length > 0) await save(page.contentKey, pageValues)
+        if (Object.keys(pageValues).length > 0) await saveToDB(page.contentKey, pageValues)
       }
       setSavedGroups({})
       setDirtyGroups({})
-      toast.success('🚀 All changes live on site!')
+      toast.success('🚀 All changes saved to site!')
     } catch (e: any) { toast.error(e.message || 'Push failed') }
     setPushing(false)
   }
@@ -523,15 +555,15 @@ export default function AdminContentPage() {
       {/* Top bar */}
       <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', padding:'12px 16px', background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px' }}>
         <span style={{ fontSize:'12px', color:'#718096', flex:1, fontFamily:'Inter,sans-serif' }}>
-          {readyCount > 0 ? `${readyCount} group(s) ready to push` : 'Edit a section, save it, then push to site'}
+          {dirtyGroups[activeGroup] ? `Unsaved changes in "${activeGroup}" — click Save to apply` : 'Make changes below then click Save. Use "Save All Pages" to save everything at once.'}
         </span>
-        <button onClick={saveGroup} disabled={!dirtyGroups[activeGroup]}
-          style={{ padding:'8px 18px', borderRadius:'8px', background: dirtyGroups[activeGroup] ? '#FEF7E0' : '#f3f4f6', border:`1px solid ${dirtyGroups[activeGroup] ? '#B8860B' : '#e5e7eb'}`, color: dirtyGroups[activeGroup] ? '#B8860B' : '#9ca3af', cursor: dirtyGroups[activeGroup] ? 'pointer' : 'not-allowed', fontSize:'13px', fontWeight:700, fontFamily:'Inter,sans-serif' }}>
-          ✓ Save {activeGroup}
+        <button onClick={saveGroup} disabled={pushing || !dirtyGroups[activeGroup]}
+          style={{ padding:'8px 18px', borderRadius:'8px', background: dirtyGroups[activeGroup] ? '#FEF7E0' : '#f3f4f6', border:`1px solid ${dirtyGroups[activeGroup] ? '#B8860B' : '#e5e7eb'}`, color: dirtyGroups[activeGroup] ? '#B8860B' : '#9ca3af', cursor: (pushing || !dirtyGroups[activeGroup]) ? 'not-allowed' : 'pointer', fontSize:'13px', fontWeight:700, fontFamily:'Inter,sans-serif', display:'flex', alignItems:'center', gap:'6px' }}>
+          {pushing ? <><Loader2 style={{width:12,height:12,animation:'spin 1s linear infinite'}}/>Saving…</> : <>✓ Save {activeGroup}</>}
         </button>
-        <button onClick={pushAll} disabled={pushing || readyCount === 0}
-          style={{ display:'flex', alignItems:'center', gap:'7px', padding:'9px 22px', borderRadius:'9px', background:'#B8860B', border:'none', color:'#fff', cursor:(pushing||readyCount===0)?'not-allowed':'pointer', fontSize:'13px', fontWeight:700, fontFamily:'Inter,sans-serif', opacity:(pushing||readyCount===0)?0.5:1 }}>
-          {pushing ? <><Loader2 style={{width:13,height:13,animation:'spin 1s linear infinite'}}/>Pushing…</> : <><Globe style={{width:13,height:13}}/>Push to Site</>}
+        <button onClick={pushAll} disabled={pushing}
+          style={{ display:'flex', alignItems:'center', gap:'7px', padding:'9px 22px', borderRadius:'9px', background:'#B8860B', border:'none', color:'#fff', cursor:pushing?'not-allowed':'pointer', fontSize:'13px', fontWeight:700, fontFamily:'Inter,sans-serif', opacity:pushing?0.5:1 }}>
+          {pushing ? <><Loader2 style={{width:13,height:13,animation:'spin 1s linear infinite'}}/>Saving…</> : <><Globe style={{width:13,height:13}}/>Save All Pages</>}
         </button>
       </div>
 

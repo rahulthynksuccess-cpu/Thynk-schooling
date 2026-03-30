@@ -319,10 +319,18 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
 
 // ── Main Settings Page ─────────────────────────────────────────
 export default function AdminSettingsPage() {
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const [activeCategory, setActiveCategory] = useState(DROPDOWN_CATEGORIES[0].key)
   const [sidebarOpen,    setSidebarOpen]    = useState(false)
   const [catSearchQuery, setCatSearchQuery] = useState('')
+
+  const logout = async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch (_) {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ts_access_token')
+      window.location.href = '/login'
+    }
+  }
 
   const filteredCats = DROPDOWN_CATEGORIES.filter(c =>
     c.label.toLowerCase().includes(catSearchQuery.toLowerCase())

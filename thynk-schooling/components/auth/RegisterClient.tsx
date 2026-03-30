@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { GraduationCap, Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, School, Users } from 'lucide-react'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { apiPost } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { User, Role } from '@/types'
 
@@ -25,13 +24,13 @@ export function RegisterClient() {
   const [showPw,   setShowPw]   = useState(false)
 
   const sendOtpMutation = useMutation({
-    mutationFn: () => apiPost('/auth/send-otp', { phone }),
+    mutationFn: () => fetch('/api/auth/send-otp',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})}).then(r=>r.json()),
     onSuccess: () => { setStep(2); toast.success('OTP sent to your mobile!') },
     onError:   () => toast.error('Failed to send OTP. Please try again.'),
   })
 
   const registerMutation = useMutation({
-    mutationFn: () => apiPost<{ user: User; accessToken: string }>('/auth/register-mobile', { phone, password, role, otp }),
+    mutationFn: () => fetch('/api/auth/register',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password,role,otp})}).then(r=>r.json()),
     onSuccess: (data) => {
       setUser(data.user)
       setAccessToken(data.accessToken)

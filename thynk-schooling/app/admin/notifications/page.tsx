@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiPost } from '@/lib/api'
 import { Bell, Send, Loader2, Users, School, Globe } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -24,7 +23,7 @@ export default function AdminNotificationsPage() {
   const [body,     setBody]     = useState('')
 
   const mutation = useMutation({
-    mutationFn: () => apiPost('/admin/notifications', { audience, title, body }),
+    mutationFn: () => fetch('/api/admin/notifications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audience,title,body})}).then(r=>r.json()),
     onSuccess: () => {
       toast.success(`Notification sent to ${audience === 'all' ? 'all users' : audience}!`)
       setTitle(''); setBody('')

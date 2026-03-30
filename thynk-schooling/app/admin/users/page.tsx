@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet, apiPut } from '@/lib/api'
+
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Shield, UserX, UserCheck, Phone, Calendar,
@@ -85,7 +85,7 @@ const hdCell: React.CSSProperties = { padding:'9px 13px', fontSize:'10px', fontW
 function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => void }) {
   const { data, isLoading } = useQuery<{ logs: ActivityLog[] }>({
     queryKey: ['ts-user-activity', user.id],
-    queryFn:  () => apiGet(`/admin/users/${user.id}/activity?limit=50`),
+    queryFn:  () => fetch(`/api/admin/users/${user.id}/activity?limit=50`, {cache:'no-store'}).then(r=>r.json()),
     staleTime: 30000,
   })
   const logs = data?.logs || []
@@ -247,7 +247,7 @@ export default function AdminUsersPage() {
 
   const { data, isLoading } = useQuery<{ data: AdminUser[]; total: number }>({
     queryKey: ['ts-admin-users', tab, search, page],
-    queryFn:  () => apiGet(`/admin/users?${params.toString()}`),
+    queryFn:  () => fetch(`/api/admin/users?${params.toString()}`, {cache:'no-store'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -257,7 +257,7 @@ export default function AdminUsersPage() {
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiPut(`/admin/users/${id}`, { isActive }),
+      fetch(`/api/admin/users/${id}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({ isActive })}).then(r=>r.json()),
     onSuccess: (_, { isActive }) => { toast.success(isActive ? 'User reactivated' : 'User suspended'); invalidate() },
     onError: () => toast.error('Action failed'),
   })

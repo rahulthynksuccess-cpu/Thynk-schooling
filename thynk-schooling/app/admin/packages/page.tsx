@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api'
 import { Plus, Pencil, Trash2, Save, X, Loader2, Package, ToggleLeft, ToggleRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -115,31 +114,31 @@ export default function LeadPackagesPage() {
 
   const { data: packages, isLoading } = useQuery<LeadPackage[]>({
     queryKey: ['admin-lead-packages'],
-    queryFn: () => apiGet('/lead-packages?all=true'),
+    queryFn: () => fetch('/api/lead-packages?all=true',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 5 * 60 * 1000,
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-lead-packages'] })
 
   const createMutation = useMutation({
-    mutationFn: (data: PackageForm) => apiPost('/lead-packages', data),
+    mutationFn: (data: PackageForm) => fetch('/api/lead-packages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()),
     onSuccess: () => { toast.success('Package created!'); setModalOpen(false); invalidate() },
     onError: () => toast.error('Failed to create package.'),
   })
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PackageForm }) => apiPut(`/lead-packages/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: PackageForm }) => fetch(`/api/lead-packages?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()),
     onSuccess: () => { toast.success('Package updated!'); setModalOpen(false); invalidate() },
     onError: () => toast.error('Failed to update package.'),
   })
 
   const toggleMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => apiPut(`/lead-packages/${id}`, { isActive }),
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => fetch(`/api/lead-packages?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive})}).then(r=>r.json()),
     onSuccess: () => invalidate(),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiDelete(`/lead-packages/${id}`),
+    mutationFn: (id: string) => fetch(`/api/lead-packages?id=${id}`,{method:'DELETE'}).then(r=>r.json()),
     onSuccess: () => { toast.success('Package deleted.'); invalidate() },
     onError: () => toast.error('Cannot delete — package may have active purchases.'),
   })

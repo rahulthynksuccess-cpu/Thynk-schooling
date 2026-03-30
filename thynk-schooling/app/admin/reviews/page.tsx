@@ -3,7 +3,6 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiGet, apiPut, apiDelete } from '@/lib/api'
 import { Search, Star, CheckCircle, Trash2, Flag } from 'lucide-react'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -36,7 +35,7 @@ export default function AdminReviewsPage() {
 
   const { data, isLoading } = useQuery<{ data: any[]; total: number }>({
     queryKey: ['admin-reviews', tab, search, page],
-    queryFn: () => apiGet(`/admin/reviews?${params}`),
+    queryFn: () => fetch(`/api/admin/reviews?${params}`,{cache:'no-store'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -46,16 +45,16 @@ export default function AdminReviewsPage() {
   const qInvalidate = () => qc.invalidateQueries({ queryKey: ['admin-reviews'] })
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => apiPut(`/admin/reviews/${id}`, { status: 'approved' }),
+    mutationFn: (id: string) => fetch(`/api/admin/reviews?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'approved'})}).then(r=>r.json()),
     onSuccess: () => { toast.success('Review approved!'); qInvalidate() },
     onError: () => toast.error('Action failed'),
   })
   const flagMutation = useMutation({
-    mutationFn: (id: string) => apiPut(`/admin/reviews/${id}`, { status: 'flagged' }),
+    mutationFn: (id: string) => fetch(`/api/admin/reviews?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:'flagged'})}).then(r=>r.json()),
     onSuccess: () => { toast.success('Review flagged.'); qInvalidate() },
   })
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiDelete(`/admin/reviews/${id}`),
+    mutationFn: (id: string) => fetch(`/api/admin/reviews?id=${id}`,{method:'DELETE'}).then(r=>r.json()),
     onSuccess: () => { toast.success('Review deleted.'); qInvalidate() },
     onError: () => toast.error('Delete failed'),
   })

@@ -11,7 +11,6 @@ import {
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { clsx } from 'clsx'
-import { apiGet, apiPost } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { Lead, LeadCredits, SchoolDashboardStats, Application } from '@/types'
 import toast from 'react-hot-toast'
@@ -148,30 +147,30 @@ export function SchoolDashboardClient() {
 
   const { data: stats,   isLoading: statsLoading   } = useQuery<SchoolDashboardStats>({
     queryKey: ['school-dashboard-stats'],
-    queryFn:  () => apiGet('/schools/me/dashboard-stats'),
+    queryFn:  () => fetch('/api/schools/me/dashboard-stats',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
   const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({
     queryKey: ['school-leads', { limit: 10 }],
-    queryFn:  () => apiGet('/leads?limit=10'),
+    queryFn:  () => fetch('/api/leads?limit=10',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
     staleTime: 1 * 60 * 1000,
   })
 
   const { data: credits } = useQuery<LeadCredits>({
     queryKey: ['lead-credits'],
-    queryFn:  () => apiGet('/lead-credits'),
+    queryFn:  () => fetch('/api/lead-credits',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
     staleTime: 1 * 60 * 1000,
   })
 
   const { data: analyticsData } = useQuery<{ date: string; leads: number; applications: number }[]>({
     queryKey: ['school-analytics-30d'],
-    queryFn:  () => apiGet('/schools/me/analytics?days=30'),
+    queryFn:  () => fetch('/api/schools/me/analytics?days=30',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
     staleTime: 5 * 60 * 1000,
   })
 
   const buyLeadMutation = useMutation({
-    mutationFn: (leadId: string) => apiPost(`/leads/${leadId}/purchase`),
+    mutationFn: (leadId: string) => fetch(`/api/leads?id=${leadId}&action=purchase`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>r.json()),
     onSuccess: () => {
       toast.success('Lead unlocked! Full details are now visible.')
       queryClient.invalidateQueries({ queryKey: ['school-leads'] })
