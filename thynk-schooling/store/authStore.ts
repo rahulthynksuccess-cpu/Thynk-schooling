@@ -2,7 +2,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { User } from '@/types'
-import { apiPost } from '@/lib/api'
 
 interface AuthState {
   user: User | null
@@ -33,16 +32,26 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: async () => {
-        try { await apiPost('/auth/logout') } catch (_) {}
-        localStorage.removeItem('ts_access_token')
+        try {
+          await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        } catch (_) {}
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('ts_access_token')
+        }
         set({ user: null, accessToken: null, isAuthenticated: false })
-        window.location.href = '/login'
+        if (typeof window !== 'undefined') window.location.href = '/login'
       },
 
       refreshUser: async () => {
         try {
           set({ isLoading: true })
-          const data = await apiPost<{ user: User; accessToken: string }>('/auth/refresh')
+          const res = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          })
+          if (!res.ok) throw new Error('Refresh failed')
+          const data = await res.json()
           get().setUser(data.user)
           get().setAccessToken(data.accessToken)
         } catch (_) {
