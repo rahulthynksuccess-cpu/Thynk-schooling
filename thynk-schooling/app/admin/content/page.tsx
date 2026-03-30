@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { apiPost } from '@/lib/api'
 import { Globe, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 

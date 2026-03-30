@@ -9,7 +9,6 @@ import {
   DollarSign, Package, BarChart3, Users, School, LogOut, Menu
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api'
 import { useAuthStore } from '@/store/authStore'
 import { DropdownOption, LeadPackage } from '@/types'
 import toast from 'react-hot-toast'
@@ -153,7 +152,7 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
 
   const { data: options, isLoading } = useQuery<DropdownOption[]>({
     queryKey: ['dropdown-options', categoryKey],
-    queryFn:  () => apiGet(`/settings/dropdown?category=${categoryKey}&includeInactive=true`),
+    queryFn:  () => fetch(`/api/settings/dropdown?category=${categoryKey}&includeInactive=true`,{cache:'no-store'}).then(r=>r.json()).then(d=>d.options||d||[]),
     staleTime: 2 * 60 * 1000,
   })
 
@@ -163,25 +162,29 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
   }
 
   const addMutation = useMutation({
-    mutationFn: (data: Partial<DropdownOption>) => apiPost('/settings/dropdown', data),
+    mutationFn: async (data: Partial<DropdownOption>) => {
+      const token = typeof window!=='undefined' ? localStorage.getItem('ts_access_token')||'' : ''
+      const res = await fetch('/api/settings/dropdown', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body:JSON.stringify(data) })
+      return res.json()
+    },
     onSuccess: () => { toast.success('Option added!'); setModalOpen(false); invalidate() },
     onError:   () => toast.error('Failed to add option.'),
   })
 
   const editMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<DropdownOption> }) => apiPut(`/settings/dropdown/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<DropdownOption> }) => fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('ts_access_token')||''}`},body:JSON.stringify(data)}).then(r=>r.json()),
     onSuccess: () => { toast.success('Option updated!'); setEditOption(undefined); setModalOpen(false); invalidate() },
     onError:   () => toast.error('Failed to update option.'),
   })
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      apiPut(`/settings/dropdown/${id}`, { isActive }),
+      fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('ts_access_token')||''}`},body:JSON.stringify({isActive})}).then(r=>r.json()),
     onSuccess: () => invalidate(),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiDelete(`/settings/dropdown/${id}`),
+    mutationFn: (id: string) => fetch(`/api/settings/dropdown?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${localStorage.getItem('ts_access_token')||''}`}}).then(r=>r.json()),
     onSuccess: () => { toast.success('Option removed.'); invalidate() },
     onError:   () => toast.error('Cannot delete — option may be in use.'),
   })

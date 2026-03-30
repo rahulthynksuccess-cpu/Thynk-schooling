@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { RotateCcw, Loader2, Globe, Eye, ChevronRight } from 'lucide-react'
-import { apiGet } from '@/lib/api'
 import toast from 'react-hot-toast'
 
 /* ─── Default theme (Ivory & Gold) ─── */
@@ -701,7 +700,7 @@ export default function AdminThemePage() {
 
   const { data: savedData } = useQuery({
     queryKey: ['admin-theme'],
-    queryFn: () => apiGet('/admin/theme'),
+    queryFn: () => fetch('/api/admin/theme', { cache:'no-store' }).then(r=>r.json()),
     staleTime: Infinity,
   })
 
