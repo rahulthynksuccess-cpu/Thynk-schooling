@@ -317,46 +317,13 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
   )
 }
 
-// ── Main Settings Page ─────────────────────────────────────────
-export default function AdminSettingsPage() {
-  const { user } = useAuthStore()
-  const [activeCategory, setActiveCategory] = useState(DROPDOWN_CATEGORIES[0].key)
-  const [sidebarOpen,    setSidebarOpen]    = useState(false)
-  const [catSearchQuery, setCatSearchQuery] = useState('')
-  const [seeding,        setSeeding]        = useState(false)
-  const queryClient = useQueryClient()
-
-  const handleSeedDefaults = async () => {
-    if (!window.confirm('This will add default Indian school dropdown values (boards, cities, types, etc.) for any categories that are currently empty. Existing entries will not be overwritten. Continue?')) return
-    setSeeding(true)
-    try {
-      const res = await fetch('/api/settings/dropdown/seed', { method: 'POST' })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Seed failed')
-      toast.success(`✅ ${data.message}`)
-      queryClient.invalidateQueries({ queryKey: ['dropdown-options'] })
-      queryClient.invalidateQueries({ queryKey: ['dropdown'] })
-    } catch (e: any) {
-      toast.error(e.message || 'Seed failed')
-    }
-    setSeeding(false)
-  }
-
-  const logout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch (_) {}
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('ts_access_token')
-      window.location.href = '/login'
-    }
-  }
-
-  const filteredCats = DROPDOWN_CATEGORIES.filter(c =>
-    c.label.toLowerCase().includes(catSearchQuery.toLowerCase())
-  )
-
-  const activeCatDef = DROPDOWN_CATEGORIES.find(c => c.key === activeCategory)
-
-  const AdminNav = ({ onClose }: { onClose?: () => void }) => (
+// ── Admin sidebar — extracted to top level to prevent remount crash ──────────
+function SettingsAdminNav({ user, onClose, onLogout }: {
+  user: any
+  onClose?: () => void
+  onLogout: () => void
+}) {
+  return (
     <aside className="w-64 bg-surface-card border-r border-surface-border flex flex-col h-full">
       <div className="p-5 border-b border-surface-border flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
@@ -396,7 +363,7 @@ export default function AdminSettingsPage() {
       </nav>
       <div className="p-3 border-t border-surface-border">
         <button
-          onClick={logout}
+          onClick={onLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 font-display font-semibold text-sm transition-all"
         >
           <LogOut className="w-4 h-4" /> Logout
@@ -404,18 +371,60 @@ export default function AdminSettingsPage() {
       </div>
     </aside>
   )
+}
+
+// ── Main Settings Page ─────────────────────────────────────────
+export default function AdminSettingsPage() {
+  const { user } = useAuthStore()
+  const [activeCategory, setActiveCategory] = useState(DROPDOWN_CATEGORIES[0].key)
+  const [sidebarOpen,    setSidebarOpen]    = useState(false)
+  const [catSearchQuery, setCatSearchQuery] = useState('')
+  const [seeding,        setSeeding]        = useState(false)
+  const queryClient = useQueryClient()
+
+  const handleSeedDefaults = async () => {
+    if (!window.confirm('This will add default Indian school dropdown values (boards, cities, types, etc.) for any categories that are currently empty. Existing entries will not be overwritten. Continue?')) return
+    setSeeding(true)
+    try {
+      const res = await fetch('/api/settings/dropdown/seed', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Seed failed')
+      toast.success(`✅ ${data.message}`)
+      queryClient.invalidateQueries({ queryKey: ['dropdown-options'] })
+      queryClient.invalidateQueries({ queryKey: ['dropdown'] })
+    } catch (e: any) {
+      toast.error(e.message || 'Seed failed')
+    }
+    setSeeding(false)
+  }
+
+  const logout = async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch (_) {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('ts_access_token')
+      window.location.href = '/login'
+    }
+  }
+
+  const filteredCats = DROPDOWN_CATEGORIES.filter(c =>
+    c.label.toLowerCase().includes(catSearchQuery.toLowerCase())
+  )
+
+  const activeCatDef = DROPDOWN_CATEGORIES.find(c => c.key === activeCategory)
 
   return (
     <div className="flex h-screen bg-navy-900 overflow-hidden">
       {/* Desktop admin sidebar */}
       <div className="hidden lg:flex flex-col">
-        <AdminNav />
+        <SettingsAdminNav user={user} onLogout={logout} />
       </div>
 
       {/* Mobile admin sidebar */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="w-64 flex flex-col"><AdminNav onClose={() => setSidebarOpen(false)} /></div>
+          <div className="w-64 flex flex-col">
+            <SettingsAdminNav user={user} onLogout={logout} onClose={() => setSidebarOpen(false)} />
+          </div>
           <div className="flex-1 bg-black/60" onClick={() => setSidebarOpen(false)} />
         </div>
       )}
