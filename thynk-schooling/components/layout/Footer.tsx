@@ -15,7 +15,14 @@ const SOCIAL = [
   { icon: Linkedin,  href: '#', label: 'LinkedIn'  },
   { icon: Youtube,   href: '#', label: 'YouTube'   },
 ]
-const CITIES = ['Delhi','Mumbai','Bangalore','Hyderabad','Chennai','Pune','Kolkata','Ahmedabad','Jaipur','Lucknow']
+const CITIES = [
+  'Delhi','Mumbai','Bangalore','Hyderabad','Chennai','Pune','Kolkata','Ahmedabad',
+  'Jaipur','Lucknow','Surat','Kochi','Chandigarh','Nagpur','Indore','Bhopal',
+  'Vadodara','Gurgaon','Noida','Coimbatore','Visakhapatnam','Mysore','Nashik',
+  'Patna','Ranchi','Bhubaneswar','Guwahati','Dehradun','Agra','Varanasi',
+  'Meerut','Faridabad','Amritsar','Kolhapur','Thiruvananthapuram','Srinagar',
+  'Jodhpur','Aurangabad','Raipur','Vijayawada',
+]
 
 export function Footer() {
   return (

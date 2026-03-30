@@ -6,6 +6,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const city    = searchParams.get('city');
+    const state   = searchParams.get('state');
     const board   = searchParams.get('board');
     const query   = searchParams.get('query') || searchParams.get('search') || searchParams.get('q');
     const page    = Math.max(1, parseInt(searchParams.get('page') || '1'));
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
     const params: any[] = [];
 
     if (city)  { params.push(city);           conditions.push(`city ILIKE $${params.length}`) }
+    if (state) { params.push(state);          conditions.push(`state ILIKE $${params.length}`) }
     if (board) { params.push(`%${board}%`);   conditions.push(`board::text ILIKE $${params.length}`) }
     if (query) { params.push(`%${query}%`);   conditions.push(`(name ILIKE $${params.length} OR city ILIKE $${params.length} OR board::text ILIKE $${params.length})`) }
 

@@ -1,6 +1,6 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { Globe, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -23,7 +23,8 @@ const PAGES: PageGroup[] = [
           { id:'h1Line3',          label:'H1 Line 3',              type:'text',    default:'for Your Child' },
           { id:'subtext',          label:'Hero subtitle',          type:'textarea',default:'Search, compare & apply to 12,000+ verified schools across 35+ Indian cities.' },
           { id:'searchPlaceholder',label:'Search box placeholder', type:'text',    default:'School name, board, or keyword…' },
-          { id:'ctaPrimary',       label:'Search button text',     type:'text',    default:'Search →' },
+          { id:'ctaPrimary',       label:'Search button text',     type:'text',    default:'Search' },
+          { id:'heroImage',        label:'Hero Image URL (right side)', type:'text', default:'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=900&q=85&auto=format&fit=crop' },
         ],
       },
       {
@@ -447,12 +448,14 @@ export default function AdminContentPage() {
   const [pushing,      setPushing]     = useState(false)
 
   // Load saved values on mount
+  const loadedRef = useRef(false)
   useEffect(() => {
+    if (loadedRef.current) return
+    loadedRef.current = true
     fetch('/api/admin/content', { cache:'no-store' })
       .then(r => r.json())
       .then(data => {
         const merged: Record<string,string> = {}
-        // Merge all page content into flat values map
         if (data) {
           Object.entries(data).forEach(([key, val]: [string, any]) => {
             if (val && typeof val === 'object' && !Array.isArray(val)) {
@@ -461,7 +464,6 @@ export default function AdminContentPage() {
               })
             }
           })
-          // Also load content.styles if present
           if (data['content.styles']) Object.assign(merged, data['content.styles'])
         }
         setValues(merged)

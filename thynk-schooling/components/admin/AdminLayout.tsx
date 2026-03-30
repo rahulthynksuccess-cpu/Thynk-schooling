@@ -73,6 +73,7 @@ const NAV_GROUPS = [
       { icon: Mail,     label: 'Integrations',  href: '/admin/integrations',  color: '#7A6A52' },
       { icon: FileText, label: 'Page Content',  href: '/admin/content',       color: '#7A6A52' },
       { icon: Bell,     label: 'Notifications', href: '/admin/notifications', color: '#7A6A52' },
+      { icon: BarChart3,label: 'SEO Manager',   href: '/admin/seo',           color: '#7A6A52' },
     ],
   },
 ]
