@@ -714,10 +714,9 @@ export default function AdminThemePage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') || '' : ''
       const res = await fetch('/api/admin/theme', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ theme }),
       })
       if (!res.ok) throw new Error('Save failed')

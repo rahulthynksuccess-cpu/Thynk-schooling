@@ -489,11 +489,10 @@ export default function AdminContentPage() {
 
   const pushAll = async () => {
     setPushing(true)
-    const token = typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') || '' : ''
     const save = async (key: string, value: any) => {
       const res = await fetch('/api/admin/content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key, value }),
       })
       if (!res.ok) throw new Error(`Save failed for ${key}`)

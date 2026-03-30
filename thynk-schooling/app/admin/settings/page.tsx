@@ -163,8 +163,7 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
 
   const addMutation = useMutation({
     mutationFn: async (data: Partial<DropdownOption>) => {
-      const token = typeof window!=='undefined' ? localStorage.getItem('ts_access_token')||'' : ''
-      const res = await fetch('/api/settings/dropdown', { method:'POST', headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`}, body:JSON.stringify(data) })
+      const res = await fetch('/api/settings/dropdown', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) })
       return res.json()
     },
     onSuccess: () => { toast.success('Option added!'); setModalOpen(false); invalidate() },
@@ -172,19 +171,19 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
   })
 
   const editMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<DropdownOption> }) => fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('ts_access_token')||''}`},body:JSON.stringify(data)}).then(r=>r.json()),
+    mutationFn: ({ id, data }: { id: string; data: Partial<DropdownOption> }) => fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()),
     onSuccess: () => { toast.success('Option updated!'); setEditOption(undefined); setModalOpen(false); invalidate() },
     onError:   () => toast.error('Failed to update option.'),
   })
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json',Authorization:`Bearer ${localStorage.getItem('ts_access_token')||''}`},body:JSON.stringify({isActive})}).then(r=>r.json()),
+      fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive})}).then(r=>r.json()),
     onSuccess: () => invalidate(),
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => fetch(`/api/settings/dropdown?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${localStorage.getItem('ts_access_token')||''}`}}).then(r=>r.json()),
+    mutationFn: (id: string) => fetch(`/api/settings/dropdown?id=${id}`,{method:'DELETE',headers:{}}).then(r=>r.json()),
     onSuccess: () => { toast.success('Option removed.'); invalidate() },
     onError:   () => toast.error('Cannot delete — option may be in use.'),
   })
