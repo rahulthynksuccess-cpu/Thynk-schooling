@@ -53,7 +53,7 @@ export default function CounsellingPage() {
         {/* Hero */}
         <section style={{ background: 'linear-gradient(160deg, #0D1117 0%, #1C2333 60%, #0D1117 100%)', padding: '80px 48px', position: 'relative', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: '-100px', right: '-100px', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(184,134,11,0.1) 0%, transparent 70%)', pointerEvents: 'none' }} />
-          <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 420px', gap: '60px', alignItems: 'center', position: 'relative' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 420px', gap: '60px', alignItems: 'center', position: 'relative' }}>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#E8C547', marginBottom: '20px', fontFamily: 'DM Sans,sans-serif' }}>
                 <span style={{ width: '20px', height: '1px', background: '#B8860B' }} /> 100% Free Service
@@ -126,7 +126,7 @@ export default function CounsellingPage() {
 
         {/* Benefits */}
         <section style={{ padding: '80px 48px', background: '#F5F0E8' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '52px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#B8860B', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
                 <span style={{ width: '20px', height: '1px', background: '#B8860B' }} />What We Cover
@@ -150,7 +150,7 @@ export default function CounsellingPage() {
 
         {/* Testimonials */}
         <section style={{ padding: '80px 48px' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: '40px', color: '#0D1117', textAlign: 'center', marginBottom: '40px' }}>
               What Parents Say
             </h2>

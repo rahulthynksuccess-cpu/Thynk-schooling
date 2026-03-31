@@ -125,7 +125,7 @@ export default function PricingPage() {
 
         {/* Plans */}
         <section style={{ padding: '48px 48px 80px' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
               {PLANS.map((plan, i) => (
                 <motion.div key={plan.name} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * .09 }}
@@ -165,7 +165,7 @@ export default function PricingPage() {
         {/* Credit packages */}
         {packages && packages.length > 0 && (
           <section style={{ padding: '64px 48px', background: '#F5F0E8' }}>
-            <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+            <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
               <div style={{ textAlign: 'center', marginBottom: '40px' }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#B8860B', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
                   <span style={{ width: '20px', height: '1px', background: '#B8860B' }} />Bulk Credits
@@ -219,7 +219,7 @@ export default function PricingPage() {
 
         {/* Bottom CTA */}
         <section style={{ padding: '0 48px 80px' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             <div style={{ background: '#0D1117', borderRadius: '20px', padding: '52px', textAlign: 'center' }}>
               <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: '42px', color: '#FAF7F2', marginBottom: '12px' }}>
                 Ready to Get More <em style={{ fontStyle: 'italic', color: '#E8C547' }}>Admissions?</em>

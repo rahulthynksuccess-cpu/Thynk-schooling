@@ -32,7 +32,7 @@ export default function AboutPage() {
 
         {/* Hero */}
         <section style={{ padding: '80px 48px', background: 'linear-gradient(160deg, #F5F0E8 60%, #EDE5D8 100%)' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px', alignItems: 'center' }}>
             <div>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#B8860B', marginBottom: '18px', fontFamily: 'DM Sans,sans-serif' }}>
                 <span style={{ width: '20px', height: '1px', background: '#B8860B' }} />Our Story
@@ -73,7 +73,7 @@ export default function AboutPage() {
 
         {/* Values */}
         <section style={{ padding: '80px 48px', background: '#F5F0E8' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '52px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#B8860B', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
                 <span style={{ width: '20px', height: '1px', background: '#B8860B' }} />What We Stand For
@@ -94,7 +94,7 @@ export default function AboutPage() {
 
         {/* Team */}
         <section style={{ padding: '80px 48px' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '52px' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#B8860B', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
                 <span style={{ width: '20px', height: '1px', background: '#B8860B' }} />Our Team
@@ -118,7 +118,7 @@ export default function AboutPage() {
 
         {/* CTA */}
         <section style={{ padding: '0 48px 80px' }}>
-          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
             <div style={{ background: '#F5F0E8', borderRadius: '20px', padding: '52px', textAlign: 'center', border: '1px solid rgba(184,134,11,0.15)' }}>
               <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: '40px', color: '#0D1117', marginBottom: '12px' }}>
                 Join 1 Lakh+ Parents on <em style={{ fontStyle: 'italic', color: '#B8860B' }}>Thynk Schooling</em>

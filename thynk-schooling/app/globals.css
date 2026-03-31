@@ -3,6 +3,19 @@
 @tailwind utilities;
 
 /* ── Theme CSS vars — controlled via Admin Theme Controller ── */
+
+/* ── Admin & Auth dark theme CSS vars (controllable via Theme admin) ── */
+:root {
+  --admin-bg: #0A0F1A;
+  --admin-sidebar-bg: linear-gradient(180deg,#0D1117 0%,#111820 100%);
+  --admin-card-bg: rgba(255,255,255,0.04);
+  --admin-border: rgba(255,255,255,0.07);
+  --admin-accent: #B8860B;
+  --admin-text: rgba(255,255,255,0.7);
+  --auth-bg: #0A0F1A;
+  --auth-card-bg: rgba(255,255,255,0.04);
+}
+
 :root {
   --nav-bg: rgba(250,247,242,0.95); --nav-size:14px; --nav-color:#4A5568; --nav-weight:400;
   --hero-bg:#FAF7F2; --hero-bg-grad:#F0EAD6;
