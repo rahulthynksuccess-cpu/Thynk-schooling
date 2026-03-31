@@ -81,6 +81,20 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
+    label: 'Homepage', icon: '🏠', contentKey: 'home_images',
+    sections: [
+      {
+        id: 'home-images', label: 'Homepage Images (Editable)',
+        fields: [
+          { id:'heroImage',        label:'Hero right-side image URL',   type:'text',    default:'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=900&q=85&auto=format&fit=crop' },
+          { id:'featuredBg',       label:'Featured Schools section BG', type:'text',    default:'' },
+          { id:'counsellingImage', label:'Counselling section image',   type:'text',    default:'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&q=80&auto=format&fit=crop' },
+          { id:'aboutImage',       label:'About page hero image',       type:'text',    default:'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=900&q=80&auto=format&fit=crop' },
+        ],
+      },
+    ],
+  },
+  {
     label: 'Navbar', icon: '📌', contentKey: 'navbar',
     sections: [
       {
@@ -397,41 +411,42 @@ const inp: React.CSSProperties = { width:'100%', padding:'9px 12px', background:
 const lbl: React.CSSProperties = { display:'block', fontSize:'10px', fontWeight:600, letterSpacing:'1.2px', textTransform:'uppercase' as const, color:'#718096', fontFamily:'Inter,sans-serif', marginBottom:'5px' }
 
 function FieldRow({ field, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {
+  const v = value  // value is always pre-populated with default; never empty
   return (
     <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'10px 0', borderBottom:'1px solid rgba(13,17,23,0.05)' }}>
       <label style={{ ...lbl, marginBottom:0, minWidth:'180px', flexShrink:0 }}>{field.label}</label>
       <div style={{ flex:1 }}>
         {field.type === 'color' && (
           <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-            <input type="color" value={value || field.default}
+            <input type="color" value={v.startsWith('#') ? v : '#000000'}
               onChange={e => onChange(e.target.value)}
               style={{ width:36, height:32, border:'1.5px solid #EDE5D8', borderRadius:'7px', padding:'2px', cursor:'pointer', background:'none', flexShrink:0 }} />
-            <input type="text" value={value || field.default}
+            <input type="text" value={v}
               onChange={e => onChange(e.target.value)}
               style={{ ...inp, fontFamily:'monospace', fontSize:'12px', maxWidth:'160px' }} />
           </div>
         )}
         {field.type === 'size' && (
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-            <input type="range" min={field.min || 8} max={field.max || 100} value={Number(value || field.default)}
+            <input type="range" min={field.min || 8} max={field.max || 100} value={Number(v) || field.min || 8}
               onChange={e => onChange(e.target.value)}
               style={{ flex:1, accentColor:'#B8860B', cursor:'pointer' }} />
             <span style={{ fontFamily:'monospace', fontSize:'12px', fontWeight:700, color:'#B8860B', minWidth:'52px', textAlign:'right' as const }}>
-              {value || field.default}px
+              {v}px
             </span>
           </div>
         )}
         {field.type === 'text' && (
-          <input type="text" value={value || ''} placeholder={field.default}
+          <input type="text" value={v}
             onChange={e => onChange(e.target.value)} style={inp} />
         )}
         {field.type === 'textarea' && (
-          <textarea value={value || ''} placeholder={field.default}
+          <textarea value={v}
             onChange={e => onChange(e.target.value)}
             style={{ ...inp, resize:'vertical' as const, lineHeight:1.6 }} rows={2} />
         )}
       </div>
-      <button onClick={() => onChange('')} title="Reset to default"
+      <button onClick={() => onChange(field.default)} title="Reset to default"
         style={{ padding:'4px 8px', borderRadius:'6px', border:'1px solid #EDE5D8', background:'transparent', color:'#A0ADB8', cursor:'pointer', fontSize:'11px', flexShrink:0 }}>
         Reset
       </button>
@@ -452,23 +467,25 @@ export default function AdminContentPage() {
   useEffect(() => {
     if (loadedRef.current) return
     loadedRef.current = true
+    // Pre-populate every field with its default value first
+    const defaults: Record<string,string> = {}
+    PAGES.forEach(p => p.sections.forEach(s => s.fields.forEach(f => { defaults[f.id] = f.default })))
+    // Then fetch DB values and override defaults
     fetch('/api/admin/content', { cache:'no-store' })
       .then(r => r.json())
       .then(data => {
-        const merged: Record<string,string> = {}
+        const fromDB: Record<string,string> = {}
         if (data) {
-          Object.entries(data).forEach(([key, val]: [string, any]) => {
+          Object.entries(data).forEach(([, val]: [string, any]) => {
             if (val && typeof val === 'object' && !Array.isArray(val)) {
-              Object.entries(val).forEach(([k, v]) => {
-                if (typeof v === 'string') merged[k] = v
-              })
+              Object.entries(val).forEach(([k, v]) => { if (typeof v === 'string') fromDB[k] = v })
             }
           })
-          if (data['content.styles']) Object.assign(merged, data['content.styles'])
+          if (data['content.styles']) Object.assign(fromDB, data['content.styles'])
         }
-        setValues(merged)
+        setValues({ ...defaults, ...fromDB })
       })
-      .catch(() => {})
+      .catch(() => setValues(defaults))
   }, [])
 
   const set = useCallback((id: string, v: string) => {
@@ -599,7 +616,7 @@ export default function AdminContentPage() {
               {openSections[section.id] && (
                 <div style={{ padding:'0 16px 8px' }}>
                   {section.fields.map(field => (
-                    <FieldRow key={field.id} field={field} value={values[field.id] || ''} onChange={v => set(field.id, v)} />
+                    <FieldRow key={field.id} field={field} value={values[field.id] ?? field.default} onChange={v => set(field.id, v)} />
                   ))}
                 </div>
               )}

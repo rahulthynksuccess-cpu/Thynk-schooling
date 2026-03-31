@@ -60,7 +60,14 @@ export default function AdminSEOPage() {
   const [showPresets, setShowPresets] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  // Cache params per page so switching pages doesn't wipe unsaved edits
+  const pageCache = useRef<Record<string, Param[]>>({})
+
   useEffect(() => {
+    if (pageCache.current[activePage]) {
+      setParams(pageCache.current[activePage])
+      return
+    }
     setLoading(true)
     fetch(`/api/admin/seo?page=${activePage}`, { cache: 'no-store' })
       .then(r => r.json())
@@ -68,11 +75,17 @@ export default function AdminSEOPage() {
         const loaded: Param[] = Object.entries(d.data || {}).map(([k, v]) => ({
           key: k, value: v as string, id: Math.random().toString(36).slice(2),
         }))
+        pageCache.current[activePage] = loaded
         setParams(loaded)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [activePage])
+
+  // Keep cache in sync when params change
+  useEffect(() => {
+    if (!loading) pageCache.current[activePage] = params
+  }, [params, activePage, loading])
 
   const save = async () => {
     setSaving(true)

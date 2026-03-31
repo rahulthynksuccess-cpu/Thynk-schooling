@@ -10,9 +10,11 @@ export async function GET() {
   await ensureTable()
   try {
     const res = await db.query("SELECT value FROM site_settings WHERE key = 'theme'")
-    if (!res.rows.length) return Response.json({ theme: null })
-    return Response.json({ theme: JSON.parse(res.rows[0].value) })
-  } catch { return Response.json({ theme: null }) }
+    const theme = res.rows.length ? JSON.parse(res.rows[0].value) : null
+    return Response.json({ theme }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' }
+    })
+  } catch { return Response.json({ theme: null }, { headers: { 'Cache-Control': 'no-store' } }) }
 }
 
 export async function POST(req: NextRequest) {

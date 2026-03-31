@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
     const out: Record<string,any> = {}
     pages.rows.forEach((r: any) => { try { out[r.key] = JSON.parse(r.value) } catch { out[r.key] = r.value } })
     settings.rows.forEach((r: any) => { try { out[r.key] = JSON.parse(r.value) } catch { out[r.key] = r.value } })
-    return Response.json(out)
-  } catch { return Response.json({}) }
+    return Response.json(out, { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } })
+  } catch { return Response.json({}, { headers: { 'Cache-Control': 'no-store' } }) }
 }
 
 export async function POST(req: NextRequest) {

@@ -925,15 +925,18 @@ export default function AdminThemePage() {
               style={{ width:'100%', height:'640px', border:'none', display:'block' }}
               title="Page Preview"
               onLoad={() => {
-                // Re-send current theme vars after iframe finishes loading
-                setTimeout(() => {
+                // Send theme vars after iframe loads — retry at 800ms and 2s
+                // to ensure ContentStyleInjector's useEffect has run
+                const send = () => {
                   try {
                     iframeRef.current?.contentWindow?.postMessage(
-                      { type: 'TS_THEME_VARS', cssText: buildThemeCssText(theme) },
-                      '*'
+                      { type: 'TS_THEME_VARS', cssText: buildThemeCssText(theme) }, '*'
                     )
                   } catch (_) {}
-                }, 300)
+                }
+                setTimeout(send, 500)
+                setTimeout(send, 1200)
+                setTimeout(send, 2500)
               }}
             />
           </div>
