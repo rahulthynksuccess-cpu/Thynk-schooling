@@ -6,7 +6,7 @@ import { MapPin, ArrowRight, Star, BookOpen } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
 
 const S = (bg='#FAF7F2') => ({ background: bg, padding: '96px 0' } as React.CSSProperties)
-const C = { maxWidth:'1160px', margin:'0 auto', padding:'0 48px' } as React.CSSProperties
+const C = { maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(20px,5vw,80px)' } as React.CSSProperties
 
 // ─── CITIES ────────────────────────────────────────────────────
 const CITY_EMOJI: Record<string,string> = { delhi:'🏛️', mumbai:'🌊', bangalore:'🌿', hyderabad:'💎', chennai:'🎭', pune:'📚', kolkata:'🎨', ahmedabad:'🏗️', jaipur:'🏰', lucknow:'🌸' }

@@ -40,7 +40,7 @@ export function Navbar() {
           ? 'bg-[rgba(250,247,242,0.95)] backdrop-blur-md border-b border-[rgba(13,17,23,0.08)] shadow-[0_2px_20px_rgba(13,17,23,0.06)]'
           : 'bg-transparent'
       )}>
-        <div className="max-w-[1160px] mx-auto px-12">
+        <div className="max-w-[1400px] mx-auto px-12">
           <div className="flex items-center justify-between h-[72px]">
 
             {/* Logo */}
@@ -126,7 +126,7 @@ export function Navbar() {
             exit={{ opacity:0, height:0 }} transition={{ duration:.22 }}
             className="fixed top-[72px] left-0 right-0 z-40 overflow-hidden"
             style={{ background: 'var(--nav-bg,rgba(250,247,242,0.97))', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(13,17,23,0.08)' }}>
-            <div className="max-w-[1160px] mx-auto px-12 py-6 flex flex-col gap-1">
+            <div className="max-w-[1400px] mx-auto px-12 py-6 flex flex-col gap-1">
               {NAV.map(l => (
                 <Link key={l.href} href={l.href} className="nav-link px-2 py-3 text-sm">{l.label}</Link>
               ))}
