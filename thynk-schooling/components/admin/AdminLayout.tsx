@@ -8,7 +8,7 @@ import {
   TrendingUp, DollarSign, Package, Settings, Palette,
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
   BarChart3, FileText, ChevronRight, ExternalLink, Mail,
-  AlertTriangle, Image as ImageIcon
+  AlertTriangle, Image as ImageIcon, MapPin
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -75,6 +75,7 @@ const NAV_GROUPS = [
       { icon: Bell,     label: 'Notifications', href: '/admin/notifications', color: '#7A6A52' },
       { icon: BarChart3,label: 'SEO Manager',   href: '/admin/seo',           color: '#7A6A52' },
       { icon: ImageIcon,label: 'Media & Brand', href: '/admin/media',         color: '#7A6A52' },
+      { icon: MapPin,   label: 'SEO Cities',   href: '/admin/cities',        color: '#7A6A52' },
     ],
   },
 ]

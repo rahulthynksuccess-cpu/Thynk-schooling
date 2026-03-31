@@ -10,8 +10,8 @@ const LINKS = {
   'Legal':       [['Privacy Policy','/privacy'],['Terms of Service','/terms'],['Refund Policy','/refund'],['Grievance Officer','/grievance']],
 }
 
-// All 40 cities for SEO
-const ALL_CITIES = [
+// Cities loaded from DB (managed via Admin → Cities), fallback to hardcoded list
+const FALLBACK_CITIES = [
   'Delhi','Mumbai','Bangalore','Hyderabad','Chennai','Pune','Kolkata','Ahmedabad',
   'Jaipur','Lucknow','Surat','Kochi','Chandigarh','Nagpur','Indore','Bhopal',
   'Vadodara','Gurgaon','Noida','Coimbatore','Visakhapatnam','Mysore','Nashik',
@@ -19,14 +19,23 @@ const ALL_CITIES = [
   'Meerut','Faridabad','Amritsar','Kolhapur','Thiruvananthapuram','Srinagar',
   'Jodhpur','Aurangabad','Raipur','Vijayawada','Rajkot','Madurai','Jabalpur',
   'Jalandhar','Udaipur','Mangalore','Hubli','Thane','Navi Mumbai','Pimpri',
+  'Ludhiana','Kanpur','Allahabad','Ghaziabad','Howrah','Solapur','Tiruchirappalli',
+  'Bareilly','Moradabad','Gwalior','Aligarh','Saharanpur','Gorakhpur','Warangal',
+  'Guntur','Bhiwandi','Cuttack','Kota','Durgapur','Ajmer','Siliguri','Kozhikode',
+  'Thrissur','Bikaner','Nellore','Jammu','Shillong','Panaji','Shimla','Haridwar',
+  'Rishikesh','Mathura','Vrindavan','Ayodhya','Dharamshala','Nainital',
 ]
 
 type Media = Record<string,string>
 
 export function Footer() {
   const [media, setMedia] = useState<Media>({})
+  const [dbCities, setDbCities] = useState<{name:string;slug:string}[]>([])
   useEffect(() => {
     fetch('/api/admin/media', { cache: 'no-store' }).then(r => r.json()).then(d => setMedia(d.data || {})).catch(() => {})
+    fetch('/api/admin/cities', { cache: 'no-store' }).then(r => r.json()).then(d => {
+      if (d.cities?.length) setDbCities(d.cities)
+    }).catch(() => {})
   }, [])
 
   const socialLinks = [
@@ -113,8 +122,8 @@ export function Footer() {
               Schools by City — India&apos;s Most Complete School Directory
             </p>
             <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-              {ALL_CITIES.map(city => (
-                <Link key={city} href={`/schools?city=${city.toLowerCase()}`} className="ft-city">
+              {(dbCities.length > 0 ? dbCities.map(c => c.name) : FALLBACK_CITIES).map(city => (
+                <Link key={city} href={`/schools?city=${city.toLowerCase().replace(/\s+/g,'-')}`} className="ft-city">
                   {city}
                 </Link>
               ))}
