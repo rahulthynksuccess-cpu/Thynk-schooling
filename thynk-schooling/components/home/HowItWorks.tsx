@@ -1,44 +1,68 @@
 'use client'
+import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
 import { useContent } from '@/hooks/useContent'
-import { motion, useInView } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
+import Link from 'next/link'
 
 const STEPS = [
-  { num:'01', emoji:'🔍', title:'Search & Discover',    desc:"AI-powered filters — city, board, fees, class — precisely matched to your child's profile and your preferences.",  col:'#B8860B' },
-  { num:'02', emoji:'⇌', title:'Compare Schools',      desc:'Side-by-side comparison of fees, facilities, ratings and admission criteria across multiple schools at once.',       col:'#4A5568' },
-  { num:'03', emoji:'📋', title:'Apply in One Click',  desc:'Fill the Common Admission Form once. Apply to multiple schools using your saved child profile — no repetition.',     col:'#B8860B' },
-  { num:'04', emoji:'✓',  title:'Track & Get Admitted', desc:'Real-time application status on your dashboard. Get notified at every stage — shortlisted, admitted, or waitlisted.', col:'#4A5568' },
+  { num:'01', title:'Search Schools',    desc:'Use our smart filters to find schools by city, board, fees, medium and 20+ more criteria.',   icon:'🔎', color:'#B8860B' },
+  { num:'02', title:'Compare & Review', desc:'Place schools side-by-side. Read authentic parent reviews and check verified ratings.',          icon:'📊', color:'#0A5F55' },
+  { num:'03', title:'Get Counselled',   desc:'Book a free 30-minute session with our expert counsellors to shortlist the right school.',       icon:'🧑‍💼', color:'#7A6A52' },
+  { num:'04', title:'Apply & Enrol',    desc:'Submit enquiries to multiple schools in one click and track all your applications in one place.', icon:'✅', color:'#B8860B' },
 ]
 
 export function HowItWorks() {
   const ref = useRef(null)
-  const inView = useInView(ref, { once:true, amount:.1 })
-  const raw = useContent('home')
-  const ct = raw ?? {}
+  const inView = useInView(ref, { once: true, amount: .1 })
+  const ct = useContent('home') ?? {}
+
   return (
-    <section ref={ref} style={{ background:'var(--how-bg,#FAF7F2)', padding:'96px 0' }}>
-      <div style={{ maxWidth:'1160px', margin:'0 auto', padding:'0 48px' }}>
-        <motion.div initial={{ opacity:0, y:18 }} animate={inView ? { opacity:1, y:0 } : {}} transition={{ duration:.6 }} style={{ textAlign:'center', marginBottom:'68px' }}>
-          <div className="eyebrow" style={{ justifyContent:'center' }}>How It Works</div>
-          <h2 className="section-title" style={{ fontSize:'var(--how-title-size,56px)', color:'var(--how-title-color,#0D1117)', marginBottom:'14px' }}>{ct.howTitle || <>Admission Made <em>Simple</em></>}</h2>
-          <p className="section-sub" style={{ margin:'0 auto', textAlign:'center' }}>From search to admission in 4 easy steps — completely free for parents.</p>
-        </motion.div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'0', position:'relative' }}>
-          <div style={{ position:'absolute', top:'36px', left:'12.5%', right:'12.5%', height:'1px', background:'linear-gradient(90deg, rgba(184,134,11,0.1), rgba(184,134,11,0.35), rgba(184,134,11,0.1))' }} />
-          {STEPS.map((s, i) => (
-            <motion.div key={s.num} initial={{ opacity:0, y:24 }} animate={inView ? { opacity:1, y:0 } : {}} transition={{ delay:i*.13, duration:.6 }}
-              style={{ display:'flex', flexDirection:'column', alignItems:'center', textAlign:'center', padding:'0 32px' }}>
-              <div style={{ position:'relative', width:'72px', height:'72px', borderRadius:'18px', background:'#fff', border:'1px solid rgba(13,17,23,0.09)', boxShadow:'0 4px 20px rgba(13,17,23,0.07)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'26px', marginBottom:'22px' }}>
-                {s.emoji}
-                <span style={{ position:'absolute', top:'-9px', right:'-9px', width:'22px', height:'22px', borderRadius:'50%', background:'#FAF7F2', border:`1px solid ${s.col}40`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px', fontFamily:'Inter,sans-serif', fontWeight:600, color: s.col }}>
-                  {i+1}
-                </span>
-              </div>
-              <div style={{ fontFamily:'Inter,sans-serif', fontSize:'10px', fontWeight:600, letterSpacing:'.14em', textTransform:'uppercase', color: s.col, marginBottom:'7px' }}>Step {s.num}</div>
-              <h3 style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:'19px', color:'#0D1117', marginBottom:'9px' }}>{s.title}</h3>
-              <p style={{ fontFamily:'Inter,sans-serif', fontSize:'13px', color:'#718096', lineHeight:1.65, fontWeight:300 }}>{s.desc}</p>
-            </motion.div>
-          ))}
+    <section ref={ref} style={{ background:'var(--how-bg,#FAF7F2)', padding:'clamp(60px,8vw,100px) 0', width:'100%' }}>
+      <div style={{ maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(20px,5vw,60px)' }}>
+
+        <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1.6fr)', gap:'clamp(40px,6vw,80px)', alignItems:'center' }}>
+
+          {/* Left: heading */}
+          <motion.div initial={{ opacity:0, x:-20 }} animate={inView?{opacity:1,x:0}:{}} transition={{ duration:.6 }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:8, fontFamily:'var(--font-sans,Inter),sans-serif', fontSize:11, fontWeight:600, letterSpacing:'.2em', textTransform:'uppercase', color:'var(--gold,#B8860B)', marginBottom:20 }}>
+              <span style={{ display:'block', width:22, height:1.5, background:'var(--gold,#B8860B)' }} />
+              How It Works
+            </div>
+            <h2 style={{ fontFamily:'var(--font-serif,"Cormorant Garamond"),Georgia,serif', fontWeight:700, fontSize:'var(--how-title-size,clamp(2.2rem,5vw,4rem))', color:'var(--how-title-color,#0D1117)', lineHeight:.95, letterSpacing:'-2px', marginBottom:24 }}>
+              {ct.howTitle || 'Admission'}
+              <em style={{ display:'block', fontStyle:'italic', color:'var(--gold,#B8860B)' }}>Made Simple</em>
+            </h2>
+            <p style={{ fontFamily:'var(--font-sans,Inter),sans-serif', fontSize:'clamp(14px,1.5vw,17px)', color:'var(--ink-muted,#4A5568)', lineHeight:1.75, fontWeight:300, marginBottom:36 }}>
+              From searching to enrolment — we guide you at every step. Completely free for parents.
+            </p>
+            <Link href="/schools" style={{ display:'inline-flex', alignItems:'center', gap:10, padding:'14px 28px', background:'var(--ink,#0D1117)', color:'var(--ivory,#FAF7F2)', borderRadius:10, fontFamily:'var(--font-sans,Inter),sans-serif', fontSize:14, fontWeight:600, textDecoration:'none', transition:'all .2s' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background='var(--gold,#B8860B)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background='var(--ink,#0D1117)' }}>
+              Start Your Search <ArrowRight style={{ width:16, height:16 }} />
+            </Link>
+          </motion.div>
+
+          {/* Right: steps */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'clamp(16px,2vw,24px)' }}>
+            {STEPS.map((step, i) => (
+              <motion.div key={step.num}
+                initial={{ opacity:0, x:20 }} animate={inView?{opacity:1,x:0}:{}}
+                transition={{ delay: i * 0.1, duration:.5 }}
+                style={{ display:'flex', gap:'clamp(16px,2vw,24px)', alignItems:'flex-start', background:'var(--surface,#fff)', borderRadius:'clamp(12px,1.5vw,16px)', padding:'clamp(18px,2vw,28px)', border:'1px solid rgba(13,17,23,0.07)', boxShadow:'0 2px 12px rgba(13,17,23,0.04)' }}>
+                <div style={{ width:'clamp(44px,5vw,56px)', height:'clamp(44px,5vw,56px)', borderRadius:'clamp(10px,1.2vw,14px)', background:`${step.color}12`, border:`1.5px solid ${step.color}25`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'clamp(20px,2.5vw,28px)', flexShrink:0 }}>
+                  {step.icon}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                    <span style={{ fontFamily:'var(--font-sans,Inter),sans-serif', fontSize:11, fontWeight:700, color:step.color, letterSpacing:'.1em' }}>{step.num}</span>
+                    <h3 style={{ fontFamily:'var(--font-serif,"Cormorant Garamond"),Georgia,serif', fontSize:'var(--how-step-title-size,clamp(16px,1.8vw,21px))', fontWeight:700, color:'var(--how-step-title-color,#0D1117)', margin:0 }}>{step.title}</h3>
+                  </div>
+                  <p style={{ fontFamily:'var(--font-sans,Inter),sans-serif', fontSize:'var(--how-step-desc-size,clamp(12px,1.2vw,14px))', color:'var(--how-step-desc-color,#4A5568)', lineHeight:1.65, margin:0, fontWeight:300 }}>{step.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </section>

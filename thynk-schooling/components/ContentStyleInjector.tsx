@@ -4,8 +4,10 @@ import { useEffect } from 'react'
 export function ContentStyleInjector() {
   useEffect(() => {
     // Set up postMessage listener FIRST so iframe messages aren't missed
+    let themeFromMessage = false
     const handleMessage = (event: MessageEvent) => {
       if (event.data?.type === 'TS_THEME_VARS' && typeof event.data.cssText === 'string') {
+        themeFromMessage = true
         let el = document.getElementById('ts-live-theme')
         if (!el) { el = document.createElement('style'); el.id = 'ts-live-theme'; document.head.appendChild(el) }
         el.textContent = event.data.cssText
@@ -27,7 +29,8 @@ export function ContentStyleInjector() {
           el.textContent = css
         }
 
-        // Fetch and inject theme CSS vars (always fresh)
+        // Fetch and inject theme CSS vars — skip if already set via postMessage (live preview)
+        if (themeFromMessage) return
         const tres = await fetch(`/api/admin/theme${bust}`, { cache: 'no-store' })
         const tdata = await tres.json()
         if (tdata?.theme) {

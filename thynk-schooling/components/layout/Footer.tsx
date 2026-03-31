@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
-import { GraduationCap, Mail, Phone, MapPin, Instagram, Twitter, Linkedin, Youtube } from 'lucide-react'
-import { config } from '@/lib/config'
+import { GraduationCap, Mail, Phone, MapPin, Instagram, Twitter, Linkedin, Youtube, Facebook } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 const LINKS = {
   'For Parents': [['Find Schools','/schools'],['Compare Schools','/compare'],['Free Counselling','/counselling'],['AI Recommendations','/recommendations'],['Admission Guide','/blog/admission-guide']],
@@ -9,68 +9,82 @@ const LINKS = {
   'Company':     [['About Us','/about'],['Blog','/blog'],['Careers','/careers'],['Press','/press'],['Contact Us','/contact']],
   'Legal':       [['Privacy Policy','/privacy'],['Terms of Service','/terms'],['Refund Policy','/refund'],['Grievance Officer','/grievance']],
 }
-const SOCIAL = [
-  { icon: Instagram, href: '#', label: 'Instagram' },
-  { icon: Twitter,   href: '#', label: 'Twitter'   },
-  { icon: Linkedin,  href: '#', label: 'LinkedIn'  },
-  { icon: Youtube,   href: '#', label: 'YouTube'   },
-]
-const CITIES = [
+
+// All 40 cities for SEO
+const ALL_CITIES = [
   'Delhi','Mumbai','Bangalore','Hyderabad','Chennai','Pune','Kolkata','Ahmedabad',
   'Jaipur','Lucknow','Surat','Kochi','Chandigarh','Nagpur','Indore','Bhopal',
   'Vadodara','Gurgaon','Noida','Coimbatore','Visakhapatnam','Mysore','Nashik',
   'Patna','Ranchi','Bhubaneswar','Guwahati','Dehradun','Agra','Varanasi',
   'Meerut','Faridabad','Amritsar','Kolhapur','Thiruvananthapuram','Srinagar',
-  'Jodhpur','Aurangabad','Raipur','Vijayawada',
+  'Jodhpur','Aurangabad','Raipur','Vijayawada','Rajkot','Madurai','Jabalpur',
+  'Jalandhar','Udaipur','Mangalore','Hubli','Thane','Navi Mumbai','Pimpri',
 ]
 
+type Media = Record<string,string>
+
 export function Footer() {
+  const [media, setMedia] = useState<Media>({})
+  useEffect(() => {
+    fetch('/api/admin/media', { cache: 'no-store' }).then(r => r.json()).then(d => setMedia(d.data || {})).catch(() => {})
+  }, [])
+
+  const socialLinks = [
+    { icon: Instagram, href: media.socialInstagram || '#', label: 'Instagram' },
+    { icon: Twitter,   href: media.socialTwitter   || '#', label: 'Twitter'   },
+    { icon: Linkedin,  href: media.socialLinkedin  || '#', label: 'LinkedIn'  },
+    { icon: Youtube,   href: media.socialYoutube   || '#', label: 'YouTube'   },
+    { icon: Facebook,  href: media.socialFacebook  || '#', label: 'Facebook'  },
+  ]
+
   return (
     <>
       <style>{`
-        .ft-link { color: rgba(250,247,242,0.4); text-decoration: none; font-size: 13px; font-weight: 300; transition: color .2s; font-family: Inter, sans-serif; }
-        .ft-link:hover { color: #B8860B; }
-        .ft-social { width:32px; height:32px; border-radius:7px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center; color:rgba(250,247,242,0.4); transition:all .2s; }
-        .ft-social:hover { color:#B8860B; border-color:rgba(184,134,11,0.3); background:rgba(184,134,11,0.06); }
-        .ft-city { display:inline-flex; align-items:center; font-family:Inter,sans-serif; font-size:11px; font-weight:400; color:rgba(250,247,242,0.4); padding:5px 12px; border-radius:100px; border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.03); cursor:pointer; transition:all .18s; text-decoration:none; }
-        .ft-city:hover { border-color:rgba(184,134,11,0.3); color:#B8860B; background:rgba(184,134,11,0.06); }
+        .ft-link{color:rgba(250,247,242,0.4);text-decoration:none;font-size:13px;font-weight:300;transition:color .2s;font-family:Inter,sans-serif}
+        .ft-link:hover{color:#B8860B}
+        .ft-social{width:32px;height:32px;border-radius:7px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;color:rgba(250,247,242,0.4);transition:all .2s}
+        .ft-social:hover{color:#B8860B;border-color:rgba(184,134,11,0.3);background:rgba(184,134,11,0.06)}
+        .ft-city{display:inline-flex;align-items:center;font-family:Inter,sans-serif;font-size:11px;color:rgba(250,247,242,0.4);padding:4px 10px;border-radius:100px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);transition:all .18s;text-decoration:none}
+        .ft-city:hover{border-color:rgba(184,134,11,0.3);color:#B8860B;background:rgba(184,134,11,0.05)}
       `}</style>
       <footer style={{ background:'var(--footer-bg,#0D1117)', color:'var(--footer-text-color,rgba(250,247,242,0.5))', fontFamily:'var(--font-sans,Inter),sans-serif', fontSize:'var(--footer-text-size,14px)' }}>
-        <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'0 clamp(16px,4vw,48px)' }}>
+        <div style={{ maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(16px,4vw,60px)' }}>
 
           {/* Main grid */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))', gap:'32px', padding:'60px 0 48px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(240px,1.4fr) repeat(4,1fr)', gap:'40px', padding:'64px 0 48px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
 
-            {/* Brand */}
+            {/* Brand column */}
             <div>
               <Link href="/" style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'18px', textDecoration:'none' }}>
-                <div style={{ width:'32px', height:'32px', borderRadius:'7px', background:'rgba(232,197,71,0.12)', border:'1px solid rgba(184,134,11,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <GraduationCap style={{ width:'15px', height:'15px', color:'#E8C547' }} />
-                </div>
-                <span style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:'17px', color:'#FAF7F2', letterSpacing:'-.2px' }}>
-                  Thynk<em style={{ fontStyle:'italic', color:'#B8860B' }}>Schooling</em>
-                </span>
+                {media.logoUrl ? (
+                  <img src={media.logoUrl} alt={media.brandName || 'Thynk Schooling'} style={{ height:32, objectFit:'contain' }} />
+                ) : (
+                  <>
+                    <div style={{ width:'32px', height:'32px', borderRadius:'7px', background:'rgba(232,197,71,0.12)', border:'1px solid rgba(184,134,11,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <GraduationCap style={{ width:'15px', height:'15px', color:'#E8C547' }} />
+                    </div>
+                    <span style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:'18px', color:'#FAF7F2', letterSpacing:'-.2px' }}>
+                      {media.brandName || <><span>Thynk</span><em style={{ fontStyle:'italic', color:'#B8860B' }}>Schooling</em></>}
+                    </span>
+                  </>
+                )}
               </Link>
-              <p style={{ fontSize:'13px', lineHeight:1.75, marginBottom:'22px', maxWidth:'240px', fontWeight:300 }}>
-                India&apos;s most trusted school admission platform. Connecting 1 lakh+ parents with 12,000+ verified schools pan-India.
+              <p style={{ fontSize:'13px', lineHeight:1.8, marginBottom:'22px', maxWidth:'260px', fontWeight:300, color:'rgba(250,247,242,0.4)' }}>
+                {media.tagline || "India's most trusted school admission platform. Connecting 1 lakh+ parents with 12,000+ verified schools."}
               </p>
-
-              {/* Contact */}
-              <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'20px' }}>
-                <a href="mailto:hello@thynkschooling.in" className="ft-link" style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                  <Mail style={{ width:'13px', height:'13px', flexShrink:0 }} /> hello@thynkschooling.in
+              <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'22px' }}>
+                <a href={`mailto:${media.contactEmail || 'hello@thynkschooling.in'}`} className="ft-link" style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <Mail style={{ width:'13px', height:'13px', flexShrink:0 }} /> {media.contactEmail || 'hello@thynkschooling.in'}
                 </a>
-                <a href="tel:+918800000000" className="ft-link" style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                  <Phone style={{ width:'13px', height:'13px', flexShrink:0 }} /> +91 88000 00000
+                <a href={`tel:${media.contactPhone || '+918800000000'}`} className="ft-link" style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                  <Phone style={{ width:'13px', height:'13px', flexShrink:0 }} /> {media.contactPhone || '+91 88000 00000'}
                 </a>
                 <span style={{ display:'flex', alignItems:'center', gap:'8px', fontSize:'13px', fontWeight:300, color:'rgba(250,247,242,0.4)' }}>
-                  <MapPin style={{ width:'13px', height:'13px', flexShrink:0 }} /> New Delhi, India
+                  <MapPin style={{ width:'13px', height:'13px', flexShrink:0 }} /> {media.contactAddress || 'New Delhi, India'}
                 </span>
               </div>
-
-              {/* Social */}
-              <div style={{ display:'flex', gap:'7px' }}>
-                {SOCIAL.map(({ icon: Icon, href, label }) => (
+              <div style={{ display:'flex', gap:'7px', flexWrap:'wrap' }}>
+                {socialLinks.map(({ icon: Icon, href, label }) => (
                   <a key={label} href={href} aria-label={label} className="ft-social">
                     <Icon style={{ width:'13px', height:'13px' }} />
                   </a>
@@ -81,40 +95,38 @@ export function Footer() {
             {/* Link columns */}
             {Object.entries(LINKS).map(([heading, links]) => (
               <div key={heading}>
-                <h4 style={{ fontFamily:'Inter,sans-serif', fontSize:'var(--footer-heading-size,12px)', fontWeight:600, letterSpacing:'.14em', textTransform:'uppercase', color:'var(--footer-link-hover,#B8860B)', marginBottom:'16px' }}>
+                <h4 style={{ fontFamily:'Inter,sans-serif', fontSize:'var(--footer-heading-size,11px)', fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'var(--footer-link-hover,#B8860B)', marginBottom:'18px' }}>
                   {heading}
                 </h4>
                 <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:'10px' }}>
                   {links.map(([label, href]) => (
-                    <li key={href}>
-                      <Link href={href} className="ft-link">{label}</Link>
-                    </li>
+                    <li key={href}><Link href={href} className="ft-link">{label}</Link></li>
                   ))}
                 </ul>
               </div>
             ))}
           </div>
 
-          {/* Cities */}
-          <div style={{ padding:'22px 0', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-            <p style={{ fontSize:'10px', fontWeight:500, letterSpacing:'.12em', textTransform:'uppercase', color:'rgba(184,134,11,0.5)', marginBottom:'12px' }}>
-              Schools by City
+          {/* Cities — full list for SEO */}
+          <div style={{ padding:'28px 0', borderBottom:'1px solid rgba(255,255,255,0.04)' }}>
+            <p style={{ fontSize:'10px', fontWeight:600, letterSpacing:'.16em', textTransform:'uppercase', color:'rgba(184,134,11,0.5)', marginBottom:'14px' }}>
+              Schools by City — India&apos;s Most Complete School Directory
             </p>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
-              {CITIES.map(city => (
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+              {ALL_CITIES.map(city => (
                 <Link key={city} href={`/schools?city=${city.toLowerCase()}`} className="ft-city">
-                  Schools in {city}
+                  {city}
                 </Link>
               ))}
             </div>
           </div>
 
           {/* Bottom */}
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px 0', borderTop:'1px solid rgba(255,255,255,0.05)', fontSize:'12px' }}>
-            <span style={{ color:'rgba(250,247,242,0.3)', fontWeight:300 }}>
-              © {new Date().getFullYear()} {config.app.name}. All rights reserved.
+          <div style={{ display:'flex', flexWrap:'wrap', justifyContent:'space-between', alignItems:'center', gap:'12px', padding:'20px 0', fontSize:'12px' }}>
+            <span style={{ color:'rgba(250,247,242,0.25)', fontWeight:300 }}>
+              © {new Date().getFullYear()} {media.brandName || 'Thynk Schooling'}. All rights reserved.
             </span>
-            <span style={{ color:'rgba(250,247,242,0.3)', display:'flex', alignItems:'center', gap:'4px', fontWeight:300 }}>
+            <span style={{ color:'rgba(250,247,242,0.25)', fontWeight:300 }}>
               Made with <span style={{ color:'#B8860B' }}>♥</span> for Indian Parents
             </span>
           </div>
