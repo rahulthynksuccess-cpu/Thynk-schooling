@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
               sort_order AS "sortOrder", is_active AS "isActive", parent_value AS "parentValue"
        FROM dropdown_options
        WHERE ${conditions.join(' AND ')}
-       ORDER BY sort_order ASC, label ASC`,
+       ORDER BY label ASC`,
       params
     )
     return NextResponse.json({ options: result.rows })

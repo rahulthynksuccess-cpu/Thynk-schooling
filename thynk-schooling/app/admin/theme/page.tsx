@@ -144,6 +144,9 @@ const PAGES = [
   { label:'🏫 For Schools CTA', url: '/',  sections:[{ key:'for-schools',  label:'For Schools CTA'  }]},
   { label:'⭐ Testimonials',    url: '/',  sections:[{ key:'testimonials',  label:'Testimonials'     }]},
   { label:'ℹ️ About Page',      url: '/about', sections:[{ key:'about',    label:'About Page'       }]},
+  { label:'📍 Cities Page',       url: '/cities', sections:[{ key:'cities-page', label:'Cities Page' }]},
+  { label:'🔒 Privacy/Terms',      url: '/privacy', sections:[{ key:'legal', label:'Legal Pages' }]},
+  { label:'📞 Contact/Careers',    url: '/contact', sections:[{ key:'contact-page', label:'Contact & Careers' }]},
   { label:'⚙️ Admin Panel',     url: '/admin', sections:[
     { key:'admin-overview', label:'Overview / Dashboard' },
     { key:'admin-style',    label:'Admin Sidebar & Cards' },

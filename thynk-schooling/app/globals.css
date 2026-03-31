@@ -312,3 +312,30 @@
   div[style*="repeat(6,1fr)"] { grid-template-columns: repeat(2,1fr) !important; }
   .stat-number { font-size: 28px !important; }
 }
+
+/* ── Mobile Responsiveness ── */
+@media (max-width: 768px) {
+  /* Full width on mobile */
+  [style*="maxWidth:'1400px'"], [style*="max-width: 1400px"], [style*="max-width:1400px"] { max-width: 100% !important; }
+  /* Fix grids to single column */
+  [style*="gridTemplateColumns:'minmax(0,1.1fr) minmax(0,0.9fr)'"] { grid-template-columns: 1fr !important; }
+  [style*="gridTemplateColumns:'minmax(0,1fr) minmax(0,1.6fr)'"] { grid-template-columns: 1fr !important; }
+  [style*="gridTemplateColumns:'repeat(4,1fr)'"] { grid-template-columns: repeat(2,1fr) !important; }
+  [style*="gridTemplateColumns:'repeat(5,1fr)'"] { grid-template-columns: repeat(2,1fr) !important; }
+  [style*="gridTemplateColumns:'minmax(240px,1.4fr) repeat(4,1fr)'"] { grid-template-columns: 1fr 1fr !important; }
+  [style*="grid-template-columns: 1fr 1fr auto"] { grid-template-columns: 1fr !important; }
+  /* Reduce padding on mobile */
+  section { padding-left: 16px !important; padding-right: 16px !important; }
+  /* Hero image hidden on mobile */
+  .hero-image-col { display: none !important; }
+  /* Navbar */
+  nav { padding: 0 16px !important; }
+  /* Admin sidebar hidden on mobile by default */
+  .admin-sidebar-desktop { display: none !important; }
+}
+@media (max-width: 480px) {
+  h1 { letter-spacing: -1px !important; }
+  [style*="gridTemplateColumns:'repeat(4,1fr)'"] { grid-template-columns: 1fr 1fr !important; }
+  [style*="gridTemplateColumns:'1fr 1fr 1fr'"] { grid-template-columns: 1fr !important; }
+  [style*="gridTemplateColumns:'1fr 1fr'"] { grid-template-columns: 1fr !important; }
+}
