@@ -6,20 +6,17 @@
 
 /* ── Admin & Auth dark theme CSS vars (controllable via Theme admin) ── */
 :root {
-  --admin-bg:         #0A0F1A;
-  --admin-sidebar-bg: linear-gradient(180deg,#0D1117 0%,#111820 100%);
-  --admin-header-bg:  rgba(13,17,23,0.95);
-  --admin-card-bg:    rgba(255,255,255,0.04);
-  --admin-border:     rgba(255,255,255,0.07);
-  --admin-accent:     #B8860B;
-  --admin-text:       rgba(255,255,255,0.9);
-  --admin-text-muted: rgba(255,255,255,0.45);
-  --admin-text-faint:  rgba(255,255,255,0.25);
-  --admin-header-bg:   rgba(13,17,23,0.98);
-  --admin-border-color: rgba(255,255,255,0.07);
-  --admin-sidebar-bg:  linear-gradient(180deg,#0D1117 0%,#111820 100%);
-  --auth-bg: #0A0F1A;
-  --auth-card-bg: rgba(255,255,255,0.04);
+  --admin-bg:          #080D14;
+  --admin-sidebar-bg:  linear-gradient(180deg,#0B1018 0%,#0F1623 100%);
+  --admin-header-bg:   rgba(8,13,20,0.98);
+  --admin-card-bg:     #0F1623;
+  --admin-border:      rgba(255,255,255,0.08);
+  --admin-accent:      #B8860B;
+  --admin-text:        rgba(255,255,255,0.92);
+  --admin-text-muted:  rgba(255,255,255,0.45);
+  --admin-text-faint:  rgba(255,255,255,0.22);
+  --auth-bg: #080D14;
+  --auth-card-bg: #0F1623;
 }
 
 :root {

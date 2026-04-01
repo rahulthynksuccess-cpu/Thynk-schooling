@@ -15,7 +15,7 @@ interface PricingConfig {
   leadExpiryDays: number
 }
 
-const card: React.CSSProperties = { background:'#111830', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', padding:'24px' }
+const card: React.CSSProperties = { background:'var(--admin-card-bg,#0F1623)', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', padding:'24px' }
 const label: React.CSSProperties = { display:'block', fontSize:'11px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'8px', fontFamily:'DM Sans,sans-serif' }
 const input: React.CSSProperties = { width:'100%', padding:'11px 14px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'8px', color:'#fff', fontSize:'14px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
 const hint: React.CSSProperties = { fontSize:'11px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginTop:'5px', fontFamily:'DM Sans,sans-serif' }

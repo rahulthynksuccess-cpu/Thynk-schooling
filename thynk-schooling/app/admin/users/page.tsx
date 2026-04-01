@@ -78,8 +78,8 @@ function exportCSV(users: AdminUser[]) {
 }
 
 /* ── Cell styles ── */
-const cell: React.CSSProperties   = { padding:'11px 13px', fontSize:'12px', fontFamily:'DM Sans,sans-serif', color:'var(--admin-text,rgba(255,255,255,0.9))', borderBottom:'1px solid #1E2A52', verticalAlign:'top' }
-const hdCell: React.CSSProperties = { padding:'9px 13px', fontSize:'10px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif', borderBottom:'1px solid #1E2A52', whiteSpace:'nowrap', background:'var(--admin-card-bg,rgba(255,255,255,0.02))' }
+const cell: React.CSSProperties   = { padding:'11px 13px', fontSize:'12px', fontFamily:'DM Sans,sans-serif', color:'var(--admin-text,rgba(255,255,255,0.9))', borderBottom:'1px solid var(--admin-border,rgba(255,255,255,0.08))', verticalAlign:'top' }
+const hdCell: React.CSSProperties = { padding:'9px 13px', fontSize:'10px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif', borderBottom:'1px solid var(--admin-border,rgba(255,255,255,0.08))', whiteSpace:'nowrap', background:'var(--admin-card-bg,rgba(255,255,255,0.02))' }
 
 /* ── Activity Drawer ── */
 function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => void }) {
@@ -96,11 +96,11 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 280 }}
       style={{ position:'fixed', top:0, right:0, bottom:0, width:'440px', zIndex:200,
-               background:'var(--admin-bg,#0D1117)', borderLeft:'1px solid #1E2A52',
+               background:'var(--admin-bg,#080D14)', borderLeft:'1px solid #1E2A52',
                boxShadow:'-12px 0 48px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
 
       {/* Header */}
-      <div style={{ padding:'20px', borderBottom:'1px solid #1E2A52', flexShrink:0 }}>
+      <div style={{ padding:'20px', borderBottom:'1px solid var(--admin-border,rgba(255,255,255,0.08))', flexShrink:0 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
           <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'18px', color:'#fff' }}>Activity Log</div>
           <button onClick={onClose}
@@ -143,9 +143,9 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
 
       {/* Log list */}
       {/* ── Terminal-style Log Viewer ── */}
-      <div style={{ flex:1, overflowY:'auto', background:'var(--admin-bg,#0D1117)', fontFamily:"'JetBrains Mono','Fira Code','Courier New',monospace" }}>
+      <div style={{ flex:1, overflowY:'auto', background:'var(--admin-bg,#080D14)', fontFamily:"'JetBrains Mono','Fira Code','Courier New',monospace" }}>
         {/* Log header bar */}
-        <div style={{ padding:'8px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:'8px', background:'var(--admin-bg,#161B22)', position:'sticky', top:0 }}>
+        <div style={{ padding:'8px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:'8px', background:'var(--admin-card-bg,#0F1623)', position:'sticky', top:0 }}>
           <div style={{ display:'flex', gap:'5px' }}>
             <div style={{ width:10, height:10, borderRadius:'50%', background:'#FF5F56' }} />
             <div style={{ width:10, height:10, borderRadius:'50%', background:'#FFBD2E' }} />
@@ -275,17 +275,17 @@ export default function AdminUsersPage() {
           { label:'Suspended',     value: users.filter(u=>!u.isActive).length,                color:'#F87171' },
         ].map((s,i) => (
           <motion.div key={s.label} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay:i*.06}}
-            style={{ background:'#111830', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'12px', padding:'14px 16px' }}>
+            style={{ background:'var(--admin-card-bg,#0F1623)', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'12px', padding:'14px 16px' }}>
             <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'26px', color:s.color, lineHeight:1, marginBottom:'4px' }}>{s.value}</div>
             <div style={{ fontSize:'10px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif', textTransform:'uppercase', letterSpacing:'.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background:'#111830', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', overflow:'hidden' }}>
+      <div style={{ background:'var(--admin-card-bg,#0F1623)', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', overflow:'hidden' }}>
 
         {/* Toolbar */}
-        <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'12px 14px', borderBottom:'1px solid #1E2A52' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'12px 14px', borderBottom:'1px solid var(--admin-border,rgba(255,255,255,0.08))' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', flex:1, background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'8px', padding:'8px 12px' }}>
             <Search style={{ width:13, height:13, color:'var(--admin-text-muted,rgba(255,255,255,0.45))', flexShrink:0 }} />
             <input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}}

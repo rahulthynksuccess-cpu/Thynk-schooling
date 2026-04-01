@@ -3,108 +3,87 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { motion } from 'framer-motion'
-import { Search, CheckCircle, XCircle, Eye, MapPin, Star, Filter } from 'lucide-react'
+import { Search, CheckCircle2, XCircle, Eye, MapPin, Star, Shield, Zap, Building2, ToggleLeft, ToggleRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
 interface AdminSchool {
-  id: string
-  name: string
-  slug: string
-  city: string
-  board: string[]
-  isVerified: boolean
-  isActive: boolean
-  isFeatured: boolean
-  avgRating: number
-  totalLeads: number
-  ownerPhone: string
-  createdAt: string
+  id: string; name: string; slug: string; city: string; board: string[]
+  isVerified: boolean; isActive: boolean; isFeatured: boolean
+  avgRating: number; totalLeads: number; ownerPhone: string; createdAt: string
 }
 
-const TABS = ['All', 'Pending Verification', 'Verified', 'Featured', 'Inactive']
-
-const cell: React.CSSProperties = { padding: '12px 14px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', color: 'var(--admin-text,rgba(255,255,255,0.9))', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }
-const hdCell: React.CSSProperties = { padding: '10px 14px', fontSize: '11px', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily: 'DM Sans, sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', whiteSpace: 'nowrap' }
+const TABS = ['All', 'Pending', 'Verified', 'Featured', 'Inactive']
 
 export default function AdminSchoolsPage() {
   const queryClient = useQueryClient()
-  const [tab, setTab]       = useState('All')
+  const [tab, setTab] = useState('All')
   const [search, setSearch] = useState('')
-  const [page, setPage]     = useState(1)
+  const [page, setPage] = useState(1)
 
   const params = new URLSearchParams({ page: String(page), limit: '20', search })
-  if (tab === 'Pending Verification') params.set('isVerified', 'false')
-  if (tab === 'Verified')             params.set('isVerified', 'true')
-  if (tab === 'Featured')             params.set('isFeatured', 'true')
-  if (tab === 'Inactive')             params.set('isActive', 'false')
+  if (tab === 'Pending')   params.set('isVerified', 'false')
+  if (tab === 'Verified')  params.set('isVerified', 'true')
+  if (tab === 'Featured')  params.set('isFeatured', 'true')
+  if (tab === 'Inactive')  params.set('isActive', 'false')
 
   const { data, isLoading } = useQuery<{ data: AdminSchool[]; total: number }>({
     queryKey: ['admin-schools', tab, search, page],
-    queryFn: () => fetch(`/api/admin/schools?${params.toString()}`,{cache:'no-store'}).then(r=>r.json()),
+    queryFn: () => fetch(`/api/admin/schools?${params}`, { cache: 'no-store' }).then(r => r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
-  const schools = data?.data ?? []
-  const total   = data?.total ?? 0
+  const inv = () => queryClient.invalidateQueries({ queryKey: ['admin-schools'] })
+  const mut = (body: any, id: string) =>
+    fetch(`/api/admin/schools?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json())
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-schools'] })
+  const verifyMut   = useMutation({ mutationFn: ({ id, v }: any) => mut({ isVerified: v }, id),   onSuccess: (_, { v }) => { toast.success(v ? '✓ School verified' : 'Verification removed'); inv() }, onError: () => toast.error('Failed') })
+  const featureMut  = useMutation({ mutationFn: ({ id, v }: any) => mut({ isFeatured: v }, id),  onSuccess: (_, { v }) => { toast.success(v ? '★ School featured' : 'Removed from featured'); inv() }, onError: () => toast.error('Failed') })
+  const activeMut   = useMutation({ mutationFn: ({ id, v }: any) => mut({ isActive: v }, id),    onSuccess: () => { toast.success('Status updated'); inv() }, onError: () => toast.error('Failed') })
 
-  const verifyMutation = useMutation({
-    mutationFn: ({ id, isVerified }: { id: string; isVerified: boolean }) =>
-      fetch(`/api/admin/schools?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isVerified})}).then(r=>r.json()),
-    onSuccess: (_, { isVerified }) => { toast.success(isVerified ? 'School verified!' : 'Verification removed.'); invalidate() },
-    onError: () => toast.error('Action failed.'),
-  })
+  const schools = data?.data ?? [], total = data?.total ?? 0
 
-  const featureMutation = useMutation({
-    mutationFn: ({ id, isFeatured }: { id: string; isFeatured: boolean }) =>
-      fetch(`/api/admin/schools?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isFeatured})}).then(r=>r.json()),
-    onSuccess: (_, { isFeatured }) => { toast.success(isFeatured ? 'School featured!' : 'Removed from featured.'); invalidate() },
-    onError: () => toast.error('Action failed.'),
-  })
-
-  const toggleActiveMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      fetch(`/api/admin/schools?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive})}).then(r=>r.json()),
-    onSuccess: () => { toast.success('Status updated.'); invalidate() },
-  })
+  const card: React.CSSProperties = { background: 'var(--admin-card-bg,#0F1623)', border: '1px solid var(--admin-border,rgba(255,255,255,0.08))', borderRadius: 14 }
 
   return (
     <AdminLayout title="Schools Manager" subtitle="Verify, feature and manage all schools on the platform">
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
 
-      {/* Summary stat row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
+      {/* Summary */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
         {[
-          { label: 'Total Schools',  value: total,  color: '#60A5FA' },
-          { label: 'Pending Review', value: schools.filter(s => !s.isVerified).length, color: '#FBBF24' },
-          { label: 'Verified',       value: schools.filter(s => s.isVerified).length,  color: '#4ADE80' },
-          { label: 'Featured',       value: schools.filter(s => s.isFeatured).length,  color: '#FF5C00' },
-        ].map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .07 }}
-            style={{ background: '#111830', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px 18px' }}>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '28px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value.toLocaleString()}</div>
-            <div style={{ fontSize: '11px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily: 'DM Sans, sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
-          </motion.div>
+          { label: 'Total', value: total, color: '#60A5FA', icon: Building2 },
+          { label: 'Pending Review', value: schools.filter(s => !s.isVerified).length, color: '#FBBF24', icon: XCircle },
+          { label: 'Verified', value: schools.filter(s => s.isVerified).length, color: '#34D399', icon: CheckCircle2 },
+          { label: 'Featured', value: schools.filter(s => s.isFeatured).length, color: '#B8860B', icon: Star },
+        ].map(({ label, value, color, icon: Icon }) => (
+          <div key={label} style={{ ...card, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: `${color}15`, border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon style={{ width: 18, height: 18, color }} />
+            </div>
+            <div>
+              <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 800, fontSize: 26, color, lineHeight: 1 }}>{value.toLocaleString()}</div>
+              <div style={{ fontSize: 11, color: 'var(--admin-text-muted,rgba(255,255,255,0.4))', fontFamily: 'DM Sans,sans-serif', marginTop: 3, textTransform: 'uppercase', letterSpacing: '.08em' }}>{label}</div>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Filters */}
-      <div style={{ background: '#111830', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', marginBottom: '0', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
-          {/* Search */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '8px 12px' }}>
-            <Search style={{ width: '15px', height: '15px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', flexShrink: 0 }} />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search school name, city, phone…"
-              style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--admin-text,rgba(255,255,255,0.9))', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', flex: 1 }} />
+      {/* Table card */}
+      <div style={{ ...card, overflow: 'hidden' }}>
+        {/* Filter bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 9, padding: '9px 13px' }}>
+            <Search style={{ width: 15, height: 15, color: 'rgba(255,255,255,0.35)', flexShrink: 0 }} />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder="Search school name, city, phone…"
+              style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--admin-text,rgba(255,255,255,0.9))', fontSize: 13, fontFamily: 'DM Sans,sans-serif', flex: 1, minWidth: 0 }} />
           </div>
-          {/* Tabs */}
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
             {TABS.map(t => (
               <button key={t} onClick={() => { setTab(t); setPage(1) }}
-                style={{ padding: '7px 14px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 500, fontFamily: 'DM Sans, sans-serif', background: tab === t ? '#FF5C00' : 'rgba(255,255,255,0.04)', color: tab === t ? '#fff' : '#8892B0', whiteSpace: 'nowrap' }}>
+                style={{ padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: tab === t ? 700 : 400, fontFamily: 'DM Sans,sans-serif', transition: 'all .15s', whiteSpace: 'nowrap',
+                  background: tab === t ? '#B8860B' : 'rgba(255,255,255,0.04)',
+                  color: tab === t ? '#fff' : 'rgba(255,255,255,0.45)' }}>
                 {t}
               </button>
             ))}
@@ -115,99 +94,78 @@ export default function AdminSchoolsPage() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr>
-                <th style={hdCell}>School</th>
-                <th style={hdCell}>City / Board</th>
-                <th style={hdCell}>Owner</th>
-                <th style={hdCell}>Rating</th>
-                <th style={hdCell}>Leads</th>
-                <th style={hdCell}>Status</th>
-                <th style={hdCell}>Actions</th>
+              <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                {['School', 'City / Board', 'Owner', 'Rating', 'Leads', 'Status', 'Actions'].map(h => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--admin-text-faint,rgba(255,255,255,0.3))', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.06))', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {isLoading
-                ? Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i}><td colSpan={7} style={{ padding: '12px 14px' }}>
-                      <div style={{ height: '36px', background: 'var(--admin-card-bg,#1E2A52)', borderRadius: '8px' }} />
-                    </td></tr>
-                  ))
+                ? [1,2,3,4,5,6,7,8].map(i => <tr key={i}><td colSpan={7} style={{ padding: '10px 16px' }}><div style={{ height: 36, background: 'rgba(255,255,255,0.04)', borderRadius: 8, animation: 'pulse 1.5s ease-in-out infinite' }} /></td></tr>)
                 : schools.length === 0
-                  ? <tr><td colSpan={7} style={{ ...cell, textAlign: 'center', padding: '40px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>No schools found.</td></tr>
-                  : schools.map(school => (
-                      <tr key={school.id} style={{ transition: 'background .15s' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
+                  ? <tr><td colSpan={7} style={{ padding: 48, textAlign: 'center', color: 'var(--admin-text-faint,rgba(255,255,255,0.3))', fontFamily: 'DM Sans,sans-serif', fontSize: 13 }}>No schools found.</td></tr>
+                  : schools.map(s => (
+                      <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background .15s' }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
 
-                        <td style={cell}>
-                          <div style={{ fontWeight: 500, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{school.name}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', marginTop: '2px' }}>/{school.slug}</div>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{s.name}</div>
+                          <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: 'var(--admin-text-faint,rgba(255,255,255,0.3))', marginTop: 2 }}>/{s.slug}</div>
                         </td>
 
-                        <td style={cell}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '3px' }}>
-                            <MapPin style={{ width: '11px', height: '11px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }} />
-                            <span style={{ color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>{school.city}</span>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 5 }}>
+                            <MapPin style={{ width: 11, height: 11, color: '#B8860B' }} />
+                            <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: 'var(--admin-text-muted,rgba(255,255,255,0.55))' }}>{s.city}</span>
                           </div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {school.board.slice(0, 2).map(b => (
-                              <span key={b} style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '100px', background: 'rgba(255,92,0,0.1)', color: '#FF7A2E', border: '1px solid rgba(255,92,0,0.2)' }}>{b}</span>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {s.board.slice(0, 2).map(b => (
+                              <span key={b} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: 'rgba(184,134,11,0.12)', color: '#B8860B', border: '1px solid rgba(184,134,11,0.2)' }}>{b}</span>
                             ))}
                           </div>
                         </td>
 
-                        <td style={{ ...cell, color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>{school.ownerPhone}</td>
+                        <td style={{ padding: '14px 16px', fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: 'var(--admin-text-muted,rgba(255,255,255,0.5))' }}>{s.ownerPhone}</td>
 
-                        <td style={cell}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Star style={{ width: '12px', height: '12px', fill: '#FBBF24', color: '#FBBF24' }} />
-                            <span>{school.avgRating.toFixed(1)}</span>
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Star style={{ width: 12, height: 12, fill: '#FBBF24', color: '#FBBF24' }} />
+                            <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontWeight: 600 }}>{s.avgRating.toFixed(1)}</span>
                           </div>
                         </td>
 
-                        <td style={{ ...cell, color: '#4ADE80', fontWeight: 600 }}>{school.totalLeads}</td>
+                        <td style={{ padding: '14px 16px', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 700, color: '#34D399' }}>{s.totalLeads}</td>
 
-                        <td style={cell}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                            {school.isVerified && (
-                              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '100px', background: 'rgba(74,222,128,0.1)', color: '#4ADE80', border: '1px solid rgba(74,222,128,0.2)', display: 'inline-flex', alignItems: 'center', gap: '3px', width: 'fit-content' }}>
-                                <CheckCircle style={{ width: '10px', height: '10px' }} /> Verified
-                              </span>
-                            )}
-                            {!school.isVerified && (
-                              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '100px', background: 'rgba(251,191,36,0.1)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.2)', display: 'inline-flex', alignItems: 'center', gap: '3px', width: 'fit-content' }}>
-                                <XCircle style={{ width: '10px', height: '10px' }} /> Pending
-                              </span>
-                            )}
-                            {school.isFeatured && (
-                              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '100px', background: 'rgba(255,92,0,0.1)', color: '#FF7A2E', border: '1px solid rgba(255,92,0,0.2)', width: 'fit-content' }}>★ Featured</span>
-                            )}
-                            {!school.isActive && (
-                              <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '100px', background: 'rgba(239,68,68,0.1)', color: '#F87171', border: '1px solid rgba(239,68,68,0.2)', width: 'fit-content' }}>Inactive</span>
-                            )}
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {s.isVerified
+                              ? <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'rgba(52,211,153,0.12)', color: '#34D399', border: '1px solid rgba(52,211,153,0.25)', display: 'inline-flex', alignItems: 'center', gap: 3, width: 'fit-content', fontWeight: 700, fontFamily: 'DM Sans,sans-serif' }}><CheckCircle2 style={{ width: 10, height: 10 }} /> Verified</span>
+                              : <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'rgba(251,191,36,0.12)', color: '#FBBF24', border: '1px solid rgba(251,191,36,0.25)', display: 'inline-flex', alignItems: 'center', gap: 3, width: 'fit-content', fontWeight: 700, fontFamily: 'DM Sans,sans-serif' }}><XCircle style={{ width: 10, height: 10 }} /> Pending</span>
+                            }
+                            {s.isFeatured && <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'rgba(184,134,11,0.12)', color: '#B8860B', border: '1px solid rgba(184,134,11,0.25)', width: 'fit-content', fontWeight: 700, fontFamily: 'DM Sans,sans-serif' }}>★ Featured</span>}
+                            {!s.isActive && <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 99, background: 'rgba(239,68,68,0.12)', color: '#F87171', border: '1px solid rgba(239,68,68,0.25)', width: 'fit-content', fontWeight: 700, fontFamily: 'DM Sans,sans-serif' }}>Inactive</span>}
                           </div>
                         </td>
 
-                        <td style={cell}>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                            <Link href={`/schools/${school.slug}`} target="_blank"
-                              style={{ padding: '6px 10px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontSize: '11px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <Eye style={{ width: '12px', height: '12px' }} /> View
+                        <td style={{ padding: '14px 16px' }}>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <Link href={`/schools/${s.slug}`} target="_blank"
+                              style={{ padding: '6px 10px', borderRadius: 7, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', fontSize: 11, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'DM Sans,sans-serif', transition: 'all .15s' }}>
+                              <Eye style={{ width: 12, height: 12 }} /> View
                             </Link>
-                            <button
-                              onClick={() => verifyMutation.mutate({ id: school.id, isVerified: !school.isVerified })}
-                              style={{ padding: '6px 10px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans, sans-serif', fontWeight: 600, background: school.isVerified ? 'rgba(239,68,68,0.1)' : 'rgba(74,222,128,0.1)', color: school.isVerified ? '#F87171' : '#4ADE80' }}>
-                              {school.isVerified ? 'Unverify' : 'Verify'}
+                            <button onClick={() => verifyMut.mutate({ id: s.id, v: !s.isVerified })}
+                              style={{ padding: '6px 11px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'DM Sans,sans-serif', fontWeight: 700, transition: 'all .15s', background: s.isVerified ? 'rgba(239,68,68,0.1)' : 'rgba(52,211,153,0.1)', color: s.isVerified ? '#F87171' : '#34D399' }}>
+                              {s.isVerified ? 'Unverify' : 'Verify'}
                             </button>
-                            <button
-                              onClick={() => featureMutation.mutate({ id: school.id, isFeatured: !school.isFeatured })}
-                              style={{ padding: '6px 10px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans, sans-serif', fontWeight: 600, background: school.isFeatured ? 'rgba(255,92,0,0.08)' : 'rgba(255,92,0,0.15)', color: '#FF7A2E' }}>
-                              {school.isFeatured ? 'Unfeature' : 'Feature'}
+                            <button onClick={() => featureMut.mutate({ id: s.id, v: !s.isFeatured })}
+                              style={{ padding: '6px 11px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 11, fontFamily: 'DM Sans,sans-serif', fontWeight: 700, background: 'rgba(184,134,11,0.12)', color: '#B8860B' }}>
+                              {s.isFeatured ? 'Unfeature' : 'Feature ★'}
                             </button>
-                            <button
-                              onClick={() => toggleActiveMutation.mutate({ id: school.id, isActive: !school.isActive })}
-                              style={{ padding: '6px 10px', borderRadius: '7px', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans, sans-serif', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>
-                              {school.isActive ? 'Deactivate' : 'Activate'}
+                            <button onClick={() => activeMut.mutate({ id: s.id, v: !s.isActive })}
+                              style={{ padding: '6px 11px', borderRadius: 7, border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', fontSize: 11, fontFamily: 'DM Sans,sans-serif', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.45)' }}>
+                              {s.isActive ? 'Deactivate' : 'Activate'}
                             </button>
                           </div>
                         </td>
@@ -220,19 +178,17 @@ export default function AdminSchoolsPage() {
 
         {/* Pagination */}
         {total > 20 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderTop: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
-            <span style={{ fontSize: '13px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily: 'DM Sans, sans-serif' }}>
-              Showing {((page - 1) * 20) + 1}–{Math.min(page * 20, total)} of {total}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderTop: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
+            <span style={{ fontSize: 12, color: 'var(--admin-text-muted,rgba(255,255,255,0.4))', fontFamily: 'DM Sans,sans-serif' }}>
+              Showing {(page - 1) * 20 + 1}–{Math.min(page * 20, total)} of {total.toLocaleString()}
             </span>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                style={{ padding: '7px 14px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', opacity: page === 1 ? .4 : 1 }}>
-                ← Prev
-              </button>
-              <button onClick={() => setPage(p => p + 1)} disabled={page * 20 >= total}
-                style={{ padding: '7px 14px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', opacity: page * 20 >= total ? .4 : 1 }}>
-                Next →
-              </button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {[['← Prev', page === 1, () => setPage(p => Math.max(1, p - 1))], ['Next →', page * 20 >= total, () => setPage(p => p + 1)]].map(([label, disabled, fn]: any) => (
+                <button key={label as string} onClick={fn} disabled={disabled}
+                  style={{ padding: '7px 16px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', cursor: disabled ? 'not-allowed' : 'pointer', fontSize: 12, fontFamily: 'DM Sans,sans-serif', opacity: disabled ? .4 : 1 }}>
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
         )}

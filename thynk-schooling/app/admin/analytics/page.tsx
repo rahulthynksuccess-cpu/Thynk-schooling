@@ -2,26 +2,30 @@
 export const dynamic = 'force-dynamic'
 import { useQuery } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { motion } from 'framer-motion'
-import { TrendingUp, TrendingDown, Users, School, DollarSign, Eye } from 'lucide-react'
+import { TrendingUp, TrendingDown, Users, School, DollarSign, Eye, FileCheck, Phone } from 'lucide-react'
 
-const card: React.CSSProperties = { background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', padding: '20px' }
+const card: React.CSSProperties = {
+  background: 'var(--admin-card-bg, #0F1623)',
+  border: '1px solid var(--admin-border, rgba(255,255,255,0.08))',
+  borderRadius: 14, padding: '20px 22px',
+}
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (!values?.length) return null
-  const max = Math.max(...values)
-  const min = Math.min(...values)
-  const range = max - min || 1
-  const w = 80, h = 32
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * w
-    const y = h - ((v - min) / range) * h
-    return `${x},${y}`
-  }).join(' ')
+  const max = Math.max(...values), min = Math.min(...values), range = max - min || 1
+  const w = 88, h = 36
+  const pts = values.map((v, i) => `${(i / (values.length - 1)) * w},${h - ((v - min) / range) * h}`).join(' ')
+  const last = pts.split(' ').pop()?.split(',')
   return (
-    <svg width={w} height={h} style={{ overflow: 'visible' }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={pts.split(' ').pop()?.split(',')[0]} cy={pts.split(' ').pop()?.split(',')[1]} r="3" fill={color} />
+    <svg width={w} height={h} style={{ overflow: 'visible', flexShrink: 0 }}>
+      <defs>
+        <linearGradient id={`g${color.replace('#','')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity=".3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      {last && <circle cx={last[0]} cy={last[1]} r="3.5" fill={color} />}
     </svg>
   )
 }
@@ -29,111 +33,85 @@ function Sparkline({ values, color }: { values: number[]; color: string }) {
 export default function AdminAnalyticsPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-analytics'],
-    queryFn: () => fetch('/api/admin/analytics',{cache:'no-store'}).then(r=>r.json()),
+    queryFn: () => fetch('/api/admin/analytics', { cache: 'no-store' }).then(r => r.json()),
     staleTime: 5 * 60 * 1000,
   })
 
-  const METRIC_CARDS = [
-    { icon: Users,      label: 'Total Users',    value: data?.totalUsers    || 0, trend: data?.usersTrend    || 0, color: '#60A5FA', spark: data?.usersDaily    },
-    { icon: School,     label: 'Total Schools',  value: data?.totalSchools  || 0, trend: data?.schoolsTrend  || 0, color: '#FF5C00', spark: data?.schoolsMonthly},
-    { icon: TrendingUp, label: 'Total Leads',    value: data?.totalLeads    || 0, trend: data?.leadsTrend    || 0, color: '#4ADE80', spark: data?.leadsDaily    },
-    { icon: DollarSign, label: 'Total Revenue',  value: data?.totalRevenue  || 0, trend: data?.revenueTrend  || 0, color: '#FBBF24', spark: data?.revenueMonthly, rupee: true },
-    { icon: Eye,        label: 'Page Views',     value: data?.totalViews    || 0, trend: data?.viewsTrend    || 0, color: '#A78BFA', spark: data?.viewsDaily    },
-    { icon: Users,      label: 'Applications',  value: data?.totalApps     || 0, trend: data?.appsTrend     || 0, color: '#F472B6', spark: data?.appsDaily     },
-  ]
+  const skel = (h = 32) => <div style={{ height: h, background: 'rgba(255,255,255,0.05)', borderRadius: 8, marginBottom: 8, animation: 'pulse 1.5s ease-in-out infinite' }} />
 
-  const TOP_CITIES   = data?.topCities   || []
-  const TOP_SCHOOLS  = data?.topSchools  || []
-  const TOP_SEARCHES = data?.topSearches || []
+  const METRICS = [
+    { icon: Users,     label: 'Total Users',    value: data?.totalUsers   || 0, trend: data?.usersTrend   || 0, color: '#60A5FA', spark: data?.usersDaily },
+    { icon: School,    label: 'Total Schools',  value: data?.totalSchools || 0, trend: data?.schoolsTrend || 0, color: '#B8860B', spark: data?.schoolsMonthly },
+    { icon: TrendingUp,label: 'Total Leads',    value: data?.totalLeads   || 0, trend: data?.leadsTrend   || 0, color: '#34D399', spark: data?.leadsDaily },
+    { icon: DollarSign,label: 'Revenue',        value: data?.totalRevenue || 0, trend: data?.revenueTrend || 0, color: '#F59E0B', spark: data?.revenueMonthly, rupee: true },
+    { icon: Eye,       label: 'Page Views',     value: data?.totalViews   || 0, trend: data?.viewsTrend   || 0, color: '#A78BFA', spark: data?.viewsDaily },
+    { icon: FileCheck, label: 'Applications',   value: data?.totalApps    || 0, trend: data?.appsTrend    || 0, color: '#FB923C', spark: data?.appsDaily },
+  ]
 
   return (
     <AdminLayout title="Analytics" subtitle="Platform performance, growth trends and key metrics">
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
 
-      {/* KPI grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '12px', marginBottom: '20px' }}>
-        {METRIC_CARDS.map((m, i) => {
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 20 }}>
+        {METRICS.map((m, i) => {
           const Icon = m.icon
-          const up   = m.trend >= 0
+          const up = m.trend >= 0
           return (
-            <motion.div key={m.label} initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.07 }}
-              style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${m.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon style={{ width: '18px', height: '18px', color: m.color }} />
+            <div key={m.label} style={{ ...card, display: 'flex', alignItems: 'flex-start', gap: 14, position: 'relative', overflow: 'hidden' }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,${m.color},${m.color}00)` }} />
+              <div style={{ width: 42, height: 42, borderRadius: 11, background: `${m.color}15`, border: `1px solid ${m.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon style={{ width: 19, height: 19, color: m.color }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '26px', color: 'var(--admin-text,rgba(255,255,255,0.9))', lineHeight: 1 }}>
-                  {m.rupee ? `₹${(m.value/100).toLocaleString('en-IN')}` : m.value.toLocaleString()}
+                <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 800, fontSize: 28, color: 'var(--admin-text,rgba(255,255,255,0.95))', lineHeight: 1 }}>
+                  {m.rupee ? `₹${(m.value / 100).toLocaleString('en-IN')}` : m.value.toLocaleString()}
                 </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.35)', marginTop: '3px', fontFamily: 'DM Sans,sans-serif' }}>{m.label}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '5px' }}>
-                  {up ? <TrendingUp style={{ width: '11px', height: '11px', color: '#4ADE80' }} /> : <TrendingDown style={{ width: '11px', height: '11px', color: '#F87171' }} />}
-                  <span style={{ fontSize: '11px', color: up ? '#4ADE80' : '#F87171', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>
+                <div style={{ fontSize: 11, color: 'var(--admin-text-muted,rgba(255,255,255,0.4))', marginTop: 4, fontFamily: 'DM Sans,sans-serif' }}>{m.label}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 7 }}>
+                  {up ? <TrendingUp style={{ width: 11, height: 11, color: '#34D399' }} /> : <TrendingDown style={{ width: 11, height: 11, color: '#F87171' }} />}
+                  <span style={{ fontSize: 11, color: up ? '#34D399' : '#F87171', fontFamily: 'DM Sans,sans-serif', fontWeight: 700 }}>
                     {up ? '+' : ''}{m.trend}% this month
                   </span>
                 </div>
               </div>
-              {m.spark && <div style={{ flexShrink: 0, opacity: .6 }}><Sparkline values={m.spark} color={m.color} /></div>}
-            </motion.div>
+              {m.spark && <Sparkline values={m.spark} color={m.color} />}
+            </div>
           )
         })}
       </div>
 
-      {/* Bottom 3 cols */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
-
-        {/* Top cities */}
-        <div style={card}>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '16px' }}>Top Cities</h3>
-          {isLoading
-            ? Array.from({length:5}).map((_,i) => <div key={i} className="skeleton" style={{ height:28, marginBottom:6, background:'rgba(255,255,255,.04)', borderRadius:6 }} />)
-            : TOP_CITIES.length === 0
-              ? <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.25)', fontFamily: 'DM Sans,sans-serif' }}>No data yet.</p>
-              : TOP_CITIES.map((c: any, i: number) => (
-                  <div key={c.city} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
-                    <span style={{ fontFamily: 'Syne,sans-serif', fontSize: '14px', fontWeight: 900, color: 'rgba(255,255,255,.15)', minWidth: '20px' }}>0{i+1}</span>
-                    <span style={{ flex: 1, fontSize: '12px', fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontFamily: 'DM Sans,sans-serif' }}>{c.city}</span>
-                    <span style={{ fontSize: '12px', color: '#60A5FA', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>{c.count}</span>
-                  </div>
-                ))
-          }
-        </div>
-
-        {/* Top schools */}
-        <div style={card}>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '16px' }}>Top Schools by Leads</h3>
-          {isLoading
-            ? Array.from({length:5}).map((_,i) => <div key={i} style={{ height:28, marginBottom:6, background:'rgba(255,255,255,.04)', borderRadius:6 }} />)
-            : TOP_SCHOOLS.length === 0
-              ? <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.25)', fontFamily: 'DM Sans,sans-serif' }}>No data yet.</p>
-              : TOP_SCHOOLS.map((s: any, i: number) => (
-                  <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
-                    <span style={{ fontFamily: 'Syne,sans-serif', fontSize: '14px', fontWeight: 900, color: 'rgba(255,255,255,.15)', minWidth: '20px' }}>0{i+1}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontFamily: 'DM Sans,sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
-                      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif' }}>{s.city}</div>
+      {/* Bottom 3-col tables */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+        {[
+          { title: 'Top Cities', items: data?.topCities || [], key: 'city', val: 'count', color: '#60A5FA' },
+          { title: 'Top Schools by Leads', items: data?.topSchools || [], key: 'name', sub: 'city', val: 'leadCount', color: '#34D399' },
+          { title: 'Top Search Terms', items: data?.topSearches || [], key: 'term', val: 'count', color: '#F59E0B' },
+        ].map(({ title, items, key, val, sub, color }) => (
+          <div key={title} style={card}>
+            <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 14, color: 'var(--admin-text,rgba(255,255,255,0.95))', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, boxShadow: `0 0 8px ${color}` }} />
+              {title}
+            </div>
+            {isLoading
+              ? [1,2,3,4,5].map(i => <div key={i}>{skel()}</div>)
+              : items.length === 0
+                ? <p style={{ fontSize: 12, color: 'var(--admin-text-faint,rgba(255,255,255,0.25))', fontFamily: 'DM Sans,sans-serif' }}>No data yet</p>
+                : items.map((item: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 800, fontSize: 11, color: 'rgba(255,255,255,0.15)', minWidth: 20, textAlign: 'right' }}>
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontFamily: 'DM Sans,sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item[key]}</div>
+                        {sub && <div style={{ fontSize: 10, color: 'var(--admin-text-faint,rgba(255,255,255,0.3))', fontFamily: 'DM Sans,sans-serif' }}>{item[sub]}</div>}
+                      </div>
+                      <span style={{ fontSize: 12, color, fontFamily: 'DM Sans,sans-serif', fontWeight: 700, flexShrink: 0 }}>{item[val]}</span>
                     </div>
-                    <span style={{ fontSize: '12px', color: '#4ADE80', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>{s.leadCount}</span>
-                  </div>
-                ))
-          }
-        </div>
-
-        {/* Top searches */}
-        <div style={card}>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '16px' }}>Top Search Keywords</h3>
-          {isLoading
-            ? Array.from({length:5}).map((_,i) => <div key={i} style={{ height:28, marginBottom:6, background:'rgba(255,255,255,.04)', borderRadius:6 }} />)
-            : TOP_SEARCHES.length === 0
-              ? <p style={{ fontSize: '12px', color: 'rgba(255,255,255,.25)', fontFamily: 'DM Sans,sans-serif' }}>No data yet.</p>
-              : TOP_SEARCHES.map((s: any, i: number) => (
-                  <div key={s.term} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
-                    <span style={{ fontFamily: 'Syne,sans-serif', fontSize: '14px', fontWeight: 900, color: 'rgba(255,255,255,.15)', minWidth: '20px' }}>0{i+1}</span>
-                    <span style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: '#E2E8F0', fontFamily: 'DM Sans,sans-serif' }}>{s.term}</span>
-                    <span style={{ fontSize: '12px', color: '#FBBF24', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>{s.count}</span>
-                  </div>
-                ))
-          }
-        </div>
+                  ))
+            }
+          </div>
+        ))}
       </div>
     </AdminLayout>
   )
