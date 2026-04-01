@@ -43,6 +43,7 @@ async function getThemeVars(): Promise<string> {
   --font-sans:   '${t.fontSans  || 'Inter'}', system-ui, sans-serif;
   --radius:      ${px(t.radius, 12)};
   --radius-sm:   ${px(t.btnRadius, 6)};
+  --container-width: ${t.containerWidth || 1400}px;
   --nav-bg:                   ${t.navBg              || 'rgba(250,247,242,0.95)'};
   --nav-size:                 ${px(t.navSize, 14)};
   --nav-color:                ${t.navColor            || '#4A5568'};

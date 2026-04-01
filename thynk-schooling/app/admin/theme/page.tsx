@@ -18,6 +18,8 @@ const DEFAULT: Record<string, any> = {
   fontSerif: 'Cormorant Garamond', fontSans: 'Inter',
   /* Global radius */
   radius: 12, btnRadius: 6,
+  /* Container width */
+  containerWidth: 1400,
   /* Global typography */
   sizeBase: 16, sizeH1: 96, sizeH2: 60, sizeH3: 36, sizeH4: 22, sizeSmall: 13,
   weightBody: 300, weightHeading: 700, lineHeight: 160,
@@ -115,41 +117,88 @@ const PRESETS: Record<string, Record<string, any>> = {
 
 /* ─── Pages tree ─── */
 const PAGES = [
-  { label:'🌐 Global',          url: '/', sections:[
-    { key:'colours',     label:'Colour Palette'   },
-    { key:'typography',  label:'Typography Scale' },
-    { key:'fonts',       label:'Fonts & Buttons'  },
+  { label:'🌐 Global',               url: '/',                    sections:[
+    { key:'colours',         label:'Colour Palette'     },
+    { key:'typography',      label:'Typography & Width' },
+    { key:'fonts',           label:'Fonts & Buttons'    },
   ]},
-  { label:'🏠 Homepage',        url: '/', sections:[
-    { key:'navbar',      label:'Navbar'           },
-    { key:'hero',        label:'Hero Section'     },
-    { key:'stats',       label:'Stats Bar'        },
-    { key:'featured',    label:'Featured Schools' },
-    { key:'why',         label:'Why Choose Us'    },
-    { key:'how',         label:'How It Works'     },
-    { key:'footer',      label:'Footer'           },
+  { label:'🏠 Homepage',             url: '/',                    sections:[
+    { key:'navbar',          label:'Navbar'             },
+    { key:'hero',            label:'Hero Section'       },
+    { key:'stats',           label:'Stats Bar'          },
+    { key:'featured',        label:'Featured Schools'   },
+    { key:'why',             label:'Why Choose Us'      },
+    { key:'how',             label:'How It Works'       },
+    { key:'cities',          label:'Cities Section'     },
+    { key:'counsel-cta',     label:'Counselling CTA'    },
+    { key:'for-schools',     label:'For Schools CTA'    },
+    { key:'testimonials',    label:'Testimonials'       },
+    { key:'footer',          label:'Footer'             },
   ]},
-  { label:'🏫 Schools Page',    url: '/schools', sections:[
-    { key:'schools-list',label:'School Listing'   },
-    { key:'school-profile',label:'School Profile' },
+  { label:'🏫 Schools Page',         url: '/schools',             sections:[
+    { key:'schools-list',    label:'School Listing'     },
+    { key:'school-profile',  label:'School Profile'     },
   ]},
-  { label:'🔍 Counselling',     url: '/counselling', sections:[{ key:'counselling', label:'Counselling Page' }]},
-  { label:'⇌ Compare',         url: '/compare', sections:[{ key:'compare',     label:'Compare Page'     }]},
-  { label:'💰 Pricing',         url: '/pricing', sections:[{ key:'pricing',     label:'Pricing Page'     }]},
-  { label:'📝 Blog',            url: '/blog', sections:[{ key:'blog',        label:'Blog Page'        }]},
-  { label:'🔐 Login / Register', url: '/login', sections:[{ key:'login',       label:'Login & Register' }]},
-  { label:'📊 Dashboard',       url: '/dashboard/parent', sections:[{ key:'dashboard',   label:'Dashboard'        }]},
-  { label:'🏙️ Cities Section',  url: '/',  sections:[{ key:'cities',       label:'Cities Section'   }]},
-  { label:'📞 Counselling CTA', url: '/',  sections:[{ key:'counsel-cta',  label:'Counselling CTA'  }]},
-  { label:'🏫 For Schools CTA', url: '/',  sections:[{ key:'for-schools',  label:'For Schools CTA'  }]},
-  { label:'⭐ Testimonials',    url: '/',  sections:[{ key:'testimonials',  label:'Testimonials'     }]},
-  { label:'ℹ️ About Page',      url: '/about', sections:[{ key:'about',    label:'About Page'       }]},
-  { label:'📍 Cities Page',       url: '/cities', sections:[{ key:'cities-page', label:'Cities Page' }]},
-  { label:'🔒 Privacy/Terms',      url: '/privacy', sections:[{ key:'legal', label:'Legal Pages' }]},
-  { label:'📞 Contact/Careers',    url: '/contact', sections:[{ key:'contact-page', label:'Contact & Careers' }]},
-  { label:'⚙️ Admin Panel',     url: '/admin', sections:[
-    { key:'admin-overview', label:'Overview / Dashboard' },
-    { key:'admin-style',    label:'Admin Sidebar & Cards' },
+  { label:'🔐 Login / Register',     url: '/login',               sections:[
+    { key:'login',           label:'Login & Register'   },
+  ]},
+  { label:'👨‍👩‍👧 Parent Dashboard',    url: '/dashboard/parent',    sections:[
+    { key:'parent-dash',     label:'Parent Dashboard'   },
+  ]},
+  { label:'🏫 School Dashboard',     url: '/dashboard/school',    sections:[
+    { key:'school-dash',     label:'School Dashboard'   },
+  ]},
+  { label:'🔍 Counselling',          url: '/counselling',         sections:[
+    { key:'counselling',     label:'Counselling Page'   },
+  ]},
+  { label:'⇌ Compare',              url: '/compare',             sections:[
+    { key:'compare',         label:'Compare Page'       },
+  ]},
+  { label:'💰 Pricing',              url: '/pricing',             sections:[
+    { key:'pricing',         label:'Pricing Page'       },
+  ]},
+  { label:'📝 Blog',                 url: '/blog',                sections:[
+    { key:'blog',            label:'Blog Page'          },
+  ]},
+  { label:'ℹ️ About Page',           url: '/about',               sections:[
+    { key:'about',           label:'About Page'         },
+  ]},
+  { label:'📍 Cities Page',          url: '/cities',              sections:[
+    { key:'cities-page',     label:'Cities Page'        },
+  ]},
+  { label:'🔒 Privacy / Terms',      url: '/privacy',             sections:[
+    { key:'legal',           label:'Legal Pages'        },
+  ]},
+  { label:'📞 Contact / Careers',    url: '/contact',             sections:[
+    { key:'contact-page',    label:'Contact & Careers'  },
+  ]},
+  { label:'⚙️ Admin — Overview',     url: '/admin',               sections:[
+    { key:'admin-overview',  label:'Overview Dashboard'  },
+    { key:'admin-style',     label:'Sidebar & Cards'    },
+  ]},
+  { label:'📊 Admin — Analytics',    url: '/admin/analytics',     sections:[
+    { key:'admin-analytics', label:'Analytics Page'     },
+  ]},
+  { label:'🏫 Admin — Schools',      url: '/admin/schools',       sections:[
+    { key:'admin-schools',   label:'Schools Manager'    },
+  ]},
+  { label:'👥 Admin — Users',        url: '/admin/users',         sections:[
+    { key:'admin-users',     label:'Users Manager'      },
+  ]},
+  { label:'📋 Admin — Applications', url: '/admin/applications',  sections:[
+    { key:'admin-apps',      label:'Applications'       },
+  ]},
+  { label:'📈 Admin — Leads',        url: '/admin/leads',         sections:[
+    { key:'admin-leads',     label:'Leads Manager'      },
+  ]},
+  { label:'💳 Admin — Payments',     url: '/admin/payments',      sections:[
+    { key:'admin-payments',  label:'Payments'           },
+  ]},
+  { label:'⭐ Admin — Reviews',      url: '/admin/reviews',       sections:[
+    { key:'admin-reviews',   label:'Reviews'            },
+  ]},
+  { label:'📦 Admin — Packages',     url: '/admin/packages',      sections:[
+    { key:'admin-packages',  label:'Lead Packages'      },
   ]},
 ]
 
@@ -251,6 +300,7 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
             <WS label="Body weight"    k="weightBody"    t={t} onChange={onChange} />
             <WS label="Heading weight" k="weightHeading" t={t} onChange={onChange} />
             <SR label="Line height" k="lineHeight" min={130} max={220} unit="%" t={t} onChange={onChange} />
+            <SR label="Max page width" k="containerWidth" min={960} max={2400} unit="px" t={t} onChange={onChange} />
           </div>
         </G2>
       </div>
@@ -599,7 +649,119 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
         <CP label="Sidebar active colour" k="adminSidebarActiveColor" t={t} onChange={onChange} />
       </div>
     )
-        default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
+
+    case 'parent-dash': return (
+      <div>
+        <Heading text="Parent Dashboard" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="dashboardBg"          t={t} onChange={onChange} />
+            <CP label="Card background"  k="dashboardCardBg"      t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="dashboardHeadingColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Heading size" k="dashboardHeadingSize" min={18} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'school-dash': return (
+      <div>
+        <Heading text="School Dashboard" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="dashboardBg"          t={t} onChange={onChange} />
+            <CP label="Card background"  k="dashboardCardBg"      t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="dashboardHeadingColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Heading size" k="dashboardHeadingSize" min={18} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-analytics':
+    case 'admin-schools':
+    case 'admin-users':
+    case 'admin-apps':
+    case 'admin-leads':
+    case 'admin-payments':
+    case 'admin-reviews':
+    case 'admin-packages':
+    case 'admin-counselling':
+    case 'admin-settings':
+    case 'admin-seo':
+    case 'admin-media': return (
+      <div>
+        <Heading text="Admin Panel — Global Style" />
+        <G2>
+          <div>
+            <label style={lbl}>Admin Background</label>
+            <CP label="Page background"  k="adminBg"           t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminCardBg"       t={t} onChange={onChange} />
+            <CP label="Sidebar bg"       k="adminSidebarBg"    t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Admin Text</label>
+            <CP label="Heading colour"   k="adminHeadingColor" t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminSidebarActiveColor" t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminHeadingSize" min={16} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+        <div style={{ marginTop:12, padding:'12px', background:'rgba(184,134,11,0.06)', borderRadius:'8px', fontFamily:'Inter,sans-serif', fontSize:'12px', color:'#718096' }}>
+          💡 Admin pages share a global dark style. Changes here affect all admin tabs.
+        </div>
+      </div>
+    )
+
+    case 'cities-page': return (
+      <div>
+        <Heading text="Cities Directory Page" />
+        <G2>
+          <div>
+            <CP label="Background"   k="citiesPageBg"    t={t} onChange={onChange} />
+            <CP label="Title colour" k="citiesTitleColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Title size" k="citiesTitleSize" min={24} max={80} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'legal': return (
+      <div>
+        <Heading text="Privacy / Terms / Legal Pages" />
+        <G2>
+          <div>
+            <CP label="Background"   k="legalBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"    k="legalH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="legalH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'contact-page': return (
+      <div>
+        <Heading text="Contact & Careers Pages" />
+        <G2>
+          <div>
+            <CP label="Background"  k="contactBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"   k="contactH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="contactH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
   }
 }
 
@@ -624,6 +786,7 @@ function buildThemeCssText(t: Record<string,any>): string {
   --font-sans: '${co('fontSans','Inter')}', system-ui, sans-serif;
   --radius: ${px('radius',12)};
   --radius-sm: ${px('btnRadius',6)};
+  --container-width: ${t.containerWidth ?? 1400}px;
   --nav-bg: ${co('navBg','rgba(250,247,242,0.95)')};
   --nav-size: ${px('navSize',14)};
   --nav-color: ${co('navColor','#4A5568')};
@@ -690,6 +853,7 @@ function applyToDom(t: Record<string,any>) {
   s('--border',     String(t.border||'rgba(13,17,23,0.09)'))
   if (t.fontSerif) s('--font-serif', `'${t.fontSerif}', Georgia, serif`)
   if (t.fontSans)  s('--font-sans',  `'${t.fontSans}', system-ui, sans-serif`)
+  s('--container-width', `${t.containerWidth ?? 1400}px`)
   // Section vars
   s('--nav-bg',                    String(t.navBg||'rgba(250,247,242,0.95)'))
   s('--nav-size',                  `${t.navSize||13}px`)
@@ -923,23 +1087,25 @@ export default function AdminThemePage() {
             </div>
             <iframe
               ref={iframeRef}
-              key={PAGES[activePage]?.url}
+              key={`preview-${activePage}`}
               src={PAGES[activePage]?.url || '/'}
               style={{ width:'100%', height:'640px', border:'none', display:'block' }}
               title="Page Preview"
               onLoad={() => {
-                // Send theme vars after iframe loads — retry at 800ms and 2s
+                // Send theme vars after iframe loads — retry multiple times
                 // to ensure ContentStyleInjector's useEffect has run
+                const css = buildThemeCssText(theme)
                 const send = () => {
                   try {
                     iframeRef.current?.contentWindow?.postMessage(
-                      { type: 'TS_THEME_VARS', cssText: buildThemeCssText(theme) }, '*'
+                      { type: 'TS_THEME_VARS', cssText: css }, '*'
                     )
                   } catch (_) {}
                 }
-                setTimeout(send, 500)
-                setTimeout(send, 1200)
-                setTimeout(send, 2500)
+                setTimeout(send, 300)
+                setTimeout(send, 800)
+                setTimeout(send, 1800)
+                setTimeout(send, 3500)
               }}
             />
           </div>

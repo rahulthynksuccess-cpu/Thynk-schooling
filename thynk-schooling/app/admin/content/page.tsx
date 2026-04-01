@@ -8,11 +8,11 @@ import toast from 'react-hot-toast'
 type FieldType = 'text' | 'textarea' | 'color' | 'size'
 interface Field { id: string; label: string; type: FieldType; cssVar?: string; default: string; min?: number; max?: number }
 interface Section { id: string; label: string; fields: Field[] }
-interface PageGroup { label: string; icon: string; contentKey: string; sections: Section[] }
+interface PageGroup { label: string; icon: string; contentKey: string; previewUrl?: string; sections: Section[] }
 
 const PAGES: PageGroup[] = [
   {
-    label: 'Homepage', icon: '🏠', contentKey: 'home',
+    label: 'Homepage', icon: '🏠', contentKey: 'home', previewUrl: '/',
     sections: [
       {
         id: 'hero-text', label: 'Hero Section — Text',
@@ -81,7 +81,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Homepage', icon: '🏠', contentKey: 'home_images',
+    label: 'Homepage', icon: '🏠', contentKey: 'home_images', previewUrl: '/',
     sections: [
       {
         id: 'home-images', label: 'Homepage Images (Editable)',
@@ -95,7 +95,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Navbar', icon: '📌', contentKey: 'navbar',
+    label: 'Navbar', icon: '📌', contentKey: 'navbar', previewUrl: '/',
     sections: [
       {
         id: 'navbar', label: 'Navigation Bar',
@@ -113,7 +113,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Footer', icon: '🦶', contentKey: 'footer',
+    label: 'Footer', icon: '🦶', contentKey: 'footer', previewUrl: '/',
     sections: [
       {
         id: 'footer', label: 'Footer',
@@ -128,7 +128,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Schools Page', icon: '🏫', contentKey: 'schools',
+    label: 'Schools Page', icon: '🏫', contentKey: 'schools', previewUrl: '/schools',
     sections: [
       {
         id: 'schools', label: 'School Listing Page',
@@ -145,7 +145,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Login / Register', icon: '🔐', contentKey: 'auth',
+    label: 'Login / Register', icon: '🔐', contentKey: 'auth', previewUrl: '/login',
     sections: [
       {
         id: 'auth', label: 'Auth Pages',
@@ -163,7 +163,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Counselling Page', icon: '🎓', contentKey: 'counselling',
+    label: 'Counselling Page', icon: '🎓', contentKey: 'counselling', previewUrl: '/counselling',
     sections: [
       {
         id: 'counselling', label: 'Counselling Page',
@@ -179,7 +179,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Cities Section', icon: '🏙️', contentKey: 'cities',
+    label: 'Cities Section', icon: '🏙️', contentKey: 'cities', previewUrl: '/',
     sections: [
       { id: 'cities', label: 'Top Cities Section',
         fields: [
@@ -192,7 +192,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Counselling CTA', icon: '📞', contentKey: 'counselling-cta',
+    label: 'Counselling CTA', icon: '📞', contentKey: 'counselling-cta', previewUrl: '/',
     sections: [
       { id: 'counsel-cta', label: 'Counselling CTA Section',
         fields: [
@@ -209,7 +209,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'For Schools CTA', icon: '🏫', contentKey: 'for-schools',
+    label: 'For Schools CTA', icon: '🏫', contentKey: 'for-schools', previewUrl: '/',
     sections: [
       { id: 'schools-cta', label: 'For Schools Section',
         fields: [
@@ -223,7 +223,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Testimonials', icon: '⭐', contentKey: 'testimonials',
+    label: 'Testimonials', icon: '⭐', contentKey: 'testimonials', previewUrl: '/',
     sections: [
       { id: 'testimonials', label: 'Testimonials Section',
         fields: [
@@ -243,7 +243,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Blog Preview', icon: '📝', contentKey: 'blog-preview',
+    label: 'Blog Preview', icon: '📝', contentKey: 'blog-preview', previewUrl: '/',
     sections: [
       { id: 'blog', label: 'Blog Preview Section',
         fields: [
@@ -258,7 +258,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'School Profile Page', icon: '📋', contentKey: 'school-profile',
+    label: 'School Profile Page', icon: '📋', contentKey: 'school-profile', previewUrl: '/schools',
     sections: [
       { id: 'school-profile', label: 'School Profile Page',
         fields: [
@@ -272,7 +272,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Dashboard', icon: '📊', contentKey: 'dashboard',
+    label: 'Dashboard', icon: '📊', contentKey: 'dashboard', previewUrl: '/dashboard/parent',
     sections: [
       { id: 'dashboard', label: 'Dashboard Pages',
         fields: [
@@ -285,7 +285,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Compare Page', icon: '⇌', contentKey: 'compare',
+    label: 'Compare Page', icon: '⇌', contentKey: 'compare', previewUrl: '/compare',
     sections: [
       { id:'compare', label:'Compare Page',
         fields: [
@@ -297,7 +297,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Pricing Page', icon: '💰', contentKey: 'pricing',
+    label: 'Pricing Page', icon: '💰', contentKey: 'pricing', previewUrl: '/pricing',
     sections: [
       { id:'pricing', label:'Pricing Page',
         fields: [
@@ -311,7 +311,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Blog Page', icon: '📰', contentKey: 'blog',
+    label: 'Blog Page', icon: '📰', contentKey: 'blog', previewUrl: '/blog',
     sections: [
       { id:'blog', label:'Blog / Articles Page',
         fields: [
@@ -324,7 +324,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'About Page', icon: 'ℹ️', contentKey: 'about',
+    label: 'About Page', icon: 'ℹ️', contentKey: 'about', previewUrl: '/about',
     sections: [
       { id:'about', label:'About Page',
         fields: [
@@ -337,7 +337,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Admin Panel', icon: '⚙️', contentKey: 'admin-panel',
+    label: 'Admin Panel', icon: '⚙️', contentKey: 'admin-panel', previewUrl: '/admin',
     sections: [
       { id:'admin-overview', label:'Overview / Dashboard',
         fields: [
@@ -371,7 +371,7 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
-    label: 'Global Buttons', icon: '🔘', contentKey: 'buttons',
+    label: 'Global Buttons', icon: '🔘', contentKey: 'buttons', previewUrl: '/',
     sections: [
       {
         id: 'buttons', label: 'Button Styles',
@@ -629,18 +629,23 @@ export default function AdminContentPage() {
           <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden' }}>
             <div style={{ padding:'10px 14px', borderBottom:'1px solid rgba(13,17,23,0.07)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span style={{ fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase' as const, color:'#A0ADB8', fontFamily:'Inter,sans-serif' }}>Live Preview</span>
-              <a href="/" target="_blank" rel="noreferrer" style={{ fontSize:'11px', color:'#B8860B', textDecoration:'none', fontFamily:'Inter,sans-serif', fontWeight:600 }}>Open site ↗</a>
+              <a href={activePage?.previewUrl || '/'} target="_blank" rel="noreferrer" style={{ fontSize:'11px', color:'#B8860B', textDecoration:'none', fontFamily:'Inter,sans-serif', fontWeight:600 }}>Open ↗</a>
             </div>
             <div style={{ background:'#f0f0f0', padding:'6px 10px', display:'flex', gap:'5px', borderBottom:'1px solid rgba(13,17,23,0.07)', alignItems:'center' }}>
               <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF5F56' }} />
               <div style={{ width:7, height:7, borderRadius:'50%', background:'#FFBD2E' }} />
               <div style={{ width:7, height:7, borderRadius:'50%', background:'#27C93F' }} />
-              <div style={{ flex:1, background:'#fff', borderRadius:'3px', padding:'2px 8px', fontSize:'10px', color:'#999', fontFamily:'monospace', marginLeft:'4px' }}>thynkschooling.in</div>
+              <div style={{ flex:1, background:'#fff', borderRadius:'3px', padding:'2px 8px', fontSize:'10px', color:'#999', fontFamily:'monospace', marginLeft:'4px' }}>{activePage?.previewUrl || '/'}</div>
             </div>
-            <iframe src="/" style={{ width:'100%', height:'540px', border:'none', display:'block' }} title="Site Preview" />
+            <iframe
+              key={`content-preview-${activeGroup}`}
+              src={activePage?.previewUrl || '/'}
+              style={{ width:'100%', height:'540px', border:'none', display:'block' }}
+              title="Site Preview"
+            />
           </div>
           <p style={{ fontSize:'11px', color:'#A0ADB8', fontFamily:'Inter,sans-serif', textAlign:'center' as const, marginTop:'8px', lineHeight:1.5 }}>
-            Push to Site → changes appear here on reload
+            Save changes → reload preview to see updates
           </p>
         </div>
       </div>
