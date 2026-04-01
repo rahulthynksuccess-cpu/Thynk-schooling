@@ -41,7 +41,7 @@ export function ContentStyleInjector() {
   --border: ${co(t.border,'rgba(13,17,23,0.09)')};
   --font-serif: '${co(t.fontSerif,'Cormorant Garamond')}', Georgia, serif;--font-sans: '${co(t.fontSans,'Inter')}', system-ui, sans-serif;
   --radius: ${px(t.radius,12)};--radius-sm: ${px(t.btnRadius,6)};
-  --container-width: ${t.containerWidth ?? 1400}px;
+  --container-width: ${t.containerWidth ?? 1600}px;
   --nav-bg: ${co(t.navBg,'rgba(250,247,242,0.95)')};--nav-size: ${px(t.navSize,14)};--nav-color: ${co(t.navColor,'#4A5568')};--nav-weight: ${co(t.navWeight,400)};
   --hero-bg: ${co(t.heroBg,'#FAF7F2')};--hero-bg-grad: ${co(t.heroBgGrad,'#F0EAD6')};
   --hero-h1-size: ${px(t.heroH1Size,96)};--hero-h1-color: ${co(t.heroH1Color,'#0D1117')};
@@ -77,7 +77,7 @@ export function ContentStyleInjector() {
   --admin-text: ${co(t.adminText,'rgba(255,255,255,0.9)')};
   --admin-text-muted: ${co(t.adminTextMuted,'rgba(255,255,255,0.45)')};
   --admin-text-faint: ${co(t.adminTextFaint,'rgba(255,255,255,0.25)')};
-  --container-width: ${t.containerWidth ?? 1400}px;
+  --container-width: ${t.containerWidth ?? 1600}px;
 }`
           let tel = document.getElementById('ts-live-theme')
           if (!tel) { tel = document.createElement('style'); tel.id = 'ts-live-theme'; document.head.appendChild(tel) }
