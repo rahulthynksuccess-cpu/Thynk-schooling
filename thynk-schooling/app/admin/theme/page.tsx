@@ -16,6 +16,16 @@ const DEFAULT: Record<string, any> = {
   surface:     '#FFFFFF', border: 'rgba(13,17,23,0.09)',
   /* Fonts */
   fontSerif: 'Cormorant Garamond', fontSans: 'Inter',
+  /* Admin panel */
+  adminBg:         '#0A0F1A',
+  adminSidebarBg:  '#0D1117',
+  adminHeaderBg:   '#0D1117',
+  adminCardBg:     '#111820',
+  adminBorder:     '#1E2A3A',
+  adminAccent:     '#B8860B',
+  adminText:       'rgba(255,255,255,0.9)',
+  adminTextMuted:  'rgba(255,255,255,0.45)',
+  adminTextFaint:  'rgba(255,255,255,0.25)',
   /* Global radius */
   radius: 12, btnRadius: 6,
   /* Container width */
@@ -636,11 +646,30 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       </div>
     )
     case 'admin-overview': return (
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
-        <CP label="Page background"   k="adminBg"                 t={t} onChange={onChange} />
-        <CP label="Card background"   k="adminCardBg"             t={t} onChange={onChange} />
-        <CP label="Heading colour"    k="adminHeadingColor"       t={t} onChange={onChange} />
-        <SR label="Heading size"      k="adminHeadingSize"        t={t} onChange={onChange} min={16} max={40} />
+      <div>
+        <Heading text="Admin Panel — Page & Card Backgrounds" />
+        <G2>
+          <div>
+            <label style={lbl}>Backgrounds</label>
+            <CP label="Page background"    k="adminBg"        t={t} onChange={onChange} />
+            <CP label="Sidebar background" k="adminSidebarBg" t={t} onChange={onChange} />
+            <CP label="Header background"  k="adminHeaderBg"  t={t} onChange={onChange} />
+            <CP label="Card background"    k="adminCardBg"    t={t} onChange={onChange} />
+            <CP label="Border colour"      k="adminBorder"    t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Text & Accent</label>
+            <CP label="Accent / gold colour"  k="adminAccent"     t={t} onChange={onChange} />
+            <CP label="Primary text"          k="adminText"       t={t} onChange={onChange} />
+            <CP label="Muted text"            k="adminTextMuted"  t={t} onChange={onChange} />
+            <CP label="Faint text"            k="adminTextFaint"  t={t} onChange={onChange} />
+            <SR label="Heading size"          k="adminHeadingSize" min={16} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+        <div style={{ marginTop:12, padding:'10px 14px', background:'rgba(184,134,11,0.08)', borderRadius:'8px', fontFamily:'Inter,sans-serif', fontSize:'12px', color:'#718096', borderLeft:'3px solid #B8860B' }}>
+          💡 These changes apply to every admin page — Dashboard, Schools, Users, Analytics, etc.
+          <br/>Set dark backgrounds for a dark theme or light (#fff, #f9fafb) for a light admin panel.
+        </div>
       </div>
     )
     case 'admin-style': return (
@@ -833,6 +862,15 @@ function buildThemeCssText(t: Record<string,any>): string {
   --btn-gold-bg: ${co('btnGoldBg','#B8860B')};
   --btn-gold-color: ${co('btnGoldColor','#ffffff')};
   --btn-size: ${px('btnSize',14)};
+  --admin-bg: ${co('adminBg','#0A0F1A')};
+  --admin-sidebar-bg: ${co('adminSidebarBg','linear-gradient(180deg,#0D1117 0%,#111820 100%)')};
+  --admin-header-bg: ${co('adminHeaderBg','rgba(13,17,23,0.95)')};
+  --admin-card-bg: ${co('adminCardBg','rgba(255,255,255,0.04)')};
+  --admin-border: ${co('adminBorder','rgba(255,255,255,0.07)')};
+  --admin-accent: ${co('adminAccent','#B8860B')};
+  --admin-text: ${co('adminText','rgba(255,255,255,0.9)')};
+  --admin-text-muted: ${co('adminTextMuted','rgba(255,255,255,0.45)')};
+  --admin-text-faint: ${co('adminTextFaint','rgba(255,255,255,0.25)')};
 }`
 }
 
@@ -927,6 +965,16 @@ function applyToDom(t: Record<string,any>) {
   s('--btn-gold-bg',               String(t.btnGoldBg||'#B8860B'))
   s('--btn-gold-color',            String(t.btnGoldColor||'#fff'))
   s('--btn-size',                  `${t.btnSize||13}px`)
+  // Admin panel vars
+  s('--admin-bg',          String(t.adminBg         || '#0A0F1A'))
+  s('--admin-sidebar-bg',  String(t.adminSidebarBg  || 'linear-gradient(180deg,#0D1117 0%,#111820 100%)'))
+  s('--admin-header-bg',   String(t.adminHeaderBg   || 'rgba(13,17,23,0.95)'))
+  s('--admin-card-bg',     String(t.adminCardBg     || 'rgba(255,255,255,0.04)'))
+  s('--admin-border',      String(t.adminBorder     || 'rgba(255,255,255,0.07)'))
+  s('--admin-accent',      String(t.adminAccent     || '#B8860B'))
+  s('--admin-text',        String(t.adminText       || 'rgba(255,255,255,0.9)'))
+  s('--admin-text-muted',  String(t.adminTextMuted  || 'rgba(255,255,255,0.45)'))
+  s('--admin-text-faint',  String(t.adminTextFaint  || 'rgba(255,255,255,0.25)'))
 }
 
 export default function AdminThemePage() {

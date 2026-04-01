@@ -120,6 +120,15 @@ async function getThemeVars(): Promise<string> {
   --btn-gold-bg:              ${t.btnGoldBg           || '#B8860B'};
   --btn-gold-color:           ${t.btnGoldColor        || '#ffffff'};
   --btn-size:                 ${px(t.btnSize, 14)};
+  --admin-bg:                 ${t.adminBg             || '#0A0F1A'};
+  --admin-sidebar-bg:         ${t.adminSidebarBg      || 'linear-gradient(180deg,#0D1117 0%,#111820 100%)'};
+  --admin-header-bg:          ${t.adminHeaderBg       || 'rgba(13,17,23,0.95)'};
+  --admin-card-bg:            ${t.adminCardBg         || 'rgba(255,255,255,0.04)'};
+  --admin-border:             ${t.adminBorder         || 'rgba(255,255,255,0.07)'};
+  --admin-accent:             ${t.adminAccent         || '#B8860B'};
+  --admin-text:               ${t.adminText           || 'rgba(255,255,255,0.9)'};
+  --admin-text-muted:         ${t.adminTextMuted      || 'rgba(255,255,255,0.45)'};
+  --admin-text-faint:         ${t.adminTextFaint      || 'rgba(255,255,255,0.25)'};
 }`
   } catch { return '' }
 }
