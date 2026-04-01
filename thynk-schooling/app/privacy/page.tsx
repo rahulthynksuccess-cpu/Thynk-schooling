@@ -12,7 +12,7 @@ export default function Page() {
 
         {/* Hero */}
         <section style={{ background:'linear-gradient(150deg,var(--ivory,#FAF7F2),var(--ivory-2,#F5F0E8))', padding:'clamp(48px,6vw,80px) clamp(20px,5vw,80px)', borderBottom:'1px solid rgba(13,17,23,0.08)' }}>
-          <div style={{ maxWidth:'1400px', margin:'0 auto' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto' }}>
             <div style={{ fontSize:11, fontWeight:600, letterSpacing:'.2em', textTransform:'uppercase', color:'#B8860B', marginBottom:16, fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', gap:8 }}>
               <span style={{ width:22, height:1.5, background:'#B8860B', display:'block' }} />Legal
             </div>
@@ -27,7 +27,7 @@ export default function Page() {
 
         {/* Content */}
         <section style={{ padding:'clamp(40px,5vw,72px) clamp(20px,5vw,80px)' }}>
-          <div style={{ maxWidth:'1400px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 280px', gap:48, alignItems:'start' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 280px', gap:48, alignItems:'start' }}>
             <div>
               
               <div style={{ marginBottom:40 }}>

@@ -67,7 +67,7 @@ export default function ComparePage() {
 
         {/* Header */}
         <div style={{ background: '#F5F0E8', borderBottom: '1px solid rgba(13,17,23,0.08)', padding: '40px 48px' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin: '0 auto' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#B8860B', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
               <span style={{ width: '20px', height: '1px', background: '#B8860B' }} />Compare Schools
             </div>
@@ -80,7 +80,7 @@ export default function ComparePage() {
           </div>
         </div>
 
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '40px 48px' }}>
+        <div style={{ maxWidth:'var(--container-width,1400px)', margin: '0 auto', padding: '40px 48px' }}>
 
           {/* School slots */}
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${MAX}, 1fr)`, gap: '16px', marginBottom: '32px' }}>

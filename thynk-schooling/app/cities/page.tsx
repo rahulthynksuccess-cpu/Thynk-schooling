@@ -125,7 +125,7 @@ export default function CitiesPage() {
       <main style={{ background:'var(--ivory,#FAF7F2)', paddingTop:'72px' }}>
         {/* Hero */}
         <section style={{ background:'linear-gradient(150deg,var(--ivory,#FAF7F2),var(--ivory-2,#F5F0E8))', padding:'clamp(48px,7vw,96px) clamp(20px,5vw,80px)', borderBottom:'1px solid rgba(13,17,23,0.07)' }}>
-          <div style={{ maxWidth:'1400px', margin:'0 auto' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto' }}>
             <div style={{ textAlign:'center', marginBottom:'clamp(36px,5vw,56px)' }}>
               <div style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:11, fontWeight:600, letterSpacing:'.2em', textTransform:'uppercase', color:'#B8860B', marginBottom:18, fontFamily:'DM Sans,sans-serif' }}>
                 <span style={{ width:22, height:1.5, background:'#B8860B', display:'block' }} />Browse by City<span style={{ width:22, height:1.5, background:'#B8860B', display:'block' }} />
@@ -178,7 +178,7 @@ export default function CitiesPage() {
 
         {/* Cities grid */}
         <section style={{ padding:'clamp(40px,6vw,80px) clamp(20px,5vw,80px)' }}>
-          <div style={{ maxWidth:'1400px', margin:'0 auto' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto' }}>
             {selectedState && <div style={{ fontFamily:'DM Sans,sans-serif', fontSize:14, color:'#B8860B', fontWeight:600, marginBottom:20 }}>{displayCities.length} cities in {selectedState}</div>}
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:'clamp(10px,1.5vw,18px)' }}>
               {displayCities.map(city => (

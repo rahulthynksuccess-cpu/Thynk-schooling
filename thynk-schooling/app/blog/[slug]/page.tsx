@@ -59,7 +59,7 @@ export default function BlogArticlePage({ params }: { params: Params }) {
       <main style={{ background:'var(--ivory,#FAF7F2)', paddingTop:'72px', minHeight:'100vh' }}>
         {/* Hero */}
         <section style={{ background:'linear-gradient(150deg,var(--ivory,#FAF7F2),var(--ivory-2,#F5F0E8))', padding:'clamp(48px,6vw,80px) clamp(20px,5vw,80px)', borderBottom:'1px solid rgba(13,17,23,0.07)' }}>
-          <div style={{ maxWidth:'1400px', margin:'0 auto' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto' }}>
             <Link href="/blog" style={{ display:'inline-flex', alignItems:'center', gap:8, fontSize:13, color:'#B8860B', fontFamily:'DM Sans,sans-serif', fontWeight:600, textDecoration:'none', marginBottom:24 }}>
               <ArrowLeft style={{ width:14, height:14 }} /> Back to Blog
             </Link>
@@ -82,7 +82,7 @@ export default function BlogArticlePage({ params }: { params: Params }) {
 
         {/* Content */}
         <section style={{ padding:'clamp(40px,5vw,72px) clamp(20px,5vw,80px)' }}>
-          <div style={{ maxWidth:'1400px', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 320px', gap:48, alignItems:'start' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto', display:'grid', gridTemplateColumns:'1fr 320px', gap:48, alignItems:'start' }}>
             <article>
               {formatBody(article.body)}
             </article>

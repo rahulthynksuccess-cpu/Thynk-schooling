@@ -30,7 +30,7 @@ export default function BlogPage() {
 
         {/* Header */}
         <section style={{ background: '#F5F0E8', padding: '56px 48px', borderBottom: '1px solid rgba(13,17,23,0.08)' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin: '0 auto' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', fontSize: '10px', fontWeight: 600, letterSpacing: '.18em', textTransform: 'uppercase', color: '#B8860B', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
               <span style={{ width: '20px', height: '1px', background: '#B8860B' }} />Admission Insights
             </div>
@@ -45,7 +45,7 @@ export default function BlogPage() {
 
         {/* Posts grid */}
         <section style={{ padding: '56px 48px 80px' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div style={{ maxWidth:'var(--container-width,1400px)', margin: '0 auto' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '20px' }}>
               {POSTS.map(post => {
                 const tagStyle = TAG_COLORS[post.tag] ?? { bg: '#EDE5D8', color: '#4A3020' }
