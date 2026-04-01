@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 const TABS = ['All', 'Pending', 'Called', 'Completed', 'No Answer']
 
 const cell: React.CSSProperties   = { padding: '11px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,.05)' }
-const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
+const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   pending:   { bg: 'rgba(251,191,36,.12)', color: '#FBBF24' },
@@ -55,20 +55,20 @@ export default function AdminCounsellingPage() {
           { label: 'No Answer',      value: sessions.filter(s=>s.status==='no_answer').length,   color: '#F87171' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '12px', padding: '16px' }}>
+            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
             <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value}</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', borderRadius: '8px', padding: '7px 11px' }}>
+      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
             <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search parent name, phone, city..."
-              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#fff', flex: 1 }} />
+              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: 'var(--admin-text,rgba(255,255,255,0.9))', flex: 1 }} />
           </div>
           <div style={{ display: 'flex', gap: '5px' }}>
             {TABS.map(t => (
@@ -91,7 +91,7 @@ export default function AdminCounsellingPage() {
               {isLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}><td colSpan={8} style={{ padding: '10px 14px' }}>
-                      <div style={{ height: '32px', background: 'rgba(255,255,255,.04)', borderRadius: '6px' }} />
+                      <div style={{ height: '32px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', borderRadius: '6px' }} />
                     </td></tr>
                   ))
                 : sessions.length === 0
@@ -102,7 +102,7 @@ export default function AdminCounsellingPage() {
                         <tr key={s.id}
                           onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,.02)'}
                           onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                          <td style={cell}><div style={{ fontWeight: 600, color: '#fff' }}>{s.name}</div></td>
+                          <td style={cell}><div style={{ fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{s.name}</div></td>
                           <td style={cell}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <a href={`tel:${s.phone}`} style={{ color: '#60A5FA', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>

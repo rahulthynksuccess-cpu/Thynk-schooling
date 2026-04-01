@@ -8,8 +8,8 @@ import { School, Users, TrendingUp, DollarSign, FileCheck, Star, ArrowRight, Clo
 
 /* ── Shared card style ── */
 const C: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #111820, #0D1520)',
-  border: '1px solid rgba(255,255,255,0.07)',
+  background: 'var(--admin-card-bg,#111820)',
+  border: '1px solid var(--admin-border,rgba(255,255,255,0.07))',
   borderRadius: '16px', padding: '20px',
 }
 

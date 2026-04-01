@@ -97,9 +97,9 @@ export default function AdminMediaPage() {
 
   const inp: React.CSSProperties = {
     width: '100%', padding: '9px 12px',
-    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+    background: 'var(--admin-card-bg,rgba(255,255,255,0.06))', border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: 8, fontSize: 13, fontFamily: 'DM Sans,sans-serif',
-    color: '#fff', outline: 'none', boxSizing: 'border-box' as const,
+    color: 'var(--admin-text,rgba(255,255,255,0.9))', outline: 'none', boxSizing: 'border-box' as const,
   }
 
   return (
@@ -114,7 +114,7 @@ export default function AdminMediaPage() {
 
       <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         {SECTIONS.map(section => (
-          <div key={section.title} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:14, overflow:'hidden' }}>
+          <div key={section.title} style={{ background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:14, overflow:'hidden' }}>
             <div style={{ padding:'14px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)', background:'rgba(184,134,11,0.06)' }}>
               <h3 style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:14, color:'#E8C547', margin:0 }}>{section.title}</h3>
             </div>
@@ -132,7 +132,7 @@ export default function AdminMediaPage() {
                         {isUrl && !SocialIcon && !isImage && <Link style={{ width:13, height:13, color:'#B8860B' }} />}
                         {field.label}
                       </div>
-                      {field.hint && <div style={{ fontFamily:'DM Sans,sans-serif', fontSize:11, color:'rgba(255,255,255,0.3)', lineHeight:1.5 }}>{field.hint}</div>}
+                      {field.hint && <div style={{ fontFamily:'DM Sans,sans-serif', fontSize:11, color:'var(--admin-text-faint,rgba(255,255,255,0.3))', lineHeight:1.5 }}>{field.hint}</div>}
                     </div>
                     <div>
                       <input

@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 const TABS = ['All', 'Pending', 'Approved', 'Flagged']
 
 const cell: React.CSSProperties   = { padding: '12px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,.05)' }
-const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
+const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -71,20 +71,20 @@ export default function AdminReviewsPage() {
           { label: 'Flagged',       value: reviews.filter(r=>r.status==='flagged').length,  color: '#F87171' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '12px', padding: '16px' }}>
+            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
             <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value}</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', borderRadius: '8px', padding: '7px 11px' }}>
+      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
             <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search school or reviewer..."
-              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#fff', flex: 1 }} />
+              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: 'var(--admin-text,rgba(255,255,255,0.9))', flex: 1 }} />
           </div>
           <div style={{ display: 'flex', gap: '5px' }}>
             {TABS.map(t => (
@@ -107,7 +107,7 @@ export default function AdminReviewsPage() {
               {isLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i}><td colSpan={7} style={{ padding: '10px 14px' }}>
-                      <div style={{ height: '32px', background: 'rgba(255,255,255,.04)', borderRadius: '6px' }} />
+                      <div style={{ height: '32px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', borderRadius: '6px' }} />
                     </td></tr>
                   ))
                 : reviews.length === 0
@@ -117,7 +117,7 @@ export default function AdminReviewsPage() {
                         onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,.02)'}
                         onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                         <td style={cell}>
-                          <div style={{ fontWeight: 600, color: '#fff' }}>{r.reviewerName || 'Anonymous'}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{r.reviewerName || 'Anonymous'}</div>
                           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{r.reviewerRole || 'Parent'}</div>
                         </td>
                         <td style={cell}>

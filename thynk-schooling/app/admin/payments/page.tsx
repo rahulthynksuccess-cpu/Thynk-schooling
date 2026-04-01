@@ -48,20 +48,20 @@ export default function AdminPaymentsPage() {
           { label: 'Completed',          value: String(payments.filter(p=>p.status==='completed').length),      color: '#FBBF24' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '12px', padding: '16px' }}>
+            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
             <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: s.value.startsWith('₹') ? '20px' : '30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value}</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', borderRadius: '8px', padding: '7px 11px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
             <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search transaction ID, school, amount..."
-              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#fff', flex: 1 }} />
+              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: 'var(--admin-text,rgba(255,255,255,0.9))', flex: 1 }} />
           </div>
           <div style={{ display: 'flex', gap: '5px' }}>
             {TABS.map(t => (
@@ -71,7 +71,7 @@ export default function AdminPaymentsPage() {
               </button>
             ))}
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '7px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif' }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif' }}>
             <Download style={{ width: '12px', height: '12px' }} /> Export
           </button>
         </div>
@@ -87,7 +87,7 @@ export default function AdminPaymentsPage() {
               {isLoading
                 ? Array.from({ length: 8 }).map((_, i) => (
                     <tr key={i}><td colSpan={7} style={{ padding: '10px 14px' }}>
-                      <div style={{ height: '32px', background: 'rgba(255,255,255,.04)', borderRadius: '6px' }} />
+                      <div style={{ height: '32px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', borderRadius: '6px' }} />
                     </td></tr>
                   ))
                 : payments.length === 0
@@ -99,7 +99,7 @@ export default function AdminPaymentsPage() {
                           onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,.02)'}
                           onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                           <td style={{ ...cell, fontFamily: 'monospace', fontSize: '11px', color: 'rgba(255,255,255,.5)' }}>{p.transactionId || p.id?.slice(0,12)}</td>
-                          <td style={cell}><div style={{ fontWeight: 600, color: '#fff' }}>{p.schoolName || '—'}</div></td>
+                          <td style={cell}><div style={{ fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{p.schoolName || '—'}</div></td>
                           <td style={cell}><span style={{ fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '100px', background: 'rgba(255,92,0,.1)', color: '#FF7A2E' }}>{p.type || 'Lead Purchase'}</span></td>
                           <td style={{ ...cell, fontFamily: 'Syne,sans-serif', fontWeight: 700, color: '#4ADE80', fontSize: '13px' }}>₹{((p.amount||0)/100).toLocaleString('en-IN')}</td>
                           <td style={{ ...cell, color: 'rgba(255,255,255,.4)' }}>{p.gateway || 'Razorpay'}</td>

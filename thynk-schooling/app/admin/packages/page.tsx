@@ -8,9 +8,9 @@ import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LeadPackage } from '@/types'
 
-const card: React.CSSProperties   = { background:'#111830', border:'1px solid #1E2A52', borderRadius:'14px', padding:'20px' }
-const lbl: React.CSSProperties    = { display:'block', fontSize:'11px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'#8892B0', marginBottom:'6px', fontFamily:'DM Sans,sans-serif' }
-const inp: React.CSSProperties    = { width:'100%', padding:'10px 13px', background:'rgba(255,255,255,0.04)', border:'1px solid #1E2A52', borderRadius:'8px', color:'#fff', fontSize:'13px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
+const card: React.CSSProperties   = { background:'#111830', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', padding:'20px' }
+const lbl: React.CSSProperties    = { display:'block', fontSize:'11px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'6px', fontFamily:'DM Sans,sans-serif' }
+const inp: React.CSSProperties    = { width:'100%', padding:'10px 13px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'8px', color:'#fff', fontSize:'13px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
 
 interface PackageForm {
   name: string
@@ -47,7 +47,7 @@ function PackageModal({ pkg, onClose, onSave }: {
           <h3 style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'16px', color:'#fff', margin:0 }}>
             {pkg ? 'Edit Package' : 'New Lead Package'}
           </h3>
-          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'#8892B0', display:'flex' }}>
+          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', display:'flex' }}>
             <X style={{ width:'18px', height:'18px' }} />
           </button>
         </div>
@@ -88,12 +88,12 @@ function PackageModal({ pkg, onClose, onSave }: {
 
           {/* Price per lead preview */}
           <div style={{ padding:'12px', borderRadius:'8px', background:'rgba(255,92,0,0.06)', border:'1px solid rgba(255,92,0,0.2)' }}>
-            <div style={{ fontSize:'12px', color:'#8892B0', fontFamily:'DM Sans,sans-serif' }}>Price per lead</div>
+            <div style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif' }}>Price per lead</div>
             <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'22px', color:'#FF5C00' }}>₹{perLead}/lead</div>
           </div>
 
           <div style={{ display:'flex', gap:'10px', paddingTop:'4px' }}>
-            <button onClick={onClose} style={{ flex:1, padding:'11px', borderRadius:'8px', background:'rgba(255,255,255,0.04)', border:'1px solid #1E2A52', color:'#8892B0', cursor:'pointer', fontSize:'13px', fontFamily:'DM Sans,sans-serif', fontWeight:500 }}>
+            <button onClick={onClose} style={{ flex:1, padding:'11px', borderRadius:'8px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'13px', fontFamily:'DM Sans,sans-serif', fontWeight:500 }}>
               Cancel
             </button>
             <button onClick={() => { if (!form.name || form.leadCredits < 1) { toast.error('Name and credits are required'); return } onSave(form) }}
@@ -183,18 +183,18 @@ export default function LeadPackagesPage() {
                 <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'26px', color:'#FF5C00', marginBottom:'4px' }}>
                   ₹{(pkg.price / 100).toLocaleString('en-IN')}
                 </div>
-                <div style={{ fontSize:'12px', color:'#8892B0', marginBottom:'3px', fontFamily:'DM Sans,sans-serif' }}>
+                <div style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'3px', fontFamily:'DM Sans,sans-serif' }}>
                   {pkg.leadCredits} credits · {pkg.validityDays} days
                 </div>
                 <div style={{ fontSize:'11px', color:'#4ADE80', marginBottom:'14px', fontFamily:'DM Sans,sans-serif' }}>
                   ₹{Math.round(pkg.price / pkg.leadCredits / 100)}/lead
                 </div>
                 {pkg.description && (
-                  <div style={{ fontSize:'11px', color:'#8892B0', marginBottom:'14px', fontFamily:'DM Sans,sans-serif', lineHeight:1.5 }}>{pkg.description}</div>
+                  <div style={{ fontSize:'11px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'14px', fontFamily:'DM Sans,sans-serif', lineHeight:1.5 }}>{pkg.description}</div>
                 )}
                 <div style={{ display:'flex', gap:'8px', paddingTop:'12px', borderTop:'1px solid #1E2A52' }}>
                   <button onClick={() => { setModalPkg(pkg); setModalOpen(true) }}
-                    style={{ flex:1, padding:'8px', borderRadius:'7px', background:'rgba(255,255,255,0.04)', border:'1px solid #1E2A52', color:'#8892B0', cursor:'pointer', fontSize:'12px', fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
+                    style={{ flex:1, padding:'8px', borderRadius:'7px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'12px', fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
                     <Pencil style={{ width:'12px', height:'12px' }} /> Edit
                   </button>
                   <button onClick={() => { if (confirm(`Delete "${pkg.name}"?`)) deleteMutation.mutate(pkg.id) }}
@@ -211,7 +211,7 @@ export default function LeadPackagesPage() {
         <div style={{ textAlign:'center', padding:'60px 0' }}>
           <Package style={{ width:'48px', height:'48px', color:'#1E2A52', margin:'0 auto 12px' }} />
           <div style={{ fontSize:'15px', fontWeight:600, color:'#fff', marginBottom:'6px', fontFamily:'Syne,sans-serif' }}>No packages yet</div>
-          <div style={{ fontSize:'13px', color:'#8892B0', fontFamily:'DM Sans,sans-serif' }}>Create your first lead credit package for schools.</div>
+          <div style={{ fontSize:'13px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif' }}>Create your first lead credit package for schools.</div>
         </div>
       )}
 

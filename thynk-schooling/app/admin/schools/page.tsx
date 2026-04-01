@@ -25,8 +25,8 @@ interface AdminSchool {
 
 const TABS = ['All', 'Pending Verification', 'Verified', 'Featured', 'Inactive']
 
-const cell: React.CSSProperties = { padding: '12px 14px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', color: '#fff', borderBottom: '1px solid #1E2A52' }
-const hdCell: React.CSSProperties = { padding: '10px 14px', fontSize: '11px', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: '#8892B0', fontFamily: 'DM Sans, sans-serif', borderBottom: '1px solid #1E2A52', whiteSpace: 'nowrap' }
+const cell: React.CSSProperties = { padding: '12px 14px', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', color: 'var(--admin-text,rgba(255,255,255,0.9))', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }
+const hdCell: React.CSSProperties = { padding: '10px 14px', fontSize: '11px', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily: 'DM Sans, sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', whiteSpace: 'nowrap' }
 
 export default function AdminSchoolsPage() {
   const queryClient = useQueryClient()
@@ -83,22 +83,22 @@ export default function AdminSchoolsPage() {
           { label: 'Featured',       value: schools.filter(s => s.isFeatured).length,  color: '#FF5C00' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .07 }}
-            style={{ background: '#111830', border: '1px solid #1E2A52', borderRadius: '12px', padding: '16px 18px' }}>
+            style={{ background: '#111830', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px 18px' }}>
             <div style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '28px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value.toLocaleString()}</div>
-            <div style={{ fontSize: '11px', color: '#8892B0', fontFamily: 'DM Sans, sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
+            <div style={{ fontSize: '11px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily: 'DM Sans, sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
       {/* Filters */}
-      <div style={{ background: '#111830', border: '1px solid #1E2A52', borderRadius: '14px', marginBottom: '0', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderBottom: '1px solid #1E2A52' }}>
+      <div style={{ background: '#111830', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', marginBottom: '0', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
           {/* Search */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid #1E2A52', borderRadius: '8px', padding: '8px 12px' }}>
-            <Search style={{ width: '15px', height: '15px', color: '#8892B0', flexShrink: 0 }} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '8px 12px' }}>
+            <Search style={{ width: '15px', height: '15px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', flexShrink: 0 }} />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search school name, city, phone…"
-              style={{ background: 'none', border: 'none', outline: 'none', color: '#fff', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', flex: 1 }} />
+              style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--admin-text,rgba(255,255,255,0.9))', fontSize: '13px', fontFamily: 'DM Sans, sans-serif', flex: 1 }} />
           </div>
           {/* Tabs */}
           <div style={{ display: 'flex', gap: '6px' }}>
@@ -129,25 +129,25 @@ export default function AdminSchoolsPage() {
               {isLoading
                 ? Array.from({ length: 8 }).map((_, i) => (
                     <tr key={i}><td colSpan={7} style={{ padding: '12px 14px' }}>
-                      <div style={{ height: '36px', background: '#1E2A52', borderRadius: '8px' }} />
+                      <div style={{ height: '36px', background: 'var(--admin-card-bg,#1E2A52)', borderRadius: '8px' }} />
                     </td></tr>
                   ))
                 : schools.length === 0
-                  ? <tr><td colSpan={7} style={{ ...cell, textAlign: 'center', padding: '40px', color: '#8892B0' }}>No schools found.</td></tr>
+                  ? <tr><td colSpan={7} style={{ ...cell, textAlign: 'center', padding: '40px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>No schools found.</td></tr>
                   : schools.map(school => (
                       <tr key={school.id} style={{ transition: 'background .15s' }}
                         onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,0.02)'}
                         onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
 
                         <td style={cell}>
-                          <div style={{ fontWeight: 500, color: '#fff' }}>{school.name}</div>
-                          <div style={{ fontSize: '11px', color: '#8892B0', marginTop: '2px' }}>/{school.slug}</div>
+                          <div style={{ fontWeight: 500, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{school.name}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', marginTop: '2px' }}>/{school.slug}</div>
                         </td>
 
                         <td style={cell}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '3px' }}>
-                            <MapPin style={{ width: '11px', height: '11px', color: '#8892B0' }} />
-                            <span style={{ color: '#8892B0' }}>{school.city}</span>
+                            <MapPin style={{ width: '11px', height: '11px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }} />
+                            <span style={{ color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>{school.city}</span>
                           </div>
                           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                             {school.board.slice(0, 2).map(b => (
@@ -156,7 +156,7 @@ export default function AdminSchoolsPage() {
                           </div>
                         </td>
 
-                        <td style={{ ...cell, color: '#8892B0' }}>{school.ownerPhone}</td>
+                        <td style={{ ...cell, color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>{school.ownerPhone}</td>
 
                         <td style={cell}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -191,7 +191,7 @@ export default function AdminSchoolsPage() {
                         <td style={cell}>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             <Link href={`/schools/${school.slug}`} target="_blank"
-                              style={{ padding: '6px 10px', borderRadius: '7px', background: 'rgba(255,255,255,0.04)', border: '1px solid #1E2A52', color: '#8892B0', fontSize: '11px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              style={{ padding: '6px 10px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontSize: '11px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <Eye style={{ width: '12px', height: '12px' }} /> View
                             </Link>
                             <button
@@ -206,7 +206,7 @@ export default function AdminSchoolsPage() {
                             </button>
                             <button
                               onClick={() => toggleActiveMutation.mutate({ id: school.id, isActive: !school.isActive })}
-                              style={{ padding: '6px 10px', borderRadius: '7px', border: '1px solid #1E2A52', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans, sans-serif', background: 'rgba(255,255,255,0.04)', color: '#8892B0' }}>
+                              style={{ padding: '6px 10px', borderRadius: '7px', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans, sans-serif', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>
                               {school.isActive ? 'Deactivate' : 'Activate'}
                             </button>
                           </div>
@@ -220,17 +220,17 @@ export default function AdminSchoolsPage() {
 
         {/* Pagination */}
         {total > 20 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderTop: '1px solid #1E2A52' }}>
-            <span style={{ fontSize: '13px', color: '#8892B0', fontFamily: 'DM Sans, sans-serif' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderTop: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
+            <span style={{ fontSize: '13px', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily: 'DM Sans, sans-serif' }}>
               Showing {((page - 1) * 20) + 1}–{Math.min(page * 20, total)} of {total}
             </span>
             <div style={{ display: 'flex', gap: '6px' }}>
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                style={{ padding: '7px 14px', borderRadius: '7px', background: 'rgba(255,255,255,0.04)', border: '1px solid #1E2A52', color: '#8892B0', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', opacity: page === 1 ? .4 : 1 }}>
+                style={{ padding: '7px 14px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', opacity: page === 1 ? .4 : 1 }}>
                 ← Prev
               </button>
               <button onClick={() => setPage(p => p + 1)} disabled={page * 20 >= total}
-                style={{ padding: '7px 14px', borderRadius: '7px', background: 'rgba(255,255,255,0.04)', border: '1px solid #1E2A52', color: '#8892B0', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', opacity: page * 20 >= total ? .4 : 1 }}>
+                style={{ padding: '7px 14px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans, sans-serif', opacity: page * 20 >= total ? .4 : 1 }}>
                 Next →
               </button>
             </div>

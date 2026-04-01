@@ -103,13 +103,13 @@ export default function AdminCitiesPage() {
   const update = (slug: string, key: keyof City, val: string) =>
     setCities(prev => prev.map(c => c.slug === slug ? { ...c, [key]: val } : c))
 
-  const inp: React.CSSProperties = { background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 11px', color:'#fff', fontFamily:'DM Sans,sans-serif', fontSize:13, outline:'none' }
+  const inp: React.CSSProperties = { background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 11px', color:'#fff', fontFamily:'DM Sans,sans-serif', fontSize:13, outline:'none' }
 
   return (
     <AdminLayout title="SEO Cities Manager" subtitle="Manage all city pages and footer city links — used for SEO">
       {/* Toolbar */}
       <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16, alignItems:'center' }}>
-        <span style={{ color:'rgba(255,255,255,0.4)', fontSize:13, fontFamily:'DM Sans,sans-serif' }}>{cities.length} cities</span>
+        <span style={{ color:'var(--admin-text-muted,rgba(255,255,255,0.4))', fontSize:13, fontFamily:'DM Sans,sans-serif' }}>{cities.length} cities</span>
         <button onClick={seedDefaults} disabled={saving} style={{ padding:'8px 16px', borderRadius:8, background:'rgba(184,134,11,0.15)', border:'1px solid rgba(184,134,11,0.3)', color:'#E8C547', cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'DM Sans,sans-serif' }}>
           🌱 Seed 100 Default Cities
         </button>
@@ -119,7 +119,7 @@ export default function AdminCitiesPage() {
       </div>
 
       {/* Add new */}
-      <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(184,134,11,0.2)', borderRadius:10, padding:'10px 14px' }}>
+      <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid rgba(184,134,11,0.2)', borderRadius:10, padding:'10px 14px' }}>
         <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==='Enter' && addCity()} placeholder="City name…" style={{ ...inp, flex:1 }} />
         <input value={newState} onChange={e => setNewState(e.target.value)} onKeyDown={e => e.key==='Enter' && addCity()} placeholder="State…" style={{ ...inp, width:160 }} />
         <button onClick={addCity} style={{ padding:'8px 16px', borderRadius:8, background:'rgba(184,134,11,0.2)', border:'1px solid rgba(184,134,11,0.3)', color:'#E8C547', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }}>
@@ -129,13 +129,13 @@ export default function AdminCitiesPage() {
 
       {/* City list */}
       <div style={{ display:'flex', flexDirection:'column', gap:3 }}>
-        {loading ? <div style={{ textAlign:'center', padding:40, color:'rgba(255,255,255,0.3)', fontFamily:'DM Sans,sans-serif' }}>Loading…</div> :
+        {loading ? <div style={{ textAlign:'center', padding:40, color:'var(--admin-text-faint,rgba(255,255,255,0.3))', fontFamily:'DM Sans,sans-serif' }}>Loading…</div> :
           cities.map(city => (
-            <div key={city.slug} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 140px 36px', gap:8, alignItems:'center', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:8, padding:'7px 12px' }}>
+            <div key={city.slug} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 140px 36px', gap:8, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.03))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:8, padding:'7px 12px' }}>
               <input value={city.name} onChange={e => update(city.slug, 'name', e.target.value)} style={{ ...inp, padding:'5px 9px', fontSize:12 }} />
               <input value={city.state} onChange={e => update(city.slug, 'state', e.target.value)} placeholder="State" style={{ ...inp, padding:'5px 9px', fontSize:12 }} />
               <code style={{ color:'rgba(184,134,11,0.7)', fontSize:11, fontFamily:'monospace', padding:'4px 8px', background:'rgba(184,134,11,0.06)', borderRadius:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>/schools?city={city.slug}</code>
-              <button onClick={() => remove(city.slug)} style={{ padding:6, background:'none', border:'none', color:'rgba(255,255,255,0.2)', cursor:'pointer', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center' }}
+              <button onClick={() => remove(city.slug)} style={{ padding:6, background:'none', border:'none', color:'var(--admin-text-faint,rgba(255,255,255,0.2))', cursor:'pointer', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center' }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.color='#f87171'}
                 onMouseLeave={e => (e.currentTarget as HTMLElement).style.color='rgba(255,255,255,0.2)'}>
                 <Trash2 style={{ width:13, height:13 }} />

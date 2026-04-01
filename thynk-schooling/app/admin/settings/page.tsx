@@ -2,62 +2,67 @@
 export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Settings, Plus, Pencil, Trash2, ChevronDown, ChevronRight,
-  GraduationCap, Save, X, Loader2, Search, ToggleLeft, ToggleRight,
-  DollarSign, Package, BarChart3, Users, School, LogOut, Menu
+  Settings, Plus, Pencil, Trash2,
+  Save, X, Loader2, Search,
+  ToggleLeft, ToggleRight, ChevronRight, Sprout, Hash
 } from 'lucide-react'
-import { clsx } from 'clsx'
-import { useAuthStore } from '@/store/authStore'
-import { DropdownOption, LeadPackage } from '@/types'
+import { AdminLayout } from '@/components/admin/AdminLayout'
+import { DropdownOption } from '@/types'
 import toast from 'react-hot-toast'
-import Link from 'next/link'
 
-// ── Dropdown categories (driven by API — shown here as navigation labels only) ──
+/* ─── CSS var helpers (same pattern as AdminLayout) ─── */
+const V = {
+  pageBg:    'var(--admin-bg, #0A0F1A)',
+  cardBg:    'var(--admin-card-bg, rgba(255,255,255,0.04))',
+  border:    'var(--admin-border, rgba(255,255,255,0.07))',
+  text:      'var(--admin-text, rgba(255,255,255,0.9))',
+  textMuted: 'var(--admin-text-muted, rgba(255,255,255,0.45))',
+  textFaint: 'var(--admin-text-faint, rgba(255,255,255,0.25))',
+  accent:    'var(--admin-accent, #B8860B)',
+}
+
 const DROPDOWN_CATEGORIES = [
-  { key: 'board',              label: 'Board',              icon: '📚' },
-  { key: 'school_type',        label: 'School Type',        icon: '🏫' },
-  { key: 'gender_policy',      label: 'Gender Policy',      icon: '⚧️' },
-  { key: 'medium',             label: 'Medium',             icon: '🗣️' },
-  { key: 'class_level',        label: 'Class Level',        icon: '🎓' },
-  { key: 'academic_year',      label: 'Academic Year',      icon: '📅' },
-  { key: 'city',               label: 'City',               icon: '🏙️' },
-  { key: 'state',              label: 'State',              icon: '🗺️' },
-  { key: 'religion',           label: 'Religion',           icon: '🕌' },
-  { key: 'recognition',        label: 'Recognition',        icon: '🏅' },
-  { key: 'blood_group',        label: 'Blood Group',        icon: '🩸' },
-  { key: 'gender',             label: 'Gender',             icon: '👤' },
-  { key: 'occupation',         label: 'Occupation',         icon: '💼' },
-  { key: 'income_range',       label: 'Income Range',       icon: '💰' },
-  { key: 'lead_status',        label: 'Lead Status',        icon: '📊' },
-  { key: 'application_status', label: 'Application Status', icon: '✅' },
-  { key: 'source',             label: 'Lead Source',        icon: '📡' },
-  { key: 'how_did_you_hear',   label: 'How Did You Hear',   icon: '👂' },
+  { key: 'board',              label: 'Board',              icon: '📚', desc: 'CBSE, ICSE, IB, State boards…' },
+  { key: 'school_type',        label: 'School Type',        icon: '🏫', desc: 'Private, Government, Aided…' },
+  { key: 'gender_policy',      label: 'Gender Policy',      icon: '⚧️', desc: 'Co-ed, Boys only, Girls only…' },
+  { key: 'medium',             label: 'Medium',             icon: '🗣️', desc: 'English, Hindi, Regional…' },
+  { key: 'class_level',        label: 'Class Level',        icon: '🎓', desc: 'Nursery to Class 12' },
+  { key: 'academic_year',      label: 'Academic Year',      icon: '📅', desc: '2024-25, 2025-26…' },
+  { key: 'city',               label: 'City',               icon: '🏙️', desc: 'Delhi, Mumbai, Bengaluru…' },
+  { key: 'state',              label: 'State',              icon: '🗺️', desc: 'All Indian states' },
+  { key: 'religion',           label: 'Religion',           icon: '🕌', desc: 'Secular, Christian, Islamic…' },
+  { key: 'recognition',        label: 'Recognition',        icon: '🏅', desc: 'NAAC, ISO, Govt Aided…' },
+  { key: 'blood_group',        label: 'Blood Group',        icon: '🩸', desc: 'A+, B+, O+, AB+…' },
+  { key: 'gender',             label: 'Gender',             icon: '👤', desc: 'Male, Female, Other' },
+  { key: 'occupation',         label: 'Occupation',         icon: '💼', desc: 'Salaried, Business, Other…' },
+  { key: 'income_range',       label: 'Income Range',       icon: '💰', desc: 'Below 5L, 5-15L, 15L+…' },
+  { key: 'lead_status',        label: 'Lead Status',        icon: '📊', desc: 'New, Contacted, Converted…' },
+  { key: 'application_status', label: 'Application Status', icon: '✅', desc: 'Pending, Shortlisted, Admitted…' },
+  { key: 'source',             label: 'Lead Source',        icon: '📡', desc: 'Organic, Paid, Referral…' },
+  { key: 'how_did_you_hear',   label: 'How Did You Hear',   icon: '👂', desc: 'Google, Instagram, Word of mouth…' },
 ]
 
-const ADMIN_NAV = [
-  { icon: BarChart3,  label: 'Overview',         href: '/admin' },
-  { icon: Settings,   label: 'Dropdown Settings',href: '/admin/settings' },
-  { icon: DollarSign, label: 'Lead Pricing',      href: '/admin/lead-pricing' },
-  { icon: Package,    label: 'Lead Packages',     href: '/admin/packages' },
-  { icon: School,     label: 'Schools',           href: '/admin/schools' },
-  { icon: Users,      label: 'Users',             href: '/admin/users' },
-]
+const iS: React.CSSProperties = {
+  width: '100%', padding: '10px 14px',
+  background: 'var(--admin-card-bg,rgba(255,255,255,0.04))',
+  border: '1.5px solid rgba(255,255,255,0.08)',
+  borderRadius: '9px', fontSize: '13px',
+  fontFamily: 'DM Sans, sans-serif',
+  color: 'var(--admin-text, rgba(255,255,255,0.9))',
+  outline: 'none', boxSizing: 'border-box' as const,
+}
 
-// ── Option Form Modal ──────────────────────────────────────────
-function OptionModal({
-  category, option, onClose, onSave,
-}: {
-  category: string
-  option?: DropdownOption
-  onClose: () => void
-  onSave: (data: Partial<DropdownOption>) => void
+/* ─── Add/Edit Modal ─── */
+function OptionModal({ category, option, onClose, onSave }: {
+  category: string; option?: DropdownOption
+  onClose: () => void; onSave: (d: Partial<DropdownOption>) => void
 }) {
-  const [label,      setLabel]      = useState(option?.label      || '')
-  const [value,      setValue]      = useState(option?.value      || '')
-  const [sortOrder,  setSortOrder]  = useState(option?.sortOrder  ?? 0)
-  const [parentVal,  setParentVal]  = useState(option?.parentValue || '')
+  const [label,     setLabel]     = useState(option?.label      || '')
+  const [value,     setValue]     = useState(option?.value      || '')
+  const [sortOrder, setSortOrder] = useState(option?.sortOrder  ?? 0)
+  const [parentVal, setParentVal] = useState(option?.parentValue || '')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -66,75 +71,62 @@ function OptionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }} onClick={onClose} />
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.96, y: 16 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative card w-full max-w-md p-6 z-10"
+        exit={{ opacity: 0, scale: 0.96, y: 16 }}
+        style={{
+          position: 'relative', width: '100%', maxWidth: 480, zIndex: 1,
+          background: 'var(--admin-bg, #0D1117)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 18, padding: 28,
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+        }}
       >
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-display font-bold text-white text-lg">
-            {option ? 'Edit Option' : 'Add New Option'}
-          </h3>
-          <button onClick={onClose} className="p-2 hover:bg-surface-hover rounded-xl transition-colors">
-            <X className="w-4 h-4 text-navy-300" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 22 }}>
+          <div>
+            <h3 style={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 700, fontSize: 18, color: V.text, margin: 0 }}>
+              {option ? 'Edit Option' : 'Add New Option'}
+            </h3>
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: V.textMuted, margin: '3px 0 0' }}>
+              Category: <span style={{ color: V.accent }}>{category}</span>
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'var(--admin-card-bg,rgba(255,255,255,0.05))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: 8, cursor: 'pointer', padding: '7px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X style={{ width: 15, height: 15, color: V.textMuted }} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
-            <label className="label">Category</label>
-            <input value={category} readOnly className="input opacity-60 cursor-not-allowed" />
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: V.textMuted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Display Label *</label>
+            <input value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Central Board of Secondary Education" style={iS} required />
           </div>
           <div>
-            <label className="label">Display Label <span className="text-orange-400">*</span></label>
-            <input
-              value={label}
-              onChange={e => setLabel(e.target.value)}
-              placeholder="e.g. Central Board of Secondary Education"
-              className="input"
-              required
-            />
+            <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: V.textMuted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Stored Value / Slug *</label>
+            <input value={value} onChange={e => setValue(e.target.value.toLowerCase().replace(/\s+/g, '_'))} placeholder="e.g. cbse" style={{ ...iS, fontFamily: 'monospace' }} required />
+            <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: V.textFaint, marginTop: 5 }}>Lowercase, underscores only. Stored in the database.</p>
           </div>
-          <div>
-            <label className="label">Stored Value / Slug <span className="text-orange-400">*</span></label>
-            <input
-              value={value}
-              onChange={e => setValue(e.target.value.toLowerCase().replace(/\s+/g, '_'))}
-              placeholder="e.g. cbse"
-              className="input font-mono text-sm"
-              required
-            />
-            <p className="text-navy-500 text-xs mt-1">Lowercase, underscores only. This is stored in the database.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <label className="label">Sort Order</label>
-              <input
-                type="number"
-                value={sortOrder}
-                onChange={e => setSortOrder(Number(e.target.value))}
-                className="input"
-                min={0}
-              />
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: V.textMuted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Sort Order</label>
+              <input type="number" value={sortOrder} onChange={e => setSortOrder(Number(e.target.value))} style={iS} min={0} />
             </div>
             <div>
-              <label className="label">Parent Value <span className="text-navy-500 text-xs font-normal">(optional)</span></label>
-              <input
-                value={parentVal}
-                onChange={e => setParentVal(e.target.value)}
-                placeholder="e.g. maharashtra"
-                className="input text-sm"
-              />
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: V.textMuted, marginBottom: 6, fontFamily: 'DM Sans, sans-serif' }}>Parent Value <span style={{ fontWeight: 400 }}>(optional)</span></label>
+              <input value={parentVal} onChange={e => setParentVal(e.target.value)} placeholder="e.g. maharashtra" style={iS} />
             </div>
           </div>
-
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={onClose} className="btn-secondary flex-1 justify-center">Cancel</button>
-            <button type="submit" className="btn-primary flex-1 justify-center">
-              <Save className="w-4 h-4" /> {option ? 'Save Changes' : 'Add Option'}
+          <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+            <button type="button" onClick={onClose}
+              style={{ flex: 1, padding: '11px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: 9, color: V.textMuted, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 600 }}>
+              Cancel
+            </button>
+            <button type="submit"
+              style={{ flex: 1, padding: '11px', background: V.accent, border: 'none', borderRadius: 9, color: '#fff', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, boxShadow: '0 4px 20px rgba(184,134,11,0.3)' }}>
+              <Save style={{ width: 14, height: 14 }} /> {option ? 'Save Changes' : 'Add Option'}
             </button>
           </div>
         </form>
@@ -143,250 +135,163 @@ function OptionModal({
   )
 }
 
-// ── Category Options List ──────────────────────────────────────
+/* ─── Category Options Panel ─── */
 function CategoryOptions({ categoryKey }: { categoryKey: string }) {
   const queryClient = useQueryClient()
-  const [search,      setSearch]      = useState('')
-  const [modalOpen,   setModalOpen]   = useState(false)
-  const [editOption,  setEditOption]  = useState<DropdownOption | undefined>()
+  const [search,    setSearch]    = useState('')
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editOpt,   setEditOpt]   = useState<DropdownOption | undefined>()
 
   const { data: options, isLoading } = useQuery<DropdownOption[]>({
     queryKey: ['dropdown-options', categoryKey],
-    queryFn:  () => fetch(`/api/settings/dropdown?category=${categoryKey}&includeInactive=true`,{cache:'no-store'}).then(r=>r.json()).then(d=>d.options||d||[]),
+    queryFn: () => fetch(`/api/settings/dropdown?category=${categoryKey}&includeInactive=true`, { cache: 'no-store' })
+      .then(r => r.json()).then(d => d.options || d || []),
     staleTime: 2 * 60 * 1000,
   })
 
-  const invalidate = () => {
+  const inv = () => {
     queryClient.invalidateQueries({ queryKey: ['dropdown-options', categoryKey] })
-    queryClient.invalidateQueries({ queryKey: ['dropdown', categoryKey] }) // bust user-facing cache too
+    queryClient.invalidateQueries({ queryKey: ['dropdown', categoryKey] })
   }
 
   const addMutation = useMutation({
-    mutationFn: async (data: Partial<DropdownOption>) => {
-      const res = await fetch('/api/settings/dropdown', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) })
-      return res.json()
-    },
-    onSuccess: () => { toast.success('Option added!'); setModalOpen(false); invalidate() },
-    onError:   () => toast.error('Failed to add option.'),
+    mutationFn: (d: Partial<DropdownOption>) => fetch('/api/settings/dropdown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).then(r => r.json()),
+    onSuccess: () => { toast.success('Option added!'); setModalOpen(false); inv() },
+    onError: () => toast.error('Failed to add.'),
   })
-
   const editMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<DropdownOption> }) => fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()),
-    onSuccess: () => { toast.success('Option updated!'); setEditOption(undefined); setModalOpen(false); invalidate() },
-    onError:   () => toast.error('Failed to update option.'),
+    mutationFn: ({ id, d }: { id: string; d: Partial<DropdownOption> }) => fetch(`/api/settings/dropdown?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).then(r => r.json()),
+    onSuccess: () => { toast.success('Updated!'); setEditOpt(undefined); setModalOpen(false); inv() },
+    onError: () => toast.error('Failed to update.'),
   })
-
   const toggleMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      fetch(`/api/settings/dropdown?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive})}).then(r=>r.json()),
-    onSuccess: () => invalidate(),
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => fetch(`/api/settings/dropdown?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isActive }) }).then(r => r.json()),
+    onSuccess: () => inv(),
   })
-
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => fetch(`/api/settings/dropdown?id=${id}`,{method:'DELETE',headers:{}}).then(r=>r.json()),
-    onSuccess: () => { toast.success('Option removed.'); invalidate() },
-    onError:   () => toast.error('Cannot delete — option may be in use.'),
+    mutationFn: (id: string) => fetch(`/api/settings/dropdown?id=${id}`, { method: 'DELETE' }).then(r => r.json()),
+    onSuccess: () => { toast.success('Deleted.'); inv() },
+    onError: () => toast.error('Cannot delete — option may be in use.'),
   })
 
-  const handleSave = (data: Partial<DropdownOption>) => {
-    if (editOption) {
-      editMutation.mutate({ id: editOption.id, data })
-    } else {
-      addMutation.mutate(data)
-    }
+  const handleSave = (d: Partial<DropdownOption>) => {
+    if (editOpt) editMutation.mutate({ id: editOpt.id, d })
+    else addMutation.mutate(d)
   }
 
   const filtered = (options ?? []).filter(o =>
     o.label.toLowerCase().includes(search.toLowerCase()) ||
     o.value.toLowerCase().includes(search.toLowerCase())
   )
+  const activeCount = (options ?? []).filter(o => o.isActive).length
 
   return (
-    <div className="flex-1">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
-        <div className="flex items-center gap-3 flex-1 input">
-          <Search className="w-4 h-4 text-navy-400 flex-shrink-0" />
-          <input
-            type="text"
-            placeholder={`Search in ${categoryKey}…`}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="bg-transparent flex-1 focus:outline-none text-white placeholder-navy-400 text-sm"
-          />
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Search + Add */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: 9, padding: '0 14px' }}>
+          <Search style={{ width: 14, height: 14, color: V.textFaint, flexShrink: 0 }} />
+          <input type="text" placeholder={`Search in ${categoryKey}…`} value={search} onChange={e => setSearch(e.target.value)}
+            style={{ background: 'transparent', border: 'none', outline: 'none', flex: 1, fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: V.text, padding: '10px 0' }} />
         </div>
-        <button
-          onClick={() => { setEditOption(undefined); setModalOpen(true) }}
-          className="btn-primary text-sm flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Add Option
+        <button onClick={() => { setEditOpt(undefined); setModalOpen(true) }}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: V.accent, border: 'none', borderRadius: 9, color: '#fff', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 12px rgba(184,134,11,0.3)' }}>
+          <Plus style={{ width: 14, height: 14 }} /> Add Option
         </button>
       </div>
 
-      {/* Count */}
-      <p className="text-navy-400 text-xs mb-4 font-display">
-        {filtered.length} option{filtered.length !== 1 ? 's' : ''} 
-        {!isLoading && options && ` · ${options.filter(o => o.isActive).length} active`}
-      </p>
+      {/* Stats row */}
+      <div style={{ display: 'flex', gap: 10 }}>
+        {[
+          { label: 'Total', value: options?.length ?? 0, color: V.text },
+          { label: 'Active', value: activeCount, color: '#4ADE80' },
+          { label: 'Inactive', value: (options?.length ?? 0) - activeCount, color: V.textMuted },
+        ].map(s => (
+          <div key={s.label} style={{ flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.03))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: 9, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 800, fontSize: 20, color: s.color }}>{s.value}</span>
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: V.textMuted, fontWeight: 500 }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
 
       {/* List */}
       {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="skeleton h-12 rounded-xl" />)}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} style={{ height: 52, borderRadius: 10, background: 'var(--admin-card-bg,rgba(255,255,255,0.03))', animation: 'pulse 2s infinite' }} />
+          ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12">
-          <Settings className="w-10 h-10 text-navy-600 mx-auto mb-3" />
-          <p className="text-navy-400">No options found. Add your first one!</p>
+        <div style={{ textAlign: 'center', padding: '64px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+          <Hash style={{ width: 40, height: 40, color: 'rgba(255,255,255,0.1)' }} />
+          <p style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 14, color: V.textMuted }}>No options found. Add your first one!</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((opt) => (
-            <motion.div
-              key={opt.id}
-              layout
-              className={clsx(
-                'flex items-center gap-4 p-3.5 rounded-xl border transition-all',
-                opt.isActive
-                  ? 'bg-navy-800 border-surface-border'
-                  : 'bg-navy-900 border-surface-border opacity-50'
-              )}
-            >
-              {/* Sort handle */}
-              <span className="text-navy-600 text-xs font-mono w-6 text-center flex-shrink-0">{opt.sortOrder}</span>
-
-              {/* Label + value */}
-              <div className="flex-1 min-w-0">
-                <div className="font-display font-semibold text-white text-sm">{opt.label}</div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <code className="text-navy-400 text-xs font-mono">{opt.value}</code>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {filtered.map(opt => (
+            <motion.div key={opt.id} layout
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '12px 16px', borderRadius: 10,
+                background: opt.isActive ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.015)',
+                border: '1px solid var(--admin-border,rgba(255,255,255,0.07))',
+                opacity: opt.isActive ? 1 : 0.55,
+                transition: 'all .15s',
+              }}>
+              {/* Sort */}
+              <span style={{ fontFamily: 'monospace', fontSize: 11, color: V.textFaint, width: 22, textAlign: 'center', flexShrink: 0 }}>{opt.sortOrder}</span>
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 600, fontSize: 14, color: V.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{opt.label}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                  <code style={{ fontFamily: 'monospace', fontSize: 11, color: V.textMuted }}>{opt.value}</code>
                   {opt.parentValue && (
-                    <span className="badge-gray text-[10px]">parent: {opt.parentValue}</span>
+                    <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 10, color: V.textFaint, background: 'var(--admin-card-bg,rgba(255,255,255,0.05))', padding: '1px 7px', borderRadius: 99 }}>parent: {opt.parentValue}</span>
                   )}
                 </div>
               </div>
-
-              {/* Active toggle */}
-              <button
-                onClick={() => toggleMutation.mutate({ id: opt.id, isActive: !opt.isActive })}
-                className={clsx('transition-colors', opt.isActive ? 'text-green-400' : 'text-navy-600')}
-                title={opt.isActive ? 'Deactivate' : 'Activate'}
-              >
-                {opt.isActive
-                  ? <ToggleRight className="w-6 h-6" />
-                  : <ToggleLeft  className="w-6 h-6" />
-                }
+              {/* Toggle */}
+              <button onClick={() => toggleMutation.mutate({ id: opt.id, isActive: !opt.isActive })}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: opt.isActive ? '#4ADE80' : 'rgba(255,255,255,0.2)', flexShrink: 0 }}
+                title={opt.isActive ? 'Deactivate' : 'Activate'}>
+                {opt.isActive ? <ToggleRight style={{ width: 22, height: 22 }} /> : <ToggleLeft style={{ width: 22, height: 22 }} />}
               </button>
-
               {/* Edit */}
-              <button
-                onClick={() => { setEditOption(opt); setModalOpen(true) }}
-                className="p-2 rounded-lg hover:bg-surface-hover text-navy-400 hover:text-white transition-all"
-              >
-                <Pencil className="w-4 h-4" />
+              <button onClick={() => { setEditOpt(opt); setModalOpen(true) }}
+                style={{ background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: 7, padding: '6px', cursor: 'pointer', display: 'flex', color: V.textMuted, flexShrink: 0 }}>
+                <Pencil style={{ width: 13, height: 13 }} />
               </button>
-
               {/* Delete */}
-              <button
-                onClick={() => {
-                  if (window.confirm(`Delete "${opt.label}"? Existing records using this value will be unaffected.`)) {
-                    deleteMutation.mutate(opt.id)
-                  }
-                }}
-                className="p-2 rounded-lg hover:bg-red-500/10 text-navy-500 hover:text-red-400 transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
+              <button onClick={() => { if (window.confirm(`Delete "${opt.label}"?`)) deleteMutation.mutate(opt.id) }}
+                style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)', borderRadius: 7, padding: '6px', cursor: 'pointer', display: 'flex', color: 'rgba(248,113,113,0.7)', flexShrink: 0 }}>
+                <Trash2 style={{ width: 13, height: 13 }} />
               </button>
             </motion.div>
           ))}
         </div>
       )}
 
-      {/* Modal */}
       <AnimatePresence>
         {modalOpen && (
-          <OptionModal
-            category={categoryKey}
-            option={editOption}
-            onClose={() => { setModalOpen(false); setEditOption(undefined) }}
-            onSave={handleSave}
-          />
+          <OptionModal category={categoryKey} option={editOpt} onClose={() => { setModalOpen(false); setEditOpt(undefined) }} onSave={handleSave} />
         )}
       </AnimatePresence>
     </div>
   )
 }
 
-// ── Admin sidebar — extracted to top level to prevent remount crash ──────────
-function SettingsAdminNav({ user, onClose, onLogout }: {
-  user: any
-  onClose?: () => void
-  onLogout: () => void
-}) {
-  return (
-    <aside className="w-64 bg-surface-card border-r border-surface-border flex flex-col h-full">
-      <div className="p-5 border-b border-surface-border flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-display font-bold text-white text-sm">Super Admin</span>
-        </Link>
-        {onClose && <button onClick={onClose}><X className="w-4 h-4 text-navy-400" /></button>}
-      </div>
-      <div className="p-4 border-b border-surface-border">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-red-500/20 flex items-center justify-center font-display font-bold text-red-400 text-sm">
-            {(user?.fullName || 'A')[0]}
-          </div>
-          <div>
-            <div className="font-display font-bold text-white text-sm">{user?.fullName || 'Admin'}</div>
-            <span className="badge-orange text-[10px]">Super Admin</span>
-          </div>
-        </div>
-      </div>
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {ADMIN_NAV.map(({ icon: Icon, label, href }) => (
-          <Link
-            key={href}
-            href={href}
-            className={clsx(
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl font-display font-semibold text-sm transition-all',
-              href === '/admin/settings'
-                ? 'bg-orange-500 text-white shadow-orange-sm'
-                : 'text-navy-300 hover:text-white hover:bg-surface-hover'
-            )}
-          >
-            <Icon className="w-4 h-4 flex-shrink-0" />{label}
-          </Link>
-        ))}
-      </nav>
-      <div className="p-3 border-t border-surface-border">
-        <button
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 font-display font-semibold text-sm transition-all"
-        >
-          <LogOut className="w-4 h-4" /> Logout
-        </button>
-      </div>
-    </aside>
-  )
-}
-
-// ── Main Settings Page ─────────────────────────────────────────
+/* ─── Main Page ─── */
 export default function AdminSettingsPage() {
-  const { user } = useAuthStore()
   const [activeCategory, setActiveCategory] = useState(DROPDOWN_CATEGORIES[0].key)
-  const [sidebarOpen,    setSidebarOpen]    = useState(false)
-  const [catSearchQuery, setCatSearchQuery] = useState('')
+  const [catSearch,      setCatSearch]      = useState('')
   const [seeding,        setSeeding]        = useState(false)
   const queryClient = useQueryClient()
 
-  const handleSeedDefaults = async () => {
-    if (!window.confirm('This will add default Indian school dropdown values (boards, cities, types, etc.) for any categories that are currently empty. Existing entries will not be overwritten. Continue?')) return
+  const handleSeed = async () => {
+    if (!window.confirm('Add default Indian school dropdown values for empty categories. Existing entries will not be overwritten. Continue?')) return
     setSeeding(true)
     try {
-      const res = await fetch('/api/settings/dropdown/seed', { method: 'POST' })
+      const res  = await fetch('/api/settings/dropdown/seed', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Seed failed')
       toast.success(`✅ ${data.message}`)
@@ -398,118 +303,87 @@ export default function AdminSettingsPage() {
     setSeeding(false)
   }
 
-  const logout = async () => {
-    try { await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }) } catch (_) {}
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('ts_access_token')
-      window.location.href = '/login'
-    }
-  }
-
   const filteredCats = DROPDOWN_CATEGORIES.filter(c =>
-    c.label.toLowerCase().includes(catSearchQuery.toLowerCase())
+    c.label.toLowerCase().includes(catSearch.toLowerCase())
   )
-
   const activeCatDef = DROPDOWN_CATEGORIES.find(c => c.key === activeCategory)
 
   return (
-    <div className="flex h-screen bg-navy-900 overflow-hidden">
-      {/* Desktop admin sidebar */}
-      <div className="hidden lg:flex flex-col">
-        <SettingsAdminNav user={user} onLogout={logout} />
+    <AdminLayout title="Dropdown Settings" subtitle="Single source of truth — all dropdown values across the platform">
+
+      {/* Top action bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: '14px 18px', background: 'rgba(184,134,11,0.06)', border: '1px solid rgba(184,134,11,0.18)', borderRadius: 12 }}>
+        <div>
+          <div style={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 700, fontSize: 14, color: V.text, marginBottom: 3 }}>
+            ⚡ Changes reflect across all dropdowns, forms, and search filters
+          </div>
+          <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: V.textMuted }}>
+            Deactivating a value hides it from new forms but does not affect existing records.
+          </div>
+        </div>
+        <button onClick={handleSeed} disabled={seeding}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'rgba(74,222,128,0.1)', border: '1px solid rgba(74,222,128,0.25)', borderRadius: 9, color: '#4ADE80', cursor: seeding ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700, flexShrink: 0, opacity: seeding ? 0.7 : 1 }}>
+          {seeding ? <><Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} /> Seeding…</> : <><Sprout style={{ width: 14, height: 14 }} /> Seed Default Values</>}
+        </button>
       </div>
 
-      {/* Mobile admin sidebar */}
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="w-64 flex flex-col">
-            <SettingsAdminNav user={user} onLogout={logout} onClose={() => setSidebarOpen(false)} />
+      {/* Two-panel layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 16, height: 'calc(100vh - 230px)', minHeight: 0 }}>
+
+        {/* Left: Category list */}
+        <div style={{ background: 'var(--admin-card-bg, rgba(255,255,255,0.04))', border: '1px solid var(--admin-border, rgba(255,255,255,0.07))', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Search */}
+          <div style={{ padding: 12, borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--admin-card-bg,rgba(255,255,255,0.05))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: 8, padding: '0 12px' }}>
+              <Search style={{ width: 13, height: 13, color: V.textFaint, flexShrink: 0 }} />
+              <input type="text" placeholder="Search categories…" value={catSearch} onChange={e => setCatSearch(e.target.value)}
+                style={{ background: 'transparent', border: 'none', outline: 'none', flex: 1, fontFamily: 'DM Sans, sans-serif', fontSize: 12, color: V.text, padding: '9px 0' }} />
+            </div>
           </div>
-          <div className="flex-1 bg-black/60" onClick={() => setSidebarOpen(false)} />
+
+          {/* Category list */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: 8 }}>
+            {filteredCats.map(cat => (
+              <button key={cat.key} onClick={() => setActiveCategory(cat.key)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 9,
+                  border: 'none', cursor: 'pointer', textAlign: 'left', marginBottom: 2, transition: 'all .15s',
+                  background: activeCategory === cat.key ? 'rgba(184,134,11,0.15)' : 'transparent',
+                  borderLeft: activeCategory === cat.key ? '3px solid var(--admin-accent, #B8860B)' : '3px solid transparent',
+                }}>
+                <span style={{ fontSize: 18, flexShrink: 0 }}>{cat.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: activeCategory === cat.key ? 700 : 500, color: activeCategory === cat.key ? 'var(--admin-accent, #B8860B)' : V.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.label}</div>
+                  <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 10, color: V.textFaint, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.desc}</div>
+                </div>
+                {activeCategory === cat.key && <ChevronRight style={{ width: 13, height: 13, color: 'var(--admin-accent, #B8860B)', flexShrink: 0 }} />}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="flex items-center gap-4 px-6 py-4 border-b border-surface-border bg-surface-card flex-shrink-0">
-          <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-            <Menu className="w-5 h-5 text-navy-300" />
-          </button>
-          <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+        {/* Right: Options panel */}
+        <div style={{ background: 'var(--admin-card-bg, rgba(255,255,255,0.04))', border: '1px solid var(--admin-border, rgba(255,255,255,0.07))', borderRadius: 14, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Panel header */}
+          <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(184,134,11,0.12)', border: '1px solid rgba(184,134,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+              {activeCatDef?.icon}
+            </div>
             <div>
-              <h1 className="font-display font-bold text-white text-lg flex items-center gap-2">
-                <Settings className="w-5 h-5 text-orange-400" /> Dropdown Settings
-              </h1>
-              <p className="text-navy-400 text-xs">
-                Single source of truth — all dropdown values across the platform are managed here.
-              </p>
-            </div>
-            <button
-              onClick={handleSeedDefaults}
-              disabled={seeding}
-              className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl border border-orange-500/30 bg-orange-500/10 text-orange-400 text-xs font-display font-semibold hover:bg-orange-500/20 transition-all disabled:opacity-50 flex-shrink-0"
-            >
-              {seeding ? '⏳ Seeding…' : '🌱 Seed Default Values'}
-            </button>
-          </div>
-        </header>
-
-        {/* Two-panel layout */}
-        <div className="flex-1 overflow-hidden flex">
-          {/* Category list panel */}
-          <div className="w-64 border-r border-surface-border flex flex-col flex-shrink-0 overflow-hidden bg-surface-card/50">
-            <div className="p-3 border-b border-surface-border">
-              <div className="flex items-center gap-2 input py-2">
-                <Search className="w-3.5 h-3.5 text-navy-400" />
-                <input
-                  type="text"
-                  placeholder="Search categories…"
-                  value={catSearchQuery}
-                  onChange={e => setCatSearchQuery(e.target.value)}
-                  className="bg-transparent flex-1 text-xs focus:outline-none text-white placeholder-navy-500"
-                />
+              <h2 style={{ fontFamily: 'DM Sans, sans-serif', fontWeight: 800, fontSize: 18, color: V.text, margin: 0 }}>{activeCatDef?.label}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 3 }}>
+                <code style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--admin-accent, #B8860B)', background: 'rgba(184,134,11,0.1)', padding: '2px 8px', borderRadius: 5 }}>{activeCategory}</code>
+                <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: 11, color: V.textFaint }}>{activeCatDef?.desc}</span>
               </div>
-            </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-              {filteredCats.map((cat) => (
-                <button
-                  key={cat.key}
-                  onClick={() => setActiveCategory(cat.key)}
-                  className={clsx(
-                    'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all text-sm font-display font-semibold',
-                    activeCategory === cat.key
-                      ? 'bg-orange-500 text-white'
-                      : 'text-navy-300 hover:text-white hover:bg-surface-hover'
-                  )}
-                >
-                  <span className="text-base flex-shrink-0">{cat.icon}</span>
-                  <span className="flex-1 truncate">{cat.label}</span>
-                  {activeCategory === cat.key && <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />}
-                </button>
-              ))}
             </div>
           </div>
 
-          {/* Options panel */}
-          <div className="flex-1 overflow-y-auto p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-3xl">{activeCatDef?.icon}</span>
-              <div>
-                <h2 className="font-display font-bold text-white text-xl">{activeCatDef?.label}</h2>
-                <p className="text-navy-400 text-xs font-mono">category: <span className="text-orange-400">{activeCategory}</span></p>
-              </div>
-            </div>
-
-            <div className="p-3 mb-5 rounded-xl bg-orange-500/8 border border-orange-500/20 text-sm text-navy-200">
-              ⚡ Changes here reflect across <strong className="text-white">all dropdowns, forms, and search filters</strong> within 5 minutes (React Query cache refresh).
-              Deactivating a value hides it from new forms but does not affect existing records.
-            </div>
-
+          {/* Options content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
             <CategoryOptions key={activeCategory} categoryKey={activeCategory} />
           </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   )
 }

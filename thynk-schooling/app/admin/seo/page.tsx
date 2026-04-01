@@ -185,7 +185,7 @@ export default function AdminSEOPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, height: 'calc(100vh - 120px)' }}>
 
         {/* Page selector */}
-        <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, overflow:'hidden', height:'fit-content' }}>
+        <div style={{ background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:12, overflow:'hidden', height:'fit-content' }}>
           {PAGE_KEYS.map(p => (
             <button key={p.key} onClick={() => setActivePage(p.key)} style={{
               width:'100%', padding:'11px 14px', border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)',
@@ -201,13 +201,13 @@ export default function AdminSEOPage() {
         <div style={{ display:'flex', flexDirection:'column', gap:12, overflow:'hidden' }}>
 
           {/* Toolbar */}
-          <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'12px 16px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, background:'rgba(255,255,255,0.06)', borderRadius:8, padding:'7px 12px', flex:1, minWidth:180 }}>
-              <Search style={{ width:14, height:14, color:'rgba(255,255,255,0.3)', flexShrink:0 }} />
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:12, padding:'12px 16px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--admin-card-bg,rgba(255,255,255,0.06))', borderRadius:8, padding:'7px 12px', flex:1, minWidth:180 }}>
+              <Search style={{ width:14, height:14, color:'var(--admin-text-faint,rgba(255,255,255,0.3))', flexShrink:0 }} />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search parameters…"
                 style={{ background:'none', border:'none', outline:'none', color:'#fff', fontSize:13, fontFamily:'DM Sans,sans-serif', width:'100%' }} />
             </div>
-            <span style={{ color:'rgba(255,255,255,0.3)', fontSize:12, fontFamily:'DM Sans,sans-serif' }}>{filtered.length} / {params.length} params</span>
+            <span style={{ color:'var(--admin-text-faint,rgba(255,255,255,0.3))', fontSize:12, fontFamily:'DM Sans,sans-serif' }}>{filtered.length} / {params.length} params</span>
 
             {/* Presets dropdown */}
             <div style={{ position:'relative' }}>
@@ -215,12 +215,12 @@ export default function AdminSEOPage() {
                 <Plus style={{ width:13, height:13 }} /> Presets <ChevronDown style={{ width:12, height:12 }} />
               </button>
               {showPresets && (
-                <div style={{ position:'absolute', top:'100%', right:0, zIndex:50, background:'#111820', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:8, width:280, maxHeight:320, overflowY:'auto', boxShadow:'0 16px 48px rgba(0,0,0,0.5)', marginTop:4 }}>
+                <div style={{ position:'absolute', top:'100%', right:0, zIndex:50, background:'var(--admin-bg,#111820)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, padding:8, width:280, maxHeight:320, overflowY:'auto', boxShadow:'0 16px 48px rgba(0,0,0,0.5)', marginTop:4 }}>
                   <button onClick={addAllPresets} style={{ width:'100%', padding:'8px 12px', borderRadius:7, background:'rgba(184,134,11,0.15)', border:'1px solid rgba(184,134,11,0.3)', color:'#E8C547', cursor:'pointer', fontSize:12, fontFamily:'DM Sans,sans-serif', fontWeight:700, marginBottom:6 }}>
                     ✨ Add All {allPresets.length} Missing Presets
                   </button>
                   {allPresets.map(k => (
-                    <button key={k} onClick={() => addPreset(k)} style={{ width:'100%', textAlign:'left', padding:'6px 12px', borderRadius:6, background:'transparent', border:'none', color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:12, fontFamily:'monospace', display:'block' }}
+                    <button key={k} onClick={() => addPreset(k)} style={{ width:'100%', textAlign:'left', padding:'6px 12px', borderRadius:6, background:'transparent', border:'none', color:'var(--admin-text-muted,rgba(255,255,255,0.6))', cursor:'pointer', fontSize:12, fontFamily:'monospace', display:'block' }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.06)'}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='transparent'}>
                       {k}
@@ -230,13 +230,13 @@ export default function AdminSEOPage() {
               )}
             </div>
 
-            <button onClick={() => setBulkMode(!bulkMode)} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.7)', cursor:'pointer', fontSize:12, fontFamily:'DM Sans,sans-serif', fontWeight:600 }}>
+            <button onClick={() => setBulkMode(!bulkMode)} style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', borderRadius:8, background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', color:'var(--admin-text-muted,rgba(255,255,255,0.7))', cursor:'pointer', fontSize:12, fontFamily:'DM Sans,sans-serif', fontWeight:600 }}>
               Bulk Add
             </button>
-            <button onClick={exportCSV} title="Export CSV" style={{ padding:'7px 10px', borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', cursor:'pointer', display:'flex', alignItems:'center' }}>
+            <button onClick={exportCSV} title="Export CSV" style={{ padding:'7px 10px', borderRadius:8, background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', cursor:'pointer', display:'flex', alignItems:'center' }}>
               <Download style={{ width:14, height:14 }} />
             </button>
-            <button onClick={() => fileRef.current?.click()} title="Import CSV" style={{ padding:'7px 10px', borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', cursor:'pointer', display:'flex', alignItems:'center' }}>
+            <button onClick={() => fileRef.current?.click()} title="Import CSV" style={{ padding:'7px 10px', borderRadius:8, background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', cursor:'pointer', display:'flex', alignItems:'center' }}>
               <Upload style={{ width:14, height:14 }} />
             </button>
             <input ref={fileRef} type="file" accept=".csv" onChange={importCSV} style={{ display:'none' }} />
@@ -248,25 +248,25 @@ export default function AdminSEOPage() {
 
           {/* Bulk add */}
           {bulkMode && (
-            <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:16 }}>
-              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:8 }}>
+            <div style={{ background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:12, padding:16 }}>
+              <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:12, color:'var(--admin-text-muted,rgba(255,255,255,0.4))', marginBottom:8 }}>
                 Paste parameters as <code style={{ color:'#E8C547' }}>key=value</code> — one per line. You can add 500+ at once.
               </p>
               <textarea value={bulkText} onChange={e => setBulkText(e.target.value)} rows={8} placeholder={'og:title=Thynk Schooling\nog:description=Find the best schools\nkeywords=schools,cbse,icse'}
-                style={{ width:'100%', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'10px 14px', color:'#fff', fontFamily:'monospace', fontSize:12, resize:'vertical', outline:'none', boxSizing:'border-box' }} />
+                style={{ width:'100%', background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'10px 14px', color:'#fff', fontFamily:'monospace', fontSize:12, resize:'vertical', outline:'none', boxSizing:'border-box' }} />
               <div style={{ display:'flex', gap:8, marginTop:8 }}>
                 <button onClick={applyBulk} style={{ padding:'8px 18px', borderRadius:8, background:'#B8860B', border:'none', color:'#fff', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:'DM Sans,sans-serif' }}>Apply</button>
-                <button onClick={() => { setBulkMode(false); setBulkText('') }} style={{ padding:'8px 18px', borderRadius:8, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.6)', cursor:'pointer', fontSize:13, fontFamily:'DM Sans,sans-serif' }}>Cancel</button>
+                <button onClick={() => { setBulkMode(false); setBulkText('') }} style={{ padding:'8px 18px', borderRadius:8, background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', color:'var(--admin-text-muted,rgba(255,255,255,0.6))', cursor:'pointer', fontSize:13, fontFamily:'DM Sans,sans-serif' }}>Cancel</button>
               </div>
             </div>
           )}
 
           {/* Add new row */}
-          <div style={{ display:'flex', gap:8, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(184,134,11,0.2)', borderRadius:12, padding:'10px 14px', alignItems:'center' }}>
+          <div style={{ display:'flex', gap:8, background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid rgba(184,134,11,0.2)', borderRadius:12, padding:'10px 14px', alignItems:'center' }}>
             <input value={newKey} onChange={e => setNewKey(e.target.value)} onKeyDown={e => e.key==='Enter' && addParam()} placeholder="meta name / property / key"
-              style={{ flex:'0 0 280px', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 12px', color:'#fff', fontFamily:'monospace', fontSize:12, outline:'none' }} />
+              style={{ flex:'0 0 280px', background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 12px', color:'#fff', fontFamily:'monospace', fontSize:12, outline:'none' }} />
             <input value={newVal} onChange={e => setNewVal(e.target.value)} onKeyDown={e => e.key==='Enter' && addParam()} placeholder="value"
-              style={{ flex:1, background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 12px', color:'#fff', fontFamily:'monospace', fontSize:12, outline:'none' }} />
+              style={{ flex:1, background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', borderRadius:8, padding:'8px 12px', color:'#fff', fontFamily:'monospace', fontSize:12, outline:'none' }} />
             <button onClick={addParam} style={{ padding:'8px 16px', borderRadius:8, background:'rgba(184,134,11,0.2)', border:'1px solid rgba(184,134,11,0.3)', color:'#E8C547', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }}>
               <Plus style={{ width:13, height:13 }} /> Add
             </button>
@@ -275,24 +275,24 @@ export default function AdminSEOPage() {
           {/* Params list */}
           <div style={{ flex:1, overflowY:'auto', display:'flex', flexDirection:'column', gap:4 }}>
             {loading ? (
-              <div style={{ textAlign:'center', padding:'40px', color:'rgba(255,255,255,0.3)', fontFamily:'DM Sans,sans-serif' }}>Loading…</div>
+              <div style={{ textAlign:'center', padding:'40px', color:'var(--admin-text-faint,rgba(255,255,255,0.3))', fontFamily:'DM Sans,sans-serif' }}>Loading…</div>
             ) : filtered.length === 0 ? (
               <div style={{ textAlign:'center', padding:'40px' }}>
                 <div style={{ fontSize:32, marginBottom:12 }}>🔍</div>
-                <p style={{ color:'rgba(255,255,255,0.3)', fontFamily:'DM Sans,sans-serif', fontSize:14 }}>{params.length === 0 ? 'No parameters yet. Add presets or type your own above.' : 'No matches for your search.'}</p>
+                <p style={{ color:'var(--admin-text-faint,rgba(255,255,255,0.3))', fontFamily:'DM Sans,sans-serif', fontSize:14 }}>{params.length === 0 ? 'No parameters yet. Add presets or type your own above.' : 'No matches for your search.'}</p>
               </div>
             ) : (
               filtered.map(p => (
-                <div key={p.id} style={{ display:'flex', gap:8, alignItems:'center', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)', borderRadius:9, padding:'8px 12px' }}
+                <div key={p.id} style={{ display:'flex', gap:8, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.03))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:9, padding:'8px 12px' }}
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.055)'}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background='rgba(255,255,255,0.03)'}>
                   <input value={p.key} onChange={e => updateParam(p.id, 'key', e.target.value)}
                     style={{ flex:'0 0 280px', background:'transparent', border:'none', outline:'none', color:'#E8C547', fontFamily:'monospace', fontSize:12, padding:'2px 0' }} />
-                  <span style={{ color:'rgba(255,255,255,0.2)', fontSize:14 }}>=</span>
+                  <span style={{ color:'var(--admin-text-faint,rgba(255,255,255,0.2))', fontSize:14 }}>=</span>
                   <input value={p.value} onChange={e => updateParam(p.id, 'value', e.target.value)}
                     style={{ flex:1, background:'transparent', border:'none', outline:'none', color:'rgba(255,255,255,0.8)', fontFamily:'monospace', fontSize:12, padding:'2px 0' }}
                     placeholder="(empty)" />
-                  <button onClick={() => deleteParam(p.id)} style={{ padding:4, background:'none', border:'none', color:'rgba(255,255,255,0.2)', cursor:'pointer', display:'flex', flexShrink:0 }}
+                  <button onClick={() => deleteParam(p.id)} style={{ padding:4, background:'none', border:'none', color:'var(--admin-text-faint,rgba(255,255,255,0.2))', cursor:'pointer', display:'flex', flexShrink:0 }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.color='#f87171'}
                     onMouseLeave={e => (e.currentTarget as HTMLElement).style.color='rgba(255,255,255,0.2)'}>
                     <Trash2 style={{ width:14, height:14 }} />

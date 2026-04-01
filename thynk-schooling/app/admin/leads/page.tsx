@@ -9,7 +9,7 @@ import { motion } from 'framer-motion'
 const TABS = ['All', 'New', 'Purchased', 'Expired']
 
 const cell: React.CSSProperties   = { padding: '11px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,.05)' }
-const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid rgba(255,255,255,.06)', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
+const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
 
 export default function AdminLeadsPage() {
   const [tab, setTab]       = useState('All')
@@ -41,20 +41,20 @@ export default function AdminLeadsPage() {
           { label: 'Revenue',        value: `₹${(totalRevenue/100).toLocaleString('en-IN')}`, color: '#FF5C00' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '12px', padding: '16px' }}>
+            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
             <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: typeof s.value==='string'?'22px':'30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value.toLocaleString()}</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', borderRadius: '8px', padding: '7px 11px' }}>
+      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
             <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />
             <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search parent name, phone, school..."
-              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#fff', flex: 1 }} />
+              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: 'var(--admin-text,rgba(255,255,255,0.9))', flex: 1 }} />
           </div>
           <div style={{ display: 'flex', gap: '5px' }}>
             {TABS.map(t => (
@@ -64,7 +64,7 @@ export default function AdminLeadsPage() {
               </button>
             ))}
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '7px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif' }}>
+          <button style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif' }}>
             <Download style={{ width: '12px', height: '12px' }} /> Export CSV
           </button>
         </div>
@@ -80,7 +80,7 @@ export default function AdminLeadsPage() {
               {isLoading
                 ? Array.from({ length: 8 }).map((_, i) => (
                     <tr key={i}><td colSpan={7} style={{ padding: '10px 14px' }}>
-                      <div style={{ height: '32px', background: 'rgba(255,255,255,.04)', borderRadius: '6px' }} />
+                      <div style={{ height: '32px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', borderRadius: '6px' }} />
                     </td></tr>
                   ))
                 : leads.length === 0
@@ -90,7 +90,7 @@ export default function AdminLeadsPage() {
                         onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,.02)'}
                         onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                         <td style={cell}>
-                          <div style={{ fontWeight: 600, color: '#fff' }}>{l.isPurchased ? l.parentName : `${(l.parentName||'Parent')[0]}***`}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{l.isPurchased ? l.parentName : `${(l.parentName||'Parent')[0]}***`}</div>
                           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{l.isPurchased ? l.parentPhone : '***** masked'}</div>
                         </td>
                         <td style={cell}><div style={{ fontWeight: 500 }}>{l.schoolName}</div><div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{l.city}</div></td>
@@ -122,8 +122,8 @@ export default function AdminLeadsPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,.05)' }}>
             <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif' }}>{((page-1)*20)+1}–{Math.min(page*20,total)} of {total}</span>
             <div style={{ display: 'flex', gap: '5px' }}>
-              <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1} style={{ padding: '6px 13px', borderRadius: '7px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', opacity: page===1?.4:1 }}>← Prev</button>
-              <button onClick={() => setPage(p => p+1)} disabled={page*20>=total} style={{ padding: '6px 13px', borderRadius: '7px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.06)', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', opacity: page*20>=total?.4:1 }}>Next →</button>
+              <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1} style={{ padding: '6px 13px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', opacity: page===1?.4:1 }}>← Prev</button>
+              <button onClick={() => setPage(p => p+1)} disabled={page*20>=total} style={{ padding: '6px 13px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', opacity: page*20>=total?.4:1 }}>Next →</button>
             </div>
           </div>
         )}

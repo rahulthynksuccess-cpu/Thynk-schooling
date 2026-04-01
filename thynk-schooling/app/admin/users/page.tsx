@@ -78,8 +78,8 @@ function exportCSV(users: AdminUser[]) {
 }
 
 /* ── Cell styles ── */
-const cell: React.CSSProperties   = { padding:'11px 13px', fontSize:'12px', fontFamily:'DM Sans,sans-serif', color:'rgba(255,255,255,0.85)', borderBottom:'1px solid #1E2A52', verticalAlign:'top' }
-const hdCell: React.CSSProperties = { padding:'9px 13px', fontSize:'10px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'#8892B0', fontFamily:'DM Sans,sans-serif', borderBottom:'1px solid #1E2A52', whiteSpace:'nowrap', background:'rgba(255,255,255,0.02)' }
+const cell: React.CSSProperties   = { padding:'11px 13px', fontSize:'12px', fontFamily:'DM Sans,sans-serif', color:'var(--admin-text,rgba(255,255,255,0.9))', borderBottom:'1px solid #1E2A52', verticalAlign:'top' }
+const hdCell: React.CSSProperties = { padding:'9px 13px', fontSize:'10px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif', borderBottom:'1px solid #1E2A52', whiteSpace:'nowrap', background:'var(--admin-card-bg,rgba(255,255,255,0.02))' }
 
 /* ── Activity Drawer ── */
 function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => void }) {
@@ -96,7 +96,7 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
       initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 280 }}
       style={{ position:'fixed', top:0, right:0, bottom:0, width:'440px', zIndex:200,
-               background:'#0D1117', borderLeft:'1px solid #1E2A52',
+               background:'var(--admin-bg,#0D1117)', borderLeft:'1px solid #1E2A52',
                boxShadow:'-12px 0 48px rgba(0,0,0,.5)', display:'flex', flexDirection:'column' }}>
 
       {/* Header */}
@@ -104,22 +104,22 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
           <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'18px', color:'#fff' }}>Activity Log</div>
           <button onClick={onClose}
-            style={{ width:30, height:30, borderRadius:'8px', border:'1px solid #1E2A52', background:'rgba(255,255,255,0.04)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'#8892B0' }}>
+            style={{ width:30, height:30, borderRadius:'8px', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', color:'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>
             <X style={{ width:14, height:14 }} />
           </button>
         </div>
 
         {/* User summary */}
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px', background:'rgba(255,255,255,0.04)', borderRadius:'10px', marginBottom:'12px', border:'1px solid #1E2A52' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'12px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', borderRadius:'10px', marginBottom:'12px', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
           <div style={{ width:40, height:40, borderRadius:'10px', background:rc.bg, border:`1px solid ${rc.color}40`, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'15px', color:rc.color, flexShrink:0 }}>
             {(user.fullName||user.phone||'U')[0].toUpperCase()}
           </div>
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ fontWeight:600, fontSize:'13px', color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.fullName}</div>
-            <div style={{ fontSize:'11px', color:'#8892B0', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.phone}{user.email ? ` · ${user.email}` : ''}</div>
+            <div style={{ fontSize:'11px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.phone}{user.email ? ` · ${user.email}` : ''}</div>
           </div>
           <div style={{ textAlign:'right', flexShrink:0 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', color:'#8892B0', fontFamily:'monospace', justifyContent:'flex-end' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'monospace', justifyContent:'flex-end' }}>
               <Globe style={{ width:10, height:10 }} /> {user.lastIp || '—'}
             </div>
             <div style={{ fontSize:'10px', color:'#4A5568', marginTop:'2px' }}>Last IP</div>
@@ -133,9 +133,9 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
             { label:'Last Login', value: fmtDate(user.lastLoginAt) },
             { label:'Joined',     value: fmtDate(user.createdAt) },
           ].map(s => (
-            <div key={s.label} style={{ background:'rgba(255,255,255,0.03)', borderRadius:'8px', padding:'8px', textAlign:'center', border:'1px solid #1E2A52' }}>
+            <div key={s.label} style={{ background:'var(--admin-card-bg,rgba(255,255,255,0.03))', borderRadius:'8px', padding:'8px', textAlign:'center', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
               <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'14px', color:'#fff', lineHeight:1 }}>{s.value}</div>
-              <div style={{ fontSize:'9px', color:'#8892B0', marginTop:'3px', textTransform:'uppercase', letterSpacing:'.08em' }}>{s.label}</div>
+              <div style={{ fontSize:'9px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginTop:'3px', textTransform:'uppercase', letterSpacing:'.08em' }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -143,16 +143,16 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
 
       {/* Log list */}
       {/* ── Terminal-style Log Viewer ── */}
-      <div style={{ flex:1, overflowY:'auto', background:'#0D1117', fontFamily:"'JetBrains Mono','Fira Code','Courier New',monospace" }}>
+      <div style={{ flex:1, overflowY:'auto', background:'var(--admin-bg,#0D1117)', fontFamily:"'JetBrains Mono','Fira Code','Courier New',monospace" }}>
         {/* Log header bar */}
-        <div style={{ padding:'8px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:'8px', background:'#161B22', position:'sticky', top:0 }}>
+        <div style={{ padding:'8px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)', display:'flex', alignItems:'center', gap:'8px', background:'var(--admin-bg,#161B22)', position:'sticky', top:0 }}>
           <div style={{ display:'flex', gap:'5px' }}>
             <div style={{ width:10, height:10, borderRadius:'50%', background:'#FF5F56' }} />
             <div style={{ width:10, height:10, borderRadius:'50%', background:'#FFBD2E' }} />
             <div style={{ width:10, height:10, borderRadius:'50%', background:'#27C93F' }} />
           </div>
-          <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.3)', flex:1 }}>activity_log — {logs.length} events</span>
-          <span style={{ fontSize:'10px', color:'rgba(255,255,255,0.2)' }}>bash</span>
+          <span style={{ fontSize:'11px', color:'var(--admin-text-faint,rgba(255,255,255,0.3))', flex:1 }}>activity_log — {logs.length} events</span>
+          <span style={{ fontSize:'10px', color:'var(--admin-text-faint,rgba(255,255,255,0.2))' }}>bash</span>
         </div>
 
         {isLoading
@@ -160,9 +160,9 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
             <div style={{ padding:'20px 16px' }}>
               {Array.from({length:6}).map((_,i) => (
                 <div key={i} style={{ display:'flex', gap:'12px', marginBottom:'10px', opacity: 1 - i*0.12 }}>
-                  <div style={{ width:'120px', height:'12px', background:'rgba(255,255,255,0.05)', borderRadius:'3px' }} />
-                  <div style={{ width:'60px', height:'12px', background:'rgba(255,255,255,0.05)', borderRadius:'3px' }} />
-                  <div style={{ flex:1, height:'12px', background:'rgba(255,255,255,0.04)', borderRadius:'3px' }} />
+                  <div style={{ width:'120px', height:'12px', background:'var(--admin-card-bg,rgba(255,255,255,0.05))', borderRadius:'3px' }} />
+                  <div style={{ width:'60px', height:'12px', background:'var(--admin-card-bg,rgba(255,255,255,0.05))', borderRadius:'3px' }} />
+                  <div style={{ flex:1, height:'12px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', borderRadius:'3px' }} />
                 </div>
               ))}
             </div>
@@ -170,14 +170,14 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
           : logs.length === 0
             ? (
               <div style={{ padding:'40px 16px', textAlign:'center' }}>
-                <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.2)', marginBottom:'8px' }}>$</div>
-                <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.25)' }}>No activity records found.</div>
+                <div style={{ fontSize:'12px', color:'var(--admin-text-faint,rgba(255,255,255,0.2))', marginBottom:'8px' }}>$</div>
+                <div style={{ fontSize:'12px', color:'var(--admin-text-faint,rgba(255,255,255,0.25))' }}>No activity records found.</div>
               </div>
             )
             : (
               <div>
                 {/* Column headers */}
-                <div style={{ display:'grid', gridTemplateColumns:'160px 120px 1fr 100px 80px', gap:'0', padding:'6px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)', fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', textTransform:'uppercase', color:'rgba(255,255,255,0.25)' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'160px 120px 1fr 100px 80px', gap:'0', padding:'6px 16px', borderBottom:'1px solid rgba(255,255,255,0.06)', fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', textTransform:'uppercase', color:'var(--admin-text-faint,rgba(255,255,255,0.25))' }}>
                   <span>Timestamp</span>
                   <span>Action</span>
                   <span>Detail</span>
@@ -185,11 +185,11 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
                   <span>Device</span>
                 </div>
                 {logs.map((log) => {
-                  const s = ACTION_STYLE[log.action] || { color:'#8892B0', bg:'rgba(255,255,255,0.04)', emoji:'•' }
+                  const s = ACTION_STYLE[log.action] || { color:'var(--admin-text-muted,rgba(255,255,255,0.45))', bg:'rgba(255,255,255,0.04)', emoji:'•' }
                   return (
                     <div key={log.id} className="log-line" style={{ display:'grid', gridTemplateColumns:'160px 120px 1fr 100px 80px', gap:'0', padding:'8px 16px', borderBottom:'1px solid rgba(255,255,255,0.04)', fontSize:'11px', fontFamily:"'JetBrains Mono','Fira Code',monospace", alignItems:'center' }}>
                       {/* Timestamp */}
-                      <span style={{ color:'rgba(255,255,255,0.3)', fontSize:'10px' }}>
+                      <span style={{ color:'var(--admin-text-faint,rgba(255,255,255,0.3))', fontSize:'10px' }}>
                         {new Date(log.created_at).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}
                       </span>
                       {/* Action badge */}
@@ -199,15 +199,15 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
                         </span>
                       </span>
                       {/* Detail */}
-                      <span style={{ color:'rgba(255,255,255,0.6)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:'11px' }}>
-                        {log.detail || <span style={{ color:'rgba(255,255,255,0.18)' }}>—</span>}
+                      <span style={{ color:'var(--admin-text-muted,rgba(255,255,255,0.6))', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontSize:'11px' }}>
+                        {log.detail || <span style={{ color:'var(--admin-text-faint,rgba(255,255,255,0.18))' }}>—</span>}
                       </span>
                       {/* IP */}
                       <span style={{ color:'#4EC9B0', fontSize:'10px' }}>
-                        {log.ip_address || <span style={{ color:'rgba(255,255,255,0.18)' }}>—</span>}
+                        {log.ip_address || <span style={{ color:'var(--admin-text-faint,rgba(255,255,255,0.18))' }}>—</span>}
                       </span>
                       {/* Device */}
-                      <span style={{ display:'flex', alignItems:'center', gap:'4px', color:'rgba(255,255,255,0.35)', fontSize:'10px' }}>
+                      <span style={{ display:'flex', alignItems:'center', gap:'4px', color:'var(--admin-text-faint,rgba(255,255,255,0.35))', fontSize:'10px' }}>
                         {log.user_agent
                           ? getDevice(log.user_agent) === 'Mobile'
                             ? <><Smartphone style={{ width:9, height:9 }} /> Mobile</>
@@ -221,7 +221,7 @@ function ActivityDrawer({ user, onClose }: { user: AdminUser; onClose: () => voi
                 {/* Shell prompt at end */}
                 <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', gap:'8px' }}>
                   <span style={{ color:'#27C93F', fontSize:'11px' }}>❯</span>
-                  <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.2)' }}>_</span>
+                  <span style={{ fontSize:'11px', color:'var(--admin-text-faint,rgba(255,255,255,0.2))' }}>_</span>
                 </div>
               </div>
             )
@@ -275,19 +275,19 @@ export default function AdminUsersPage() {
           { label:'Suspended',     value: users.filter(u=>!u.isActive).length,                color:'#F87171' },
         ].map((s,i) => (
           <motion.div key={s.label} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay:i*.06}}
-            style={{ background:'#111830', border:'1px solid #1E2A52', borderRadius:'12px', padding:'14px 16px' }}>
+            style={{ background:'#111830', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'12px', padding:'14px 16px' }}>
             <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'26px', color:s.color, lineHeight:1, marginBottom:'4px' }}>{s.value}</div>
-            <div style={{ fontSize:'10px', color:'#8892B0', fontFamily:'DM Sans,sans-serif', textTransform:'uppercase', letterSpacing:'.08em' }}>{s.label}</div>
+            <div style={{ fontSize:'10px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif', textTransform:'uppercase', letterSpacing:'.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background:'#111830', border:'1px solid #1E2A52', borderRadius:'14px', overflow:'hidden' }}>
+      <div style={{ background:'#111830', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', overflow:'hidden' }}>
 
         {/* Toolbar */}
         <div style={{ display:'flex', alignItems:'center', gap:'10px', padding:'12px 14px', borderBottom:'1px solid #1E2A52' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'8px', flex:1, background:'rgba(255,255,255,0.04)', border:'1px solid #1E2A52', borderRadius:'8px', padding:'8px 12px' }}>
-            <Search style={{ width:13, height:13, color:'#8892B0', flexShrink:0 }} />
+          <div style={{ display:'flex', alignItems:'center', gap:'8px', flex:1, background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'8px', padding:'8px 12px' }}>
+            <Search style={{ width:13, height:13, color:'var(--admin-text-muted,rgba(255,255,255,0.45))', flexShrink:0 }} />
             <input value={search} onChange={e=>{setSearch(e.target.value);setPage(1)}}
               placeholder="Search name, phone, email, school..."
               style={{ background:'none', border:'none', outline:'none', fontSize:'13px', fontFamily:'DM Sans,sans-serif', color:'#fff', flex:1 }} />
@@ -322,11 +322,11 @@ export default function AdminUsersPage() {
               {isLoading
                 ? Array.from({length:8}).map((_,i) => (
                     <tr key={i}><td colSpan={9} style={{padding:'10px 14px'}}>
-                      <div style={{height:'36px',background:'rgba(255,255,255,0.03)',borderRadius:'6px'}} />
+                      <div style={{height:'36px',background:'var(--admin-card-bg,rgba(255,255,255,0.03))',borderRadius:'6px'}} />
                     </td></tr>
                   ))
                 : users.length === 0
-                  ? <tr><td colSpan={9} style={{...cell,textAlign:'center',padding:'40px',color:'#8892B0'}}>No users found.</td></tr>
+                  ? <tr><td colSpan={9} style={{...cell,textAlign:'center',padding:'40px',color:'var(--admin-text-muted,rgba(255,255,255,0.45))'}}>No users found.</td></tr>
                   : users.map((u) => {
                       const rc = ROLE_COLORS[u.role] || ROLE_COLORS.parent
                       return (
@@ -342,7 +342,7 @@ export default function AdminUsersPage() {
                               </div>
                               <div style={{minWidth:0}}>
                                 <div style={{fontWeight:600,fontSize:'13px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'130px'}}>{u.fullName||'—'}</div>
-                                <div style={{fontSize:'11px',color:'#8892B0',display:'flex',alignItems:'center',gap:'4px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'130px'}}>
+                                <div style={{fontSize:'11px',color:'var(--admin-text-muted,rgba(255,255,255,0.45))',display:'flex',alignItems:'center',gap:'4px',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',maxWidth:'130px'}}>
                                   <Phone style={{width:9,height:9}}/> {u.phone}
                                   {u.isPhoneVerified && <span style={{width:5,height:5,borderRadius:'50%',background:'#4ADE80',display:'inline-block',flexShrink:0}} />}
                                 </div>
@@ -360,7 +360,7 @@ export default function AdminUsersPage() {
 
                           {/* School */}
                           <td style={{...cell,maxWidth:'130px'}}>
-                            <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:'12px',color:'#8892B0'}}>
+                            <div style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:'12px',color:'var(--admin-text-muted,rgba(255,255,255,0.45))'}}>
                               {u.schoolName || (u.role==='parent' ? `${u.totalApplications||0} applications` : '—')}
                             </div>
                           </td>
@@ -373,17 +373,17 @@ export default function AdminUsersPage() {
                           </td>
 
                           {/* IP */}
-                          <td style={{...cell,fontFamily:'monospace',fontSize:'11px',color:'#8892B0',whiteSpace:'nowrap'}}>
+                          <td style={{...cell,fontFamily:'monospace',fontSize:'11px',color:'var(--admin-text-muted,rgba(255,255,255,0.45))',whiteSpace:'nowrap'}}>
                             {u.lastIp
                               ? <div style={{display:'flex',alignItems:'center',gap:'4px'}}><Globe style={{width:10,height:10}}/>{u.lastIp}</div>
                               : '—'}
                           </td>
 
                           {/* Last Login */}
-                          <td style={{...cell,fontSize:'11px',color:'#8892B0',whiteSpace:'nowrap'}}>{fmtDate(u.lastLoginAt)}</td>
+                          <td style={{...cell,fontSize:'11px',color:'var(--admin-text-muted,rgba(255,255,255,0.45))',whiteSpace:'nowrap'}}>{fmtDate(u.lastLoginAt)}</td>
 
                           {/* Joined */}
-                          <td style={{...cell,fontSize:'11px',color:'#8892B0',whiteSpace:'nowrap'}}>
+                          <td style={{...cell,fontSize:'11px',color:'var(--admin-text-muted,rgba(255,255,255,0.45))',whiteSpace:'nowrap'}}>
                             <div style={{display:'flex',alignItems:'center',gap:'4px'}}>
                               <Calendar style={{width:10,height:10}}/>{fmtDate(u.createdAt)}
                             </div>
@@ -429,12 +429,12 @@ export default function AdminUsersPage() {
         {/* Pagination */}
         {total > 20 && (
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'12px 14px',borderTop:'1px solid #1E2A52'}}>
-            <span style={{fontSize:'12px',color:'#8892B0',fontFamily:'DM Sans,sans-serif'}}>{((page-1)*20)+1}–{Math.min(page*20,total)} of {total} users</span>
+            <span style={{fontSize:'12px',color:'var(--admin-text-muted,rgba(255,255,255,0.45))',fontFamily:'DM Sans,sans-serif'}}>{((page-1)*20)+1}–{Math.min(page*20,total)} of {total} users</span>
             <div style={{display:'flex',gap:'6px'}}>
               <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page===1}
-                style={{padding:'6px 14px',borderRadius:'7px',background:'rgba(255,255,255,0.04)',border:'1px solid #1E2A52',color:'#8892B0',cursor:'pointer',fontSize:'12px',opacity:page===1?.4:1}}>← Prev</button>
+                style={{padding:'6px 14px',borderRadius:'7px',background:'var(--admin-card-bg,rgba(255,255,255,0.04))',border:'1px solid var(--admin-border,rgba(255,255,255,0.07))',color:'var(--admin-text-muted,rgba(255,255,255,0.45))',cursor:'pointer',fontSize:'12px',opacity:page===1?.4:1}}>← Prev</button>
               <button onClick={()=>setPage(p=>p+1)} disabled={page*20>=total}
-                style={{padding:'6px 14px',borderRadius:'7px',background:'rgba(255,255,255,0.04)',border:'1px solid #1E2A52',color:'#8892B0',cursor:'pointer',fontSize:'12px',opacity:page*20>=total?.4:1}}>Next →</button>
+                style={{padding:'6px 14px',borderRadius:'7px',background:'var(--admin-card-bg,rgba(255,255,255,0.04))',border:'1px solid var(--admin-border,rgba(255,255,255,0.07))',color:'var(--admin-text-muted,rgba(255,255,255,0.45))',cursor:'pointer',fontSize:'12px',opacity:page*20>=total?.4:1}}>Next →</button>
             </div>
           </div>
         )}

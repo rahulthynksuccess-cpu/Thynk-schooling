@@ -18,6 +18,10 @@ const DEFAULT: Record<string, any> = {
   fontSerif: 'Cormorant Garamond', fontSans: 'Inter',
   /* Admin panel */
   adminBg:         '#0A0F1A',
+  adminText:       'rgba(255,255,255,0.9)',
+  adminTextMuted:  'rgba(255,255,255,0.45)',
+  adminTextFaint:  'rgba(255,255,255,0.25)',
+  adminSidebarBg:  '#0D1117',
   adminSidebarBg:  '#0D1117',
   adminHeaderBg:   '#0D1117',
   adminCardBg:     '#111820',
@@ -29,7 +33,7 @@ const DEFAULT: Record<string, any> = {
   /* Global radius */
   radius: 12, btnRadius: 6,
   /* Container width */
-  containerWidth: 1400,
+  containerWidth: 1600,
   /* Global typography */
   sizeBase: 16, sizeH1: 96, sizeH2: 60, sizeH3: 36, sizeH4: 22, sizeSmall: 13,
   weightBody: 300, weightHeading: 700, lineHeight: 160,

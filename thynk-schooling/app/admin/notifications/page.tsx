@@ -15,7 +15,7 @@ const TEMPLATES = [
 ]
 
 const lbl: React.CSSProperties = { display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: '7px', fontFamily: 'DM Sans,sans-serif' }
-const inp: React.CSSProperties = { width: '100%', padding: '10px 13px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: '9px', color: '#fff', fontSize: '13px', fontFamily: 'DM Sans,sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s' }
+const inp: React.CSSProperties = { width: '100%', padding: '10px 13px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid rgba(255,255,255,.08)', borderRadius: '9px', color: 'var(--admin-text,rgba(255,255,255,0.9))', fontSize: '13px', fontFamily: 'DM Sans,sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s' }
 
 export default function AdminNotificationsPage() {
   const [audience, setAudience] = useState<'all' | 'parents' | 'schools'>('all')
@@ -42,8 +42,8 @@ export default function AdminNotificationsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '20px', alignItems: 'start' }}>
 
         {/* Compose */}
-        <div style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', padding: '24px' }}>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '16px', color: '#fff', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', padding: '24px' }}>
+          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '16px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Bell style={{ width: '16px', height: '16px', color: '#FF5C00' }} /> Compose Notification
           </h3>
 
@@ -57,7 +57,7 @@ export default function AdminNotificationsPage() {
                   <button key={opt.value} onClick={() => setAudience(opt.value as any)}
                     style={{ flex: 1, padding: '12px', borderRadius: '10px', border: audience===opt.value ? `1.5px solid ${opt.color}` : '1px solid rgba(255,255,255,.08)', background: audience===opt.value ? `${opt.color}10` : 'rgba(255,255,255,.02)', cursor: 'pointer', textAlign: 'left', transition: 'all .15s' }}>
                     <Icon style={{ width: '16px', height: '16px', color: opt.color, marginBottom: '6px' }} />
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff', fontFamily: 'DM Sans,sans-serif' }}>{opt.label}</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontFamily: 'DM Sans,sans-serif' }}>{opt.label}</div>
                     <div style={{ fontSize: '10px', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', marginTop: '2px' }}>{opt.desc}</div>
                   </button>
                 )
@@ -83,19 +83,19 @@ export default function AdminNotificationsPage() {
 
           <button onClick={() => { if (!title || !body) { toast.error('Title and body required'); return } mutation.mutate() }}
             disabled={mutation.isPending}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FF5C00', color: '#fff', border: 'none', borderRadius: '9px', padding: '12px 24px', fontSize: '13px', fontWeight: 700, fontFamily: 'DM Sans,sans-serif', cursor: 'pointer', opacity: mutation.isPending ? .7 : 1, boxShadow: '0 4px 14px rgba(255,92,0,.3)' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FF5C00', color: 'var(--admin-text,rgba(255,255,255,0.9))', border: 'none', borderRadius: '9px', padding: '12px 24px', fontSize: '13px', fontWeight: 700, fontFamily: 'DM Sans,sans-serif', cursor: 'pointer', opacity: mutation.isPending ? .7 : 1, boxShadow: '0 4px 14px rgba(255,92,0,.3)' }}>
             {mutation.isPending ? <><Loader2 style={{ width: '15px', height: '15px', animation: 'spin 1s linear infinite' }} />Sending…</> : <><Send style={{ width: '15px', height: '15px' }} />Send Notification</>}
           </button>
         </div>
 
         {/* Templates + history */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', padding: '20px' }}>
-            <h4 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: '#fff', marginBottom: '14px' }}>Quick Templates</h4>
+          <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', padding: '20px' }}>
+            <h4 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '14px' }}>Quick Templates</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
               {TEMPLATES.map(t => (
                 <button key={t.label} onClick={() => { setTitle(t.label); setBody(t.body) }}
-                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)', color: 'rgba(255,255,255,.6)', cursor: 'pointer', textAlign: 'left', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', transition: 'all .15s' }}
+                  style={{ padding: '10px 12px', borderRadius: '8px', background: 'rgba(255,255,255,.03)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.6)', cursor: 'pointer', textAlign: 'left', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', transition: 'all .15s' }}
                   onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,92,0,.3)'}
                   onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,.06)'}>
                   {t.label}
@@ -104,16 +104,16 @@ export default function AdminNotificationsPage() {
             </div>
           </div>
 
-          <div style={{ background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', padding: '20px' }}>
-            <h4 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: '#fff', marginBottom: '4px' }}>Preview</h4>
+          <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', padding: '20px' }}>
+            <h4 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '4px' }}>Preview</h4>
             <p style={{ fontSize: '11px', color: 'rgba(255,255,255,.25)', fontFamily: 'DM Sans,sans-serif', marginBottom: '14px' }}>How it will look on mobile</p>
             <div style={{ background: '#1A2233', borderRadius: '12px', padding: '14px', border: '1px solid rgba(255,255,255,.08)' }}>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: '#FF5C00', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Bell style={{ width: '16px', height: '16px', color: '#fff' }} />
+                  <Bell style={{ width: '16px', height: '16px', color: 'var(--admin-text,rgba(255,255,255,0.9))' }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', fontFamily: 'DM Sans,sans-serif', marginBottom: '3px' }}>{title || 'Notification Title'}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontFamily: 'DM Sans,sans-serif', marginBottom: '3px' }}>{title || 'Notification Title'}</div>
                   <div style={{ fontSize: '12px', color: 'rgba(255,255,255,.5)', fontFamily: 'DM Sans,sans-serif', lineHeight: 1.5 }}>{body || 'Your message will appear here...'}</div>
                   <div style={{ fontSize: '10px', color: 'rgba(255,255,255,.2)', fontFamily: 'DM Sans,sans-serif', marginTop: '6px' }}>Thynk Schooling · just now</div>
                 </div>

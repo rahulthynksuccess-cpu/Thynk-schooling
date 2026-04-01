@@ -389,6 +389,32 @@ const PAGES: PageGroup[] = [
 ]
 
 // Build ALL_FIELDS flat map
+// ── URL map for live preview per page group ──────────────────────────
+const PAGE_URLS: Record<string, string> = {
+  'Homepage':           '/',
+  'Navbar':             '/',
+  'Footer':             '/',
+  'Schools Page':       '/schools',
+  'Login / Register':   '/login',
+  'Counselling Page':   '/counselling',
+  'Cities Section':     '/',
+  'Counselling CTA':    '/',
+  'For Schools CTA':    '/',
+  'Testimonials':       '/',
+  'Blog Preview':       '/',
+  'Compare Page':       '/compare',
+  'Pricing Page':       '/pricing',
+  'Blog Page':          '/blog',
+  'About Page':         '/about',
+  'Admin Panel':        '/admin',
+  'Global Buttons':     '/',
+  'School Dashboard':   '/dashboard/school',
+  'Parent Dashboard':   '/dashboard/parent',
+  'Cities Page':        '/cities',
+  'Privacy / Terms':    '/privacy',
+  'Contact Page':       '/contact',
+}
+
 const ALL_CSS_FIELDS: Record<string, Field> = {}
 PAGES.forEach(p => p.sections.forEach(s => s.fields.forEach(f => {
   if (f.cssVar) ALL_CSS_FIELDS[f.id] = f

@@ -5,7 +5,7 @@ import { AdminLayout } from '@/components/admin/AdminLayout'
 import { motion } from 'framer-motion'
 import { TrendingUp, TrendingDown, Users, School, DollarSign, Eye } from 'lucide-react'
 
-const card: React.CSSProperties = { background: '#0D1117', border: '1px solid rgba(255,255,255,.06)', borderRadius: '14px', padding: '20px' }
+const card: React.CSSProperties = { background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', padding: '20px' }
 
 function Sparkline({ values, color }: { values: number[]; color: string }) {
   if (!values?.length) return null
@@ -61,7 +61,7 @@ export default function AdminAnalyticsPage() {
                 <Icon style={{ width: '18px', height: '18px', color: m.color }} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '26px', color: '#fff', lineHeight: 1 }}>
+                <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '26px', color: 'var(--admin-text,rgba(255,255,255,0.9))', lineHeight: 1 }}>
                   {m.rupee ? `₹${(m.value/100).toLocaleString('en-IN')}` : m.value.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.35)', marginTop: '3px', fontFamily: 'DM Sans,sans-serif' }}>{m.label}</div>
@@ -83,7 +83,7 @@ export default function AdminAnalyticsPage() {
 
         {/* Top cities */}
         <div style={card}>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: '#fff', marginBottom: '16px' }}>Top Cities</h3>
+          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '16px' }}>Top Cities</h3>
           {isLoading
             ? Array.from({length:5}).map((_,i) => <div key={i} className="skeleton" style={{ height:28, marginBottom:6, background:'rgba(255,255,255,.04)', borderRadius:6 }} />)
             : TOP_CITIES.length === 0
@@ -91,7 +91,7 @@ export default function AdminAnalyticsPage() {
               : TOP_CITIES.map((c: any, i: number) => (
                   <div key={c.city} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
                     <span style={{ fontFamily: 'Syne,sans-serif', fontSize: '14px', fontWeight: 900, color: 'rgba(255,255,255,.15)', minWidth: '20px' }}>0{i+1}</span>
-                    <span style={{ flex: 1, fontSize: '12px', fontWeight: 600, color: '#fff', fontFamily: 'DM Sans,sans-serif' }}>{c.city}</span>
+                    <span style={{ flex: 1, fontSize: '12px', fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontFamily: 'DM Sans,sans-serif' }}>{c.city}</span>
                     <span style={{ fontSize: '12px', color: '#60A5FA', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>{c.count}</span>
                   </div>
                 ))
@@ -100,7 +100,7 @@ export default function AdminAnalyticsPage() {
 
         {/* Top schools */}
         <div style={card}>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: '#fff', marginBottom: '16px' }}>Top Schools by Leads</h3>
+          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '16px' }}>Top Schools by Leads</h3>
           {isLoading
             ? Array.from({length:5}).map((_,i) => <div key={i} style={{ height:28, marginBottom:6, background:'rgba(255,255,255,.04)', borderRadius:6 }} />)
             : TOP_SCHOOLS.length === 0
@@ -109,7 +109,7 @@ export default function AdminAnalyticsPage() {
                   <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 0', borderBottom: '1px solid rgba(255,255,255,.04)' }}>
                     <span style={{ fontFamily: 'Syne,sans-serif', fontSize: '14px', fontWeight: 900, color: 'rgba(255,255,255,.15)', minWidth: '20px' }}>0{i+1}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#fff', fontFamily: 'DM Sans,sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))', fontFamily: 'DM Sans,sans-serif', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</div>
                       <div style={{ fontSize: '10px', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif' }}>{s.city}</div>
                     </div>
                     <span style={{ fontSize: '12px', color: '#4ADE80', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>{s.leadCount}</span>
@@ -120,7 +120,7 @@ export default function AdminAnalyticsPage() {
 
         {/* Top searches */}
         <div style={card}>
-          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: '#fff', marginBottom: '16px' }}>Top Search Keywords</h3>
+          <h3 style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '14px', color: 'var(--admin-text,rgba(255,255,255,0.9))', marginBottom: '16px' }}>Top Search Keywords</h3>
           {isLoading
             ? Array.from({length:5}).map((_,i) => <div key={i} style={{ height:28, marginBottom:6, background:'rgba(255,255,255,.04)', borderRadius:6 }} />)
             : TOP_SEARCHES.length === 0

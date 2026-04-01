@@ -15,10 +15,10 @@ interface PricingConfig {
   leadExpiryDays: number
 }
 
-const card: React.CSSProperties = { background:'#111830', border:'1px solid #1E2A52', borderRadius:'14px', padding:'24px' }
-const label: React.CSSProperties = { display:'block', fontSize:'11px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'#8892B0', marginBottom:'8px', fontFamily:'DM Sans,sans-serif' }
-const input: React.CSSProperties = { width:'100%', padding:'11px 14px', background:'rgba(255,255,255,0.04)', border:'1px solid #1E2A52', borderRadius:'8px', color:'#fff', fontSize:'14px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
-const hint: React.CSSProperties = { fontSize:'11px', color:'#8892B0', marginTop:'5px', fontFamily:'DM Sans,sans-serif' }
+const card: React.CSSProperties = { background:'#111830', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', padding:'24px' }
+const label: React.CSSProperties = { display:'block', fontSize:'11px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'8px', fontFamily:'DM Sans,sans-serif' }
+const input: React.CSSProperties = { width:'100%', padding:'11px 14px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'8px', color:'#fff', fontSize:'14px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
+const hint: React.CSSProperties = { fontSize:'11px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginTop:'5px', fontFamily:'DM Sans,sans-serif' }
 
 export default function LeadPricingPage() {
   const queryClient = useQueryClient()
@@ -77,7 +77,7 @@ export default function LeadPricingPage() {
               </div>
               <div>
                 <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'24px', color:'#fff', lineHeight:1 }}>{c.value}</div>
-                <div style={{ fontSize:'11px', color:'#8892B0', marginTop:'3px', fontFamily:'DM Sans,sans-serif' }}>{c.title} · {c.sub}</div>
+                <div style={{ fontSize:'11px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginTop:'3px', fontFamily:'DM Sans,sans-serif' }}>{c.title} · {c.sub}</div>
               </div>
             </motion.div>
           )
@@ -93,7 +93,7 @@ export default function LeadPricingPage() {
             <div>
               <label style={label}>Default Price (₹)</label>
               <div style={{ position:'relative' }}>
-                <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#8892B0', fontFamily:'DM Sans,sans-serif' }}>₹</span>
+                <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif' }}>₹</span>
                 <input type="number" value={toRupees(form.defaultPricePaise)} min="1"
                   onChange={e => set('defaultPricePaise', toPaise(e.target.value))}
                   style={{ ...input, paddingLeft:'28px' }} />
@@ -103,7 +103,7 @@ export default function LeadPricingPage() {
             <div>
               <label style={label}>Floor Price (₹)</label>
               <div style={{ position:'relative' }}>
-                <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#8892B0' }}>₹</span>
+                <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>₹</span>
                 <input type="number" value={toRupees(form.minPricePaise)} min="1"
                   onChange={e => set('minPricePaise', toPaise(e.target.value))}
                   style={{ ...input, paddingLeft:'28px' }} />
@@ -113,7 +113,7 @@ export default function LeadPricingPage() {
             <div>
               <label style={label}>Ceiling Price (₹)</label>
               <div style={{ position:'relative' }}>
-                <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#8892B0' }}>₹</span>
+                <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'var(--admin-text-muted,rgba(255,255,255,0.45))' }}>₹</span>
                 <input type="number" value={toRupees(form.maxPricePaise)} min="1"
                   onChange={e => set('maxPricePaise', toPaise(e.target.value))}
                   style={{ ...input, paddingLeft:'28px' }} />
@@ -160,13 +160,13 @@ export default function LeadPricingPage() {
                 'School can set their own price within floor-ceiling range',
                 'If no custom price, the default price applies',
               ].map((t, i) => (
-                <li key={i} style={{ fontSize:'12px', color:'#8892B0', fontFamily:'DM Sans,sans-serif', lineHeight:1.5 }}>{t}</li>
+                <li key={i} style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif', lineHeight:1.5 }}>{t}</li>
               ))}
             </ul>
           </div>
 
           <div style={card}>
-            <div style={{ fontSize:'12px', fontWeight:600, color:'#8892B0', letterSpacing:'.08em', textTransform:'uppercase', marginBottom:'10px', fontFamily:'DM Sans,sans-serif' }}>Current Settings</div>
+            <div style={{ fontSize:'12px', fontWeight:600, color:'var(--admin-text-muted,rgba(255,255,255,0.45))', letterSpacing:'.08em', textTransform:'uppercase', marginBottom:'10px', fontFamily:'DM Sans,sans-serif' }}>Current Settings</div>
             {[
               { label:'Default', value:`₹${toRupees(form.defaultPricePaise)}/lead` },
               { label:'Floor',   value:`₹${toRupees(form.minPricePaise)}/lead` },
@@ -175,7 +175,7 @@ export default function LeadPricingPage() {
               { label:'Expiry',  value:`${form.leadExpiryDays} days` },
             ].map(r => (
               <div key={r.label} style={{ display:'flex', justifyContent:'space-between', padding:'8px 0', borderBottom:'1px solid #1E2A52' }}>
-                <span style={{ fontSize:'12px', color:'#8892B0', fontFamily:'DM Sans,sans-serif' }}>{r.label}</span>
+                <span style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif' }}>{r.label}</span>
                 <span style={{ fontSize:'13px', fontWeight:600, color:'#fff', fontFamily:'DM Sans,sans-serif' }}>{r.value}</span>
               </div>
             ))}
