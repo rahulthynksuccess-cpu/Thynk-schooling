@@ -49,7 +49,7 @@ export function HeroSection() {
       {/* Gold radial glow top-right */}
       <div style={{ position:'absolute', top:'-10%', right:'-5%', width:'700px', height:'700px', background:'radial-gradient(circle, rgba(184,134,11,0.08) 0%, transparent 65%)', pointerEvents:'none', zIndex:0 }} />
 
-      <div style={{ width:'100%', maxWidth:'1400px', margin:'0 auto', padding:'60px clamp(20px,5vw,80px)', position:'relative', zIndex:1 }}>
+      <div style={{ width:'100%', maxWidth:'var(--container-width,1400px)', margin:'0 auto', padding:'60px clamp(20px,5vw,80px)', position:'relative', zIndex:1 }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'minmax(0,1.1fr) minmax(0,0.9fr)',

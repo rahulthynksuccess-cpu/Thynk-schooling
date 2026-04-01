@@ -19,7 +19,7 @@ export function WhyChooseUs() {
 
   return (
     <section ref={ref} style={{ background:'var(--why-bg,#F5F0E8)', padding:'clamp(60px,8vw,100px) 0', width:'100%' }}>
-      <div style={{ maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(20px,5vw,60px)' }}>
+      <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto', padding:'0 clamp(20px,5vw,60px)' }}>
 
         {/* Header */}
         <motion.div initial={{ opacity:0, y:20 }} animate={inView?{opacity:1,y:0}:{}} transition={{ duration:.6 }}

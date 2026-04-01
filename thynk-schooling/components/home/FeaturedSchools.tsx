@@ -80,7 +80,7 @@ export function FeaturedSchools() {
 
   return (
     <section ref={ref} style={{ background:'#FAF7F2', padding:'96px 0' }}>
-      <div style={{ maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(20px,5vw,80px)' }}>
+      <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto', padding:'0 clamp(20px,5vw,80px)' }}>
         <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:'24px', marginBottom:'48px' }}>
           <div>
             <div className="eyebrow">Featured Schools</div>

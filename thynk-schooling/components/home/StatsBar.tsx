@@ -18,7 +18,7 @@ export function StatsBar() {
 
   return (
     <section ref={ref} style={{ background:'var(--stats-bg,#F5F0E8)', padding:'clamp(40px,6vw,72px) 0', borderTop:'1px solid rgba(13,17,23,0.06)', borderBottom:'1px solid rgba(13,17,23,0.06)' }}>
-      <div style={{ maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(20px,5vw,60px)' }}>
+      <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto', padding:'0 clamp(20px,5vw,60px)' }}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:'clamp(16px,3vw,40px)' }}>
           {STATS.map((s, i) => (
             <motion.div key={s.label}

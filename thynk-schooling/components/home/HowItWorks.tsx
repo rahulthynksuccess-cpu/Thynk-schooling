@@ -19,7 +19,7 @@ export function HowItWorks() {
 
   return (
     <section ref={ref} style={{ background:'var(--how-bg,#FAF7F2)', padding:'clamp(60px,8vw,100px) 0', width:'100%' }}>
-      <div style={{ maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(20px,5vw,60px)' }}>
+      <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto', padding:'0 clamp(20px,5vw,60px)' }}>
 
         <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(0,1.6fr)', gap:'clamp(40px,6vw,80px)', alignItems:'center' }}>
 

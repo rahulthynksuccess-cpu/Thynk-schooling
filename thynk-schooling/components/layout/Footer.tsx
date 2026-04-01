@@ -57,7 +57,7 @@ export function Footer() {
         .ft-city:hover{border-color:rgba(184,134,11,0.3);color:#B8860B;background:rgba(184,134,11,0.05)}
       `}</style>
       <footer style={{ background:'var(--footer-bg,#0D1117)', color:'var(--footer-text-color,rgba(250,247,242,0.5))', fontFamily:'var(--font-sans,Inter),sans-serif', fontSize:'var(--footer-text-size,14px)' }}>
-        <div style={{ maxWidth:'1400px', margin:'0 auto', padding:'0 clamp(16px,4vw,60px)' }}>
+        <div style={{ maxWidth:'var(--container-width,1400px)', margin:'0 auto', padding:'0 clamp(16px,4vw,60px)' }}>
 
           {/* Main grid */}
           <div style={{ display:'grid', gridTemplateColumns:'minmax(240px,1.4fr) repeat(4,1fr)', gap:'40px', padding:'64px 0 48px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
