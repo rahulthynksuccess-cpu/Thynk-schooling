@@ -23,21 +23,48 @@ export function RegisterClient() {
   const [name,     setName]     = useState('')
 
   const sendOtpMutation = useMutation({
-    mutationFn: () => fetch('/api/auth/send-otp',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})}).then(r=>r.json()),
+    mutationFn: async () => {
+      const r = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw data
+      return data
+    },
     onSuccess: () => { setStep(2); toast.success('OTP sent to your mobile!') },
-    onError:   () => toast.error('Failed to send OTP. Please try again.'),
+    onError: (err: any) => toast.error(err?.message || 'Failed to send OTP. Please try again.'),
   })
 
   const registerMutation = useMutation({
-    mutationFn: () => fetch('/api/auth/register',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone,password,role,otp,fullName:name})}).then(r=>r.json()),
+    mutationFn: async () => {
+      const r = await fetch('/api/auth/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, password, role, otp, fullName: name }),
+      })
+      const data = await r.json()
+      // Throw with body so onError can read the message (covers 409, 400, 500)
+      if (!r.ok) throw data
+      return data
+    },
     onSuccess: (data) => {
-      if (data.message && !data.user) { toast.error(data.message); return }
+      if (!data.user) {
+        toast.error(data.message || 'Registration failed. Please try again.')
+        return
+      }
       setUser(data.user)
       setAccessToken(data.accessToken)
       toast.success('Account created! Welcome to Thynk Schooling 🎉')
       router.push(role === 'school_admin' ? '/school/complete-profile' : '/parent/complete-profile')
     },
-    onError: () => toast.error('Registration failed. Please try again.'),
+    onError: (err: any) => {
+      // Surface the exact API error message (e.g. "Phone number already registered")
+      toast.error(err?.message || 'Registration failed. Please try again.')
+    },
   })
 
   const handleStep1 = (e: React.FormEvent) => {

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     )
     const user = ins.rows[0]
 
-    await logActivity(user.id, 'register', `New ${role||'parent'} account`, ip, ua)
+    await logActivity(user.id, 'register', `New ${role || 'parent'} account`, ip, ua)
 
     const accessToken  = signAccessToken ({ id: user.id, role: user.role })
     const refreshToken = signRefreshToken({ id: user.id })
@@ -43,8 +43,14 @@ export async function POST(req: NextRequest) {
       accessToken,
     }, { status: 201 })
 
-    resp.headers.set('Set-Cookie',
-      `ts_refresh=${refreshToken}; HttpOnly; Path=/; SameSite=Strict; Max-Age=${7*24*3600}`)
+    // SameSite=Lax (was Strict) — required for iOS Safari compatibility when
+    // the API is served via the Next.js same-origin proxy (see next.config.js).
+    // Lax still blocks the cookie on cross-site POST requests, so it remains secure.
+    const isProduction = process.env.NEXT_PUBLIC_APP_ENV === 'production'
+    resp.headers.set(
+      'Set-Cookie',
+      `ts_refresh=${refreshToken}; HttpOnly; Path=/; SameSite=Lax;${isProduction ? ' Secure;' : ''} Max-Age=${7 * 24 * 3600}`
+    )
     return resp
   } catch (err) {
     console.error('[register]', err)

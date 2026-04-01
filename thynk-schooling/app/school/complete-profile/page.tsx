@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   GraduationCap, ArrowRight, ArrowLeft, Save, Loader2, Upload,
   MapPin, Phone, Mail, Globe, DollarSign, Users, School, Image,
-  CheckCircle2, Building2
+  CheckCircle2, Building2, X
 } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
@@ -23,6 +23,10 @@ const STEPS = [
   { label: 'Lead Pricing',    icon: DollarSign },
 ]
 
+const MAX_FILE_SIZE_MB = 1
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
 type SchoolFormData = Record<string, string | string[] | number | boolean>
 
 export default function SchoolCompleteProfilePage() {
@@ -36,6 +40,10 @@ export default function SchoolCompleteProfilePage() {
     facilitiesCafeteria: false, facilitiesHostel: false,
     facilitiesSmartClassrooms: false, admissionOpen: false,
   })
+
+  // Image file state (separate from JSON formData — files can't be JSON serialised)
+  const [logoFile,  setLogoFile]  = useState<File | null>(null)
+  const [coverFile, setCoverFile] = useState<File | null>(null)
 
   // All dropdowns fetched dynamically
   const { options: boards          } = useDropdown('board')
@@ -60,15 +68,67 @@ export default function SchoolCompleteProfilePage() {
     set(key, arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
   }
 
+  // ── Image validation + handler ─────────────────────────────────────────────
+  const handleImageFile = (
+    file: File | null,
+    setter: (f: File | null) => void,
+    label: string
+  ) => {
+    if (!file) { setter(null); return }
+
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      toast.error(`${label}: only JPG, PNG, or WEBP files are accepted.`)
+      return
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      toast.error(
+        `${label} is too large (${(file.size / 1024 / 1024).toFixed(1)} MB). ` +
+        `Maximum allowed size is ${MAX_FILE_SIZE_MB} MB. Please compress the image and try again.`
+      )
+      return
+    }
+    setter(file)
+  }
+
+  // ── Save mutation — uses FormData to handle file uploads ───────────────────
   const saveMutation = useMutation({
-    mutationFn: () => fetch('/api/schools/profile',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify(formData)}).then(r=>r.json()),
+    mutationFn: async () => {
+      const fd = new FormData()
+      // Append all JSON fields
+      Object.entries(formData).forEach(([k, v]) => {
+        if (Array.isArray(v)) {
+          v.forEach(item => fd.append(k, item))
+        } else {
+          fd.append(k, String(v))
+        }
+      })
+      // Append files only if selected and valid
+      if (logoFile)  fd.append('logo',  logoFile)
+      if (coverFile) fd.append('cover', coverFile)
+
+      const r = await fetch('/api/schools/profile', {
+        method: 'POST',
+        credentials: 'include',
+        // Do NOT set Content-Type — browser sets multipart boundary automatically
+        body: fd,
+      })
+      const data = await r.json()
+      if (!r.ok) throw data
+      return data
+    },
     onSuccess: async () => {
-      await fetch('/api/auth/complete-profile',{method:'PUT',credentials:'include',headers:{'Content-Type':'application/json'},body:JSON.stringify({profileCompleted:true})})
+      await fetch('/api/auth/complete-profile', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileCompleted: true }),
+      })
       if (user) setUser({ ...user, profileCompleted: true })
       toast.success('School profile saved! 🎉')
       router.push('/dashboard/school')
     },
-    onError: () => toast.error('Failed to save profile. Please try again.'),
+    onError: (err: any) =>
+      toast.error(err?.message || 'Failed to save profile. Please try again.'),
   })
 
   const FACILITY_TOGGLES = [
@@ -127,6 +187,67 @@ export default function SchoolCompleteProfilePage() {
       </div>
     )
   }
+
+  // ── Image upload field component ───────────────────────────────────────────
+  const ImageUploadField = ({
+    label,
+    hint,
+    file,
+    onChange,
+  }: {
+    label: string
+    hint: string
+    file: File | null
+    onChange: (f: File | null) => void
+  }) => (
+    <div>
+      <label className="label">{label}</label>
+      <div className="relative">
+        {file ? (
+          <div className="flex items-center gap-3 p-3 bg-navy-800 border border-orange-500/40 rounded-xl">
+            <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-navy-700">
+              <img
+                src={URL.createObjectURL(file)}
+                alt="preview"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{file.name}</p>
+              <p className="text-navy-400 text-xs">{(file.size / 1024).toFixed(0)} KB</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="text-navy-400 hover:text-red-400 transition-colors flex-shrink-0"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <label className="flex flex-col items-center justify-center gap-2 p-5 bg-navy-800 border border-dashed border-surface-border rounded-xl cursor-pointer hover:border-orange-500/40 transition-colors">
+            <Upload className="w-6 h-6 text-navy-400" />
+            <span className="text-navy-300 text-sm font-semibold">Click to upload {label}</span>
+            <span className="text-navy-500 text-xs">{hint}</span>
+            <input
+              type="file"
+              accept={ACCEPTED_IMAGE_TYPES.join(',')}
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0] ?? null
+                handleImageFile(f, onChange, label)
+                // Reset input value so same file can be re-selected after clearing
+                e.target.value = ''
+              }}
+            />
+          </label>
+        )}
+      </div>
+      <p className="text-navy-500 text-xs mt-1">
+        JPG, PNG or WEBP · Max {MAX_FILE_SIZE_MB} MB
+      </p>
+    </div>
+  )
 
   const STEP_CONTENT = [
     // Step 0: Basic Info
@@ -289,7 +410,7 @@ export default function SchoolCompleteProfilePage() {
       <p className="text-navy-500 text-xs">📍 GPS coordinates are used to show your school on the map and for lead matching. You can get them from Google Maps.</p>
     </div>,
 
-    // Step 4: Contact & Media
+    // Step 4: Contact & Media — NOW WITH REAL FILE UPLOAD + VALIDATION
     <div key="contact" className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -323,15 +444,25 @@ export default function SchoolCompleteProfilePage() {
           placeholder="e.g. Dr. Ranjana Sharma" className="input" />
       </div>
 
-      {/* Media upload note */}
-      <div className="p-4 rounded-xl border border-dashed border-surface-border bg-navy-800/50 text-center space-y-2">
-        <Upload className="w-8 h-8 text-navy-500 mx-auto" />
-        <p className="font-display font-semibold text-white text-sm">Logo & Gallery Photos</p>
-        <p className="text-navy-400 text-xs">
-          Upload school logo, cover photo, and gallery images (up to 50 depending on your plan) directly from your School Profile dashboard after saving.
-        </p>
-        <p className="text-navy-500 text-xs">Accepted: JPG, PNG, WEBP · Max 5MB per image</p>
-      </div>
+      {/* Logo upload with validation */}
+      <ImageUploadField
+        label="School Logo"
+        hint="Square image recommended · JPG, PNG, WEBP · Max 1 MB"
+        file={logoFile}
+        onChange={setLogoFile}
+      />
+
+      {/* Cover photo upload with validation */}
+      <ImageUploadField
+        label="Cover Photo"
+        hint="Landscape image recommended (1200×400px) · JPG, PNG, WEBP · Max 1 MB"
+        file={coverFile}
+        onChange={setCoverFile}
+      />
+
+      <p className="text-navy-500 text-xs">
+        Additional gallery images (up to 50 depending on your plan) can be uploaded from the School Profile dashboard after saving.
+      </p>
     </div>,
 
     // Step 5: Lead Pricing
