@@ -1,139 +1,138 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
   LayoutDashboard, Users, FileText, Star, Zap, TrendingUp,
-  MapPin, Phone, Eye, EyeOff, ShoppingCart, Package, Bell,
-  Settings, ChevronRight, BarChart3, GraduationCap, LogOut,
-  BadgeCheck, Menu, X
+  ShoppingCart, Package, Settings, ChevronRight,
+  BarChart3, GraduationCap, LogOut, Menu, X,
+  ArrowUpRight, AlertCircle, CheckCircle2, Clock,
+  Loader2, MapPin
 } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
-import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
-import { Lead, LeadCredits, SchoolDashboardStats, Application } from '@/types'
+import { Lead, LeadCredits, SchoolDashboardStats } from '@/types'
 import toast from 'react-hot-toast'
 
 const NAV = [
-  { icon: LayoutDashboard, label: 'Dashboard',    href: '/dashboard/school' },
-  { icon: Users,           label: 'Leads',         href: '/dashboard/school/leads' },
-  { icon: FileText,        label: 'Applications',  href: '/dashboard/school/applications' },
-  { icon: Star,            label: 'Reviews',       href: '/dashboard/school/reviews' },
-  { icon: Package,         label: 'Lead Packages', href: '/dashboard/school/packages' },
-  { icon: BarChart3,       label: 'Analytics',     href: '/dashboard/school/analytics' },
-  { icon: Settings,        label: 'School Profile',href: '/school/complete-profile' },
+  { icon: LayoutDashboard, label: 'Dashboard',     href: '/dashboard/school' },
+  { icon: Users,           label: 'Leads',          href: '/dashboard/school/leads' },
+  { icon: FileText,        label: 'Applications',   href: '/dashboard/school/applications' },
+  { icon: Star,            label: 'Reviews',        href: '/dashboard/school/reviews' },
+  { icon: Package,         label: 'Lead Packages',  href: '/dashboard/school/packages' },
+  { icon: BarChart3,       label: 'Analytics',      href: '/dashboard/school/analytics' },
+  { icon: Settings,        label: 'School Profile', href: '/school/complete-profile' },
 ]
 
-function DashSidebar({ active, onClose }: { active: string; onClose?: () => void }) {
+function Sidebar({ active, onClose, credits }: { active: string; onClose?: () => void; credits?: any }) {
   const { user, logout } = useAuthStore()
+  const router = useRouter()
   return (
-    <aside className="w-64 bg-surface-card border-r border-surface-border flex flex-col h-full">
-      {/* Logo */}
-      <div className="p-5 border-b border-surface-border flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-white" />
+    <aside style={{ width: 256, display: 'flex', flexDirection: 'column', height: '100%', background: '#FFFFFF', borderRight: '1px solid rgba(13,17,23,0.08)' }}>
+      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(13,17,23,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#B8860B,#E5B64A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(184,134,11,0.3)' }}>
+            <GraduationCap style={{ width: 18, height: 18, color: '#fff' }} />
           </div>
-          <span className="font-display font-bold text-white text-sm">ThynkSchooling</span>
+          <div>
+            <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 15, color: '#0D1117', lineHeight: 1 }}>Thynk Schooling</div>
+            <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#B8860B', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginTop: 2 }}>School Portal</div>
+          </div>
         </Link>
-        {onClose && <button onClick={onClose}><X className="w-4 h-4 text-navy-400" /></button>}
+        {onClose && <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X style={{ width: 16, height: 16, color: '#718096' }} /></button>}
       </div>
-
-      {/* User */}
-      <div className="p-4 border-b border-surface-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center font-display font-bold text-orange-400">
+      <div style={{ margin: '12px 12px 4px', background: 'linear-gradient(135deg,#FEF7E0,#FAF7F2)', border: '1px solid rgba(184,134,11,0.15)', borderRadius: 12, padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#B8860B,#E5B64A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 17, color: '#fff', flexShrink: 0 }}>
             {(user?.fullName || user?.phone || 'S')[0].toUpperCase()}
           </div>
-          <div className="min-w-0">
-            <div className="font-display font-bold text-white text-sm truncate">{user?.fullName || 'School Admin'}</div>
-            <div className="text-navy-400 text-xs">{user?.phone}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullName || 'School Admin'}</div>
+            <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#B8860B', fontWeight: 600 }}>School Administrator</div>
           </div>
         </div>
+        {credits && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(184,134,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#718096' }}>Lead Credits</span>
+            <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 14, color: '#B8860B' }}>{credits.availableCredits}</span>
+          </div>
+        )}
       </div>
-
-      {/* Nav */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {NAV.map(({ icon: Icon, label, href }) => (
-          <Link
-            key={href}
-            href={href}
-            className={clsx(
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl font-display font-semibold text-sm transition-all',
-              active === href
-                ? 'bg-orange-500 text-white shadow-orange-sm'
-                : 'text-navy-300 hover:text-white hover:bg-surface-hover'
-            )}
-          >
-            <Icon className="w-4 h-4 flex-shrink-0" />
-            {label}
-          </Link>
-        ))}
+      <nav style={{ flex: 1, padding: '8px 10px', overflowY: 'auto' }}>
+        {NAV.map(({ icon: Icon, label, href }) => {
+          const isActive = active === href
+          return (
+            <Link key={href} href={href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, marginBottom: 2, textDecoration: 'none', transition: 'all .15s', background: isActive ? 'linear-gradient(135deg,rgba(184,134,11,0.1),rgba(184,134,11,0.04))' : 'transparent', color: isActive ? '#B8860B' : '#4A5568', fontFamily: 'DM Sans,sans-serif', fontWeight: isActive ? 600 : 400, fontSize: 13, borderLeft: isActive ? '3px solid #B8860B' : '3px solid transparent' }}>
+              <Icon style={{ width: 16, height: 16, flexShrink: 0 }} />
+              <span style={{ flex: 1 }}>{label}</span>
+              {isActive && <ChevronRight style={{ width: 13, height: 13, opacity: .5 }} />}
+            </Link>
+          )
+        })}
       </nav>
-
-      {/* Logout */}
-      <div className="p-3 border-t border-surface-border">
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 font-display font-semibold text-sm transition-all"
-        >
-          <LogOut className="w-4 h-4" /> Logout
+      <div style={{ padding: '10px', borderTop: '1px solid rgba(13,17,23,0.07)' }}>
+        <button onClick={() => { logout(); router.replace('/login') }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#E53E3E' }}>
+          <LogOut style={{ width: 16, height: 16 }} /> Sign Out
         </button>
       </div>
     </aside>
   )
 }
 
-function StatCard({ icon: Icon, label, value, change, color }: {
-  icon: React.ElementType; label: string; value: string | number; change?: string; color: string
-}) {
-  return (
-    <div className="stat-card">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${color}`}>
-        <Icon className="w-5 h-5 text-white" />
+function StatCard({ icon: Icon, label, value, sub, color, href }: any) {
+  const inner = (
+    <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px', position: 'relative', overflow: 'hidden', transition: 'all .2s', height: '100%' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,${color},${color}40)`, borderRadius: '14px 14px 0 0' }} />
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${color}12`, border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon style={{ width: 18, height: 18, color }} />
+        </div>
+        {href && <ArrowUpRight style={{ width: 14, height: 14, color: '#A0ADB8' }} />}
       </div>
-      <div className="stat-value">{value}</div>
-      <div className="stat-label">{label}</div>
-      {change && <div className="stat-change-up mt-1">{change}</div>}
+      <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 34, color: '#0D1117', lineHeight: 1, letterSpacing: '-1px', marginBottom: 4 }}>
+        {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
+      </div>
+      <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096' }}>{label}</div>
+      {sub && <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color, fontWeight: 600, marginTop: 6 }}>{sub}</div>}
     </div>
   )
+  if (href) return <Link href={href} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>{inner}</Link>
+  return inner
 }
 
-function LeadRow({ lead, onBuy }: { lead: Lead; onBuy: (id: string) => void }) {
-  const [revealed, setRevealed] = useState(lead.isPurchased)
-
+function LeadRow({ lead, onBuy, buying }: { lead: Lead; onBuy: (id: string) => void; buying: boolean }) {
+  const statusColors: Record<string, string> = { new: '#16A34A', contacted: '#2563EB', interested: '#B8860B', lost: '#718096' }
+  const color = statusColors[lead.status] || '#718096'
   return (
-    <tr className="border-b border-surface-border hover:bg-surface-hover/50 transition-colors">
-      <td className="px-4 py-3">
-        <div className="font-display font-semibold text-white text-sm">{revealed ? lead.fullName : lead.maskedName}</div>
-        <div className="text-navy-400 text-xs">{lead.childName} · Class {lead.classApplyingFor}</div>
+    <tr style={{ borderBottom: '1px solid rgba(13,17,23,0.05)' }}>
+      <td style={{ padding: '12px 16px' }}>
+        <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117' }}>{lead.isPurchased ? lead.fullName : lead.maskedName}</div>
+        <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#718096', marginTop: 2 }}>{lead.childName} · Class {lead.classApplyingFor}</div>
       </td>
-      <td className="px-4 py-3">
-        <div className="font-mono text-sm text-white">{revealed ? lead.fullPhone : lead.maskedPhone}</div>
+      <td style={{ padding: '12px 16px' }}>
+        <div style={{ fontFamily: 'monospace', fontSize: 13, color: lead.isPurchased ? '#0D1117' : '#718096' }}>{lead.isPurchased ? lead.fullPhone : lead.maskedPhone}</div>
       </td>
-      <td className="px-4 py-3">
-        <span className="text-navy-300 text-sm">{lead.city}</span>
+      <td style={{ padding: '12px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#4A5568' }}>
+          <MapPin style={{ width: 12, height: 12, color: '#B8860B' }} />{lead.city}
+        </div>
       </td>
-      <td className="px-4 py-3">
-        <span className="text-navy-400 text-xs">{new Date(lead.createdAt).toLocaleDateString('en-IN')}</span>
+      <td style={{ padding: '12px 16px' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 99, background: `${color}12`, border: `1px solid ${color}30`, fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 600, color }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, display: 'inline-block' }} />{lead.status}
+        </span>
       </td>
-      <td className="px-4 py-3">
-        <span className={clsx('badge text-[10px]',
-          lead.status === 'new'         ? 'badge-green'  :
-          lead.status === 'contacted'   ? 'badge-blue'   :
-          lead.status === 'interested'  ? 'badge-orange' : 'badge-gray'
-        )}>{lead.status}</span>
-      </td>
-      <td className="px-4 py-3">
+      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
         {lead.isPurchased ? (
-          <span className="badge-green text-[10px]">✓ Unlocked</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 99, background: '#F0FDF4', border: '1px solid #BBF7D0', fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 600, color: '#16A34A' }}>
+            <CheckCircle2 style={{ width: 11, height: 11 }} /> Unlocked
+          </span>
         ) : (
-          <button
-            onClick={() => onBuy(lead.id)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500 text-white text-xs font-display font-semibold hover:bg-orange-400 transition-colors"
-          >
-            <ShoppingCart className="w-3 h-3" /> Buy Lead
+          <button onClick={() => onBuy(lead.id)} disabled={buying} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, background: '#0D1117', border: 'none', color: '#FAF7F2', cursor: buying ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 500, opacity: buying ? .6 : 1 }}>
+            {buying ? <Loader2 style={{ width: 12, height: 12, animation: 'spin 1s linear infinite' }} /> : <ShoppingCart style={{ width: 12, height: 12 }} />}
+            Buy Lead
           </button>
         )}
       </td>
@@ -142,227 +141,210 @@ function LeadRow({ lead, onBuy }: { lead: Lead; onBuy: (id: string) => void }) {
 }
 
 export function SchoolDashboardClient() {
+  const router = useRouter()
+  const { user, accessToken } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const queryClient = useQueryClient()
 
-  const { data: stats,   isLoading: statsLoading   } = useQuery<SchoolDashboardStats>({
-    queryKey: ['school-dashboard-stats'],
-    queryFn:  () => fetch('/api/schools/me/dashboard-stats',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
-    staleTime: 2 * 60 * 1000,
-  })
+  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    if (!mounted) return
+    if (!accessToken || !user) { router.replace('/login'); return }
+    if (user.role !== 'school_admin') {
+      if (user.role === 'super_admin') router.replace('/admin')
+      else router.replace('/dashboard/parent')
+    }
+  }, [mounted, accessToken, user, router])
 
-  const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({
-    queryKey: ['school-leads', { limit: 10 }],
-    queryFn:  () => fetch('/api/leads?limit=10',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
-    staleTime: 1 * 60 * 1000,
-  })
+  const enabled = !!accessToken && mounted
+  const { data: stats, isLoading: statsLoading } = useQuery<SchoolDashboardStats>({ queryKey: ['school-dashboard-stats'], queryFn: () => fetch('/api/schools/me/dashboard-stats',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 2*60*1000 })
+  const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({ queryKey: ['school-leads',{limit:8}], queryFn: () => fetch('/api/leads?limit=8',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 60*1000 })
+  const { data: credits } = useQuery<LeadCredits>({ queryKey: ['lead-credits'], queryFn: () => fetch('/api/lead-credits',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 60*1000 })
+  const { data: analyticsData } = useQuery<{ date: string; leads: number; applications: number }[]>({ queryKey: ['school-analytics-30d'], queryFn: () => fetch('/api/schools/me/analytics?days=30',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 5*60*1000 })
 
-  const { data: credits } = useQuery<LeadCredits>({
-    queryKey: ['lead-credits'],
-    queryFn:  () => fetch('/api/lead-credits',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
-    staleTime: 1 * 60 * 1000,
-  })
-
-  const { data: analyticsData } = useQuery<{ date: string; leads: number; applications: number }[]>({
-    queryKey: ['school-analytics-30d'],
-    queryFn:  () => fetch('/api/schools/me/analytics?days=30',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
-    staleTime: 5 * 60 * 1000,
-  })
-
+  const [buyingId, setBuyingId] = useState<string | null>(null)
   const buyLeadMutation = useMutation({
-    mutationFn: (leadId: string) => fetch(`/api/leads?id=${leadId}&action=purchase`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>r.json()),
-    onSuccess: () => {
-      toast.success('Lead unlocked! Full details are now visible.')
-      queryClient.invalidateQueries({ queryKey: ['school-leads'] })
-      queryClient.invalidateQueries({ queryKey: ['lead-credits'] })
-    },
-    onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
-      toast.error(msg || 'Failed to purchase lead.')
-    },
+    mutationFn: async (leadId: string) => { setBuyingId(leadId); return fetch(`/api/leads?id=${leadId}&action=purchase`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>r.json()) },
+    onSuccess: () => { toast.success('Lead unlocked!'); queryClient.invalidateQueries({queryKey:['school-leads']}); queryClient.invalidateQueries({queryKey:['lead-credits']}); setBuyingId(null) },
+    onError: () => { toast.error('Failed to purchase lead.'); setBuyingId(null) },
   })
+
+  if (!mounted || !accessToken || !user || user.role !== 'school_admin') {
+    return (
+      <div style={{ minHeight: '100vh', background: '#FAF7F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg,#B8860B,#E5B64A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 4px 20px rgba(184,134,11,0.3)' }}>
+            <Loader2 style={{ width: 24, height: 24, color: '#fff', animation: 'spin 1s linear infinite' }} />
+          </div>
+          <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#718096' }}>Loading…</div>
+        </div>
+      </div>
+    )
+  }
 
   const leads = leadsData?.data ?? []
-  const chartData = analyticsData ?? []
+  const STAT_CARDS = [
+    { icon: Users,    label: 'Total Leads',      value: stats?.totalLeads ?? 0,       sub: `+${stats?.newLeadsToday ?? 0} today`, color: '#B8860B', href: '/dashboard/school/leads' },
+    { icon: FileText, label: 'Applications',      value: stats?.totalApplications ?? 0, sub: undefined,                           color: '#2563EB', href: '/dashboard/school/applications' },
+    { icon: Star,     label: 'Average Rating',    value: stats?.avgRating ? `${stats.avgRating.toFixed(1)}★` : '—', sub: undefined, color: '#16A34A', href: '/dashboard/school/reviews' },
+    { icon: Zap,      label: 'Lead Credits',       value: credits?.availableCredits ?? 0, sub: 'Click to buy more',               color: '#7C3AED', href: '/dashboard/school/packages' },
+  ]
 
   return (
-    <div className="flex h-screen bg-navy-900 overflow-hidden">
-      {/* Desktop Sidebar */}
-      <div className="hidden lg:flex flex-col">
-        <DashSidebar active="/dashboard/school" />
+    <div style={{ display: 'flex', height: '100vh', background: '#FAF7F2', overflow: 'hidden', fontFamily: 'DM Sans,sans-serif' }}>
+      <style>{`@media(min-width:1024px){.lg-only{display:flex!important}}@media(max-width:1023px){.mobile-btn{display:flex!important}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
+
+      <div className="lg-only" style={{ display: 'none', flexDirection: 'column', flexShrink: 0 }}>
+        <Sidebar active="/dashboard/school" credits={credits} />
       </div>
 
-      {/* Mobile Sidebar */}
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="w-64 flex flex-col"><DashSidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} /></div>
-          <div className="flex-1 bg-black/60" onClick={() => setSidebarOpen(false)} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
+          <div style={{ width: 256, display: 'flex', flexDirection: 'column' }}>
+            <Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} />
+          </div>
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setSidebarOpen(false)} />
         </div>
       )}
 
-      {/* Main */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top bar */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface-card flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-              <Menu className="w-5 h-5 text-navy-300" />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', height: 64, background: '#fff', borderBottom: '1px solid rgba(13,17,23,0.08)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="mobile-btn" onClick={() => setSidebarOpen(true)} style={{ display: 'none', background: 'none', border: '1px solid rgba(13,17,23,0.12)', borderRadius: 8, padding: 7, cursor: 'pointer' }}>
+              <Menu style={{ width: 16, height: 16, color: '#4A5568' }} />
             </button>
             <div>
-              <h1 className="font-display font-bold text-white text-lg">School Dashboard</h1>
-              <p className="text-navy-400 text-xs">Overview of your school's performance</p>
+              <h1 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 22, color: '#0D1117', margin: 0, lineHeight: 1 }}>School Dashboard</h1>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: 0, marginTop: 2 }}>Good to see you, {user.fullName?.split(' ')[0] || 'Admin'}</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {credits && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-2 card rounded-xl">
-                <Zap className="w-4 h-4 text-orange-400" />
-                <span className="font-display font-bold text-white text-sm">{credits.availableCredits}</span>
-                <span className="text-navy-400 text-xs">credits</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#FEF7E0', border: '1px solid rgba(184,134,11,0.2)', borderRadius: 9 }}>
+                <Zap style={{ width: 14, height: 14, color: '#B8860B' }} />
+                <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 14, color: '#0D1117' }}>{credits.availableCredits}</span>
+                <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#B8860B' }}>credits</span>
               </div>
             )}
-            <Link href="/dashboard/school/packages" className="btn-primary text-xs px-4 py-2">
+            <Link href="/dashboard/school/packages" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0D1117', borderRadius: 8, color: '#FAF7F2', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 500 }}>
               Buy Credits
             </Link>
           </div>
         </header>
 
-        {/* Scrollable body */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {statsLoading ? (
-              Array.from({ length: 4 }).map((_, i) => <div key={i} className="skeleton h-32 rounded-2xl" />)
-            ) : (
-              <>
-                <StatCard icon={Users}    label="Total Leads"      value={stats?.totalLeads ?? 0}      change={`+${stats?.newLeadsToday ?? 0} today`} color="bg-orange-500" />
-                <StatCard icon={FileText} label="Applications"     value={stats?.totalApplications ?? 0}                                               color="bg-blue-500" />
-                <StatCard icon={Star}     label="Avg Rating"       value={`${stats?.avgRating?.toFixed(1) ?? '—'}★`}                                   color="bg-yellow-500" />
-                <StatCard icon={Zap}      label="Lead Credits Left" value={credits?.availableCredits ?? 0}                                              color="bg-green-500" />
-              </>
-            )}
-          </div>
-
-          {/* Profile completeness */}
+        <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px,3vw,28px)' }}>
           {stats && stats.profileCompleteness < 100 && (
-            <div className="card p-5">
-              <div className="flex items-center justify-between mb-3">
+            <div style={{ background: '#FEF7E0', border: '1px solid rgba(184,134,11,0.25)', borderRadius: 12, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <AlertCircle style={{ width: 18, height: 18, color: '#B8860B', flexShrink: 0 }} />
                 <div>
-                  <h3 className="font-display font-bold text-white text-sm">Complete Your School Profile</h3>
-                  <p className="text-navy-400 text-xs mt-0.5">A complete profile gets 3x more leads</p>
+                  <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117' }}>Profile {stats.profileCompleteness}% complete — finish to get 3× more leads</div>
+                  <div style={{ width: 200, height: 4, background: 'rgba(184,134,11,0.15)', borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${stats.profileCompleteness}%`, background: 'linear-gradient(90deg,#B8860B,#E5B64A)', borderRadius: 99 }} />
+                  </div>
                 </div>
-                <span className="font-display font-bold text-orange-400 text-lg">{stats.profileCompleteness}%</span>
               </div>
-              <div className="w-full h-2 bg-navy-800 rounded-full overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${stats.profileCompleteness}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                  className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full"
-                />
-              </div>
-              <Link href="/school/complete-profile" className="btn-outline text-xs mt-3 inline-flex">
-                Complete Profile <ChevronRight className="w-3 h-3" />
+              <Link href="/school/complete-profile" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#B8860B', borderRadius: 8, color: '#fff', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
+                Complete Profile <ChevronRight style={{ width: 14, height: 14 }} />
               </Link>
             </div>
           )}
 
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            {/* Analytics Chart */}
-            <div className="xl:col-span-2 card p-5">
-              <h3 className="font-display font-bold text-white text-base mb-5">Lead Activity — Last 30 Days</h3>
-              {chartData.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
+            {statsLoading
+              ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={{ height: 140, background: '#fff', border: '1px solid rgba(13,17,23,0.07)', borderRadius: 14, animation: 'pulse 1.5s ease-in-out infinite' }} />)
+              : STAT_CARDS.map(card => <StatCard key={card.label} {...card} />)
+            }
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 280px', gap: 16, marginBottom: 24 }}>
+            <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: 0 }}>Lead Activity</h3>
+                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: '2px 0 0' }}>Last 30 days</p>
+                </div>
+                <div style={{ display: 'flex', gap: 12, fontFamily: 'DM Sans,sans-serif', fontSize: 11 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#718096' }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#B8860B', display: 'inline-block' }} /> Leads</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#718096' }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#2563EB', display: 'inline-block' }} /> Applications</span>
+                </div>
+              </div>
+              {(analyticsData ?? []).length > 0 ? (
                 <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={chartData} barSize={8}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1E2A52" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fill: '#6B7FCC', fontSize: 11, fontFamily: 'DM Sans' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#6B7FCC', fontSize: 11, fontFamily: 'DM Sans' }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ background: '#111830', border: '1px solid #1E2A52', borderRadius: '12px', fontFamily: 'DM Sans' }}
-                      labelStyle={{ color: '#fff', fontWeight: 700 }}
-                    />
-                    <Bar dataKey="leads"        name="Leads"        fill="#FF5C00" radius={[4,4,0,0]} />
-                    <Bar dataKey="applications" name="Applications" fill="#3D52B0" radius={[4,4,0,0]} />
+                  <BarChart data={analyticsData ?? []} barSize={10} barGap={3}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(13,17,23,0.05)" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill: '#A0ADB8', fontSize: 10, fontFamily: 'DM Sans' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: '#A0ADB8', fontSize: 10, fontFamily: 'DM Sans' }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ background: '#fff', border: '1px solid rgba(13,17,23,0.1)', borderRadius: 10, fontFamily: 'DM Sans', boxShadow: '0 4px 20px rgba(13,17,23,0.1)' }} />
+                    <Bar dataKey="leads" name="Leads" fill="#B8860B" radius={[4,4,0,0]} />
+                    <Bar dataKey="applications" name="Applications" fill="#2563EB" radius={[4,4,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
-                <div className="h-48 flex items-center justify-center">
-                  <div className="text-center">
-                    <BarChart3 className="w-10 h-10 text-navy-600 mx-auto mb-2" />
-                    <p className="text-navy-400 text-sm">No data yet. Start getting leads!</p>
-                  </div>
+                <div style={{ height: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <BarChart3 style={{ width: 36, height: 36, color: '#E2E8F0' }} />
+                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#A0ADB8', margin: 0 }}>No data yet — start receiving leads!</p>
                 </div>
               )}
             </div>
 
-            {/* Credit wallet */}
-            <div className="card p-5 flex flex-col gap-4">
-              <h3 className="font-display font-bold text-white text-base">Lead Credits</h3>
+            <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: '0 0 16px' }}>Lead Credits</h3>
               {credits ? (
                 <>
-                  <div className="text-center py-4">
-                    <div className="font-display font-bold text-5xl text-orange-400">{credits.availableCredits}</div>
-                    <div className="text-navy-400 text-sm mt-1">credits available</div>
-                    {credits.expiresAt && (
-                      <div className="text-navy-500 text-xs mt-1">Expires: {new Date(credits.expiresAt).toLocaleDateString('en-IN')}</div>
-                    )}
+                  <div style={{ textAlign: 'center', padding: '16px 0', background: 'linear-gradient(135deg,#FEF7E0,#FAF7F2)', borderRadius: 10, marginBottom: 16 }}>
+                    <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 52, color: '#B8860B', lineHeight: 1 }}>{credits.availableCredits}</div>
+                    <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', marginTop: 4 }}>credits available</div>
+                    {credits.expiresAt && <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#A0ADB8', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />Expires {new Date(credits.expiresAt).toLocaleDateString('en-IN')}</div>}
                   </div>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-navy-400">Total Purchased</span>
-                      <span className="text-white font-semibold">{credits.totalCredits}</span>
+                  {[['Total Purchased', credits.totalCredits], ['Used', credits.usedCredits], ['Remaining', credits.availableCredits]].map(([l, v]) => (
+                    <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'DM Sans,sans-serif', fontSize: 12, marginBottom: 8 }}>
+                      <span style={{ color: '#718096' }}>{l}</span><span style={{ fontWeight: 600, color: '#0D1117' }}>{v}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-navy-400">Used</span>
-                      <span className="text-white font-semibold">{credits.usedCredits}</span>
-                    </div>
-                  </div>
-                  <Link href="/dashboard/school/packages" className="btn-primary w-full justify-center text-sm">
-                    Buy More Credits
-                  </Link>
+                  ))}
+                  <Link href="/dashboard/school/packages" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', background: '#0D1117', borderRadius: 8, color: '#FAF7F2', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 500, marginTop: 'auto' }}>Buy More Credits</Link>
                 </>
               ) : (
-                <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">
-                  <Package className="w-10 h-10 text-navy-600" />
-                  <p className="text-navy-400 text-sm">No credits yet</p>
-                  <Link href="/dashboard/school/packages" className="btn-primary text-sm">Buy Lead Package</Link>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, textAlign: 'center' }}>
+                  <Package style={{ width: 36, height: 36, color: '#E2E8F0' }} />
+                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#A0ADB8', margin: 0 }}>No credits yet</p>
+                  <Link href="/dashboard/school/packages" style={{ padding: '8px 18px', background: '#B8860B', borderRadius: 8, color: '#fff', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 600 }}>Buy Lead Package</Link>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Leads Table */}
-          <div className="card overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-surface-border">
-              <h3 className="font-display font-bold text-white text-base">Recent Leads</h3>
-              <Link href="/dashboard/school/leads" className="text-orange-400 text-sm font-display font-semibold hover:text-orange-300 transition-colors flex items-center gap-1">
-                View All <ChevronRight className="w-4 h-4" />
+          <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(13,17,23,0.07)' }}>
+              <div>
+                <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: 0 }}>Recent Leads</h3>
+                <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: '2px 0 0' }}>{leadsData?.total ? `${leadsData.total} total leads` : 'Parents looking for schools like yours'}</p>
+              </div>
+              <Link href="/dashboard/school/leads" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#B8860B', textDecoration: 'none', fontWeight: 600 }}>
+                View All <ChevronRight style={{ width: 14, height: 14 }} />
               </Link>
             </div>
             {leadsLoading ? (
-              <div className="p-5 space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => <div key={i} className="skeleton h-12 rounded-xl" />)}
-              </div>
+              <div style={{ padding: 20 }}>{Array.from({length:4}).map((_,i)=><div key={i} style={{ height:52, background:'rgba(13,17,23,0.04)', borderRadius:8, marginBottom:8, animation:'pulse 1.5s ease-in-out infinite' }} />)}</div>
             ) : leads.length === 0 ? (
-              <div className="py-16 text-center">
-                <Users className="w-10 h-10 text-navy-600 mx-auto mb-3" />
-                <h4 className="font-display font-bold text-white text-sm mb-1">No leads yet</h4>
-                <p className="text-navy-400 text-xs">Complete your profile to start receiving leads from parents.</p>
+              <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+                <Users style={{ width: 36, height: 36, color: '#E2E8F0', margin: '0 auto 12px' }} />
+                <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 14, color: '#0D1117', marginBottom: 6 }}>No leads yet</div>
+                <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#718096' }}>Complete your school profile to start receiving leads.</div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr className="border-b border-surface-border">
-                      {['Parent / Child', 'Phone', 'City', 'Date', 'Status', 'Action'].map(h => (
-                        <th key={h} className="px-4 py-3 text-left text-xs font-display font-bold text-navy-400 uppercase tracking-wider">{h}</th>
+                    <tr style={{ background: '#FAF7F2', borderBottom: '1px solid rgba(13,17,23,0.06)' }}>
+                      {['Parent / Child', 'Phone', 'City', 'Status', 'Action'].map(h => (
+                        <th key={h} style={{ padding: '10px 16px', textAlign: h==='Action'?'right':'left', fontFamily:'DM Sans,sans-serif', fontSize:11, fontWeight:600, letterSpacing:'1.2px', textTransform:'uppercase', color:'#A0ADB8' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {leads.map(lead => (
-                      <LeadRow key={lead.id} lead={lead} onBuy={id => buyLeadMutation.mutate(id)} />
-                    ))}
+                    {leads.map(lead => <LeadRow key={lead.id} lead={lead} onBuy={id => buyLeadMutation.mutate(id)} buying={buyingId === lead.id} />)}
                   </tbody>
                 </table>
               </div>

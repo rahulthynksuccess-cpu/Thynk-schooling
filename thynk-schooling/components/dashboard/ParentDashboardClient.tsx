@@ -1,16 +1,16 @@
 'use client'
 import { useQuery } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
   LayoutDashboard, Users, FileText, Heart, Calendar,
   Bell, Settings, LogOut, GraduationCap, Menu, X,
-  Plus, ArrowRight, ChevronRight, Sparkles, Star, MapPin, BookOpen
+  Plus, ArrowRight, ChevronRight, Sparkles, Star, MapPin,
+  BookOpen, Loader2
 } from 'lucide-react'
-import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 import { Student, Application, School } from '@/types'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 
 const NAV = [
   { icon: LayoutDashboard, label: 'Dashboard',     href: '/dashboard/parent' },
@@ -22,256 +22,264 @@ const NAV = [
   { icon: Bell,            label: 'Notifications', href: '/dashboard/parent/notifications' },
 ]
 
-function ParentSidebar({ onClose }: { onClose?: () => void }) {
+function Sidebar({ onClose }: { onClose?: () => void }) {
   const { user, logout } = useAuthStore()
+  const router = useRouter()
   return (
-    <aside className="w-64 bg-surface-card border-r border-surface-border flex flex-col h-full">
-      <div className="p-5 border-b border-surface-border flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <GraduationCap className="w-4 h-4 text-white" />
-          </div>
-          <span className="font-display font-bold text-white text-sm">ThynkSchooling</span>
-        </Link>
-        {onClose && <button onClick={onClose}><X className="w-4 h-4 text-navy-400" /></button>}
-      </div>
-      <div className="p-4 border-b border-surface-border">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center font-display font-bold text-blue-400">
-            {(user?.fullName || user?.phone || 'P')[0].toUpperCase()}
+    <aside style={{ width: 256, display: 'flex', flexDirection: 'column', height: '100%', background: '#FFFFFF', borderRight: '1px solid rgba(13,17,23,0.08)' }}>
+      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(13,17,23,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#B8860B,#E5B64A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(184,134,11,0.3)' }}>
+            <GraduationCap style={{ width: 18, height: 18, color: '#fff' }} />
           </div>
           <div>
-            <div className="font-display font-bold text-white text-sm">{user?.fullName || 'Parent'}</div>
-            <div className="text-navy-400 text-xs">{user?.phone}</div>
+            <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 15, color: '#0D1117', lineHeight: 1 }}>Thynk Schooling</div>
+            <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#B8860B', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginTop: 2 }}>Parent Portal</div>
+          </div>
+        </Link>
+        {onClose && <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X style={{ width: 16, height: 16, color: '#718096' }} /></button>}
+      </div>
+
+      <div style={{ margin: '12px 12px 4px', background: 'linear-gradient(135deg,#EFF6FF,#F0F9FF)', border: '1px solid rgba(37,99,235,0.12)', borderRadius: 12, padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#2563EB,#60A5FA)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 17, color: '#fff', flexShrink: 0 }}>
+            {(user?.fullName || user?.phone || 'P')[0].toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullName || 'Parent'}</div>
+            <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#2563EB', fontWeight: 600 }}>Parent Account</div>
           </div>
         </div>
       </div>
-      <nav className="flex-1 p-3 space-y-1">
+
+      <nav style={{ flex: 1, padding: '8px 10px', overflowY: 'auto' }}>
         {NAV.map(({ icon: Icon, label, href }) => (
-          <Link key={href} href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-display font-semibold text-sm text-navy-300 hover:text-white hover:bg-surface-hover transition-all">
-            <Icon className="w-4 h-4 flex-shrink-0" />{label}
+          <Link key={href} href={href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, marginBottom: 2, textDecoration: 'none', color: '#4A5568', fontFamily: 'DM Sans,sans-serif', fontWeight: 400, fontSize: 13 }}>
+            <Icon style={{ width: 16, height: 16, flexShrink: 0 }} />
+            <span>{label}</span>
           </Link>
         ))}
       </nav>
-      <div className="p-3 border-t border-surface-border">
-        <button onClick={useAuthStore.getState().logout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 font-display font-semibold text-sm transition-all">
-          <LogOut className="w-4 h-4" /> Logout
+
+      <div style={{ padding: '10px', borderTop: '1px solid rgba(13,17,23,0.07)' }}>
+        <button onClick={() => { logout(); router.replace('/login') }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#E53E3E' }}>
+          <LogOut style={{ width: 16, height: 16 }} /> Sign Out
         </button>
       </div>
     </aside>
   )
 }
 
-function AppStatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    submitted:    'badge-blue',
-    under_review: 'badge-orange',
-    shortlisted:  'badge-green',
-    admitted:     'badge-green',
-    rejected:     'badge-gray',
-    waitlisted:   'badge-purple',
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, [string, string]> = {
+    submitted:    ['#2563EB', '#EFF6FF'],
+    under_review: ['#B8860B', '#FEF7E0'],
+    shortlisted:  ['#16A34A', '#F0FDF4'],
+    admitted:     ['#16A34A', '#F0FDF4'],
+    rejected:     ['#718096', '#F7FAFC'],
+    waitlisted:   ['#7C3AED', '#F5F3FF'],
   }
-  return <span className={clsx('badge text-[10px]', map[status] || 'badge-gray')}>{status.replace('_', ' ')}</span>
+  const [color, bg] = map[status] || ['#718096', '#F7FAFC']
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 99, background: bg, fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 600, color }}>
+      {status.replace('_', ' ')}
+    </span>
+  )
 }
 
 export function ParentDashboardClient() {
-  const { user } = useAuthStore()
+  const { user, accessToken } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const router = useRouter()
 
-  const { data: children, isLoading: childrenLoading } = useQuery<Student[]>({
-    queryKey: ['parent-children'],
-    queryFn:  () => fetch('/api/students',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
-    staleTime: 5 * 60 * 1000,
-  })
+  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    if (!mounted) return
+    if (!accessToken || !user) { router.replace('/login'); return }
+    if (user.role === 'school_admin') router.replace('/dashboard/school')
+    else if (user.role === 'super_admin') router.replace('/admin')
+  }, [mounted, accessToken, user, router])
 
-  const { data: applications, isLoading: appsLoading } = useQuery<{ data: Application[] }>({
-    queryKey: ['parent-applications'],
-    queryFn:  () => fetch('/api/applications?limit=5',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
-    staleTime: 2 * 60 * 1000,
-  })
+  const enabled = !!accessToken && mounted
+  const { data: children, isLoading: childrenLoading } = useQuery<Student[]>({ queryKey: ['parent-children'], queryFn: () => fetch('/api/students',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 5*60*1000 })
+  const { data: applications, isLoading: appsLoading } = useQuery<{ data: Application[] }>({ queryKey: ['parent-applications'], queryFn: () => fetch('/api/applications?limit=5',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 2*60*1000 })
+  const { data: savedSchools } = useQuery<{ data: School[] }>({ queryKey: ['parent-saved-schools'], queryFn: () => fetch('/api/saved-schools?limit=4',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 5*60*1000 })
+  const { data: recommendations } = useQuery<{ data: School[] }>({ queryKey: ['parent-recommendations'], queryFn: () => fetch('/api/recommendations?limit=4',{cache:'no-store'}).then(r=>r.json()), enabled, staleTime: 10*60*1000 })
 
-  const { data: savedSchools } = useQuery<{ data: School[] }>({
-    queryKey: ['parent-saved-schools'],
-    queryFn:  () => fetch('/api/saved-schools?limit=4',{cache:'no-store',credentials:'include'}).then(r=>r.json()),
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const { data: recommendations } = useQuery<{ data: School[] }>({
-    queryKey: ['parent-recommendations'],
-    queryFn:  () => fetch('/api/recommendations?limit=4',{cache:'no-store'}).then(r=>r.json()),
-    staleTime: 10 * 60 * 1000,
-  })
+  if (!mounted || !accessToken || !user) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#FAF7F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg,#2563EB,#60A5FA)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Loader2 style={{ width: 24, height: 24, color: '#fff', animation: 'spin 1s linear infinite' }} />
+          </div>
+          <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#718096' }}>Loading…</div>
+        </div>
+        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      </div>
+    )
+  }
 
   const apps = applications?.data ?? []
   const saved = savedSchools?.data ?? []
   const recs  = recommendations?.data ?? []
 
+  const STATS = [
+    { label: 'My Children',   value: children?.length ?? 0,  icon: Users,    color: '#2563EB', bg: '#EFF6FF',  href: '/dashboard/parent/children' },
+    { label: 'Applications',  value: apps.length,             icon: FileText, color: '#B8860B', bg: '#FEF7E0',  href: '/dashboard/parent/applications' },
+    { label: 'Saved Schools', value: saved.length,            icon: Heart,    color: '#DB2777', bg: '#FDF2F8',  href: '/dashboard/parent/saved' },
+    { label: 'AI Matches',    value: recs.length,             icon: Sparkles, color: '#7C3AED', bg: '#F5F3FF',  href: '/dashboard/parent/recommendations' },
+  ]
+
   return (
-    <div className="flex h-screen bg-navy-900 overflow-hidden">
-      <div className="hidden lg:flex flex-col">
-        <ParentSidebar />
+    <div style={{ display: 'flex', height: '100vh', background: '#FAF7F2', overflow: 'hidden', fontFamily: 'DM Sans,sans-serif' }}>
+      <style>{`@media(min-width:1024px){.lg-only{display:flex!important}}@media(max-width:1023px){.mobile-btn{display:flex!important}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
+
+      <div className="lg-only" style={{ display: 'none', flexDirection: 'column', flexShrink: 0 }}>
+        <Sidebar />
       </div>
+
       {sidebarOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          <div className="w-64 flex flex-col"><ParentSidebar onClose={() => setSidebarOpen(false)} /></div>
-          <div className="flex-1 bg-black/60" onClick={() => setSidebarOpen(false)} />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
+          <div style={{ width: 256, display: 'flex', flexDirection: 'column' }}><Sidebar onClose={() => setSidebarOpen(false)} /></div>
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setSidebarOpen(false)} />
         </div>
       )}
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-surface-border bg-surface-card flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <button className="lg:hidden" onClick={() => setSidebarOpen(true)}><Menu className="w-5 h-5 text-navy-300" /></button>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', height: 64, background: '#fff', borderBottom: '1px solid rgba(13,17,23,0.08)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="mobile-btn" onClick={() => setSidebarOpen(true)} style={{ display: 'none', background: 'none', border: '1px solid rgba(13,17,23,0.12)', borderRadius: 8, padding: 7, cursor: 'pointer' }}>
+              <Menu style={{ width: 16, height: 16, color: '#4A5568' }} />
+            </button>
             <div>
-              <h1 className="font-display font-bold text-white text-lg">
-                Welcome back{user?.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}! 👋
+              <h1 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 22, color: '#0D1117', margin: 0, lineHeight: 1 }}>
+                Welcome back{user.fullName ? `, ${user.fullName.split(' ')[0]}` : ''}!
               </h1>
-              <p className="text-navy-400 text-xs">Your admission journey at a glance</p>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: 0, marginTop: 2 }}>Your admission journey at a glance</p>
             </div>
           </div>
-          <Link href="/schools" className="btn-primary text-xs px-4 py-2">
-            Find Schools <ArrowRight className="w-3 h-3" />
+          <Link href="/schools" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0D1117', borderRadius: 8, color: '#FAF7F2', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 500 }}>
+            Find Schools <ArrowRight style={{ width: 14, height: 14 }} />
           </Link>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px,3vw,28px)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
           {/* Quick stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'My Children',   value: children?.length ?? 0,  icon: Users,    color: 'bg-blue-500' },
-              { label: 'Applications',  value: apps.length,             icon: FileText, color: 'bg-orange-500' },
-              { label: 'Saved Schools', value: saved.length,            icon: Heart,    color: 'bg-pink-500' },
-              { label: 'AI Matches',    value: recs.length,             icon: Sparkles, color: 'bg-purple-500' },
-            ].map(s => {
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14 }}>
+            {STATS.map(s => {
               const Icon = s.icon
               return (
-                <div key={s.label} className="stat-card">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${s.color}`}>
-                    <Icon className="w-5 h-5 text-white" />
+                <Link key={s.label} href={s.href} style={{ textDecoration: 'none', background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '18px 20px', position: 'relative', overflow: 'hidden', transition: 'all .2s', display: 'block' }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,${s.color},${s.color}40)`, borderRadius: '14px 14px 0 0' }} />
+                  <div style={{ width: 38, height: 38, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+                    <Icon style={{ width: 18, height: 18, color: s.color }} />
                   </div>
-                  <div className="stat-value">{s.value}</div>
-                  <div className="stat-label">{s.label}</div>
-                </div>
+                  <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 30, color: '#0D1117', lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
+                  <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096' }}>{s.label}</div>
+                </Link>
               )
             })}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* My Children */}
-            <div className="card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-bold text-white text-base">My Children</h3>
-                <Link href="/dashboard/parent/children/add" className="flex items-center gap-1.5 text-orange-400 text-xs font-display font-semibold hover:text-orange-300">
-                  <Plus className="w-3.5 h-3.5" /> Add Child
+          <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0,1fr)', gap: 16 }}>
+            {/* Children */}
+            <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: 0 }}>My Children</h3>
+                <Link href="/dashboard/parent/children/add" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#B8860B', textDecoration: 'none', fontWeight: 600 }}>
+                  <Plus style={{ width: 13, height: 13 }} /> Add
                 </Link>
               </div>
               {childrenLoading ? (
-                <div className="space-y-3">{Array.from({length:2}).map((_,i)=><div key={i} className="skeleton h-16 rounded-xl"/>)}</div>
-              ) : children?.length === 0 ? (
-                <div className="text-center py-6">
-                  <Users className="w-8 h-8 text-navy-600 mx-auto mb-2" />
-                  <p className="text-navy-400 text-sm mb-3">No children added yet</p>
-                  <Link href="/dashboard/parent/children/add" className="btn-primary text-xs">Add Child Profile</Link>
+                <div>{Array.from({length:2}).map((_,i)=><div key={i} style={{ height:56, background:'rgba(13,17,23,0.04)', borderRadius:10, marginBottom:8, animation:'pulse 1.5s ease-in-out infinite' }} />)}</div>
+              ) : !children?.length ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <Users style={{ width: 32, height: 32, color: '#E2E8F0', margin: '0 auto 10px' }} />
+                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#A0ADB8', margin: '0 0 12px' }}>No children added yet</p>
+                  <Link href="/dashboard/parent/children/add" style={{ display: 'inline-block', padding: '7px 14px', background: '#0D1117', borderRadius: 8, color: '#FAF7F2', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 12 }}>Add Child Profile</Link>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {children?.map(child => (
-                    <div key={child.id} className="flex items-center gap-3 p-3 rounded-xl bg-navy-800 border border-surface-border">
-                      <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center font-display font-bold text-blue-400 text-sm">
-                        {child.fullName[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-display font-bold text-white text-sm">{child.fullName}</div>
-                        <div className="text-navy-400 text-xs">Class {child.applyingForClass} · {child.academicYear}</div>
-                      </div>
-                      <Link href={`/schools?classFrom=${child.applyingForClass}`} className="text-orange-400 text-xs font-display font-semibold flex items-center gap-1 hover:text-orange-300">
-                        Find <ChevronRight className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  ))}
+              ) : children?.map(child => (
+                <div key={child.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#FAF7F2', borderRadius: 10, marginBottom: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 9, background: 'linear-gradient(135deg,#2563EB,#60A5FA)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 15, color: '#fff', flexShrink: 0 }}>
+                    {child.fullName[0]}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{child.fullName}</div>
+                    <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#718096' }}>Class {child.applyingForClass} · {child.academicYear}</div>
+                  </div>
+                  <Link href={`/schools?classFrom=${child.applyingForClass}`} style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#B8860B', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}>
+                    Find <ChevronRight style={{ width: 12, height: 12 }} />
+                  </Link>
                 </div>
-              )}
+              ))}
             </div>
 
             {/* Applications */}
-            <div className="lg:col-span-2 card p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display font-bold text-white text-base">My Applications</h3>
-                <Link href="/dashboard/parent/applications" className="text-orange-400 text-xs font-display font-semibold hover:text-orange-300">
-                  View All <ChevronRight className="w-4 h-4 inline" />
+            <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: 0 }}>My Applications</h3>
+                <Link href="/dashboard/parent/applications" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#B8860B', textDecoration: 'none', fontWeight: 600 }}>
+                  View All <ChevronRight style={{ width: 14, height: 14 }} />
                 </Link>
               </div>
               {appsLoading ? (
-                <div className="space-y-3">{Array.from({length:3}).map((_,i)=><div key={i} className="skeleton h-16 rounded-xl"/>)}</div>
+                <div>{Array.from({length:3}).map((_,i)=><div key={i} style={{ height:60, background:'rgba(13,17,23,0.04)', borderRadius:10, marginBottom:8, animation:'pulse 1.5s ease-in-out infinite' }} />)}</div>
               ) : apps.length === 0 ? (
-                <div className="text-center py-10">
-                  <FileText className="w-10 h-10 text-navy-600 mx-auto mb-3" />
-                  <p className="text-navy-400 text-sm mb-3">No applications yet</p>
-                  <Link href="/schools" className="btn-primary text-xs">Find Schools & Apply</Link>
+                <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                  <FileText style={{ width: 36, height: 36, color: '#E2E8F0', margin: '0 auto 10px' }} />
+                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#A0ADB8', margin: '0 0 12px' }}>No applications yet</p>
+                  <Link href="/schools" style={{ display: 'inline-block', padding: '7px 14px', background: '#0D1117', borderRadius: 8, color: '#FAF7F2', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 12 }}>Find Schools & Apply</Link>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {apps.map(app => (
-                    <div key={app.id} className="flex items-center gap-4 p-3 rounded-xl bg-navy-800 border border-surface-border">
-                      <div className="w-10 h-10 rounded-xl bg-navy-700 overflow-hidden flex-shrink-0">
-                        {app.schoolLogo
-                          ? <img src={app.schoolLogo} alt={app.schoolName} className="w-full h-full object-contain p-1" />
-                          : <div className="w-full h-full flex items-center justify-center"><GraduationCap className="w-5 h-5 text-navy-500" /></div>
-                        }
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-display font-bold text-white text-sm truncate">{app.schoolName}</div>
-                        <div className="text-navy-400 text-xs">{app.studentName} · {app.academicYear}</div>
-                      </div>
-                      <div className="flex-shrink-0">
-                        <AppStatusBadge status={app.status} />
-                      </div>
-                    </div>
-                  ))}
+              ) : apps.map(app => (
+                <div key={app.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#FAF7F2', borderRadius: 10, marginBottom: 8 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid rgba(13,17,23,0.08)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {app.schoolLogo ? <img src={app.schoolLogo} alt={app.schoolName} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 4 }} /> : <GraduationCap style={{ width: 18, height: 18, color: '#A0ADB8' }} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.schoolName}</div>
+                    <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#718096' }}>{app.studentName} · {app.academicYear}</div>
+                  </div>
+                  <StatusBadge status={app.status} />
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
           {/* AI Recommendations */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-5">
+          <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div>
-                <h3 className="font-display font-bold text-white text-base flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-orange-400" /> AI School Recommendations
+                <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Sparkles style={{ width: 18, height: 18, color: '#B8860B' }} /> AI School Recommendations
                 </h3>
-                <p className="text-navy-400 text-xs mt-0.5">Based on your child's profile and preferences</p>
+                <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: '4px 0 0' }}>Personalised matches based on your child's profile</p>
               </div>
-              <Link href="/dashboard/parent/recommendations" className="text-orange-400 text-xs font-display font-semibold hover:text-orange-300">
-                View All <ChevronRight className="w-4 h-4 inline" />
+              <Link href="/dashboard/parent/recommendations" style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#B8860B', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                View All <ChevronRight style={{ width: 14, height: 14 }} />
               </Link>
             </div>
             {recs.length === 0 ? (
-              <div className="text-center py-8">
-                <Sparkles className="w-10 h-10 text-navy-600 mx-auto mb-3" />
-                <p className="text-navy-400 text-sm mb-3">Complete your child's profile to get AI recommendations</p>
-                <Link href="/dashboard/parent/children/add" className="btn-primary text-xs">Add Child Profile</Link>
+              <div style={{ textAlign: 'center', padding: '28px 0' }}>
+                <Sparkles style={{ width: 36, height: 36, color: '#E2E8F0', margin: '0 auto 10px' }} />
+                <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#A0ADB8', margin: '0 0 12px' }}>Add a child profile to get AI recommendations</p>
+                <Link href="/dashboard/parent/children/add" style={{ display: 'inline-block', padding: '7px 14px', background: '#B8860B', borderRadius: 8, color: '#fff', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 600 }}>Add Child Profile</Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
                 {recs.map((school, i) => (
-                  <Link key={school.id} href={`/schools/${school.slug}`} className="card-hover p-4 flex flex-col gap-3 block">
-                    <div className="flex items-center justify-between">
-                      <div className="w-10 h-10 rounded-xl bg-navy-800 overflow-hidden">
-                        {school.logoUrl
-                          ? <img src={school.logoUrl} alt={school.name} className="w-full h-full object-contain p-1" />
-                          : <div className="w-full h-full flex items-center justify-center"><GraduationCap className="w-5 h-5 text-navy-600" /></div>
-                        }
+                  <Link key={school.id} href={`/schools/${school.slug}`} style={{ textDecoration: 'none', background: '#FAF7F2', border: '1px solid rgba(13,17,23,0.07)', borderRadius: 12, padding: '14px', display: 'flex', flexDirection: 'column', gap: 10, transition: 'all .2s' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ width: 36, height: 36, borderRadius: 9, background: '#fff', border: '1px solid rgba(13,17,23,0.08)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {school.logoUrl ? <img src={school.logoUrl} alt={school.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 3 }} /> : <GraduationCap style={{ width: 16, height: 16, color: '#A0ADB8' }} />}
                       </div>
-                      <span className="font-display font-bold text-orange-400 text-sm">{98 - i*3}% match</span>
+                      <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 12, color: '#B8860B' }}>{98 - i*3}% match</span>
                     </div>
                     <div>
-                      <h4 className="font-display font-bold text-white text-sm leading-tight line-clamp-2">{school.name}</h4>
-                      <div className="flex items-center gap-1 text-navy-400 text-xs mt-1"><MapPin className="w-3 h-3" />{school.city}</div>
-                    </div>
-                    <div className="flex gap-1 flex-wrap">
-                      {school.board.slice(0,1).map(b=><span key={b} className="badge-orange text-[10px]">{b}</span>)}
+                      <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{school.name}</div>
+                      <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#718096', marginTop: 4, display: 'flex', alignItems: 'center', gap: 3 }}><MapPin style={{ width: 11, height: 11 }} />{school.city}</div>
                     </div>
                   </Link>
                 ))}
@@ -279,16 +287,14 @@ export function ParentDashboardClient() {
             )}
           </div>
 
-          {/* CTA: Free Counselling */}
-          <div className="card p-6 flex flex-col sm:flex-row items-center justify-between gap-4"
-            style={{ background: 'linear-gradient(135deg, #151D52 0%, #0F1640 100%)', border: '1px solid rgba(255,92,0,0.2)' }}
-          >
+          {/* CTA */}
+          <div style={{ background: 'linear-gradient(135deg,#FEF7E0,#FAF7F2)', border: '1px solid rgba(184,134,11,0.2)', borderRadius: 14, padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div>
-              <h3 className="font-display font-bold text-white text-lg mb-1">Need Help Choosing Schools?</h3>
-              <p className="text-navy-300 text-sm">Book a free 1-on-1 session with an expert education counsellor.</p>
+              <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 20, color: '#0D1117', margin: 0 }}>Need Help Choosing the Right School?</h3>
+              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#718096', margin: '6px 0 0' }}>Book a free 1-on-1 session with an expert education counsellor.</p>
             </div>
-            <Link href="/counselling" className="btn-primary flex-shrink-0">
-              Book Free Session <ArrowRight className="w-4 h-4" />
+            <Link href="/counselling" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '10px 20px', background: '#B8860B', borderRadius: 9, color: '#fff', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+              Book Free Session <ArrowRight style={{ width: 14, height: 14 }} />
             </Link>
           </div>
         </main>
