@@ -68,6 +68,15 @@ export function ContentStyleInjector() {
   --blog-bg: ${co(t.blogBg,'#FAF7F2')};--blog-title-size: ${px(t.blogTitleSize,20)};--blog-title-color: ${co(t.blogTitleColor,'#0D1117')};
   --btn-primary-bg: ${co(t.btnPrimaryBg,'#0D1117')};--btn-primary-color: ${co(t.btnPrimaryColor,'#FAF7F2')};
   --btn-gold-bg: ${co(t.btnGoldBg,'#B8860B')};--btn-gold-color: ${co(t.btnGoldColor,'#ffffff')};--btn-size: ${px(t.btnSize,14)};
+  --admin-bg: ${co(t.adminBg,'#0A0F1A')};
+  --admin-sidebar-bg: ${co(t.adminSidebarBg,'linear-gradient(180deg,#0D1117 0%,#111820 100%)')};
+  --admin-header-bg: ${co(t.adminHeaderBg,'rgba(13,17,23,0.95)')};
+  --admin-card-bg: ${co(t.adminCardBg,'rgba(255,255,255,0.04)')};
+  --admin-border: ${co(t.adminBorder,'rgba(255,255,255,0.07)')};
+  --admin-accent: ${co(t.adminAccent,'#B8860B')};
+  --admin-text: ${co(t.adminText,'rgba(255,255,255,0.9)')};
+  --admin-text-muted: ${co(t.adminTextMuted,'rgba(255,255,255,0.45)')};
+  --admin-text-faint: ${co(t.adminTextFaint,'rgba(255,255,255,0.25)')};
   --container-width: ${t.containerWidth ?? 1400}px;
 }`
           let tel = document.getElementById('ts-live-theme')
