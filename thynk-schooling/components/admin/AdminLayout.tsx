@@ -19,17 +19,17 @@ import { useAuthStore } from '@/store/authStore'
 */
 const V = {
   /* backgrounds */
-  pageBg:      'var(--admin-bg,          #0A0F1A)',
-  sidebarBg:   'var(--admin-sidebar-bg,  linear-gradient(180deg,#0D1117 0%,#111820 100%))',
-  cardBg:      'var(--admin-card-bg,     rgba(255,255,255,0.04))',
-  headerBg:    'var(--admin-header-bg,   rgba(13,17,23,0.95))',
+  pageBg:      'var(--admin-bg,          #080D14)',
+  sidebarBg:   'var(--admin-sidebar-bg,  linear-gradient(180deg,#0B1018 0%,#0F1623 100%))',
+  cardBg:      'var(--admin-card-bg,     #0F1623)',
+  headerBg:    'var(--admin-header-bg,   rgba(8,13,20,0.98))',
   /* borders */
-  border:      'var(--admin-border,      rgba(255,255,255,0.07))',
+  border:      'var(--admin-border,      rgba(255,255,255,0.08))',
   borderLight: 'var(--admin-border,      rgba(255,255,255,0.06))',
   /* text */
-  textPrimary: 'var(--admin-text,        rgba(255,255,255,0.9))',
+  textPrimary: 'var(--admin-text,        rgba(255,255,255,0.92))',
   textMuted:   'var(--admin-text-muted,  rgba(255,255,255,0.45))',
-  textFaint:   'var(--admin-text-faint,  rgba(255,255,255,0.25))',
+  textFaint:   'var(--admin-text-faint,  rgba(255,255,255,0.22))',
   /* accent */
   accent:      'var(--admin-accent,      #B8860B)',
 }
