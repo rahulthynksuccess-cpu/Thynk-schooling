@@ -2,13 +2,14 @@ export const dynamic = 'force-dynamic'
 import { Suspense } from 'react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { HeroSection }      from '@/components/home/HeroSection'
-import { StatsBar }         from '@/components/home/StatsBar'
-import { HowItWorks }       from '@/components/home/HowItWorks'
-import { FeaturedSchools }  from '@/components/home/FeaturedSchools'
-import { WhyChooseUs }      from '@/components/home/WhyChooseUs'
+import { HeroSection }     from '@/components/home/HeroSection'
+import { StatsBar }        from '@/components/home/StatsBar'
+import { HowItWorks }      from '@/components/home/HowItWorks'
+import { FeaturedSchools } from '@/components/home/FeaturedSchools'
+import { WhyChooseUs }     from '@/components/home/WhyChooseUs'
 import {
   TopCitiesGrid,
+  BoardComparison,
   CounsellingCTA,
   TestimonialsSection,
   ForSchoolsCTA,
@@ -33,6 +34,7 @@ export default function HomePage() {
         </Suspense>
         <WhyChooseUs />
         <TopCitiesGrid />
+        <BoardComparison />
         <TestimonialsSection />
         <CounsellingCTA />
         <ForSchoolsCTA />
