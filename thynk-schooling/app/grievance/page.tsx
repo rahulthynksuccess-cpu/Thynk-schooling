@@ -73,11 +73,6 @@ export default function Page() {
             </div>
             {/* Sidebar */}
             <aside style={{ position:'sticky', top:100 }}>
-              <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.08)', borderRadius:16, padding:28, marginBottom:16 }}>
-                <h3 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:22, fontWeight:700, color:'#0D1117', marginBottom:12 }}>Need Help?</h3>
-                <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:14, color:'#4A5568', lineHeight:1.65, marginBottom:16, fontWeight:300 }}>Questions about our policies? We're here to help.</p>
-                <a href="mailto:hello@thynkschooling.in" style={{ display:'block', textAlign:'center', padding:'11px 20px', background:'#B8860B', color:'#fff', borderRadius:9, textDecoration:'none', fontFamily:'DM Sans,sans-serif', fontSize:14, fontWeight:700 }}>Email Us →</a>
-              </div>
               <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.08)', borderRadius:16, padding:24 }}>
                 <div style={{ fontFamily:'DM Sans,sans-serif', fontSize:12, fontWeight:600, color:'#718096', letterSpacing:'.1em', textTransform:'uppercase', marginBottom:12 }}>Other Policies</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
