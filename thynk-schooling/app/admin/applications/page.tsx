@@ -1,180 +1,415 @@
 'use client'
-export const dynamic = 'force-dynamic'
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState, useEffect, useCallback } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { Search, Eye, CheckCircle, XCircle, Clock, Download } from 'lucide-react'
-import { motion } from 'framer-motion'
-import Link from 'next/link'
-import toast from 'react-hot-toast'
+import {
+  Search, Download, Eye, MessageSquare, XCircle,
+  FileText, Clock, ListFilter, GraduationCap, RefreshCw,
+  ChevronLeft, ChevronRight, CheckCircle2
+} from 'lucide-react'
 
-const TABS = ['All', 'Pending', 'Shortlisted', 'Admitted', 'Rejected']
+/* ── Types ── */
+type AppStatus = 'pending' | 'shortlisted' | 'contacted' | 'admitted' | 'rejected'
 
-const STATUS_STYLE: Record<string, { bg: string; color: string; label: string }> = {
-  pending:     { bg: 'rgba(251,191,36,.12)',  color: '#FBBF24', label: 'Pending'     },
-  shortlisted: { bg: 'rgba(96,165,250,.12)',  color: '#60A5FA', label: 'Shortlisted' },
-  admitted:    { bg: 'rgba(74,222,128,.12)',  color: '#4ADE80', label: 'Admitted'    },
-  rejected:    { bg: 'rgba(239,68,68,.12)',   color: '#F87171', label: 'Rejected'    },
+interface Application {
+  id: string
+  parentName: string
+  parentEmail: string
+  parentPhone: string
+  schoolName: string
+  childName: string
+  childClass: string
+  appliedAt: string
+  status: AppStatus
+  notes?: string
 }
 
-const cell: React.CSSProperties   = { padding: '11px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,.05)' }
-const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
+/* ── Status config ── */
+const STATUS_CONFIG: Record<AppStatus, { label: string; cls: string; color: string }> = {
+  pending:     { label: 'Pending',     cls: 'badge-pending',   color: '#FCD34D' },
+  shortlisted: { label: 'Shortlisted', cls: 'badge-complete',  color: '#34D399' },
+  contacted:   { label: 'Contacted',   cls: 'badge-school',    color: '#A78BFA' },
+  admitted:    { label: 'Admitted',    cls: 'badge-active',    color: '#34D399' },
+  rejected:    { label: 'Rejected',    cls: 'badge-suspended', color: '#F87171' },
+}
 
+/* ── Stat Card ── */
+function StatCard({
+  label, value, color, icon: Icon, delay = 0
+}: {
+  label: string; value: number; color: 'gold'|'blue'|'green'|'red'; icon: React.ElementType; delay?: number
+}) {
+  const [displayed, setDisplayed] = useState(0)
+  useEffect(() => {
+    if (value === 0) return
+    const steps = 30; const inc = value / steps; let cur = 0
+    const t = setInterval(() => {
+      cur += inc
+      if (cur >= value) { setDisplayed(value); clearInterval(t) }
+      else setDisplayed(Math.floor(cur))
+    }, 800 / steps)
+    return () => clearInterval(t)
+  }, [value])
+
+  return (
+    <div className={`admin-stat-card ${color}`} style={{ animationDelay: `${delay}s` }}>
+      <div className="stat-label">{label}</div>
+      <div className={`stat-number ${color}`}>{displayed.toLocaleString()}</div>
+      <div className="stat-sub">All applications</div>
+      <div className="stat-bg-icon"><Icon size={24} /></div>
+    </div>
+  )
+}
+
+/* ── Status Badge ── */
+function AppStatusBadge({ status }: { status: AppStatus }) {
+  const cfg = STATUS_CONFIG[status]
+  return <span className={`badge ${cfg.cls}`}>{cfg.label}</span>
+}
+
+/* ── Main Component ── */
 export default function AdminApplicationsPage() {
-  const qc = useQueryClient()
-  const [tab, setTab]       = useState('All')
-  const [search, setSearch] = useState('')
-  const [page, setPage]     = useState(1)
+  const [apps, setApps]         = useState<Application[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [query, setQuery]       = useState('')
+  const [filter, setFilter]     = useState('All')
+  const [page, setPage]         = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [stats, setStats] = useState({ total: 0, pending: 0, shortlisted: 0, admitted: 0 })
+  const [selected, setSelected] = useState<Set<string>>(new Set())
 
-  const params = new URLSearchParams({ page: String(page), limit: '20', search })
-  if (tab !== 'All') params.set('status', tab.toLowerCase())
+  const PER_PAGE = 20
 
-  const { data, isLoading } = useQuery<{ data: any[]; total: number }>({
-    queryKey: ['admin-applications', tab, search, page],
-    queryFn: () => fetch(`/api/admin/applications?${params}`,{cache:'no-store'}).then(r=>r.json()),
-    staleTime: 2 * 60 * 1000,
-  })
+  const fetchApps = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams({ page: String(page), limit: String(PER_PAGE) })
+      if (query) params.set('q', query)
+      if (filter !== 'All') params.set('status', filter.toLowerCase())
+      const res = await fetch(`/api/admin/applications?${params}`)
+      if (!res.ok) throw new Error('Failed')
+      const data = await res.json()
+      setApps(data.applications || [])
+      setStats(data.stats || { total: 0, pending: 0, shortlisted: 0, admitted: 0 })
+      setTotalPages(data.totalPages || 1)
+    } catch {
+      setApps([])
+    } finally {
+      setLoading(false)
+    }
+  }, [query, filter, page])
 
-  const apps  = data?.data  || []
-  const total = data?.total || 0
+  useEffect(() => { fetchApps() }, [fetchApps])
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      fetch(`/api/admin/applications?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})}).then(r=>r.json()),
-    onSuccess: (_, { status }) => {
-      toast.success(`Application ${status}`)
-      qc.invalidateQueries({ queryKey: ['admin-applications'] })
-    },
-    onError: () => toast.error('Action failed'),
-  })
+  useEffect(() => {
+    const t = setTimeout(() => { setPage(1); fetchApps() }, 400)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
 
-  const SUMMARY = [
-    { label: 'Total',       value: total,                                            color: '#60A5FA' },
-    { label: 'Pending',     value: apps.filter(a => a.status==='pending').length,    color: '#FBBF24' },
-    { label: 'Shortlisted', value: apps.filter(a => a.status==='shortlisted').length,color: '#60A5FA' },
-    { label: 'Admitted',    value: apps.filter(a => a.status==='admitted').length,   color: '#4ADE80' },
-  ]
+  const handleExport = async () => {
+    const res = await fetch('/api/admin/applications/export')
+    if (!res.ok) return
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = 'applications.xlsx'; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const updateStatus = async (id: string, status: AppStatus) => {
+    await fetch(`/api/admin/applications/${id}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    fetchApps()
+  }
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const FILTERS = ['All', 'Pending', 'Shortlisted', 'Contacted', 'Admitted', 'Rejected']
 
   return (
     <AdminLayout title="Applications" subtitle="All parent school applications across the platform">
 
-      {/* Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
-        {SUMMARY.map((s, i) => (
-          <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
-            <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value}</div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
-          </motion.div>
-        ))}
+      {/* Stats */}
+      <div className="admin-stat-grid">
+        <StatCard label="Total"       value={stats.total}       color="gold"  icon={FileText}    delay={0}    />
+        <StatCard label="Pending"     value={stats.pending}     color="blue"  icon={Clock}       delay={0.08} />
+        <StatCard label="Shortlisted" value={stats.shortlisted} color="green" icon={ListFilter}  delay={0.16} />
+        <StatCard label="Admitted"    value={stats.admitted}    color="green" icon={GraduationCap} delay={0.24} />
       </div>
 
-      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
-        {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
-            <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-              placeholder="Search parent, school, child name..."
-              style={{ background: 'none', border: 'none', outline: 'none', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: 'var(--admin-text,rgba(255,255,255,0.9))', flex: 1 }} />
-          </div>
-          <div style={{ display: 'flex', gap: '5px' }}>
-            {TABS.map(t => (
-              <button key={t} onClick={() => { setTab(t); setPage(1) }}
-                style={{ padding: '6px 13px', borderRadius: '7px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: 500, fontFamily: 'DM Sans,sans-serif', background: tab===t ? '#FF5C00' : 'rgba(255,255,255,.04)', color: tab===t ? '#fff' : 'rgba(255,255,255,.4)', transition: 'all .15s' }}>
-                {t}
-              </button>
-            ))}
-          </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif' }}>
-            <Download style={{ width: '12px', height: '12px' }} /> Export
+      {/* Toolbar */}
+      <div className="admin-toolbar">
+        <div className="toolbar-search">
+          <Search size={14} color="rgba(255,255,255,0.3)" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search parent, school, child name…"
+          />
+          {loading && (
+            <RefreshCw size={13} style={{ color: 'var(--a-t3)', animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+          )}
+        </div>
+        <div className="filter-pills">
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              className={`filter-pill${filter === f ? ' active' : ''}`}
+              onClick={() => { setFilter(f); setPage(1) }}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <button className="export-btn" onClick={handleExport}>
+          <Download size={13} />
+          Export
+        </button>
+      </div>
+
+      {/* Bulk action */}
+      {selected.size > 0 && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          padding: '12px 20px',
+          background: 'var(--a-gold-dim)',
+          border: '1px solid rgba(245,158,11,0.3)',
+          borderRadius: 14,
+          animation: 'fadeIn .25s ease',
+        }}>
+          <span style={{ fontSize: 13, color: 'var(--a-gold)', fontWeight: 600 }}>
+            {selected.size} selected
+          </span>
+          {(['shortlisted', 'contacted', 'admitted', 'rejected'] as AppStatus[]).map((s) => (
+            <button
+              key={s}
+              className={`badge ${STATUS_CONFIG[s].cls}`}
+              style={{ cursor: 'pointer', border: 'none' }}
+              onClick={async () => {
+                await Promise.all([...selected].map((id) => updateStatus(id, s)))
+                setSelected(new Set())
+                fetchApps()
+              }}
+            >
+              Mark {STATUS_CONFIG[s].label}
+            </button>
+          ))}
+          <button
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--a-t3)', cursor: 'pointer', fontSize: 12 }}
+            onClick={() => setSelected(new Set())}
+          >
+            Clear
           </button>
         </div>
+      )}
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['Parent','School','Child / Class','Applied','Status','Actions'].map(h => <th key={h} style={hdCell}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading
-                ? Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i}><td colSpan={6} style={{ padding: '10px 14px' }}>
-                      <div style={{ height: '32px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', borderRadius: '6px' }} />
-                    </td></tr>
-                  ))
-                : apps.length === 0
-                  ? <tr><td colSpan={6} style={{ ...cell, textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,.25)' }}>No applications found.</td></tr>
-                  : apps.map((a, i) => {
-                      const s = STATUS_STYLE[a.status] || STATUS_STYLE.pending
-                      return (
-                        <tr key={a.id} onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,.02)'}
-                          onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                          <td style={cell}>
-                            <div style={{ fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{a.parentName || '—'}</div>
-                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{a.parentPhone}</div>
-                          </td>
-                          <td style={cell}>
-                            <div style={{ fontWeight: 500 }}>{a.schoolName || '—'}</div>
-                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{a.city}</div>
-                          </td>
-                          <td style={{ ...cell, color: 'rgba(255,255,255,.5)' }}>
-                            {a.childName} · Class {a.classApplied}
-                          </td>
-                          <td style={{ ...cell, color: 'rgba(255,255,255,.4)', fontSize: '11px' }}>
-                            {a.createdAt ? new Date(a.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'2-digit' }) : '—'}
-                          </td>
-                          <td style={cell}>
-                            <span style={{ fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '100px', background: s.bg, color: s.color, fontFamily: 'DM Sans,sans-serif' }}>
-                              {s.label}
-                            </span>
-                          </td>
-                          <td style={cell}>
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                              {a.status === 'pending' && (
-                                <>
-                                  <button onClick={() => updateMutation.mutate({ id: a.id, status: 'shortlisted' })}
-                                    style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(96,165,250,.1)', border: '1px solid rgba(96,165,250,.2)', color: '#60A5FA', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>
-                                    Shortlist
-                                  </button>
-                                  <button onClick={() => updateMutation.mutate({ id: a.id, status: 'rejected' })}
-                                    style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(239,68,68,.08)', border: '1px solid rgba(239,68,68,.15)', color: '#F87171', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>
-                                    Reject
-                                  </button>
-                                </>
-                              )}
-                              {a.status === 'shortlisted' && (
-                                <button onClick={() => updateMutation.mutate({ id: a.id, status: 'admitted' })}
-                                  style={{ padding: '5px 10px', borderRadius: '6px', background: 'rgba(74,222,128,.1)', border: '1px solid rgba(74,222,128,.2)', color: '#4ADE80', cursor: 'pointer', fontSize: '11px', fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}>
-                                  Admit
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })
-              }
-            </tbody>
-          </table>
+      {/* Table */}
+      <div className="admin-table-card">
+        <div
+          className="table-header-row"
+          style={{ gridTemplateColumns: '24px 2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px' }}
+        >
+          <div className="th" />
+          <div className="th">Parent</div>
+          <div className="th">School</div>
+          <div className="th">Child / Class</div>
+          <div className="th">Applied</div>
+          <div className="th">Status</div>
+          <div className="th">Update</div>
+          <div className="th">Actions</div>
         </div>
 
-        {total > 20 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,.05)' }}>
-            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif' }}>
-              {((page-1)*20)+1}–{Math.min(page*20,total)} of {total}
-            </span>
-            <div style={{ display: 'flex', gap: '5px' }}>
-              <button onClick={() => setPage(p => Math.max(1,p-1))} disabled={page===1}
-                style={{ padding: '6px 13px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', opacity: page===1 ? .4 : 1 }}>← Prev</button>
-              <button onClick={() => setPage(p => p+1)} disabled={page*20>=total}
-                style={{ padding: '6px 13px', borderRadius: '7px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', color: 'rgba(255,255,255,.4)', cursor: 'pointer', fontSize: '11px', opacity: page*20>=total ? .4 : 1 }}>Next →</button>
+        {loading ? (
+          <div>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="table-data-row"
+                style={{ gridTemplateColumns: '24px 2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px', opacity: 0.5 - i * 0.08 }}
+              >
+                {Array.from({ length: 8 }).map((_, j) => (
+                  <div key={j} className="td">
+                    <div style={{
+                      height: 12, borderRadius: 6, width: '65%',
+                      background: 'rgba(255,255,255,0.06)',
+                    }} />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : apps.length === 0 ? (
+          <div className="admin-empty">
+            <div className="empty-icon-wrap">
+              <FileText size={24} color="rgba(255,255,255,0.3)" />
+            </div>
+            <div className="empty-title">No applications found</div>
+            <div className="empty-sub">
+              {query || filter !== 'All'
+                ? 'Try adjusting your search or filter'
+                : 'Applications will appear here once parents submit them'}
             </div>
           </div>
+        ) : (
+          apps.map((app, i) => (
+            <div
+              key={app.id}
+              className="table-data-row"
+              style={{
+                gridTemplateColumns: '24px 2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px',
+                animationDelay: `${i * 0.04}s`,
+                background: selected.has(app.id) ? 'rgba(245,158,11,0.04)' : undefined,
+              }}
+            >
+              {/* Checkbox */}
+              <div className="td">
+                <div
+                  onClick={() => toggleSelect(app.id)}
+                  style={{
+                    width: 16, height: 16, borderRadius: 4,
+                    border: `1px solid ${selected.has(app.id) ? 'var(--a-gold)' : 'var(--a-border2)'}`,
+                    background: selected.has(app.id) ? 'var(--a-gold)' : 'transparent',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all .15s',
+                  }}
+                >
+                  {selected.has(app.id) && <CheckCircle2 size={10} color="#000" />}
+                </div>
+              </div>
+
+              {/* Parent */}
+              <div className="td">
+                <div className="user-cell">
+                  <div
+                    className="user-avatar"
+                    style={{ background: 'linear-gradient(135deg,#1D4ED8,#3B82F6)' }}
+                  >
+                    {app.parentName?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="user-name">{app.parentName}</div>
+                    <div className="user-email">{app.parentPhone || app.parentEmail}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* School */}
+              <div className="td">
+                <span style={{ fontSize: 13, color: 'var(--a-t1)', fontWeight: 500 }}>{app.schoolName}</span>
+              </div>
+
+              {/* Child / Class */}
+              <div className="td">
+                <div>
+                  <div style={{ fontSize: 13, color: 'var(--a-t1)', fontWeight: 500 }}>{app.childName}</div>
+                  <div style={{ fontSize: 11, color: 'var(--a-t3)', marginTop: 1 }}>Class {app.childClass}</div>
+                </div>
+              </div>
+
+              {/* Applied */}
+              <div className="td" style={{ fontSize: 12 }}>
+                {new Date(app.appliedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' })}
+              </div>
+
+              {/* Status */}
+              <div className="td">
+                <AppStatusBadge status={app.status} />
+              </div>
+
+              {/* Quick status update */}
+              <div className="td">
+                <select
+                  value={app.status}
+                  onChange={(e) => updateStatus(app.id, e.target.value as AppStatus)}
+                  style={{
+                    background: 'var(--a-card2)',
+                    border: '1px solid var(--a-border)',
+                    borderRadius: 7,
+                    color: 'var(--a-t2)',
+                    fontSize: 11,
+                    padding: '4px 8px',
+                    fontFamily: 'var(--a-sans)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  {(Object.keys(STATUS_CONFIG) as AppStatus[]).map((s) => (
+                    <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Actions */}
+              <div className="td">
+                <div className="action-btns">
+                  <button
+                    className="act-btn"
+                    title="View application"
+                    onClick={() => window.open(`/admin/applications/${app.id}`, '_blank')}
+                  >
+                    <Eye size={13} />
+                  </button>
+                  <button
+                    className="act-btn"
+                    title="Send message"
+                    onClick={() => window.open(`/admin/applications/${app.id}/message`, '_blank')}
+                  >
+                    <MessageSquare size={13} />
+                  </button>
+                  <button
+                    className="act-btn danger"
+                    title="Reject application"
+                    onClick={() => updateStatus(app.id, 'rejected')}
+                  >
+                    <XCircle size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}>
+          <button
+            className="act-btn"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{ opacity: page === 1 ? 0.4 : 1 }}
+          >
+            <ChevronLeft size={14} />
+          </button>
+          <span style={{ fontSize: 13, color: 'var(--a-t2)' }}>
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className="act-btn"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{ opacity: page === totalPages ? 0.4 : 1 }}
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      `}</style>
     </AdminLayout>
   )
 }
