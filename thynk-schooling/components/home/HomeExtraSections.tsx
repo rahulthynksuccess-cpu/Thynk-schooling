@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion, useInView } from 'framer-motion'
 import { MapPin, ArrowRight, Star, BookOpen, CheckCircle2, TrendingUp, Shield, Zap } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
+import { FloatingOrbs } from './HomeVisualEffects'
 
 const W = { width: '100%' } as React.CSSProperties
 const C = { maxWidth: 'var(--container-width,1600px)', margin: '0 auto', padding: '0 clamp(20px,5vw,80px)' } as React.CSSProperties

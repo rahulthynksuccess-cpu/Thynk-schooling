@@ -819,7 +819,7 @@ function buildThemeCssText(t: Record<string,any>): string {
   --font-sans: '${co('fontSans','Inter')}', system-ui, sans-serif;
   --radius: ${px('radius',12)};
   --radius-sm: ${px('btnRadius',6)};
-  --container-width: ${t.containerWidth ?? 1400}px;
+  --container-width: ${t.containerWidth ?? 1600}px;
   --nav-bg: ${co('navBg','rgba(250,247,242,0.95)')};
   --nav-size: ${px('navSize',14)};
   --nav-color: ${co('navColor','#4A5568')};
@@ -895,7 +895,7 @@ function applyToDom(t: Record<string,any>) {
   s('--border',     String(t.border||'rgba(13,17,23,0.09)'))
   if (t.fontSerif) s('--font-serif', `'${t.fontSerif}', Georgia, serif`)
   if (t.fontSans)  s('--font-sans',  `'${t.fontSans}', system-ui, sans-serif`)
-  s('--container-width', `${t.containerWidth ?? 1400}px`)
+  s('--container-width', `${t.containerWidth ?? 1600}px`)
   // Section vars
   s('--nav-bg',                    String(t.navBg||'rgba(250,247,242,0.95)'))
   s('--nav-size',                  `${t.navSize||13}px`)

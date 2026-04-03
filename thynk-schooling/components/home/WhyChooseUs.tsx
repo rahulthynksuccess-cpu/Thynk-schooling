@@ -2,6 +2,7 @@
 import { motion, useInView } from 'framer-motion'
 import { useRef } from 'react'
 import { useContent } from '@/hooks/useContent'
+import { FloatingOrbs } from './HomeVisualEffects'
 
 const CARDS = [
   { icon: '🔍', title: 'Smart Search',         desc: 'Filter by board, city, fee, medium and 20+ parameters in seconds.', accent: '#B8860B' },
