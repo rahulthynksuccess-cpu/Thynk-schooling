@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useEffect, useState } from 'react'
+import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { useContent } from '@/hooks/useContent'
 
@@ -21,17 +21,18 @@ function Counter({to,suffix='',prefix=''}:{to:number,suffix?:string,prefix?:stri
   return <span ref={ref}>{prefix}{v.toLocaleString('en-IN')}{suffix}</span>
 }
 
-const STATS=[
-  {icon:'🏫',to:12000,suffix:'+',label:'Verified Schools',sub:'Across India'},
-  {icon:'👨‍👩‍👧',custom:'1 Lakh+',label:'Happy Parents',sub:'& counting'},
-  {icon:'🏙️',to:35,suffix:'+',label:'Indian Cities',sub:'Covered'},
-  {icon:'⭐',to:98,suffix:'%',label:'Satisfaction',sub:'Rate'},
-  {icon:'🏆',custom:'4.8 ★',label:'Avg Rating',sub:'from parents'},
-]
-
 export function StatsBar() {
   const ref=useRef(null)
   const inView=useInView(ref,{once:true,amount:.2})
+  const ct=useContent('home')??{}
+
+  const STATS=[
+    {icon:'🏫', custom: ct.stat1Num||'12,000+', label: ct.stat1Label||'Verified Schools',  sub:'Across India'},
+    {icon:'👨‍👩‍👧', custom: ct.stat2Num||'1 Lakh+',  label: ct.stat2Label||'Happy Parents',    sub:'& counting'},
+    {icon:'🏙️', custom: ct.stat3Num||'350+',     label: ct.stat3Label||'Indian Cities',    sub:'Covered'},
+    {icon:'⭐',  custom: ct.stat4Num||'98%',      label: ct.stat4Label||'Satisfaction',     sub:'Rate'},
+    {icon:'🏆',  custom: ct.stat5Num||'4.8 ★',   label: ct.stat5Label||'Avg Rating',       sub:'from parents'},
+  ]
   return (
     <section ref={ref} style={{background:'#0D1117',padding:'clamp(56px,8vw,96px) 0',position:'relative',overflow:'hidden'}}>
       {/* Mesh */}
@@ -62,7 +63,7 @@ export function StatsBar() {
               <motion.div style={{fontSize:'clamp(26px,3.5vw,40px)',marginBottom:16,display:'inline-block',filter:'drop-shadow(0 0 12px rgba(184,134,11,0.3))',animation:`floatY ${3.5+i*.4}s ease-in-out infinite`,animationDelay:`${i*-.5}s`}}>{s.icon}</motion.div>
               {/* Number */}
               <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(30px,4.5vw,56px)',color:'#FAF7F2',lineHeight:.95,marginBottom:8,letterSpacing:'-2px'}}>
-                {s.custom || (inView && s.to !== undefined ? <Counter to={s.to} suffix={s.suffix}/> : '0')}
+                {s.custom}
               </div>
               {/* Label */}
               <div style={{fontFamily:'Inter,sans-serif',fontSize:'clamp(11px,1.1vw,13px)',color:'rgba(250,247,242,0.55)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.12em',marginBottom:4}}>{s.label}</div>

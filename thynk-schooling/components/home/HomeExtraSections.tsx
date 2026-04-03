@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { motion, useInView } from 'framer-motion'
 import { MapPin, ArrowRight, Star, BookOpen, CheckCircle2, TrendingUp, Shield, Zap } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
+import { useContent } from '@/hooks/useContent'
 
 const C={maxWidth:'1600px',margin:'0 auto',padding:'0 clamp(24px,5vw,80px)'} as React.CSSProperties
 
@@ -13,6 +14,8 @@ export function TopCitiesGrid() {
   const ref=useRef(null)
   const inView=useInView(ref,{once:true,amount:.1})
   const {options:cities,isLoading}=useDropdown('city')
+  const ct=useContent('home')??{}
+  const cityCount=ct.stat3Num||'350+'
   return (
     <section ref={ref} style={{background:'#FDFAF5',padding:'clamp(80px,10vw,130px) 0',position:'relative',overflow:'hidden'}}>
       <svg style={{position:'absolute',inset:0,width:'100%',height:'100%',pointerEvents:'none'}} preserveAspectRatio="xMidYMid slice">
@@ -27,7 +30,7 @@ export function TopCitiesGrid() {
           <h2 style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.4rem,5vw,4.5rem)',color:'#0D1117',lineHeight:.92,letterSpacing:'-2.5px',marginBottom:16}}>
             Schools in Your <em className="text-shimmer" style={{fontStyle:'italic'}}>City</em>
           </h2>
-          <p style={{fontFamily:'Inter,sans-serif',fontSize:'clamp(14px,1.5vw,17px)',color:'#4A5568',fontWeight:300,maxWidth:480,margin:'0 auto'}}>Find top schools in 35+ Indian cities — all verified, all real.</p>
+          <p style={{fontFamily:'Inter,sans-serif',fontSize:'clamp(14px,1.5vw,17px)',color:'#4A5568',fontWeight:300,maxWidth:480,margin:'0 auto'}}>Find top schools in {cityCount} Indian cities — all verified, all real.</p>
         </motion.div>
 
         <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'clamp(10px,1.5vw,16px)'}}>
@@ -50,7 +53,7 @@ export function TopCitiesGrid() {
           <Link href="/cities" style={{display:'inline-flex',alignItems:'center',gap:8,fontFamily:'Inter,sans-serif',fontSize:13,fontWeight:600,color:'#B8860B',textDecoration:'none',padding:'11px 22px',border:'1.5px solid rgba(184,134,11,0.3)',borderRadius:10,transition:'all .22s',background:'transparent'}}
             onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background='#B8860B';el.style.color='#fff';el.style.borderColor='#B8860B'}}
             onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background='transparent';el.style.color='#B8860B';el.style.borderColor='rgba(184,134,11,0.3)'}}>
-            View all 35+ cities <ArrowRight style={{width:14,height:14}}/>
+            View all {cityCount} cities <ArrowRight style={{width:14,height:14}}/>
           </Link>
         </div>
       </div>

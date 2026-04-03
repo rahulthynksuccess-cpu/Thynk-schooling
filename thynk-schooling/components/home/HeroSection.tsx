@@ -6,7 +6,7 @@ import { Search, MapPin, ArrowRight, Star, BadgeCheck, Sparkles } from 'lucide-r
 import { useDropdown } from '@/hooks/useDropdown'
 import { useContent } from '@/hooks/useContent'
 
-const IMG = 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1200&q=90&auto=format&fit=crop'
+const DEFAULT_IMG = 'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=1200&q=90&auto=format&fit=crop'
 
 function ParticleField() {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -92,24 +92,24 @@ export function HeroSection() {
                 <div style={{width:22,height:22,borderRadius:'50%',background:'linear-gradient(135deg,#B8860B,#E8C547)',display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 8px rgba(184,134,11,0.4)'}}>
                   <Sparkles style={{width:12,height:12,color:'#fff'}}/>
                 </div>
-                <span style={{fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:600,letterSpacing:'.14em',textTransform:'uppercase',color:'#926A09'}}>AI-Powered · Free for Parents</span>
+                <span style={{fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:600,letterSpacing:'.14em',textTransform:'uppercase',color:'#926A09'}}>{ct.eyebrow||'AI-Powered · Free for Parents'}</span>
               </div>
             </motion.div>
 
             <div style={{overflow:'hidden',marginBottom:32}}>
               <motion.h1 initial={{opacity:0,y:'100%'}} animate={{opacity:1,y:0}} transition={{duration:.8,delay:.08,ease:[.22,1,.36,1]}}
                 style={{fontFamily:'"Cormorant Garamond",Georgia,serif',fontWeight:700,fontSize:'clamp(3.8rem,7.5vw,7.8rem)',lineHeight:.86,letterSpacing:'-4px',color:'#0D1117',margin:0}}>
-                Find the
+                {ct.h1Line1||'Find the'}
                 <br/>
-                <span className="text-shimmer" style={{fontStyle:'italic'}}>Perfect School</span>
+                <span className="text-shimmer" style={{fontStyle:'italic'}}>{ct.h1Italic||'Perfect School'}</span>
                 <br/>
-                <span style={{color:'rgba(13,17,23,0.16)',fontSize:'.65em',fontWeight:400,fontStyle:'normal',letterSpacing:'-2px'}}>for Your Child</span>
+                <span style={{color:'rgba(13,17,23,0.16)',fontSize:'.65em',fontWeight:400,fontStyle:'normal',letterSpacing:'-2px'}}>{ct.h1Line3||'for Your Child'}</span>
               </motion.h1>
             </div>
 
             <motion.p initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:.7,delay:.22,ease:[.22,1,.36,1]}}
               style={{fontFamily:'Inter,sans-serif',fontSize:'clamp(15px,1.7vw,18px)',fontWeight:300,color:'#4A5568',lineHeight:1.8,maxWidth:480,marginBottom:40}}>
-              Search, compare &amp; apply to <strong style={{color:'#0D1117',fontWeight:600}}>12,000+ verified schools</strong> across 35+ cities. CBSE, ICSE, IB and more.
+              {ct.subtext||'Search, compare & apply to 12,000+ verified schools across 350+ Indian cities. CBSE, ICSE, IB and more.'}
             </motion.p>
 
             {/* Search box */}
@@ -119,7 +119,7 @@ export function HeroSection() {
                 onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.boxShadow='0 24px 64px rgba(13,17,23,0.12),0 2px 8px rgba(184,134,11,0.08)';el.style.transform='translateY(0)'}}>
                 <div style={{display:'flex',alignItems:'center',gap:12,padding:'0 20px',borderBottom:'1px solid rgba(13,17,23,0.06)'}}>
                   <Search style={{width:16,height:16,color:'#B8860B',flexShrink:0}}/>
-                  <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="School name, board, or keyword…" style={{flex:1,border:'none',outline:'none',fontSize:15,fontFamily:'Inter,sans-serif',fontWeight:300,color:'#0D1117',background:'transparent',padding:'18px 0'}}/>
+                  <input value={query} onChange={e=>setQuery(e.target.value)} placeholder={ct.searchPlaceholder||"School name, board, or keyword…"} style={{flex:1,border:'none',outline:'none',fontSize:15,fontFamily:'Inter,sans-serif',fontWeight:300,color:'#0D1117',background:'transparent',padding:'18px 0'}}/>
                 </div>
                 <div style={{display:'flex',alignItems:'center'}}>
                   <div style={{display:'flex',alignItems:'center',gap:8,padding:'0 20px',flex:1}}>
@@ -132,7 +132,7 @@ export function HeroSection() {
                   <button type="submit" style={{background:'linear-gradient(135deg,#B8860B,#C9960D)',color:'#fff',border:'none',fontSize:14,fontWeight:600,fontFamily:'Inter,sans-serif',padding:'0 32px',height:58,cursor:'pointer',display:'flex',alignItems:'center',gap:8,whiteSpace:'nowrap',transition:'all .22s',flexShrink:0,boxShadow:'inset 0 1px 0 rgba(255,255,255,0.15)'}}
                     onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background='linear-gradient(135deg,#C9960D,#D4A520)';el.style.boxShadow='0 4px 20px rgba(184,134,11,0.4)'}}
                     onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background='linear-gradient(135deg,#B8860B,#C9960D)';el.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.15)'}}>
-                    Search Schools <ArrowRight style={{width:15,height:15}}/>
+                    {ct.ctaPrimary||'Search Schools'} <ArrowRight style={{width:15,height:15}}/>
                   </button>
                 </div>
               </div>
@@ -173,7 +173,7 @@ export function HeroSection() {
               {/* Image with parallax */}
               <motion.div style={{y:imgY}} transition={{type:'spring',stiffness:40,damping:25}}>
                 <div style={{borderRadius:24,overflow:'hidden',aspectRatio:'4/3',boxShadow:'0 60px 120px rgba(13,17,23,0.22),0 12px 40px rgba(184,134,11,0.12)',position:'relative',border:'1px solid rgba(255,255,255,0.4)'}}>
-                  <img src={IMG} alt="Students" style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transition:'transform .6s ease'}}
+                  <img src={ct.heroImage||DEFAULT_IMG} alt="Students" style={{width:'100%',height:'100%',objectFit:'cover',display:'block',transition:'transform .6s ease'}}
                     onMouseEnter={e=>(e.currentTarget as HTMLElement).style.transform='scale(1.04)'}
                     onMouseLeave={e=>(e.currentTarget as HTMLElement).style.transform='scale(1)'}/>
                   <div style={{position:'absolute',inset:0,background:'linear-gradient(to top,rgba(13,17,23,0.45) 0%,transparent 55%)',pointerEvents:'none'}}/>
