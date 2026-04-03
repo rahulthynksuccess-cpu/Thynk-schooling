@@ -131,7 +131,7 @@
   /* ── Container ───────────────────────────── */
   .container {
     width: 100%;
-    max-width: var(--container-width, 1600px);
+    max-width: 1600px;
     margin: 0 auto;
     padding: 0 24px;
   }
@@ -498,4 +498,63 @@ main > section {
 .reveal.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* ── DEFINITIVE WIDTH FIX — bypasses CSS variable system entirely ── */
+/* Use .ts-container class instead of inline maxWidth style           */
+.ts-container {
+  width: 100%;
+  max-width: 1600px !important;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(20px, 5vw, 80px);
+  padding-right: clamp(20px, 5vw, 80px);
+}
+@media (max-width: 768px) {
+  .ts-container { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Force DB-stored containerWidth to be ignored for home sections */
+main > section > div[style*="maxWidth"],
+main > section > div[style*="max-width"] {
+  max-width: 1600px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* DEFINITIVE WIDTH FIX — beats ContentStyleInjector inline style */
+/* The injector sets --container-width from DB. We bypass it.     */
+/* These selectors target every inner container div on home page  */
+/* ═══════════════════════════════════════════════════════════════ */
+@layer base {
+  /* Any div with maxWidth set to a pixel value inside main */
+  main section > div { max-width: 1600px !important; }
+  /* But allow inner content to be narrower */
+  main section > div > div { max-width: none !important; }
+  main section > div > div > div { max-width: none !important; }
+}
+
+/* ── New keyframes for world-class animations ─────────────────── */
+@keyframes shimmerText {
+  0%   { background-position: 0%   center; }
+  100% { background-position: 200% center; }
+}
+@keyframes spin36 {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes floatY {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(184,134,11,0); }
+  50%       { box-shadow: 0 0 0 8px rgba(184,134,11,0.12); }
+}
+@keyframes borderWave {
+  0%, 100% { border-color: rgba(184,134,11,0.15); }
+  50%       { border-color: rgba(184,134,11,0.4); }
 }
