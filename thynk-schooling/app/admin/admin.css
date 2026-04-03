@@ -64,6 +64,20 @@
   --a-shadow-gold: 0 6px 28px rgba(245,166,35,0.35);
   --a-shadow-blue: 0 6px 28px rgba(79,142,247,0.3);
   --a-shadow-green:0 6px 28px rgba(0,229,160,0.25);
+
+  /* ══ LEGACY --admin-* ALIASES ══════════════════════════════
+     All admin pages use these old variable names. Mapping them
+     here means every page renders correctly without rewriting.
+  ═══════════════════════════════════════════════════════════ */
+  --admin-bg:          #04080F;
+  --admin-sidebar-bg:  linear-gradient(180deg, #080E1A 0%, #060B14 100%);
+  --admin-header-bg:   rgba(4,8,15,0.92);
+  --admin-card-bg:     #0C1422;
+  --admin-border:      rgba(255,255,255,0.08);
+  --admin-accent:      #F5A623;
+  --admin-text:        rgba(255,255,255,0.95);
+  --admin-text-muted:  rgba(255,255,255,0.45);
+  --admin-text-faint:  rgba(255,255,255,0.18);
 }
 
 /* ── Reset ── */
@@ -1617,4 +1631,67 @@
   .admin-stat-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
   .stat-number { font-size: 32px; }
   .admin-toolbar { padding: 10px 14px; }
+}
+
+/* ══════════════════════════════════════════════
+   LEGACY PAGE OVERRIDES
+   Fix inline-styled tables/cards across all old
+   admin pages so they render on the dark theme.
+══════════════════════════════════════════════ */
+
+/* Ensure all admin tables are readable */
+.admin-main table {
+  background: transparent;
+  color: var(--a-t1);
+}
+
+.admin-main table th {
+  color: var(--a-t3) !important;
+  background: rgba(255,255,255,0.025) !important;
+  border-bottom: 1px solid var(--a-border2) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  padding: 10px 14px !important;
+  white-space: nowrap !important;
+}
+
+.admin-main table td {
+  color: var(--a-t2);
+  border-bottom: 1px solid var(--a-border) !important;
+  vertical-align: middle;
+}
+
+.admin-main table tr:hover td {
+  background: rgba(255,255,255,0.025) !important;
+}
+
+/* Stat cards in old pages */
+.admin-main [style*="var(--admin-bg"] {
+  background: var(--admin-bg) !important;
+  border-color: var(--admin-border) !important;
+}
+
+/* Scrollbars in admin content */
+.admin-main ::-webkit-scrollbar { width: 4px; height: 4px; }
+.admin-main ::-webkit-scrollbar-track { background: transparent; }
+.admin-main ::-webkit-scrollbar-thumb {
+  background: rgba(245,166,35,0.2);
+  border-radius: 99px;
+}
+
+/* Form inputs inside admin pages (integrations, content etc.) */
+.admin-main input:not([type=range]):not([type=color]):not([type=checkbox]),
+.admin-main textarea,
+.admin-main select {
+  color-scheme: dark;
+}
+
+/* White-bg content page — keep its light form controls */
+.admin-content > div[style*="background:#fff"] input,
+.admin-content > div[style*="background:#fff"] textarea,
+.admin-content > div[style*="background:#fff"] select,
+.admin-content > div[style*='background: #fff'] input {
+  color-scheme: light;
 }
