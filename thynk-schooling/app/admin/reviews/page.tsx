@@ -10,7 +10,7 @@ import toast from 'react-hot-toast'
 const TABS = ['All', 'Pending', 'Approved', 'Flagged']
 
 const cell: React.CSSProperties   = { padding: '12px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,.05)' }
-const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '10px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.02)', whiteSpace: 'nowrap' }
+const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '11px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.05)', whiteSpace: 'nowrap' }
 
 function StarRating({ rating }: { rating: number }) {
   return (

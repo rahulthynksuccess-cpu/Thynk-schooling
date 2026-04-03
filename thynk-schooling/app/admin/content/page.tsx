@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { Globe, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { refreshContent } from '@/hooks/useContent'
 
 type FieldType = 'text' | 'textarea' | 'color' | 'size'
 interface Field { id: string; label: string; type: FieldType; cssVar?: string; default: string; min?: number; max?: number }
@@ -21,7 +22,7 @@ const PAGES: PageGroup[] = [
           { id:'h1Line1',          label:'H1 Line 1',              type:'text',    default:'Find the' },
           { id:'h1Italic',         label:'H1 Italic word',         type:'text',    default:'Perfect School' },
           { id:'h1Line3',          label:'H1 Line 3',              type:'text',    default:'for Your Child' },
-          { id:'subtext',          label:'Hero subtitle',          type:'textarea',default:'Search, compare & apply to 12,000+ verified schools across 35+ Indian cities.' },
+          { id:'subtext',          label:'Hero subtitle',          type:'textarea',default:'Search, compare & apply to 12,000+ verified schools across 350+ Indian cities.' },
           { id:'searchPlaceholder',label:'Search box placeholder', type:'text',    default:'School name, board, or keyword…' },
           { id:'ctaPrimary',       label:'Search button text',     type:'text',    default:'Search' },
           { id:'heroImage',        label:'Hero Image URL (right side)', type:'text', default:'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=900&q=85&auto=format&fit=crop' },
@@ -48,7 +49,7 @@ const PAGES: PageGroup[] = [
           { id:'stat1Label', label:'Stat 1 — Label',  type:'text',  default:'Verified Schools' },
           { id:'stat2Num',   label:'Stat 2 — Number', type:'text',  default:'1 Lakh+' },
           { id:'stat2Label', label:'Stat 2 — Label',  type:'text',  default:'Happy Parents' },
-          { id:'stat3Num',   label:'Stat 3 — Number', type:'text',  default:'35+' },
+          { id:'stat3Num',   label:'Stat 3 — Number', type:'text',  default:'350+' },
           { id:'stat3Label', label:'Stat 3 — Label',  type:'text',  default:'Indian Cities' },
           { id:'stat4Num',   label:'Stat 4 — Number', type:'text',  default:'98%' },
           { id:'stat4Label', label:'Stat 4 — Label',  type:'text',  default:'Satisfaction Rate' },
@@ -487,6 +488,7 @@ export default function AdminContentPage() {
   const [savedGroups,  setSavedGroups] = useState<Record<string,boolean>>({})
   const [dirtyGroups,  setDirtyGroups] = useState<Record<string,boolean>>({})
   const [pushing,      setPushing]     = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Load saved values on mount
   const loadedRef = useRef(false)
@@ -557,6 +559,12 @@ export default function AdminContentPage() {
       setSavedGroups(p => ({ ...p, [activeGroup]: true }))
       setDirtyGroups(p => ({ ...p, [activeGroup]: false }))
       toast.success(`✅ "${activeGroup}" saved to site!`)
+      // Bust the content cache so live pages re-fetch immediately
+      refreshContent()
+      // Reload the preview iframe to show updated content
+      setTimeout(() => {
+        if (iframeRef.current) iframeRef.current.src = iframeRef.current.src
+      }, 400)
     } catch (e: any) {
       toast.error(e.message || 'Save failed')
     }
@@ -587,6 +595,10 @@ export default function AdminContentPage() {
       setSavedGroups({})
       setDirtyGroups({})
       toast.success('🚀 All changes saved to site!')
+      refreshContent()
+      setTimeout(() => {
+        if (iframeRef.current) iframeRef.current.src = iframeRef.current.src
+      }, 400)
     } catch (e: any) { toast.error(e.message || 'Push failed') }
     setPushing(false)
   }
@@ -664,6 +676,7 @@ export default function AdminContentPage() {
               <div style={{ flex:1, background:'#fff', borderRadius:'3px', padding:'2px 8px', fontSize:'10px', color:'#999', fontFamily:'monospace', marginLeft:'4px' }}>{activePage?.previewUrl || '/'}</div>
             </div>
             <iframe
+              ref={iframeRef}
               key={`content-preview-${activeGroup}`}
               src={activePage?.previewUrl || '/'}
               style={{ width:'100%', height:'540px', border:'none', display:'block' }}
@@ -671,7 +684,7 @@ export default function AdminContentPage() {
             />
           </div>
           <p style={{ fontSize:'11px', color:'#A0ADB8', fontFamily:'Inter,sans-serif', textAlign:'center' as const, marginTop:'8px', lineHeight:1.5 }}>
-            Save changes → reload preview to see updates
+            Preview reloads automatically after save
           </p>
         </div>
       </div>

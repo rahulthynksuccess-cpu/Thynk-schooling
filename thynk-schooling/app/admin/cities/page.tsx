@@ -42,6 +42,16 @@ const DEFAULT_CITIES = [
   ['Mathura','mathura','Uttar Pradesh'],['Vrindavan','vrindavan','Uttar Pradesh'],['Ayodhya','ayodhya','Uttar Pradesh'],
 ].map(([name, slug, state], i) => ({ name, slug, state, sort_order: i, is_active: true, id: slug }))
 
+const INDIAN_STATES = [
+  'Andaman & Nicobar','Andhra Pradesh','Arunachal Pradesh','Assam','Bihar',
+  'Chandigarh','Chhattisgarh','Dadra & Nagar Haveli','Daman & Diu','Delhi',
+  'Goa','Gujarat','Haryana','Himachal Pradesh','Jammu & Kashmir','Jharkhand',
+  'Karnataka','Kerala','Ladakh','Lakshadweep','Madhya Pradesh','Maharashtra',
+  'Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Puducherry','Punjab',
+  'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
+  'Uttarakhand','West Bengal',
+]
+
 type City = { id: string; name: string; slug: string; state: string; sort_order: number; is_active: boolean }
 
 export default function AdminCitiesPage() {
@@ -121,7 +131,10 @@ export default function AdminCitiesPage() {
       {/* Add new */}
       <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid rgba(184,134,11,0.2)', borderRadius:10, padding:'10px 14px' }}>
         <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==='Enter' && addCity()} placeholder="City name…" style={{ ...inp, flex:1 }} />
-        <input value={newState} onChange={e => setNewState(e.target.value)} onKeyDown={e => e.key==='Enter' && addCity()} placeholder="State…" style={{ ...inp, width:160 }} />
+        <select value={newState} onChange={e => setNewState(e.target.value)} style={{ ...inp, width:190 }}>
+          <option value="">Select state…</option>
+          {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
         <button onClick={addCity} style={{ padding:'8px 16px', borderRadius:8, background:'rgba(184,134,11,0.2)', border:'1px solid rgba(184,134,11,0.3)', color:'#E8C547', cursor:'pointer', fontSize:13, fontWeight:700, fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }}>
           <Plus style={{ width:13, height:13 }} /> Add City
         </button>
@@ -133,7 +146,10 @@ export default function AdminCitiesPage() {
           cities.map(city => (
             <div key={city.slug} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 140px 36px', gap:8, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.03))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:8, padding:'7px 12px' }}>
               <input value={city.name} onChange={e => update(city.slug, 'name', e.target.value)} style={{ ...inp, padding:'5px 9px', fontSize:12 }} />
-              <input value={city.state} onChange={e => update(city.slug, 'state', e.target.value)} placeholder="State" style={{ ...inp, padding:'5px 9px', fontSize:12 }} />
+              <select value={city.state} onChange={e => update(city.slug, 'state', e.target.value)} style={{ ...inp, padding:'5px 9px', fontSize:12 }}>
+                <option value="">Select state…</option>
+                {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
               <code style={{ color:'rgba(184,134,11,0.7)', fontSize:11, fontFamily:'monospace', padding:'4px 8px', background:'rgba(184,134,11,0.06)', borderRadius:5, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>/schools?city={city.slug}</code>
               <button onClick={() => remove(city.slug)} style={{ padding:6, background:'none', border:'none', color:'var(--admin-text-faint,rgba(255,255,255,0.2))', cursor:'pointer', borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center' }}
                 onMouseEnter={e => (e.currentTarget as HTMLElement).style.color='#f87171'}

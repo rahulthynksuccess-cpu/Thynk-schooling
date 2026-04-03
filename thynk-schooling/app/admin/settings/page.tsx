@@ -136,11 +136,22 @@ function OptionModal({ category, option, onClose, onSave }: {
 }
 
 /* ─── Category Options Panel ─── */
+const INDIAN_STATES_LIST = [
+  'Andaman & Nicobar','Andhra Pradesh','Arunachal Pradesh','Assam','Bihar',
+  'Chandigarh','Chhattisgarh','Dadra & Nagar Haveli','Daman & Diu','Delhi',
+  'Goa','Gujarat','Haryana','Himachal Pradesh','Jammu & Kashmir','Jharkhand',
+  'Karnataka','Kerala','Ladakh','Lakshadweep','Madhya Pradesh','Maharashtra',
+  'Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Puducherry','Punjab',
+  'Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh',
+  'Uttarakhand','West Bengal',
+]
+
 function CategoryOptions({ categoryKey }: { categoryKey: string }) {
   const queryClient = useQueryClient()
-  const [search,    setSearch]    = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
-  const [editOpt,   setEditOpt]   = useState<DropdownOption | undefined>()
+  const [search,      setSearch]      = useState('')
+  const [stateFilter, setStateFilter] = useState('')
+  const [modalOpen,   setModalOpen]   = useState(false)
+  const [editOpt,     setEditOpt]     = useState<DropdownOption | undefined>()
 
   const { data: options, isLoading } = useQuery<DropdownOption[]>({
     queryKey: ['dropdown-options', categoryKey],
@@ -179,10 +190,13 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
     else addMutation.mutate(d)
   }
 
-  const filtered = (options ?? []).filter(o =>
-    o.label.toLowerCase().includes(search.toLowerCase()) ||
-    o.value.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = (options ?? []).filter(o => {
+    const matchesSearch = o.label.toLowerCase().includes(search.toLowerCase()) ||
+      o.value.toLowerCase().includes(search.toLowerCase())
+    const matchesState = categoryKey !== 'city' || !stateFilter ||
+      (o.parentValue || '').toLowerCase() === stateFilter.toLowerCase().replace(/\s+/g, '_')
+    return matchesSearch && matchesState
+  })
   const activeCount = (options ?? []).filter(o => o.isActive).length
 
   return (
@@ -194,6 +208,16 @@ function CategoryOptions({ categoryKey }: { categoryKey: string }) {
           <input type="text" placeholder={`Search in ${categoryKey}…`} value={search} onChange={e => setSearch(e.target.value)}
             style={{ background: 'transparent', border: 'none', outline: 'none', flex: 1, fontFamily: 'DM Sans, sans-serif', fontSize: 13, color: V.text, padding: '10px 0' }} />
         </div>
+        {categoryKey === 'city' && (
+          <select
+            value={stateFilter}
+            onChange={e => setStateFilter(e.target.value)}
+            style={{ padding: '0 12px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: 9, color: V.text, fontFamily: 'DM Sans, sans-serif', fontSize: 13, cursor: 'pointer', minWidth: 160 }}
+          >
+            <option value="">All States</option>
+            {INDIAN_STATES_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        )}
         <button onClick={() => { setEditOpt(undefined); setModalOpen(true) }}
           style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: V.accent, border: 'none', borderRadius: 9, color: '#fff', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontSize: 13, fontWeight: 700, flexShrink: 0, boxShadow: '0 2px 12px rgba(184,134,11,0.3)' }}>
           <Plus style={{ width: 14, height: 14 }} /> Add Option
