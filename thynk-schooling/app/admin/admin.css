@@ -12,18 +12,18 @@
   --admin-card-bg:     #0C1428;
   --admin-border:      rgba(45,212,191,0.09);
   --admin-accent:      #B8860B;
-  --admin-text:        rgba(255,255,255,0.95);
-  --admin-text-muted:  rgba(255,255,255,0.55);
-  --admin-text-faint:  rgba(255,255,255,0.27);
+  --admin-text:        #FFFFFF;
+  --admin-text-muted:  rgba(255,255,255,0.65);
+  --admin-text-faint:  rgba(255,255,255,0.38);
 
   --a-bg:      var(--admin-bg);
   --a-card:    var(--admin-card-bg);
   --a-border:  var(--admin-border);
   --a-accent:  var(--admin-accent);
-  --a-t1:      var(--admin-text);
-  --a-t2:      var(--admin-text-muted);
-  --a-t3:      var(--admin-text-faint);
-  --a-t4:      rgba(255,255,255,0.13);
+  --a-t1:      #FFFFFF;
+  --a-t2:      rgba(255,255,255,0.65);
+  --a-t3:      rgba(255,255,255,0.38);
+  --a-t4:      rgba(255,255,255,0.18);
 
   --a-gold:        var(--admin-accent);
   --a-gold2:       color-mix(in srgb, var(--admin-accent) 70%, #fff 30%);
