@@ -129,6 +129,15 @@ async function getThemeVars(): Promise<string> {
   --admin-text:               ${t.adminText           || 'rgba(255,255,255,0.9)'};
   --admin-text-muted:         ${t.adminTextMuted      || 'rgba(255,255,255,0.45)'};
   --admin-text-faint:         ${t.adminTextFaint      || 'rgba(255,255,255,0.25)'};
+  --a-bg:                     ${t.adminBg             || '#060D1F'};
+  --a-sidebar:                ${t.adminSidebarBg      || '#07101F'};
+  --a-header:                 ${t.adminHeaderBg       || 'rgba(6,13,31,0.97)'};
+  --a-card:                   ${t.adminCardBg         || '#0C1428'};
+  --a-border:                 ${t.adminBorder         || 'rgba(255,255,255,0.07)'};
+  --a-t1:                     ${t.adminText           || 'rgba(255,255,255,0.95)'};
+  --a-t2:                     ${t.adminTextMuted      || 'rgba(255,255,255,0.55)'};
+  --a-t3:                     ${t.adminTextFaint      || 'rgba(255,255,255,0.25)'};
+  --a-gold:                   ${t.adminAccent         || '#B8860B'};
 }`
   } catch { return '' }
 }
