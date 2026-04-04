@@ -65,10 +65,12 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       })
       if (!res.ok) throw new Error('Refresh failed')
       const data = await res.json()
-      get().setUser(data.user)
-      get().setAccessToken(data.accessToken)
+      // Always update the access token; update user only if the server returned one
+      if (data.accessToken) get().setAccessToken(data.accessToken)
+      if (data.user)        get().setUser(data.user)
     } catch (_) {
-      set({ user: null, isAuthenticated: false })
+      set({ user: null, accessToken: null, isAuthenticated: false })
+      try { localStorage.removeItem('ts-auth'); localStorage.removeItem('ts_access_token') } catch {}
     } finally {
       set({ isLoading: false })
     }
