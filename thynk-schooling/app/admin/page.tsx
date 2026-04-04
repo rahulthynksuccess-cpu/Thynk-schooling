@@ -27,24 +27,6 @@ const T = {
 }
 const card: React.CSSProperties = { background:T.card, border:`1px solid ${T.border}`, borderRadius:16 }
 
-const leadsWeekly = [
-  {day:'Mon',leads:12,revenue:3600},{day:'Tue',leads:19,revenue:5700},
-  {day:'Wed',leads:15,revenue:4500},{day:'Thu',leads:28,revenue:8400},
-  {day:'Fri',leads:24,revenue:7200},{day:'Sat',leads:31,revenue:9300},{day:'Sun',leads:22,revenue:6600},
-]
-const monthlyGrowth = [
-  {month:'Oct',users:42,schools:8,leads:85},{month:'Nov',users:67,schools:14,leads:134},
-  {month:'Dec',users:55,schools:11,leads:110},{month:'Jan',users:89,schools:19,leads:178},
-  {month:'Feb',users:112,schools:24,leads:224},{month:'Mar',users:143,schools:31,leads:286},
-]
-const schoolsByBoard = [
-  {name:'CBSE',value:45,color:T.gold},{name:'ICSE',value:22,color:T.blue},
-  {name:'State',value:20,color:T.green},{name:'IB',value:8,color:T.purple},{name:'Other',value:5,color:T.orange},
-]
-const appStatusData = [
-  {name:'Pending',value:35,fill:'#FBBF24'},{name:'Shortlisted',value:25,fill:T.green},
-  {name:'Admitted',value:28,fill:T.blue},{name:'Rejected',value:12,fill:T.red},
-]
 
 function ChartTip({active,payload,label}:any){
   if(!active||!payload?.length) return null
@@ -130,7 +112,7 @@ export default function AdminDashboardPage(){
             <TabBar tabs={['Leads','Revenue']} active={chartTab} onChange={setChartTab}/>
           </div>
           <ResponsiveContainer width="100%" height={210}>
-            <AreaChart data={leadsWeekly} margin={{top:5,right:5,left:-20,bottom:0}}>
+            <AreaChart data={data?.leadsWeekly||[]} margin={{top:5,right:5,left:-20,bottom:0}}>
               <defs>
                 <linearGradient id="glL" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={T.green} stopOpacity={0.35}/><stop offset="100%" stopColor={T.green} stopOpacity={0}/></linearGradient>
                 <linearGradient id="glR" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={T.gold} stopOpacity={0.35}/><stop offset="100%" stopColor={T.gold} stopOpacity={0}/></linearGradient>
@@ -151,14 +133,14 @@ export default function AdminDashboardPage(){
           <p style={{fontFamily:'Plus Jakarta Sans,sans-serif',fontSize:12,color:T.t2,marginBottom:16}}>Curriculum distribution</p>
           <ResponsiveContainer width="100%" height={155}>
             <PieChart>
-              <Pie data={schoolsByBoard} cx="50%" cy="50%" innerRadius={42} outerRadius={68} paddingAngle={3} dataKey="value">
+              <Pie data={data?.schoolsByBoard||[]} cx="50%" cy="50%" innerRadius={42} outerRadius={68} paddingAngle={3} dataKey="value">
                 {schoolsByBoard.map((e,i)=><Cell key={i} fill={e.color} stroke="transparent"/>)}
               </Pie>
               <Tooltip content={<ChartTip/>}/>
             </PieChart>
           </ResponsiveContainer>
           <div style={{display:'flex',flexWrap:'wrap',gap:'6px 14px',marginTop:6}}>
-            {schoolsByBoard.map(b=>(
+            {(data?.schoolsByBoard||[]).map((b:any)=>(
               <div key={b.name} style={{display:'flex',alignItems:'center',gap:5}}>
                 <div style={{width:8,height:8,borderRadius:2,background:b.color,flexShrink:0}}/>
                 <span style={{fontSize:11,color:T.t2,fontFamily:'Plus Jakarta Sans,sans-serif'}}>{b.name}</span>
@@ -181,7 +163,7 @@ export default function AdminDashboardPage(){
             <TabBar tabs={['6M','3M','1M']} active={growthTab} onChange={setGrowthTab}/>
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={monthlyGrowth} margin={{top:5,right:5,left:-20,bottom:0}} barGap={3}>
+            <BarChart data={data?.monthlyGrowth||[]} margin={{top:5,right:5,left:-20,bottom:0}} barGap={3}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false}/>
               <XAxis dataKey="month" tick={{fill:T.t3,fontSize:11,fontFamily:'Plus Jakarta Sans'}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fill:T.t3,fontSize:11,fontFamily:'Plus Jakarta Sans'}} axisLine={false} tickLine={false}/>
@@ -199,13 +181,13 @@ export default function AdminDashboardPage(){
           <h3 style={{fontFamily:'Plus Jakarta Sans,sans-serif',fontWeight:700,fontSize:15,color:T.t1,margin:'0 0 4px'}}>Application Pipeline</h3>
           <p style={{fontFamily:'Plus Jakarta Sans,sans-serif',fontSize:12,color:T.t2,marginBottom:16}}>Status breakdown</p>
           <ResponsiveContainer width="100%" height={160}>
-            <RadialBarChart cx="50%" cy="50%" innerRadius={20} outerRadius={75} data={appStatusData} startAngle={90} endAngle={-270}>
+            <RadialBarChart cx="50%" cy="50%" innerRadius={20} outerRadius={75} data={data?.appStatus||[]} startAngle={90} endAngle={-270}>
               <RadialBar minAngle={8} dataKey="value" cornerRadius={4}/>
               <Tooltip content={<ChartTip/>}/>
             </RadialBarChart>
           </ResponsiveContainer>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 16px',marginTop:4}}>
-            {appStatusData.map(a=>(
+            {(data?.appStatus||[]).map((a:any)=>(
               <div key={a.name} style={{display:'flex',alignItems:'center',gap:7}}>
                 <div style={{width:9,height:9,borderRadius:3,background:a.fill,flexShrink:0}}/>
                 <span style={{fontSize:11,color:T.t2,fontFamily:'Plus Jakarta Sans,sans-serif',flex:1}}>{a.name}</span>

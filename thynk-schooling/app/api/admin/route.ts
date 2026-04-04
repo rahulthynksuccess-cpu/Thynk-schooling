@@ -15,23 +15,76 @@ import bcrypt from 'bcryptjs'
 // ─── overview ─────────────────────────────────────────────────────────────────
 
 async function getOverview() {
-  const [users, schools, apps, leads] = await Promise.all([
+  const [users, schools, apps, leads, pendingSchools, newUsersToday, leadsToday,
+         revenue, pendingApps, pendingReviews, reviews,
+         weeklyLeads, monthlyGrowth, boardDist, appStatus] = await Promise.all([
     db.query("SELECT COUNT(*) FROM users WHERE role!='super_admin'").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM schools").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM applications").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM lead_purchases").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM schools WHERE (is_verified=false OR is_verified IS NULL)").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM users WHERE role!='super_admin' AND created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM lead_purchases WHERE created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COALESCE(SUM(amount),0) AS total FROM lead_purchases").catch(() => ({ rows: [{ total: 0 }] })),
+    db.query("SELECT COUNT(*) FROM applications WHERE status='pending' OR status IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM reviews WHERE is_approved=false OR is_approved IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM reviews").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT to_char(DATE(created_at),'Dy') AS day, COUNT(*) AS leads, COUNT(*)*300 AS revenue FROM lead_purchases WHERE created_at >= NOW()-INTERVAL '7 days' GROUP BY DATE(created_at), to_char(DATE(created_at),'Dy') ORDER BY DATE(created_at)").catch(() => ({ rows: [] })),
+    db.query("SELECT to_char(DATE_TRUNC('month',created_at),'Mon') AS month, COUNT(*) AS users FROM users WHERE created_at >= NOW()-INTERVAL '6 months' GROUP BY DATE_TRUNC('month',created_at), to_char(DATE_TRUNC('month',created_at),'Mon') ORDER BY DATE_TRUNC('month',created_at)").catch(() => ({ rows: [] })),
+    db.query("SELECT UNNEST(board) AS name, COUNT(*) AS value FROM schools WHERE board IS NOT NULL GROUP BY name ORDER BY value DESC LIMIT 5").catch(() => ({ rows: [] })),
+    db.query("SELECT COALESCE(status,'pending') AS name, COUNT(*) AS value FROM applications GROUP BY status").catch(() => ({ rows: [] })),
   ])
-  return NextResponse.json({ totalUsers: Number(users.rows[0].count), totalSchools: Number(schools.rows[0].count), totalApps: Number(apps.rows[0].count), totalLeads: Number(leads.rows[0].count) })
+  const BOARD_COLORS: Record<string,string> = { CBSE:'#F5A623', ICSE:'#4F8EF7', State:'#00E5A0', IB:'#9B72FF' }
+  const STATUS_COLORS: Record<string,string> = { pending:'#FBBF24', shortlisted:'#00E5A0', admitted:'#4F8EF7', rejected:'#FF5757' }
+  return NextResponse.json({
+    totalUsers: Number(users.rows[0].count),
+    totalSchools: Number(schools.rows[0].count),
+    totalApps: Number(apps.rows[0].count),
+    totalLeads: Number(leads.rows[0].count),
+    totalReviews: Number(reviews.rows[0].count),
+    pendingVerification: Number(pendingSchools.rows[0].count),
+    newUsersToday: Number(newUsersToday.rows[0].count),
+    leadsToday: Number(leadsToday.rows[0].count),
+    totalRevenue: Number(revenue.rows[0].total) * 100,
+    pendingApps: Number(pendingApps.rows[0].count),
+    pendingReviews: Number(pendingReviews.rows[0].count),
+    leadsWeekly: weeklyLeads.rows.map((r:any) => ({ day: r.day, leads: Number(r.leads), revenue: Number(r.revenue) })),
+    monthlyGrowth: monthlyGrowth.rows.map((r:any) => ({ month: r.month, users: Number(r.users) })),
+    schoolsByBoard: boardDist.rows.map((r:any,i:number) => ({ name: r.name, value: Number(r.value), color: BOARD_COLORS[r.name] || ['#F5A623','#4F8EF7','#00E5A0','#9B72FF','#FF7A2E'][i] || '#888' })),
+    appStatus: appStatus.rows.map((r:any) => ({ name: r.name, value: Number(r.value), fill: STATUS_COLORS[r.name] || '#888' })),
+  })
 }
 
 // ─── analytics ────────────────────────────────────────────────────────────────
 
 async function getAnalytics() {
-  const [signups, schools] = await Promise.all([
+  const [signups30, schools30, leads30, topCities, boardDist, funnel] = await Promise.all([
     db.query("SELECT DATE(created_at) AS day, COUNT(*) AS count FROM users WHERE created_at >= NOW()-INTERVAL '30 days' GROUP BY day ORDER BY day").catch(() => ({ rows: [] })),
     db.query("SELECT DATE(created_at) AS day, COUNT(*) AS count FROM schools WHERE created_at >= NOW()-INTERVAL '30 days' GROUP BY day ORDER BY day").catch(() => ({ rows: [] })),
+    db.query("SELECT DATE(created_at) AS day, COUNT(*) AS count, COUNT(*)*300 AS revenue FROM lead_purchases WHERE created_at >= NOW()-INTERVAL '30 days' GROUP BY day ORDER BY day").catch(() => ({ rows: [] })),
+    db.query("SELECT s.city, COUNT(DISTINCT s.id) AS schools, COUNT(lp.id) AS leads FROM schools s LEFT JOIN lead_purchases lp ON lp.school_id=s.id WHERE s.city IS NOT NULL GROUP BY s.city ORDER BY leads DESC LIMIT 6").catch(() => ({ rows: [] })),
+    db.query("SELECT UNNEST(board) AS name, COUNT(*) AS value FROM schools WHERE board IS NOT NULL GROUP BY name ORDER BY value DESC LIMIT 5").catch(() => ({ rows: [] })),
+    db.query(`SELECT
+      (SELECT COUNT(*) FROM users WHERE role!='super_admin') AS visitors,
+      (SELECT COUNT(*) FROM schools) AS school_views,
+      (SELECT COUNT(*) FROM lead_purchases) AS leads_purchased,
+      (SELECT COUNT(*) FROM applications) AS applications`).catch(() => ({ rows: [{}] })),
   ])
-  return NextResponse.json({ signups: signups.rows, schools: schools.rows })
+  const BOARD_COLORS = ['#F5A623','#4F8EF7','#00E5A0','#9B72FF','#FF7A2E']
+  const f = funnel.rows[0] || {}
+  return NextResponse.json({
+    signups: signups30.rows,
+    schools: schools30.rows,
+    dailyLeads30: leads30.rows.map((r:any) => ({ day: String(r.day).slice(5), leads: Number(r.count), revenue: Number(r.revenue) })),
+    topCities: topCities.rows.map((r:any) => ({ city: r.city, leads: Number(r.leads), schools: Number(r.schools) })),
+    boardData: boardDist.rows.map((r:any, i:number) => ({ name: r.name, value: Number(r.value), color: BOARD_COLORS[i] || '#888' })),
+    funnelData: [
+      { name:'Registered Users', value: Number(f.visitors||0) },
+      { name:'School Views',     value: Number(f.school_views||0) },
+      { name:'Leads Purchased',  value: Number(f.leads_purchased||0) },
+      { name:'Applications',     value: Number(f.applications||0) },
+    ],
+  })
 }
 
 // ─── schools ──────────────────────────────────────────────────────────────────
@@ -41,19 +94,30 @@ async function getAdminSchools(req: NextRequest) {
   const page = Math.max(1, Number(searchParams.get('page') || 1))
   const limit = Math.min(50, Number(searchParams.get('limit') || 20))
   const offset = (page - 1) * limit
-  const search = searchParams.get('search') || '', status = searchParams.get('status')
+  const search = searchParams.get('search') || ''
+  // Support both ?status=verified and ?isVerified=true (what the frontend sends)
+  const isVerified = searchParams.get('isVerified'), isFeatured = searchParams.get('isFeatured'), isActive = searchParams.get('isActive')
+  const status = searchParams.get('status')
   const conds: string[] = ['1=1']; const params: any[] = []
-  if (search) { params.push(`%${search}%`); conds.push(`(s.name ILIKE $${params.length} OR s.city ILIKE $${params.length})`) }
-  if (status === 'verified')   conds.push('s.is_verified=true')
-  if (status === 'unverified') conds.push('(s.is_verified=false OR s.is_verified IS NULL)')
-  if (status === 'featured')   conds.push('s.is_featured=true')
+  if (search) { params.push(`%${search}%`); conds.push(`(s.name ILIKE $${params.length} OR s.city ILIKE $${params.length} OR u.phone ILIKE $${params.length})`) }
+  if (isVerified === 'true'  || status === 'verified')   conds.push('s.is_verified=true')
+  if (isVerified === 'false' || status === 'unverified') conds.push('(s.is_verified=false OR s.is_verified IS NULL)')
+  if (isFeatured === 'true'  || status === 'featured')   conds.push('s.is_featured=true')
+  if (isActive === 'false')                              conds.push('(s.is_active=false OR s.is_active IS NULL)')
   const where = conds.join(' AND ')
   params.push(limit, offset)
   const [rows, ct] = await Promise.all([
-    db.query(`SELECT s.*, u.email AS admin_email FROM schools s LEFT JOIN users u ON u.id=s.admin_user_id WHERE ${where} ORDER BY s.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params),
-    db.query(`SELECT COUNT(*) FROM schools s WHERE ${where}`, params.slice(0,-2)),
+    db.query(`SELECT s.id, s.name, s.slug, s.city, s.board, s.is_verified, s.is_featured, s.is_active, s.rating, s.created_at, COALESCE(u.phone,u.mobile) AS owner_phone FROM schools s LEFT JOIN users u ON u.id=s.admin_user_id WHERE ${where} ORDER BY s.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params),
+    db.query(`SELECT COUNT(*) FROM schools s LEFT JOIN users u ON u.id=s.admin_user_id WHERE ${where}`, params.slice(0,-2)),
   ])
-  return NextResponse.json({ data: rows.rows, total: Number(ct.rows[0].count), page, limit })
+  const data = rows.rows.map((s:any) => ({
+    id: s.id, name: s.name || '—', slug: s.slug || '',
+    city: s.city || '—', board: Array.isArray(s.board) ? s.board : [],
+    isVerified: s.is_verified || false, isFeatured: s.is_featured || false, isActive: s.is_active !== false,
+    avgRating: Number(s.rating) || 0, totalLeads: 0,
+    ownerPhone: s.owner_phone || '—', createdAt: s.created_at,
+  }))
+  return NextResponse.json({ data, total: Number(ct.rows[0].count), page, limit })
 }
 
 async function updateAdminSchool(req: NextRequest) {
@@ -73,20 +137,40 @@ async function updateAdminSchool(req: NextRequest) {
 
 async function getAdminUsers(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const role = searchParams.get('role'), isActive = searchParams.get('isActive'), search = searchParams.get('search') || ''
+  const role = searchParams.get('role'), search = searchParams.get('search') || searchParams.get('q') || ''
+  const status = searchParams.get('status')
   const limit = Math.min(50, Number(searchParams.get('limit') || 20))
   const page = Math.max(1, Number(searchParams.get('page') || 1))
   const offset = (page - 1) * limit
   const conds: string[] = ["u.role!='super_admin'"]; const params: unknown[] = []; let idx = 1
-  if (role)               { conds.push(`u.role=$${idx++}`); params.push(role) }
-  if (isActive === 'false'){ conds.push(`u.is_active=$${idx++}`); params.push(false) }
-  if (search)             { conds.push(`(u.full_name ILIKE $${idx} OR u.name ILIKE $${idx} OR u.phone ILIKE $${idx} OR u.email ILIKE $${idx})`); params.push(`%${search}%`); idx++ }
+  if (role && role !== 'suspended') { conds.push(`u.role=$${idx++}`); params.push(role) }
+  if (status === 'suspended' || role === 'suspended') { conds.push(`u.is_active=$${idx++}`); params.push(false) }
+  if (search) { conds.push(`(COALESCE(u.full_name,u.name) ILIKE $${idx} OR COALESCE(u.phone,u.mobile) ILIKE $${idx} OR u.email ILIKE $${idx})`); params.push(`%${search}%`); idx++ }
   const where = conds.join(' AND ')
-  const [rows, ct] = await Promise.all([
-    db.query(`SELECT u.id, COALESCE(u.full_name,u.name) AS full_name, COALESCE(u.phone,u.mobile) AS phone, u.email, u.role, COALESCE(u.is_active,true) AS is_active, COALESCE(u.is_phone_verified,u.is_verified,false) AS is_phone_verified, u.profile_completed, u.last_login_at, u.last_ip, u.created_at, s.name AS school_name FROM users u LEFT JOIN user_profiles up ON up.user_id=u.id LEFT JOIN schools s ON s.id=up.school_id WHERE ${where} ORDER BY u.created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...params, limit, offset]),
+  const [rows, ct, parentCt, schoolCt, suspendedCt] = await Promise.all([
+    db.query(`SELECT u.id, COALESCE(u.full_name,u.name) AS full_name, COALESCE(u.phone,u.mobile) AS phone, u.email, u.role, COALESCE(u.is_active,true) AS is_active, u.profile_completed, u.last_login_at, u.created_at, s.name AS school_name FROM users u LEFT JOIN schools s ON s.admin_user_id=u.id WHERE ${where} ORDER BY u.created_at DESC LIMIT $${idx} OFFSET $${idx+1}`, [...params, limit, offset]),
     db.query(`SELECT COUNT(*) FROM users u WHERE ${where}`, params),
+    db.query("SELECT COUNT(*) FROM users WHERE role='parent'").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM users WHERE role='school_admin'").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM users WHERE is_active=false").catch(() => ({ rows: [{ count: 0 }] })),
   ])
-  return Response.json({ data: rows.rows.map((r: any) => ({ id: r.id, fullName: r.full_name||'—', phone: r.phone||'—', email: r.email||null, role: r.role, isActive: r.is_active, isPhoneVerified: r.is_phone_verified, profileCompleted: r.profile_completed||false, lastLoginAt: r.last_login_at||null, lastIp: r.last_ip||null, createdAt: r.created_at, schoolName: r.school_name||null })), total: Number(ct.rows[0].count), page, limit })
+  const total = Number(ct.rows[0].count)
+  const users = rows.rows.map((r: any) => ({
+    id: r.id, fullName: r.full_name || '—', phone: r.phone || '—', email: r.email || null,
+    role: r.role, profileDone: r.profile_completed || false,
+    lastLogin: r.last_login_at || null, joinedAt: r.created_at, schoolName: r.school_name || null,
+    status: r.is_active === false ? 'suspended' : 'active',
+  }))
+  return Response.json({
+    users, data: users, total, page, limit,
+    totalPages: Math.ceil(total / limit),
+    stats: {
+      total: Number(ct.rows[0].count),
+      parents: Number(parentCt.rows[0].count),
+      schools: Number(schoolCt.rows[0].count),
+      suspended: Number(suspendedCt.rows[0].count),
+    }
+  })
 }
 
 async function updateAdminUser(req: NextRequest) {
