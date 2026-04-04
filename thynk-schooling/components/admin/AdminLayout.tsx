@@ -61,7 +61,7 @@ function DBStatusBanner() {
   )
 }
 
-export function AdminLayout({ children, title, subtitle }: { children: React.ReactNode; title: string; subtitle?: string }) {
+export function AdminLayout({ children, title, subtitle, pageClass }: { children: React.ReactNode; title: string; subtitle?: string; pageClass?: string }) {
   const pathname = usePathname()
   const { user, logout } = useAuthStore()
   const [open, setOpen] = useState(false)
@@ -131,7 +131,7 @@ export function AdminLayout({ children, title, subtitle }: { children: React.Rea
   )
 
   return (
-    <div className="admin-root">
+    <div className={`admin-root${pageClass ? ` ${pageClass}` : ''}`}>
       <div className="hidden lg:flex" style={{ flexShrink:0, height:'100vh', position:'sticky', top:0 }}>
         <Sidebar />
       </div>
