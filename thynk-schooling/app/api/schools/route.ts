@@ -151,8 +151,14 @@ async function saveProfile(req: NextRequest) {
   const phone = getStr(fd, 'phone'), email = getStr(fd, 'email'), websiteUrl = getStr(fd, 'websiteUrl'), principalName = getStr(fd, 'principalName')
   let logoUrl: string | null = getStr(fd, 'logo_url'), coverUrl: string | null = getStr(fd, 'cover_url')
   const logoFile = fd.get('logo') as File | null, coverFile = fd.get('cover') as File | null
-  if (logoFile && logoFile.size > 0) { const buf = Buffer.from(await logoFile.arrayBuffer()); logoUrl = `data:${logoFile.type};base64,${buf.toString('base64')}` }
-  if (coverFile && coverFile.size > 0) { const buf = Buffer.from(await coverFile.arrayBuffer()); coverUrl = `data:${coverFile.type};base64,${buf.toString('base64')}` }
+  if (logoFile && logoFile.size > 0) {
+    if (logoFile.size > 2 * 1024 * 1024) return NextResponse.json({ error: 'Logo image must be under 2MB' }, { status: 400 })
+    const buf = Buffer.from(await logoFile.arrayBuffer()); logoUrl = `data:${logoFile.type};base64,${buf.toString('base64')}`
+  }
+  if (coverFile && coverFile.size > 0) {
+    if (coverFile.size > 2 * 1024 * 1024) return NextResponse.json({ error: 'Cover image must be under 2MB' }, { status: 400 })
+    const buf = Buffer.from(await coverFile.arrayBuffer()); coverUrl = `data:${coverFile.type};base64,${buf.toString('base64')}`
+  }
   await db.query(
     `INSERT INTO schools (admin_user_id,name,slug,tagline,affiliation_no,description,founding_year,total_students,student_teacher_ratio,school_type,board,gender_policy,medium_of_instruction,recognition,classes_from,classes_to,monthly_fee_min,monthly_fee_max,annual_fee,admission_open,admission_academic_year,facilities,sports,languages,extracurriculars,address_line1,state,city,locality,pincode,latitude,longitude,phone,email,website_url,principal_name,logo_url,cover_url,profile_completed)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,true)
@@ -193,10 +199,10 @@ async function getDashboardStats(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'profile')         return getProfile(req)
-    if (action === 'analytics')       return getAnalytics(req)
-    if (action === 'dashboard-stats') return getDashboardStats(req)
-    return listSchools(req)
+    if (action === 'profile')         return await getProfile(req)
+    if (action === 'analytics')       return await getAnalytics(req)
+    if (action === 'dashboard-stats') return await getDashboardStats(req)
+    return await listSchools(req)
   } catch (e: any) {
     console.error('[schools GET]', e)
     return NextResponse.json({ error: e.message }, { status: 500 })
@@ -206,7 +212,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'profile') return saveProfile(req)
+    if (action === 'profile') return await saveProfile(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) {
     console.error('[schools POST]', e)
