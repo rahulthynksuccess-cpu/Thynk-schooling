@@ -10,9 +10,11 @@ import jwt from 'jsonwebtoken'
 
 function getUserId(req: NextRequest): string | null {
   try {
+    const url = new URL(req.url)
     const token =
       req.headers.get('authorization')?.replace('Bearer ', '') ||
       req.cookies.get('ts_access_token')?.value ||
+      url.searchParams.get('__token') ||
       ''
     if (!token) return null
     const p = jwt.verify(token, process.env.JWT_SECRET!, { ignoreExpiration: true }) as any

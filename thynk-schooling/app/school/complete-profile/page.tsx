@@ -391,12 +391,14 @@ export default function SchoolCompleteProfilePage() {
       if (logoFile)  fd.append('logo',  logoFile)
       if (coverFile) fd.append('cover', coverFile)
 
-      // Get token from localStorage as fallback for cookie
+      // Vercel rewrites strip the Authorization header, so we also pass the token
+      // as a query param (__token) which survives the rewrite intact.
       const token = accessToken || localStorage.getItem('ts_access_token') || ''
       const headers: Record<string, string> = {}
       if (token) headers['Authorization'] = `Bearer ${token}`
+      const tokenParam = token ? `?__token=${encodeURIComponent(token)}` : ''
 
-      const r = await fetch('/api/schools/profile', {
+      const r = await fetch(`/api/schools/profile${tokenParam}`, {
         method: 'POST',
         credentials: 'include',
         headers,
@@ -409,7 +411,8 @@ export default function SchoolCompleteProfilePage() {
     onSuccess: async () => {
       const token = accessToken || localStorage.getItem('ts_access_token') || ''
       const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {}
-      await fetch('/api/auth/complete-profile', {
+      const tokenParam = token ? `?__token=${encodeURIComponent(token)}` : ''
+      await fetch(`/api/auth/complete-profile${tokenParam}`, {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({ profileCompleted: true }),
