@@ -291,22 +291,27 @@ async function handleCompleteProfile(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
-  if (action === 'reset-password') return handleResetPasswordGet(req)
-  return Response.json({ error: 'Unknown action' }, { status: 400 })
+  try {
+    if (action === 'reset-password') return await handleResetPasswordGet(req)
+    return Response.json({ error: 'Unknown action' }, { status: 400 })
+  } catch (e: any) {
+    console.error(`[auth GET:${action}]`, e)
+    return Response.json({ message: e.message || 'Action failed' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'register':        return handleRegister(req)
-      case 'login-mobile':    return handleLoginMobile(req)
-      case 'login-otp':       return handleLoginOtp(req)
-      case 'logout':          return handleLogout()
-      case 'refresh':         return handleRefresh(req)
-      case 'send-otp':        return handleSendOtp(req)
-      case 'forgot-password': return handleForgotPassword(req)
-      case 'reset-password':  return handleResetPasswordPost(req)
+      case 'register':        return await handleRegister(req)
+      case 'login-mobile':    return await handleLoginMobile(req)
+      case 'login-otp':       return await handleLoginOtp(req)
+      case 'logout':          return await handleLogout()
+      case 'refresh':         return await handleRefresh(req)
+      case 'send-otp':        return await handleSendOtp(req)
+      case 'forgot-password': return await handleForgotPassword(req)
+      case 'reset-password':  return await handleResetPasswordPost(req)
       default:                return Response.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) {
@@ -318,7 +323,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   if (action === 'complete-profile') {
-    try { return handleCompleteProfile(req) }
+    try { return await handleCompleteProfile(req) }
     catch (e: any) { return Response.json({ error: e.message }, { status: 500 }) }
   }
   return Response.json({ error: 'Unknown action' }, { status: 400 })
