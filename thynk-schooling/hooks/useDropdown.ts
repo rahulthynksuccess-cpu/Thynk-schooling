@@ -7,7 +7,8 @@ async function fetchDropdown(category: string, parentValue?: string): Promise<Se
   const params = new URLSearchParams({ category })
   if (parentValue) params.set('parentValue', parentValue)
 
-  const res = await fetch(`/api/settings/dropdown?${params}`, { cache: 'no-store' })
+  params.set('action', 'dropdown')
+  const res = await fetch(`/api/settings?${params}`, { cache: 'no-store' })
   if (!res.ok) return []
   const data = await res.json()
 
