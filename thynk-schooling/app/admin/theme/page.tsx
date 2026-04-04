@@ -1599,7 +1599,11 @@ export default function AdminThemePage() {
     toast.success(`Preset "${name}" applied`)
   }
 
-  const handleReset = () => { applyPreset('Ivory & Gold (Default)') }
+  const handleReset = async () => {
+    await fetch('/api/admin?action=theme', { method: 'DELETE' }).catch(() => {})
+    applyPreset('Ivory & Gold (Default)')
+    toast.success('Theme reset to default')
+  }
 
   return (
     <AdminLayout title="Theme Controller" subtitle="Customise every page and section — save to apply site-wide">

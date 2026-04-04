@@ -145,7 +145,7 @@ export default function AdminUsersPage() {
         }
         if (roleMap[filter]) params.set(filter === 'Suspended' ? 'status' : 'role', roleMap[filter])
       }
-      const res = await fetch(`/api/admin/users?${params}`)
+      const res = await fetch(`/api/admin?action=users&${params}`)
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
       setUsers(data.users || [])

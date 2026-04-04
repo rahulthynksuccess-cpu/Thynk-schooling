@@ -538,6 +538,9 @@ export async function DELETE(req: NextRequest) {
     switch (action) {
       case 'reviews': return await deleteAdminReview(req)
       case 'cities':  return await deleteCity(req)
+      case 'theme':
+        await db.query("DELETE FROM site_settings WHERE key='theme'").catch(() => {})
+        return NextResponse.json({ success: true })
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin DELETE:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }

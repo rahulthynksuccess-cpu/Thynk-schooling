@@ -29,13 +29,13 @@ export default function AdminSchoolsPage() {
 
   const { data, isLoading } = useQuery<{ data: AdminSchool[]; total: number }>({
     queryKey: ['admin-schools', tab, search, page],
-    queryFn: () => fetch(`/api/admin/schools?${params}`, { cache: 'no-store' }).then(r => r.json()),
+    queryFn: () => fetch(`/api/admin?action=schools&${params}`, { cache: 'no-store' }).then(r => r.json()),
     staleTime: 2 * 60 * 1000,
   })
 
   const inv = () => queryClient.invalidateQueries({ queryKey: ['admin-schools'] })
   const mut = (body: any, id: string) =>
-    fetch(`/api/admin/schools?id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json())
+    fetch(`/api/admin?action=schools&id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json())
 
   const verifyMut   = useMutation({ mutationFn: ({ id, v }: any) => mut({ isVerified: v }, id),   onSuccess: (_, { v }) => { toast.success(v ? '✓ School verified' : 'Verification removed'); inv() }, onError: () => toast.error('Failed') })
   const featureMut  = useMutation({ mutationFn: ({ id, v }: any) => mut({ isFeatured: v }, id),  onSuccess: (_, { v }) => { toast.success(v ? '★ School featured' : 'Removed from featured'); inv() }, onError: () => toast.error('Failed') })

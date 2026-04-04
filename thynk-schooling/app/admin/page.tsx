@@ -79,7 +79,7 @@ export default function AdminDashboardPage(){
   const [growthTab,setGrowthTab]=useState('6M')
   const {data,isLoading}=useQuery({
     queryKey:['admin-overview'],
-    queryFn:()=>fetch('/api/admin/overview',{cache:'no-store'}).then(r=>r.json()),
+    queryFn:()=>fetch('/api/admin?action=overview',{cache:'no-store'}).then(r=>r.json()),
     staleTime:2*60*1000,
   })
   const skel=(h=40)=><div style={{height:h,background:'rgba(255,255,255,0.04)',borderRadius:8,animation:'tskel 1.4s ease-in-out infinite'}}/>
