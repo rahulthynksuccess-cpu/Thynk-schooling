@@ -370,24 +370,24 @@ export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'overview':              return getOverview()
-      case 'analytics':             return getAnalytics()
-      case 'schools':               return getAdminSchools(req)
-      case 'users':                 return getAdminUsers(req)
-      case 'applications':          return getAdminApplications(req)
-      case 'reviews':               return getAdminReviews(req)
-      case 'leads':                 return getAdminLeads(req)
-      case 'payments':              return getAdminPayments(req)
-      case 'counselling':           return getAdminCounselling(req)
-      case 'content':               return getContent(req)
-      case 'theme':                 return getTheme()
-      case 'seo':                   return getSeo(req)
-      case 'settings':              return getSettings()
-      case 'media':                 return getMedia()
-      case 'cities':                return getCities()
-      case 'lead-pricing-defaults': return getLeadPricingDefaults()
+      case 'overview':              return await getOverview()
+      case 'analytics':             return await getAnalytics()
+      case 'schools':               return await getAdminSchools(req)
+      case 'users':                 return await getAdminUsers(req)
+      case 'applications':          return await getAdminApplications(req)
+      case 'reviews':               return await getAdminReviews(req)
+      case 'leads':                 return await getAdminLeads(req)
+      case 'payments':              return await getAdminPayments(req)
+      case 'counselling':           return await getAdminCounselling(req)
+      case 'content':               return await getContent(req)
+      case 'theme':                 return await getTheme()
+      case 'seo':                   return await getSeo(req)
+      case 'settings':              return await getSettings()
+      case 'media':                 return await getMedia()
+      case 'cities':                return await getCities()
+      case 'lead-pricing-defaults': return await getLeadPricingDefaults()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
-      case 'health':                return health()
+      case 'health':                return await health()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin GET:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -397,14 +397,14 @@ export async function POST(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'content':        return saveContent(req)
-      case 'theme':          return saveTheme(req)
-      case 'seo':            return saveSeo(req)
-      case 'settings':       return saveSettings(req)
-      case 'media':          return saveMedia(req)
-      case 'cities':         return saveCities(req)
-      case 'notifications':  return sendNotification(req)
-      case 'seed-demo':      return seedDemo()
+      case 'content':        return await saveContent(req)
+      case 'theme':          return await saveTheme(req)
+      case 'seo':            return await saveSeo(req)
+      case 'settings':       return await saveSettings(req)
+      case 'media':          return await saveMedia(req)
+      case 'cities':         return await saveCities(req)
+      case 'notifications':  return await sendNotification(req)
+      case 'seed-demo':      return await seedDemo()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -414,12 +414,12 @@ export async function PUT(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'schools':               return updateAdminSchool(req)
-      case 'users':                 return updateAdminUser(req)
-      case 'applications':          return updateAdminApplication(req)
-      case 'reviews':               return updateAdminReview(req)
-      case 'counselling':           return updateAdminCounselling(req)
-      case 'lead-pricing-defaults': return saveLeadPricingDefaults(req)
+      case 'schools':               return await updateAdminSchool(req)
+      case 'users':                 return await updateAdminUser(req)
+      case 'applications':          return await updateAdminApplication(req)
+      case 'reviews':               return await updateAdminReview(req)
+      case 'counselling':           return await updateAdminCounselling(req)
+      case 'lead-pricing-defaults': return await saveLeadPricingDefaults(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin PUT:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -429,8 +429,8 @@ export async function DELETE(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'reviews': return deleteAdminReview(req)
-      case 'cities':  return deleteCity(req)
+      case 'reviews': return await deleteAdminReview(req)
+      case 'cities':  return await deleteCity(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin DELETE:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -439,7 +439,7 @@ export async function DELETE(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'users-activity') return getUserActivity(req)
+    if (action === 'users-activity') return await getUserActivity(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
