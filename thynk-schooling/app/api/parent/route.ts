@@ -148,12 +148,12 @@ export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'applications':    return getApplications(req)
-      case 'students':        return getStudents(req)
-      case 'profile':         return getParentProfile(req)
-      case 'saved-schools':   return getSavedSchools(req)
-      case 'recommendations': return getRecommendations(req)
-      case 'lead-credits':    return getLeadCredits(req)
+      case 'applications':    return await getApplications(req)
+      case 'students':        return await getStudents(req)
+      case 'profile':         return await getParentProfile(req)
+      case 'saved-schools':   return await getSavedSchools(req)
+      case 'recommendations': return await getRecommendations(req)
+      case 'lead-credits':    return await getLeadCredits(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) {
@@ -166,9 +166,9 @@ export async function POST(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'students':          return addStudent(req)
-      case 'profile':           return saveParentProfile(req)
-      case 'book-counselling':  return bookCounselling(req)
+      case 'students':          return await addStudent(req)
+      case 'profile':           return await saveParentProfile(req)
+      case 'book-counselling':  return await bookCounselling(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) {
