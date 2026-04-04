@@ -1,6 +1,0 @@
-export { HeroSection }     from './HeroSection'
-export { StatsBar }        from './StatsBar'
-export { HowItWorks }      from './HowItWorks'
-export { FeaturedSchools } from './FeaturedSchools'
-export { WhyChooseUs }     from './WhyChooseUs'
-export { TopCitiesGrid, CounsellingCTA, TestimonialsSection, ForSchoolsCTA, BlogPreview } from './HomeExtraSections'
