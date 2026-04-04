@@ -34,7 +34,9 @@ const CATEGORIES: DropdownCategory[] = [
   { key: 'recognition',  name: 'Recognition',      emoji: '🏆', description: 'NAAC, ISO, Govt Aided…' },
   { key: 'blood_group',  name: 'Blood Group',      emoji: '🩸', description: 'A+, B+, O+, AB+…' },
   { key: 'gender',       name: 'Gender',           emoji: '⚧️', description: 'Male, Female, Other' },
-  { key: 'occupation',   name: 'Occupation',       emoji: '💼', description: 'Salaried, Business, Other…' },
+  { key: 'occupation',      name: 'Occupation',            emoji: '💼', description: 'Salaried, Business, Other…' },
+  { key: 'income_range',    name: 'Annual Income Range',   emoji: '💰', description: 'e.g. ₹2–5L, ₹5–10L, ₹10L+…' },
+  { key: 'how_did_you_hear',name: 'How Did You Hear?',     emoji: '📣', description: 'Google, Friend, Social Media…' },
 ]
 
 /* ── Inline edit input ── */
