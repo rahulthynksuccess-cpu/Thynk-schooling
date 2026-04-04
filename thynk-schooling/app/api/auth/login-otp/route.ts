@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       accessToken,
     })
     resp.headers.set('Set-Cookie',
-      `ts_refresh=${refreshToken}; HttpOnly; Path=/; SameSite=Strict; Max-Age=${7*24*3600}`)
+      `ts_refresh=${refreshToken}; HttpOnly; Path=/; SameSite=Lax;${process.env.NEXT_PUBLIC_APP_ENV === 'production' ? ' Secure;' : ''} Max-Age=${7*24*3600}`)
     return resp
   } catch (err) {
     console.error('[login-otp]', err)
