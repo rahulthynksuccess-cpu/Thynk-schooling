@@ -6,28 +6,33 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
   SlidersHorizontal, Search, MapPin, Star, BadgeCheck,
-  GraduationCap, X, LayoutGrid, List, ChevronDown
+  GraduationCap, X, LayoutGrid, List, ChevronDown, ArrowRight
 } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
+import { useAuthStore } from '@/store/authStore'
 import { School, SchoolSearchFilters, PaginatedResponse } from '@/types'
 import { clsx } from 'clsx'
 
-async function fetchSchools(filters: SchoolSearchFilters): Promise<PaginatedResponse<School>> {
+async function fetchSchools(filters: SchoolSearchFilters & { state?: string }): Promise<PaginatedResponse<School>> {
   const params = new URLSearchParams()
-  if (filters.query)         params.set('query',         filters.query)
-  if (filters.city)          params.set('city',           filters.city)
-  if (filters.state)         params.set('state',          filters.state as string)
-  if (filters.board?.length) params.set('board',          filters.board.join(','))
-  if (filters.schoolType)    params.set('type',           filters.schoolType)
-  if (filters.genderPolicy)  params.set('gender_policy',  filters.genderPolicy)
-  if (filters.medium)        params.set('medium',         filters.medium)
-  if (filters.feeMin)        params.set('feeMin',         String(filters.feeMin))
-  if (filters.feeMax)        params.set('feeMax',         String(filters.feeMax))
-  if (filters.rating)        params.set('rating',         String(filters.rating))
-  if (filters.isFeatured)    params.set('isFeatured',     'true')
-  if (filters.page)          params.set('page',           String(filters.page))
-  if (filters.limit)         params.set('limit',          String(filters.limit))
-  if (filters.sortBy)        params.set('sortBy',         filters.sortBy)
+  if (filters.query)            params.set('query',            filters.query)
+  if (filters.city)             params.set('city',             filters.city)
+  if ((filters as any).state)   params.set('state',            (filters as any).state)
+  if (filters.board?.length)    params.set('board',            filters.board.join(','))
+  if (filters.schoolType)       params.set('type',             filters.schoolType)
+  if (filters.genderPolicy)     params.set('gender_policy',    filters.genderPolicy)
+  if (filters.medium)           params.set('medium',           filters.medium)
+  if (filters.feeMin)           params.set('feeMin',           String(filters.feeMin))
+  if (filters.feeMax)           params.set('feeMax',           String(filters.feeMax))
+  if (filters.rating)           params.set('rating',           String(filters.rating))
+  if (filters.isFeatured)       params.set('isFeatured',       'true')
+  if (filters.facilities?.length) params.set('facilities',     filters.facilities.join(','))
+  if (filters.sports?.length)   params.set('sports',           (filters.sports as string[]).join(','))
+  if ((filters as any).extraCurricular?.length) params.set('extra_curricular', (filters as any).extraCurricular.join(','))
+  if ((filters as any).language) params.set('language',        (filters as any).language)
+  if (filters.page)             params.set('page',             String(filters.page))
+  if (filters.limit)            params.set('limit',            String(filters.limit))
+  if (filters.sortBy)           params.set('sortBy',           filters.sortBy)
   const res = await fetch(`/api/schools?${params}`, { cache: 'no-store' })
   if (!res.ok) return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 }
   return res.json()
@@ -47,7 +52,6 @@ function SkeletonCard() {
   )
 }
 
-// Styled select wrapper
 function FilterSelect({ label, value, onChange, options, placeholder }: {
   label: string; value: string; onChange: (v: string) => void
   options: { label: string; value: string }[]; placeholder: string
@@ -56,11 +60,7 @@ function FilterSelect({ label, value, onChange, options, placeholder }: {
     <div className="mb-4">
       <div className="label mb-2">{label}</div>
       <div className="relative">
-        <select
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          className="input appearance-none cursor-pointer pr-8 w-full"
-        >
+        <select value={value} onChange={e => onChange(e.target.value)} className="input appearance-none cursor-pointer pr-8 w-full">
           <option value="">{placeholder}</option>
           {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
@@ -70,65 +70,70 @@ function FilterSelect({ label, value, onChange, options, placeholder }: {
   )
 }
 
-function FilterSidebar({ filters, onChange, onReset }: {
-  filters: SchoolSearchFilters & { state?: string }
+function MultiPillFilter({ label, fieldKey, selected, options, onChange }: {
+  label: string; fieldKey: string; selected: string[]
+  options: { label: string; value: string }[]; onChange: (vals: string[]) => void
+}) {
+  return (
+    <div className="mb-4">
+      <div className="label mb-2">{label}</div>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map(o => (
+          <button key={o.value} onClick={() => {
+            onChange(selected.includes(o.value) ? selected.filter(x => x !== o.value) : [...selected, o.value])
+          }} className={clsx('px-2.5 py-1 rounded-lg text-xs font-display font-semibold border transition-all',
+            selected.includes(o.value)
+              ? 'bg-orange-500 border-orange-500 text-white'
+              : 'bg-navy-800 border-surface-border text-navy-300 hover:border-orange-500/40'
+          )}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function FilterSidebar({ filters, onChange, onReset, onSearch }: {
+  filters: SchoolSearchFilters & { state?: string; extraCurricular?: string[]; language?: string }
   onChange: (k: string, v: unknown) => void
   onReset: () => void
+  onSearch: () => void
 }) {
-  const { options: states  } = useDropdown('state')
-  const { options: cities  } = useDropdown('city', { parentValue: (filters as any).state || undefined, enabled: true })
-  const { options: boards  } = useDropdown('board')
-  const { options: types   } = useDropdown('school_type')
-  const { options: genders } = useDropdown('gender_policy')
-  const { options: mediums } = useDropdown('medium')
-
-  // Filter cities by selected state if state has a value
-  const filteredCities = (filters as any).state
-    ? cities.filter((c: any) => !c.parentValue || c.parentValue === (filters as any).state).concat(
-        cities.filter((c: any) => !c.parentValue)
-      ).filter((c, i, arr) => arr.findIndex(x => x.value === c.value) === i)
-    : cities
+  const { options: states      } = useDropdown('state')
+  const { options: cities      } = useDropdown('city', { parentValue: filters.state || undefined, enabled: true })
+  const { options: boards      } = useDropdown('board')
+  const { options: types       } = useDropdown('school_type')
+  const { options: genders     } = useDropdown('gender_policy')
+  const { options: mediums     } = useDropdown('medium')
+  const { options: facilities  } = useDropdown('facility')
+  const { options: sports      } = useDropdown('sport')
+  const { options: extraCurr   } = useDropdown('extra_curricular')
+  const { options: languages   } = useDropdown('language')
 
   return (
-    <div className="card p-5 sticky top-20">
+    <div className="card p-5 sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto">
       <div className="flex items-center justify-between mb-5">
         <h3 className="font-display font-bold text-white text-base flex items-center gap-2">
           <SlidersHorizontal className="w-4 h-4 text-orange-400" /> Filters
         </h3>
-        <button onClick={onReset} className="text-orange-400 text-xs font-display font-semibold hover:text-orange-300 transition-colors">
-          Reset All
-        </button>
+        <button onClick={onReset} className="text-orange-400 text-xs font-display font-semibold hover:text-orange-300 transition-colors">Reset All</button>
       </div>
 
-      {/* State */}
-      <FilterSelect
-        label="State"
-        value={(filters as any).state || ''}
-        onChange={v => { onChange('state', v || undefined); onChange('city', undefined) }}
-        options={states}
-        placeholder="All States"
-      />
+      <FilterSelect label="State" value={filters.state || ''} onChange={v => { onChange('state', v || undefined); onChange('city', undefined) }} options={states} placeholder="All States" />
 
-      {/* City — cascades from State */}
       <div className="mb-4">
         <div className="label mb-2">City</div>
         <div className="relative">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-navy-400 pointer-events-none" />
-          <select
-            value={filters.city || ''}
-            onChange={e => onChange('city', e.target.value || undefined)}
-            className="input pl-9 appearance-none cursor-pointer w-full"
-          >
-            <option value="">{(filters as any).state ? 'All Cities in State' : 'All Cities'}</option>
-            {(filteredCities.length > 0 ? filteredCities : cities).map(c => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
+          <select value={filters.city || ''} onChange={e => onChange('city', e.target.value || undefined)} className="input pl-9 appearance-none cursor-pointer w-full">
+            <option value="">{filters.state ? 'All Cities in State' : 'All Cities'}</option>
+            {cities.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-navy-400 pointer-events-none" />
         </div>
       </div>
 
-      {/* Board as dropdown multi-select (shown as pills with a select) */}
       <FilterSelect label="Board" value="" onChange={v => {
         if (!v) return
         const cur = (filters.board as string[]) ?? []
@@ -149,20 +154,43 @@ function FilterSidebar({ filters, onChange, onReset }: {
       <FilterSelect label="Gender Policy" value={filters.genderPolicy || ''} onChange={v => onChange('genderPolicy', v || undefined)} options={genders} placeholder="All" />
       <FilterSelect label="Medium"        value={filters.medium       || ''} onChange={v => onChange('medium',       v || undefined)} options={mediums} placeholder="All Mediums" />
 
-      {/* Fee */}
+      {/* NEW: Facilities */}
+      {facilities.length > 0 && (
+        <MultiPillFilter label="Facilities" fieldKey="facilities"
+          selected={(filters.facilities as string[]) ?? []}
+          options={facilities}
+          onChange={vals => onChange('facilities', vals.length ? vals : undefined)} />
+      )}
+
+      {/* NEW: Sports */}
+      {sports.length > 0 && (
+        <MultiPillFilter label="Sports" fieldKey="sports"
+          selected={(filters.sports as string[]) ?? []}
+          options={sports}
+          onChange={vals => onChange('sports', vals.length ? vals : undefined)} />
+      )}
+
+      {/* NEW: Extra Curricular */}
+      {extraCurr.length > 0 && (
+        <MultiPillFilter label="Extra Curricular" fieldKey="extraCurricular"
+          selected={filters.extraCurricular ?? []}
+          options={extraCurr}
+          onChange={vals => onChange('extraCurricular', vals.length ? vals : undefined)} />
+      )}
+
+      {/* NEW: Language */}
+      {languages.length > 0 && (
+        <FilterSelect label="Language Offered" value={filters.language || ''} onChange={v => onChange('language', v || undefined)} options={languages} placeholder="Any Language" />
+      )}
+
       <div className="mb-4">
         <div className="label mb-2">Monthly Fee (₹)</div>
         <div className="flex gap-2">
-          <input type="number" placeholder="Min" value={filters.feeMin || ''}
-            onChange={e => onChange('feeMin', e.target.value ? Number(e.target.value) : undefined)}
-            className="input text-sm" />
-          <input type="number" placeholder="Max" value={filters.feeMax || ''}
-            onChange={e => onChange('feeMax', e.target.value ? Number(e.target.value) : undefined)}
-            className="input text-sm" />
+          <input type="number" placeholder="Min" value={filters.feeMin || ''} onChange={e => onChange('feeMin', e.target.value ? Number(e.target.value) : undefined)} className="input text-sm" />
+          <input type="number" placeholder="Max" value={filters.feeMax || ''} onChange={e => onChange('feeMax', e.target.value ? Number(e.target.value) : undefined)} className="input text-sm" />
         </div>
       </div>
 
-      {/* Rating */}
       <div className="mb-4">
         <div className="label mb-2">Min Rating</div>
         <div className="flex gap-2 flex-wrap">
@@ -177,14 +205,18 @@ function FilterSidebar({ filters, onChange, onReset }: {
         </div>
       </div>
 
-      {/* Featured */}
-      <div className="flex items-center justify-between p-3 rounded-xl bg-navy-800 border border-surface-border">
+      <div className="flex items-center justify-between p-3 rounded-xl bg-navy-800 border border-surface-border mb-5">
         <span className="font-display font-semibold text-sm text-white">Featured Only</span>
         <button onClick={() => onChange('isFeatured', filters.isFeatured ? undefined : true)}
           className={clsx('w-10 h-5 rounded-full transition-colors relative', filters.isFeatured ? 'bg-orange-500' : 'bg-navy-600')}>
           <span className={clsx('absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform', filters.isFeatured ? 'translate-x-5' : 'translate-x-0.5')} />
         </button>
       </div>
+
+      {/* Search Button */}
+      <button onClick={onSearch} className="btn-primary w-full justify-center">
+        <Search className="w-4 h-4" /> Search Schools
+      </button>
     </div>
   )
 }
@@ -234,21 +266,49 @@ function SchoolListCard({ school }: { school: School }) {
   )
 }
 
-const INITIAL_FILTERS: SchoolSearchFilters & { state?: string } = { page: 1, limit: 15, sortBy: 'rating' }
+const INITIAL_FILTERS: SchoolSearchFilters & { state?: string; extraCurricular?: string[]; language?: string } = { page: 1, limit: 15, sortBy: 'rating' }
+
+// Modal shown to guests when they click Search
+function GuestSearchModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} className="relative bg-navy-900 border border-surface-border rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+        <button onClick={onClose} className="absolute top-4 right-4 text-navy-400 hover:text-white"><X className="w-5 h-5" /></button>
+        <div className="text-5xl mb-4">🏫</div>
+        <h2 className="font-display font-bold text-white text-2xl mb-2">Create a Free Account</h2>
+        <p className="text-navy-300 text-sm mb-6 leading-relaxed">
+          Sign up in 30 seconds to search and explore 12,000+ schools across India. It's completely free for parents.
+        </p>
+        <div className="flex flex-col gap-3">
+          <Link href="/register" className="btn-primary justify-center">
+            Register Free <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link href="/login" className="btn-secondary justify-center text-sm">
+            Already have an account? Log in
+          </Link>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
 
 export function SchoolListingClient() {
   const searchParams = useSearchParams()
-  const [filters, setFilters] = useState<SchoolSearchFilters & { state?: string }>({
+  const { isAuthenticated } = useAuthStore()
+  const [filters, setFilters] = useState<SchoolSearchFilters & { state?: string; extraCurricular?: string[]; language?: string }>({
     ...INITIAL_FILTERS,
     query: searchParams.get('q') || undefined,
     city:  searchParams.get('city') || undefined,
   })
+  const [activeFilters, setActiveFilters] = useState({ ...INITIAL_FILTERS })
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const [showGuestModal, setShowGuestModal] = useState(false)
 
   const { data, isLoading, isFetching } = useQuery<PaginatedResponse<School>>({
-    queryKey: ['schools', filters],
-    queryFn: () => fetchSchools(filters),
+    queryKey: ['schools', activeFilters],
+    queryFn: () => fetchSchools(activeFilters),
     placeholderData: prev => prev,
     staleTime: 2 * 60 * 1000,
   })
@@ -257,7 +317,18 @@ export function SchoolListingClient() {
     setFilters(prev => ({ ...prev, [key]: value, page: 1 }))
   }, [])
 
-  const resetFilters = useCallback(() => setFilters(INITIAL_FILTERS), [])
+  const handleSearch = useCallback(() => {
+    if (!isAuthenticated) {
+      setShowGuestModal(true)
+      return
+    }
+    setActiveFilters({ ...filters, page: 1 })
+  }, [isAuthenticated, filters])
+
+  const resetFilters = useCallback(() => {
+    setFilters(INITIAL_FILTERS)
+    setActiveFilters(INITIAL_FILTERS)
+  }, [])
 
   const schools = data?.data ?? []
   const total = data?.total ?? 0
@@ -265,10 +336,12 @@ export function SchoolListingClient() {
 
   return (
     <div className="min-h-screen">
+      {showGuestModal && <GuestSearchModal onClose={() => setShowGuestModal(false)} />}
+
       <div className="bg-navy-950 border-b border-surface-border py-8">
         <div className="container-xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="font-display font-bold text-3xl text-white mb-4">
-            {filters.city ? `Schools in ${filters.city}` : (filters as any).state ? `Schools in ${(filters as any).state}` : 'Find Schools Across India'}
+            {filters.city ? `Schools in ${filters.city}` : filters.state ? `Schools in ${filters.state}` : 'Find Schools Across India'}
           </h1>
           <div className="flex gap-3 max-w-2xl">
             <div className="flex items-center gap-3 flex-1 input">
@@ -276,20 +349,30 @@ export function SchoolListingClient() {
               <input type="text" placeholder="Search by school name, board, area…"
                 value={filters.query || ''}
                 onChange={e => updateFilter('query', e.target.value || undefined)}
+                onKeyDown={e => e.key === 'Enter' && handleSearch()}
                 className="bg-transparent flex-1 focus:outline-none text-white placeholder-navy-400 text-sm" />
               {filters.query && <button onClick={() => updateFilter('query', undefined)}><X className="w-4 h-4 text-navy-400 hover:text-white" /></button>}
             </div>
+            <button onClick={handleSearch} className="btn-primary flex items-center gap-2">
+              <Search className="w-4 h-4" /> Search
+            </button>
             <button onClick={() => setSidebarOpen(!sidebarOpen)} className="btn-secondary lg:hidden flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4" /> Filters
             </button>
           </div>
+          {!isAuthenticated && (
+            <p className="text-navy-400 text-xs mt-3 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" />
+              <Link href="/register" className="text-orange-400 hover:underline">Register free</Link> to search and save schools
+            </p>
+          )}
         </div>
       </div>
 
       <div className="container-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-7">
           <div className="hidden lg:block w-72 flex-shrink-0">
-            <FilterSidebar filters={filters} onChange={updateFilter} onReset={resetFilters} />
+            <FilterSidebar filters={filters} onChange={updateFilter} onReset={resetFilters} onSearch={handleSearch} />
           </div>
 
           <AnimatePresence>
@@ -298,7 +381,9 @@ export function SchoolListingClient() {
                 transition={{ type: 'tween', duration: 0.25 }}
                 className="fixed inset-y-0 left-0 z-50 w-80 bg-navy-900 border-r border-surface-border overflow-y-auto p-4 lg:hidden">
                 <button onClick={() => setSidebarOpen(false)} className="absolute top-4 right-4 p-2 hover:bg-surface-hover rounded-xl"><X className="w-5 h-5" /></button>
-                <div className="mt-10"><FilterSidebar filters={filters} onChange={updateFilter} onReset={resetFilters} /></div>
+                <div className="mt-10">
+                  <FilterSidebar filters={filters} onChange={updateFilter} onReset={resetFilters} onSearch={() => { handleSearch(); setSidebarOpen(false) }} />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -323,30 +408,33 @@ export function SchoolListingClient() {
               </div>
             </div>
 
-            {/* Active chips */}
+            {/* Active filter chips */}
             <div className="flex flex-wrap gap-2 mb-5">
-              {(filters as any).state && <span className="badge-gray flex items-center gap-1 pr-1.5">🗺️ {(filters as any).state}<button onClick={() => { updateFilter('state', undefined); updateFilter('city', undefined) }}><X className="w-3 h-3" /></button></span>}
-              {filters.city && <span className="badge-orange flex items-center gap-1 pr-1.5">📍 {filters.city}<button onClick={() => updateFilter('city', undefined)}><X className="w-3 h-3" /></button></span>}
-              {filters.board?.map(b => <span key={b} className="badge-blue flex items-center gap-1 pr-1.5">{b}<button onClick={() => updateFilter('board', filters.board?.filter(x => x !== b))}><X className="w-3 h-3" /></button></span>)}
-              {filters.schoolType && <span className="badge-gray flex items-center gap-1 pr-1.5">{filters.schoolType}<button onClick={() => updateFilter('schoolType', undefined)}><X className="w-3 h-3" /></button></span>}
-              {filters.genderPolicy && <span className="badge-gray flex items-center gap-1 pr-1.5">{filters.genderPolicy}<button onClick={() => updateFilter('genderPolicy', undefined)}><X className="w-3 h-3" /></button></span>}
-              {filters.medium && <span className="badge-gray flex items-center gap-1 pr-1.5">{filters.medium}<button onClick={() => updateFilter('medium', undefined)}><X className="w-3 h-3" /></button></span>}
+              {(activeFilters as any).state && <span className="badge-gray flex items-center gap-1 pr-1.5">🗺️ {(activeFilters as any).state}<button onClick={() => { updateFilter('state', undefined); updateFilter('city', undefined); setActiveFilters(p => ({...p, state: undefined, city: undefined})) }}><X className="w-3 h-3" /></button></span>}
+              {activeFilters.city && <span className="badge-orange flex items-center gap-1 pr-1.5">📍 {activeFilters.city}<button onClick={() => { updateFilter('city', undefined); setActiveFilters(p => ({...p, city: undefined})) }}><X className="w-3 h-3" /></button></span>}
+              {activeFilters.board?.map(b => <span key={b} className="badge-blue flex items-center gap-1 pr-1.5">{b}<button onClick={() => updateFilter('board', activeFilters.board?.filter(x => x !== b))}><X className="w-3 h-3" /></button></span>)}
+              {activeFilters.schoolType && <span className="badge-gray flex items-center gap-1 pr-1.5">{activeFilters.schoolType}<button onClick={() => updateFilter('schoolType', undefined)}><X className="w-3 h-3" /></button></span>}
             </div>
 
             <div className={clsx('gap-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' : 'flex flex-col')}>
               {isLoading
                 ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
                 : schools.length === 0
-                  ? <div className="col-span-full text-center py-20"><div className="text-5xl mb-4">🔍</div><h3 className="font-display font-bold text-white text-xl mb-2">No Schools Found</h3><p className="text-navy-300 mb-6">Try adjusting your filters.</p><button onClick={resetFilters} className="btn-primary">Reset Filters</button></div>
+                  ? <div className="col-span-full text-center py-20">
+                      <div className="text-5xl mb-4">🔍</div>
+                      <h3 className="font-display font-bold text-white text-xl mb-2">No Schools Found</h3>
+                      <p className="text-navy-300 mb-6">Try adjusting your filters.</p>
+                      <button onClick={resetFilters} className="btn-primary">Reset Filters</button>
+                    </div>
                   : schools.map(school => <SchoolListCard key={school.id} school={school} />)
               }
             </div>
 
             {!isLoading && totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-10">
-                <button disabled={(filters.page ?? 1) <= 1} onClick={() => updateFilter('page', (filters.page ?? 1) - 1)} className="btn-secondary px-4 py-2 disabled:opacity-40">← Prev</button>
-                <span className="text-navy-300 text-sm font-display">Page <span className="text-white font-bold">{filters.page}</span> of <span className="text-white font-bold">{totalPages}</span></span>
-                <button disabled={(filters.page ?? 1) >= totalPages} onClick={() => updateFilter('page', (filters.page ?? 1) + 1)} className="btn-secondary px-4 py-2 disabled:opacity-40">Next →</button>
+                <button disabled={(activeFilters.page ?? 1) <= 1} onClick={() => { const p = (activeFilters.page ?? 1) - 1; updateFilter('page', p); setActiveFilters(f => ({...f, page: p})) }} className="btn-secondary px-4 py-2 disabled:opacity-40">← Prev</button>
+                <span className="text-navy-300 text-sm font-display">Page <span className="text-white font-bold">{activeFilters.page}</span> of <span className="text-white font-bold">{totalPages}</span></span>
+                <button disabled={(activeFilters.page ?? 1) >= totalPages} onClick={() => { const p = (activeFilters.page ?? 1) + 1; updateFilter('page', p); setActiveFilters(f => ({...f, page: p})) }} className="btn-secondary px-4 py-2 disabled:opacity-40">Next →</button>
               </div>
             )}
           </div>

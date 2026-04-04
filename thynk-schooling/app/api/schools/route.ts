@@ -31,6 +31,17 @@ export async function GET(req: NextRequest) {
     const gender = searchParams.get('gender_policy');
     const medium = searchParams.get('medium');
 
+
+    const facilities    = searchParams.get('facilities')
+    const sports        = searchParams.get('sports')
+    const extraCurr     = searchParams.get('extra_curricular')
+    const language      = searchParams.get('language')
+
+    if (facilities)   { params.push('%' + facilities + '%');    conditions.push(`facilities::text ILIKE $${params.length}`) }
+    if (sports)       { params.push('%' + sports + '%');        conditions.push(`sports::text ILIKE $${params.length}`) }
+    if (extraCurr)    { params.push('%' + extraCurr + '%');     conditions.push(`extra_curricular::text ILIKE $${params.length}`) }
+    if (language)     { params.push('%' + language + '%');      conditions.push(`languages_offered::text ILIKE $${params.length}`) }
+
     if (feeMin)       { params.push(feeMin);        conditions.push(`fee_min >= $${params.length}`) }
     if (feeMax)       { params.push(feeMax);        conditions.push(`fee_max <= $${params.length}`) }
     if (rating)       { params.push(rating);        conditions.push(`rating >= $${params.length}`) }

@@ -166,6 +166,19 @@ export function ParentDashboardClient() {
         </header>
 
         <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px,3vw,28px)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          {/* Profile completion banner — show if profile not done */}
+          {user && !user.profileCompleted && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 18px', borderRadius: 14, background: 'linear-gradient(135deg,#FEF3C7,#FDE68A)', border: '1px solid rgba(180,83,9,0.2)' }}>
+              <div>
+                <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 14, color: '#92400E' }}>Complete your profile to get better school matches 🎯</div>
+                <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#B45309', marginTop: 2 }}>Takes 2 minutes · Helps us personalise recommendations for your child</div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <Link href="/parent/complete-profile" style={{ padding: '8px 16px', borderRadius: 9, background: '#B45309', color: '#fff', textDecoration: 'none', fontSize: 13, fontWeight: 700, fontFamily: 'DM Sans,sans-serif', whiteSpace: 'nowrap' }}>Complete Profile</Link>
+                <span style={{ padding: '8px 12px', borderRadius: 9, background: 'rgba(180,83,9,0.1)', color: '#92400E', fontSize: 12, fontFamily: 'DM Sans,sans-serif', cursor: 'default', whiteSpace: 'nowrap' }}>Skip for now</span>
+              </div>
+            </div>
+          )}
 
           {/* Quick stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 14 }}>

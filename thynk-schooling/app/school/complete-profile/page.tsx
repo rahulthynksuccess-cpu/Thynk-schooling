@@ -39,6 +39,7 @@ export default function SchoolCompleteProfilePage() {
     facilitiesComputerLab: false, facilitiesLibrary: false,
     facilitiesCafeteria: false, facilitiesHostel: false,
     facilitiesSmartClassrooms: false, admissionOpen: false,
+    facilities: [], sports: [], extraCurricular: [], languagesOffered: [],
   })
 
   // Image file state (separate from JSON formData — files can't be JSON serialised)
@@ -59,6 +60,10 @@ export default function SchoolCompleteProfilePage() {
     enabled: !!formData.state,
   })
   const { options: academicYears   } = useDropdown('academic_year')
+  const { options: facilitiesOpts  } = useDropdown('facility')
+  const { options: sportsOpts      } = useDropdown('sport')
+  const { options: extraCurrOpts   } = useDropdown('extra_curricular')
+  const { options: languageOpts    } = useDropdown('language')
 
   const set = (key: string, val: SchoolFormData[string]) =>
     setFormData(prev => ({ ...prev, [key]: val }))
@@ -343,6 +348,27 @@ export default function SchoolCompleteProfilePage() {
           ))}
         </div>
       </div>
+
+
+      {/* Facilities — dynamic from Settings */}
+      {facilitiesOpts.length > 0 && (
+        <MultiSelect label="Facilities Available" fieldKey="facilities" options={facilitiesOpts} />
+      )}
+
+      {/* Sports — dynamic from Settings */}
+      {sportsOpts.length > 0 && (
+        <MultiSelect label="Sports Offered" fieldKey="sports" options={sportsOpts} />
+      )}
+
+      {/* Extra Curricular — dynamic from Settings */}
+      {extraCurrOpts.length > 0 && (
+        <MultiSelect label="Extra Curricular Activities" fieldKey="extraCurricular" options={extraCurrOpts} />
+      )}
+
+      {/* Languages — dynamic from Settings */}
+      {languageOpts.length > 0 && (
+        <MultiSelect label="Languages Offered" fieldKey="languagesOffered" options={languageOpts} />
+      )}
 
       {/* Admission */}
       <div className="space-y-3">

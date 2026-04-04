@@ -59,7 +59,7 @@ export function RegisterClient() {
       setUser(data.user)
       setAccessToken(data.accessToken)
       toast.success('Account created! Welcome to Thynk Schooling 🎉')
-      router.push(role === 'school_admin' ? '/school/complete-profile' : '/parent/complete-profile')
+      router.push(role === 'school_admin' ? '/school/complete-profile' : '/dashboard/parent')
     },
     onError: (err: any) => {
       // Surface the exact API error message (e.g. "Phone number already registered")

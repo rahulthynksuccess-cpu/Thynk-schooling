@@ -219,30 +219,89 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                     ))}
                   </div>
                 </div>
+
+                {/* Quick highlights for facilities/sports/languages on Overview */}
+                {[
+                  { label: 'Facilities',    items: school.facilities       as string[], color: 'text-orange-300', bg: 'bg-orange-500/10 border-orange-500/25' },
+                  { label: 'Sports',        items: school.sports           as string[], color: 'text-green-300',  bg: 'bg-green-500/10 border-green-500/25'   },
+                  { label: 'Extra Curricular', items: school.extraCurricular as string[], color: 'text-purple-300', bg: 'bg-purple-500/10 border-purple-500/25' },
+                  { label: 'Languages',     items: school.languagesOffered as string[], color: 'text-blue-300',   bg: 'bg-blue-500/10 border-blue-500/25'     },
+                ].filter(g => g.items?.length > 0).map(g => (
+                  <div key={g.label}>
+                    <h3 className="font-display font-bold text-white text-base mb-3">{g.label}</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {g.items.slice(0,8).map(item => (
+                        <span key={item} className={`px-2.5 py-1 rounded-lg border text-xs font-display font-semibold ${g.bg} ${g.color}`}>{item}</span>
+                      ))}
+                      {g.items.length > 8 && <span className="px-2.5 py-1 rounded-lg border border-surface-border text-navy-400 text-xs font-display">+{g.items.length - 8} more</span>}
+                    </div>
+                  </div>
+                ))}
               </motion.div>
             )}
 
             {activeTab === 'Facilities' && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                <h2 className="font-display font-bold text-white text-xl mb-5">Facilities & Infrastructure</h2>
-                {school.facilities ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {Object.entries(school.facilities).map(([key, hasIt]) => {
-                      const def = FACILITY_ICONS[key]
-                      if (!def) return null
-                      const Icon = def.icon
-                      return (
-                        <div key={key} className={clsx('card p-4 flex flex-col items-center gap-2 text-center', !hasIt && 'opacity-40')}>
-                          <div className={clsx('w-12 h-12 rounded-xl flex items-center justify-center', hasIt ? 'bg-orange-500/15' : 'bg-navy-800')}>
-                            <Icon className={clsx('w-6 h-6', hasIt ? 'text-orange-400' : 'text-navy-500')} />
-                          </div>
-                          <span className="font-display font-semibold text-sm text-white">{def.label}</span>
-                          <span className={clsx('text-xs', hasIt ? 'text-green-400' : 'text-navy-500')}>{hasIt ? 'Available' : 'Not Available'}</span>
-                        </div>
-                      )
-                    })}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+
+                {/* Facilities */}
+                {school.facilities && (school.facilities as string[]).length > 0 && (
+                  <div>
+                    <h2 className="font-display font-bold text-white text-xl mb-4">Facilities & Infrastructure</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {(school.facilities as string[]).map(f => (
+                        <span key={f} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/10 border border-orange-500/25 text-orange-300 text-sm font-display font-semibold">
+                          🏗️ {f}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                ) : <p className="text-navy-400">Facility information not available.</p>}
+                )}
+
+                {/* Sports */}
+                {school.sports && (school.sports as string[]).length > 0 && (
+                  <div>
+                    <h2 className="font-display font-bold text-white text-xl mb-4">Sports</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {(school.sports as string[]).map(s => (
+                        <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/25 text-green-300 text-sm font-display font-semibold">
+                          ⚽ {s}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Extra Curricular */}
+                {school.extraCurricular && (school.extraCurricular as string[]).length > 0 && (
+                  <div>
+                    <h2 className="font-display font-bold text-white text-xl mb-4">Extra Curricular Activities</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {(school.extraCurricular as string[]).map(e => (
+                        <span key={e} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/25 text-purple-300 text-sm font-display font-semibold">
+                          🎭 {e}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Languages */}
+                {school.languagesOffered && (school.languagesOffered as string[]).length > 0 && (
+                  <div>
+                    <h2 className="font-display font-bold text-white text-xl mb-4">Languages Offered</h2>
+                    <div className="flex flex-wrap gap-2">
+                      {(school.languagesOffered as string[]).map(l => (
+                        <span key={l} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/25 text-blue-300 text-sm font-display font-semibold">
+                          🗣️ {l}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {!school.facilities && !school.sports && !school.extraCurricular && !school.languagesOffered && (
+                  <p className="text-navy-400">Facility information not yet added by this school.</p>
+                )}
               </motion.div>
             )}
 
