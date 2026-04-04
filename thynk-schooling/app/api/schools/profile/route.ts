@@ -1,7 +1,11 @@
 export const dynamic = 'force-dynamic'
 /**
- * /api/schools/profile  ← legacy path used by complete-profile page
- * Delegates to the consolidated /api/schools?action=profile handler.
+ * GET  /api/schools/profile  — return school profile for authenticated admin
+ * POST /api/schools/profile  — create or update school profile
+ *
+ * BUG FIX: slug was regenerated with Date.now() on every save, causing
+ * a Postgres UNIQUE constraint violation on the slug column for returning saves.
+ * Fix: look up existing row first, reuse slug if found, only generate new slug on first insert.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
@@ -46,20 +50,34 @@ async function ensureSchoolsTable() {
     )
   `).catch(() => {})
   const migrations = [
-    'ADD COLUMN IF NOT EXISTS tagline VARCHAR(300)', 'ADD COLUMN IF NOT EXISTS affiliation_no VARCHAR(100)',
-    'ADD COLUMN IF NOT EXISTS founding_year INTEGER', 'ADD COLUMN IF NOT EXISTS total_students INTEGER',
-    'ADD COLUMN IF NOT EXISTS student_teacher_ratio VARCHAR(20)', 'ADD COLUMN IF NOT EXISTS school_type VARCHAR(100)',
-    'ADD COLUMN IF NOT EXISTS medium_of_instruction VARCHAR(100)', 'ADD COLUMN IF NOT EXISTS recognition VARCHAR(100)',
-    'ADD COLUMN IF NOT EXISTS classes_from VARCHAR(50)', 'ADD COLUMN IF NOT EXISTS classes_to VARCHAR(50)',
-    'ADD COLUMN IF NOT EXISTS monthly_fee_min INTEGER', 'ADD COLUMN IF NOT EXISTS monthly_fee_max INTEGER',
-    'ADD COLUMN IF NOT EXISTS annual_fee INTEGER', 'ADD COLUMN IF NOT EXISTS admission_open BOOLEAN DEFAULT false',
-    'ADD COLUMN IF NOT EXISTS admission_academic_year VARCHAR(50)', 'ADD COLUMN IF NOT EXISTS facilities TEXT[]',
-    'ADD COLUMN IF NOT EXISTS sports TEXT[]', 'ADD COLUMN IF NOT EXISTS languages TEXT[]',
-    'ADD COLUMN IF NOT EXISTS extracurriculars TEXT[]', 'ADD COLUMN IF NOT EXISTS address_line1 TEXT',
-    'ADD COLUMN IF NOT EXISTS state VARCHAR(100)', 'ADD COLUMN IF NOT EXISTS locality VARCHAR(100)',
-    'ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)', 'ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)',
-    'ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)', 'ADD COLUMN IF NOT EXISTS website_url VARCHAR(300)',
-    'ADD COLUMN IF NOT EXISTS principal_name VARCHAR(200)', 'ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)',
+    'ADD COLUMN IF NOT EXISTS tagline VARCHAR(300)',
+    'ADD COLUMN IF NOT EXISTS affiliation_no VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS founding_year INTEGER',
+    'ADD COLUMN IF NOT EXISTS total_students INTEGER',
+    'ADD COLUMN IF NOT EXISTS student_teacher_ratio VARCHAR(20)',
+    'ADD COLUMN IF NOT EXISTS school_type VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS medium_of_instruction VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS recognition VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS classes_from VARCHAR(50)',
+    'ADD COLUMN IF NOT EXISTS classes_to VARCHAR(50)',
+    'ADD COLUMN IF NOT EXISTS monthly_fee_min INTEGER',
+    'ADD COLUMN IF NOT EXISTS monthly_fee_max INTEGER',
+    'ADD COLUMN IF NOT EXISTS annual_fee INTEGER',
+    'ADD COLUMN IF NOT EXISTS admission_open BOOLEAN DEFAULT false',
+    'ADD COLUMN IF NOT EXISTS admission_academic_year VARCHAR(50)',
+    'ADD COLUMN IF NOT EXISTS facilities TEXT[]',
+    'ADD COLUMN IF NOT EXISTS sports TEXT[]',
+    'ADD COLUMN IF NOT EXISTS languages TEXT[]',
+    'ADD COLUMN IF NOT EXISTS extracurriculars TEXT[]',
+    'ADD COLUMN IF NOT EXISTS address_line1 TEXT',
+    'ADD COLUMN IF NOT EXISTS state VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS locality VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)',
+    'ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)',
+    'ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)',
+    'ADD COLUMN IF NOT EXISTS website_url VARCHAR(300)',
+    'ADD COLUMN IF NOT EXISTS principal_name VARCHAR(200)',
+    'ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)',
     'ADD COLUMN IF NOT EXISTS cover_url VARCHAR(500)',
   ]
   for (const m of migrations) await db.query(`ALTER TABLE schools ${m}`).catch(() => {})
@@ -74,15 +92,19 @@ function getArr(fd: FormData, key: string): string[] {
   })
 }
 function getStr(fd: FormData, key: string): string | null {
-  const v = fd.get(key)
-  const s = String(v ?? '').trim()
+  const v = fd.get(key); const s = String(v ?? '').trim()
   return (!v || !s || s === 'undefined' || s === 'null') ? null : s
 }
-function getInt(fd: FormData, key: string): number | null { const v = getStr(fd, key); if (!v) return null; const n = parseInt(v, 10); return isNaN(n) ? null : n }
-function getFloat(fd: FormData, key: string): number | null { const v = getStr(fd, key); if (!v) return null; const n = parseFloat(v); return isNaN(n) ? null : n }
-function getBool(fd: FormData, key: string): boolean { const v = getStr(fd, key); return v === 'true' || v === '1' }
+function getInt(fd: FormData, key: string): number | null {
+  const v = getStr(fd, key); if (!v) return null; const n = parseInt(v, 10); return isNaN(n) ? null : n
+}
+function getFloat(fd: FormData, key: string): number | null {
+  const v = getStr(fd, key); if (!v) return null; const n = parseFloat(v); return isNaN(n) ? null : n
+}
+function getBool(fd: FormData, key: string): boolean {
+  return getStr(fd, key) === 'true' || getStr(fd, key) === '1'
+}
 
-/** GET /api/schools/profile — return the school profile for the authenticated admin */
 export async function GET(req: NextRequest) {
   try {
     await ensureSchoolsTable()
@@ -96,7 +118,6 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST /api/schools/profile — create or update the school profile */
 export async function POST(req: NextRequest) {
   try {
     await ensureSchoolsTable()
@@ -105,40 +126,82 @@ export async function POST(req: NextRequest) {
 
     const fd = await req.formData()
     const name = getStr(fd, 'name') || 'School'
-    const slug = toSlug(name) + '-' + Date.now()
-    const tagline = getStr(fd, 'tagline'), affiliationNo = getStr(fd, 'affiliationNo'), description = getStr(fd, 'description')
-    const foundingYear = getInt(fd, 'foundingYear'), totalStudents = getInt(fd, 'totalStudents')
-    const studentTeacherRatio = getStr(fd, 'studentTeacherRatio'), schoolType = getStr(fd, 'schoolType')
-    const board = getArr(fd, 'board'), genderPolicy = getStr(fd, 'genderPolicy')
-    const mediumOfInstruction = getStr(fd, 'mediumOfInstruction'), recognition = getStr(fd, 'recognition')
-    const classesFrom = getStr(fd, 'classesFrom'), classesTo = getStr(fd, 'classesTo')
-    const monthlyFeeMin = getInt(fd, 'monthlyFeeMin'), monthlyFeeMax = getInt(fd, 'monthlyFeeMax'), annualFee = getInt(fd, 'annualFee')
-    const admissionOpen = getBool(fd, 'admissionOpen'), admissionAcademicYear = getStr(fd, 'admissionAcademicYear')
-    const facilities = getArr(fd, 'facilities'), sports = getArr(fd, 'sports'), languages = getArr(fd, 'languages'), extracurriculars = getArr(fd, 'extracurriculars')
-    const addressLine1 = getStr(fd, 'addressLine1'), state = getStr(fd, 'state'), city = getStr(fd, 'city'), locality = getStr(fd, 'locality'), pincode = getStr(fd, 'pincode')
-    const latitude = getFloat(fd, 'latitude'), longitude = getFloat(fd, 'longitude')
-    const phone = getStr(fd, 'phone'), email = getStr(fd, 'email'), websiteUrl = getStr(fd, 'websiteUrl'), principalName = getStr(fd, 'principalName')
-    let logoUrl: string | null = getStr(fd, 'logo_url'), coverUrl: string | null = getStr(fd, 'cover_url')
 
+    // Image handling
+    let logoUrl: string | null = getStr(fd, 'logo_url')
+    let coverUrl: string | null = getStr(fd, 'cover_url')
     const logoFile = fd.get('logo') as File | null
     const coverFile = fd.get('cover') as File | null
     if (logoFile && logoFile.size > 0) {
-      if (logoFile.size > 2 * 1024 * 1024) return NextResponse.json({ error: 'Logo image must be under 2MB' }, { status: 400 })
-      const buf = Buffer.from(await logoFile.arrayBuffer())
-      logoUrl = `data:${logoFile.type};base64,${buf.toString('base64')}`
+      if (logoFile.size > 2 * 1024 * 1024) return NextResponse.json({ error: 'Logo must be under 2 MB' }, { status: 400 })
+      logoUrl = `data:${logoFile.type};base64,${Buffer.from(await logoFile.arrayBuffer()).toString('base64')}`
     }
     if (coverFile && coverFile.size > 0) {
-      if (coverFile.size > 2 * 1024 * 1024) return NextResponse.json({ error: 'Cover image must be under 2MB' }, { status: 400 })
-      const buf = Buffer.from(await coverFile.arrayBuffer())
-      coverUrl = `data:${coverFile.type};base64,${buf.toString('base64')}`
+      if (coverFile.size > 2 * 1024 * 1024) return NextResponse.json({ error: 'Cover image must be under 2 MB' }, { status: 400 })
+      coverUrl = `data:${coverFile.type};base64,${Buffer.from(await coverFile.arrayBuffer()).toString('base64')}`
     }
 
-    await db.query(
-      `INSERT INTO schools (admin_user_id,name,slug,tagline,affiliation_no,description,founding_year,total_students,student_teacher_ratio,school_type,board,gender_policy,medium_of_instruction,recognition,classes_from,classes_to,monthly_fee_min,monthly_fee_max,annual_fee,admission_open,admission_academic_year,facilities,sports,languages,extracurriculars,address_line1,state,city,locality,pincode,latitude,longitude,phone,email,website_url,principal_name,logo_url,cover_url,profile_completed)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,true)
-       ON CONFLICT (admin_user_id) DO UPDATE SET name=$2,tagline=$4,affiliation_no=$5,description=$6,founding_year=$7,total_students=$8,student_teacher_ratio=$9,school_type=$10,board=$11,gender_policy=$12,medium_of_instruction=$13,recognition=$14,classes_from=$15,classes_to=$16,monthly_fee_min=$17,monthly_fee_max=$18,annual_fee=$19,admission_open=$20,admission_academic_year=$21,facilities=$22,sports=$23,languages=$24,extracurriculars=$25,address_line1=$26,state=$27,city=$28,locality=$29,pincode=$30,latitude=$31,longitude=$32,phone=$33,email=$34,website_url=$35,principal_name=$36,logo_url=COALESCE($37,schools.logo_url),cover_url=COALESCE($38,schools.cover_url),profile_completed=true`,
-      [userId, name, slug, tagline, affiliationNo, description, foundingYear, totalStudents, studentTeacherRatio, schoolType, board, genderPolicy, mediumOfInstruction, recognition, classesFrom, classesTo, monthlyFeeMin, monthlyFeeMax, annualFee, admissionOpen, admissionAcademicYear, facilities, sports, languages, extracurriculars, addressLine1, state, city, locality, pincode, latitude, longitude, phone, email, websiteUrl, principalName, logoUrl, coverUrl]
-    )
+    const vals = [
+      getStr(fd, 'tagline'), getStr(fd, 'affiliationNo'), getStr(fd, 'description'),
+      getInt(fd, 'foundingYear'), getInt(fd, 'totalStudents'), getStr(fd, 'studentTeacherRatio'),
+      getStr(fd, 'schoolType'), getArr(fd, 'board'), getStr(fd, 'genderPolicy'),
+      getStr(fd, 'mediumOfInstruction'), getStr(fd, 'recognition'),
+      getStr(fd, 'classesFrom'), getStr(fd, 'classesTo'),
+      getInt(fd, 'monthlyFeeMin'), getInt(fd, 'monthlyFeeMax'), getInt(fd, 'annualFee'),
+      getBool(fd, 'admissionOpen'), getStr(fd, 'admissionAcademicYear'),
+      getArr(fd, 'facilities'), getArr(fd, 'sports'), getArr(fd, 'languages'), getArr(fd, 'extracurriculars'),
+      getStr(fd, 'addressLine1'), getStr(fd, 'state'), getStr(fd, 'city'),
+      getStr(fd, 'locality'), getStr(fd, 'pincode'),
+      getFloat(fd, 'latitude'), getFloat(fd, 'longitude'),
+      getStr(fd, 'phone'), getStr(fd, 'email'), getStr(fd, 'websiteUrl'), getStr(fd, 'principalName'),
+      logoUrl, coverUrl,
+    ]
+
+    // Check if row already exists — CRITICAL: reuse existing slug to prevent UNIQUE violation
+    const existing = await db.query('SELECT slug FROM schools WHERE admin_user_id=$1', [userId])
+
+    if (existing.rows.length > 0) {
+      // UPDATE — never touch the slug
+      await db.query(
+        `UPDATE schools SET
+          name=$2, tagline=$3, affiliation_no=$4, description=$5,
+          founding_year=$6, total_students=$7, student_teacher_ratio=$8,
+          school_type=$9, board=$10, gender_policy=$11,
+          medium_of_instruction=$12, recognition=$13,
+          classes_from=$14, classes_to=$15,
+          monthly_fee_min=$16, monthly_fee_max=$17, annual_fee=$18,
+          admission_open=$19, admission_academic_year=$20,
+          facilities=$21, sports=$22, languages=$23, extracurriculars=$24,
+          address_line1=$25, state=$26, city=$27, locality=$28, pincode=$29,
+          latitude=$30, longitude=$31,
+          phone=$32, email=$33, website_url=$34, principal_name=$35,
+          logo_url=COALESCE($36, logo_url),
+          cover_url=COALESCE($37, cover_url),
+          profile_completed=true
+        WHERE admin_user_id=$1`,
+        [userId, name, ...vals]
+      )
+    } else {
+      // INSERT — generate slug only once
+      const slug = toSlug(name) + '-' + Date.now()
+      await db.query(
+        `INSERT INTO schools (
+          admin_user_id, name, slug, tagline, affiliation_no, description,
+          founding_year, total_students, student_teacher_ratio,
+          school_type, board, gender_policy, medium_of_instruction, recognition,
+          classes_from, classes_to, monthly_fee_min, monthly_fee_max, annual_fee,
+          admission_open, admission_academic_year,
+          facilities, sports, languages, extracurriculars,
+          address_line1, state, city, locality, pincode, latitude, longitude,
+          phone, email, website_url, principal_name, logo_url, cover_url, profile_completed
+        ) VALUES (
+          $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+          $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,true
+        )`,
+        [userId, name, slug, ...vals]
+      )
+    }
+
     return NextResponse.json({ success: true })
   } catch (e: any) {
     console.error('[schools/profile POST]', e)
