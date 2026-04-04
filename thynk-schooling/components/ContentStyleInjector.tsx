@@ -77,6 +77,15 @@ export function ContentStyleInjector() {
   --admin-text: ${co(t.adminText,'rgba(255,255,255,0.9)')};
   --admin-text-muted: ${co(t.adminTextMuted,'rgba(255,255,255,0.45)')};
   --admin-text-faint: ${co(t.adminTextFaint,'rgba(255,255,255,0.25)')};
+  --a-bg:      ${co(t.adminBg,'#060D1F')};
+  --a-sidebar: ${co(t.adminSidebarBg,'#07101F')};
+  --a-header:  ${co(t.adminHeaderBg,'rgba(6,13,31,0.97)')};
+  --a-card:    ${co(t.adminCardBg,'#0C1428')};
+  --a-border:  ${co(t.adminBorder,'rgba(255,255,255,0.07)')};
+  --a-t1:      ${co(t.adminText,'rgba(255,255,255,0.95)')};
+  --a-t2:      ${co(t.adminTextMuted,'rgba(255,255,255,0.55)')};
+  --a-t3:      ${co(t.adminTextFaint,'rgba(255,255,255,0.25)')};
+  --a-gold:    ${co(t.adminAccent,'#B8860B')};
   --container-width: ${t.containerWidth ?? 1600}px;
 }`
           let tel = document.getElementById('ts-live-theme')
