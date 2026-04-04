@@ -429,17 +429,73 @@ async function deleteCity(req: NextRequest) {
 
 // ─── lead pricing defaults ────────────────────────────────────────────────────
 
-async function getLeadPricingDefaults() {
+async function ensureLeadPricingTables() {
   await db.query(`CREATE TABLE IF NOT EXISTS admin_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
-  const res = await db.query("SELECT value FROM admin_settings WHERE key='lead_pricing_defaults'")
-  if (!res.rows.length) return NextResponse.json({ pricePerLead:299, bulkDiscount:10, minLeads:5 })
-  return NextResponse.json(JSON.parse(res.rows[0].value))
+  await db.query(`CREATE TABLE IF NOT EXISTS state_lead_pricing (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    state VARCHAR(120) NOT NULL UNIQUE,
+    default_price_paise INTEGER NOT NULL DEFAULT 29900,
+    min_price_paise INTEGER NOT NULL DEFAULT 9900,
+    max_price_paise INTEGER NOT NULL DEFAULT 99900,
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(() => {})
+}
+
+async function getLeadPricingDefaults() {
+  await ensureLeadPricingTables()
+  const [globalRes, stateRes] = await Promise.all([
+    db.query("SELECT value FROM admin_settings WHERE key='lead_pricing_defaults'"),
+    db.query("SELECT * FROM state_lead_pricing ORDER BY state ASC"),
+  ])
+  const DEFAULTS = {
+    defaultPricePaise: 29900,
+    minPricePaise: 9900,
+    maxPricePaise: 99900,
+    maskBlurMeters: 1000,
+    leadExpiryDays: 30,
+  }
+  let global = DEFAULTS
+  if (globalRes.rows.length) {
+    const saved = JSON.parse(globalRes.rows[0].value)
+    // Support both old schema (pricePerLead) and new schema (defaultPricePaise)
+    if (saved.pricePerLead && !saved.defaultPricePaise) {
+      global = { ...DEFAULTS, defaultPricePaise: saved.pricePerLead * 100 }
+    } else {
+      global = { ...DEFAULTS, ...saved }
+    }
+  }
+  const statePricing = stateRes.rows.map((r: any) => ({
+    id: r.id,
+    state: r.state,
+    defaultPricePaise: r.default_price_paise,
+    minPricePaise: r.min_price_paise,
+    maxPricePaise: r.max_price_paise,
+    isActive: r.is_active,
+  }))
+  return NextResponse.json({ ...global, statePricing })
 }
 
 async function saveLeadPricingDefaults(req: NextRequest) {
-  await db.query(`CREATE TABLE IF NOT EXISTS admin_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await ensureLeadPricingTables()
   const body = await req.json()
-  await db.query(`INSERT INTO admin_settings (key,value,updated_at) VALUES ('lead_pricing_defaults',$1,NOW()) ON CONFLICT (key) DO UPDATE SET value=$1,updated_at=NOW()`, [JSON.stringify(body)])
+  const { statePricing, ...global } = body
+  // Save global settings
+  await db.query(
+    `INSERT INTO admin_settings (key,value,updated_at) VALUES ('lead_pricing_defaults',$1,NOW()) ON CONFLICT (key) DO UPDATE SET value=$1,updated_at=NOW()`,
+    [JSON.stringify(global)]
+  )
+  // Save/update state pricing rows
+  if (Array.isArray(statePricing)) {
+    for (const sp of statePricing) {
+      await db.query(
+        `INSERT INTO state_lead_pricing (state, default_price_paise, min_price_paise, max_price_paise, is_active, updated_at)
+         VALUES ($1,$2,$3,$4,$5,NOW())
+         ON CONFLICT (state) DO UPDATE SET default_price_paise=$2, min_price_paise=$3, max_price_paise=$4, is_active=$5, updated_at=NOW()`,
+        [sp.state, sp.defaultPricePaise, sp.minPricePaise, sp.maxPricePaise, sp.isActive !== false]
+      )
+    }
+  }
   return NextResponse.json({ success: true })
 }
 

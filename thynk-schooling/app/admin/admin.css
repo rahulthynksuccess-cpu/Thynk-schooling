@@ -515,3 +515,309 @@ body:has(.admin-root) {
 .admin-page-users       .table-data-row:nth-child(even) { background: var(--admin-users-row-bg-alt, rgba(255,255,255,0.06)); }
 .admin-page-overview { --a-card: var(--admin-card-bg, #0C1428); --a-border: var(--admin-border, rgba(255,255,255,0.07)); --a-t1: var(--admin-text, rgba(255,255,255,0.9)); }
 .admin-page-overview .admin-header-title { font-size: var(--admin-heading-size, 22px) !important; }
+
+/* ══════════════════════════════════════════════════════════
+   VISUAL ENHANCEMENT PATCH v2
+   Better contrast · Richer typography · Improved readability
+══════════════════════════════════════════════════════════ */
+
+/* ── Stronger base text contrast ── */
+:root {
+  --a-t1: #FFFFFF;
+  --a-t2: rgba(255,255,255,0.80);
+  --a-t3: rgba(255,255,255,0.52);
+  --a-t4: rgba(255,255,255,0.28);
+}
+
+/* ── Sidebar: richer gradient + larger nav text ── */
+.admin-sidebar {
+  background: linear-gradient(180deg, #060E1E 0%, #07101F 100%) !important;
+  border-right: 1px solid rgba(45,212,191,0.10) !important;
+}
+.sidebar-logo-icon {
+  background: linear-gradient(135deg, #0A7A6A, #2DD4BF) !important;
+  box-shadow: 0 4px 16px rgba(45,212,191,0.3) !important;
+}
+.sidebar-logo-name {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.3px !important;
+}
+.sidebar-logo-tag {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.15em !important;
+}
+.sidebar-nav-label {
+  font-size: 9.5px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.18em !important;
+  color: rgba(255,255,255,0.30) !important;
+}
+.sidebar-nav-item {
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  border-radius: 9px !important;
+  margin: 1px 0 !important;
+}
+.sidebar-nav-item.active {
+  font-weight: 700 !important;
+  background: linear-gradient(90deg, rgba(45,212,191,0.14), rgba(45,212,191,0.06)) !important;
+  box-shadow: inset 3px 0 0 var(--a-teal) !important;
+}
+.sidebar-nav-item:not(.active):hover {
+  background: rgba(255,255,255,0.05) !important;
+}
+
+/* ── Header: stronger text + larger height ── */
+.admin-header {
+  height: 60px !important;
+  border-bottom: 1px solid rgba(45,212,191,0.09) !important;
+  backdrop-filter: blur(16px) !important;
+}
+.admin-header-title {
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.4px !important;
+  color: #FFFFFF !important;
+}
+.admin-header-subtitle {
+  font-size: 12.5px !important;
+  color: rgba(255,255,255,0.55) !important;
+  font-weight: 400 !important;
+}
+
+/* ── Cards: better depth + readable headings ── */
+.admin-card {
+  background: linear-gradient(145deg, #0C1428, #0F1830) !important;
+  border: 1px solid rgba(45,212,191,0.09) !important;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.3) !important;
+}
+.admin-card:hover {
+  border-color: rgba(45,212,191,0.22) !important;
+  box-shadow: 0 6px 30px rgba(0,0,0,0.4) !important;
+}
+.card-title {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -0.3px !important;
+}
+.card-subtitle {
+  font-size: 12.5px !important;
+  color: rgba(255,255,255,0.55) !important;
+}
+
+/* ── Stat cards: bigger numbers, bolder labels ── */
+.stat-label {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  color: rgba(255,255,255,0.65) !important;
+}
+.stat-number {
+  font-size: 36px !important;
+  font-weight: 800 !important;
+  letter-spacing: -2px !important;
+}
+.stat-sub {
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.55) !important;
+  font-weight: 500 !important;
+}
+
+/* ── Table: sharper column headings & data rows ── */
+.th {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.1em !important;
+  color: rgba(255,255,255,0.90) !important;
+  padding: 13px 12px !important;
+}
+.td {
+  font-size: 13.5px !important;
+  color: rgba(255,255,255,0.80) !important;
+  padding: 13px 12px !important;
+}
+.admin-main table th {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: rgba(255,255,255,0.92) !important;
+  padding: 13px 16px !important;
+}
+.admin-main table td {
+  font-size: 13.5px !important;
+  color: rgba(255,255,255,0.80) !important;
+  padding: 14px 16px !important;
+}
+
+/* ── Buttons: more impact ── */
+.btn-primary {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  padding: 10px 20px !important;
+  box-shadow: 0 3px 16px rgba(45,212,191,0.30) !important;
+}
+.btn-gold {
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  padding: 10px 20px !important;
+}
+.btn-secondary {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+/* ── Filter pills: easier to tap ── */
+.filter-pill {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 6px 14px !important;
+}
+.filter-pill.active {
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+/* ── Badges: slightly larger ── */
+.badge {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  padding: 4px 9px !important;
+  letter-spacing: 0.03em !important;
+}
+
+/* ── User cell: sharper name ── */
+.user-name {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+}
+.user-email {
+  font-size: 11.5px !important;
+  color: rgba(255,255,255,0.50) !important;
+}
+
+/* ── Empty state: more visible ── */
+.empty-title {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: rgba(255,255,255,0.75) !important;
+}
+.empty-sub {
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.40) !important;
+}
+
+/* ── Toolbar search: better placeholder contrast ── */
+.toolbar-search input::placeholder {
+  color: rgba(255,255,255,0.32) !important;
+  font-size: 13px !important;
+}
+.toolbar-search input {
+  font-size: 13px !important;
+}
+
+/* ── Export button: pop ── */
+.export-btn {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  padding: 7px 15px !important;
+}
+
+/* ── Page content padding ── */
+.admin-content {
+  padding: 22px 24px !important;
+  gap: 18px !important;
+}
+
+/* ── Scrollbar: slightly more visible ── */
+.admin-main ::-webkit-scrollbar { width: 4px; height: 4px; }
+.admin-main ::-webkit-scrollbar-thumb { background: rgba(45,212,191,0.22); border-radius: 99px; }
+.admin-main ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Inputs globally ── */
+.admin-main input:not([type=range]):not([type=color]):not([type=checkbox]):not([type=radio]),
+.admin-main textarea,
+.a-input {
+  font-size: 13.5px !important;
+  color: rgba(255,255,255,0.90) !important;
+}
+.admin-main input::placeholder,
+.admin-main textarea::placeholder,
+.a-input::placeholder {
+  color: rgba(255,255,255,0.30) !important;
+}
+
+/* ── a-label ── */
+.a-label {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  color: rgba(255,255,255,0.65) !important;
+  letter-spacing: 0.12em !important;
+}
+
+/* ── Section headings inside pages ── */
+.admin-main h2 {
+  font-size: 20px !important;
+  font-weight: 800 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -0.4px !important;
+}
+.admin-main h3 {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.95) !important;
+}
+.admin-main h4 {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.85) !important;
+}
+
+/* ── Leads stat boxes: bigger numbers ── */
+.leads-stat-num {
+  font-size: 34px !important;
+  font-weight: 800 !important;
+  letter-spacing: -1.5px !important;
+}
+.leads-stat-label {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.1em !important;
+  color: rgba(255,255,255,0.65) !important;
+}
+
+/* ── Act buttons: bigger tap targets ── */
+.act-btn {
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 7px !important;
+}
+
+/* ── Sidebar user section ── */
+.sidebar-user-name {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.92) !important;
+}
+.sidebar-user-role {
+  font-size: 10.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+}
+
+/* ── Recharts / chart labels inside admin ── */
+.admin-main .recharts-text {
+  fill: rgba(255,255,255,0.65) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+}
+.admin-main .recharts-cartesian-axis-tick-value {
+  font-size: 11px !important;
+  fill: rgba(255,255,255,0.55) !important;
+}
+.admin-main .recharts-legend-item-text {
+  font-size: 12px !important;
+  color: rgba(255,255,255,0.70) !important;
+}

@@ -235,3 +235,64 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }
+
+// ── PUT — update a package ────────────────────────────────────────────────────
+export async function PUT(req: NextRequest) {
+  try {
+    await ensureTable()
+    const { searchParams } = new URL(req.url)
+    const id = searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'Package id required' }, { status: 400 })
+
+    const body = await req.json()
+    const sets: string[] = []
+    const params: any[] = []
+
+    if (body.name        !== undefined) { params.push(body.name);          sets.push(`name=$${params.length}`) }
+    if (body.description !== undefined) { params.push(body.description);   sets.push(`description=$${params.length}`) }
+    if (body.leadCredits !== undefined) { params.push(body.leadCredits);   sets.push(`leads_count=$${params.length}`) }
+    if (body.price       !== undefined) { params.push(body.price);         sets.push(`price_paise=$${params.length}`) }
+    if (body.validityDays!== undefined) { params.push(body.validityDays);  sets.push(`validity_days=$${params.length}`) }
+    if (body.isActive    !== undefined) { params.push(body.isActive);      sets.push(`is_active=$${params.length}`) }
+
+    if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+
+    params.push(id)
+    const res = await db.query(
+      `UPDATE lead_packages SET ${sets.join(', ')} WHERE id=$${params.length} RETURNING *`,
+      params
+    )
+    if (!res.rows.length) return NextResponse.json({ error: 'Package not found' }, { status: 404 })
+    return NextResponse.json(toPackage(res.rows[0]))
+  } catch (e: any) {
+    console.error('[lead-packages PUT]', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
+// ── DELETE — delete a package ─────────────────────────────────────────────────
+export async function DELETE(req: NextRequest) {
+  try {
+    const id = new URL(req.url).searchParams.get('id')
+    if (!id) return NextResponse.json({ error: 'Package id required' }, { status: 400 })
+
+    // Check for active purchases referencing this package
+    const purchases = await db.query(
+      `SELECT COUNT(*) FROM lead_package_payments WHERE package_id=$1 AND status='completed'`,
+      [id]
+    ).catch(() => ({ rows: [{ count: '0' }] }))
+
+    if (parseInt(purchases.rows[0].count) > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete — package has active purchases.' },
+        { status: 409 }
+      )
+    }
+
+    await db.query('DELETE FROM lead_packages WHERE id=$1', [id])
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    console.error('[lead-packages DELETE]', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
