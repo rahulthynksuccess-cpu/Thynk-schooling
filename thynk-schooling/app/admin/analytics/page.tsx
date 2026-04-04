@@ -12,7 +12,7 @@ import {
 
 const C = {
   card: 'var(--admin-card-bg,#0D1420)', border: 'var(--admin-border,rgba(255,255,255,0.07))',
-  t1: 'rgba(255,255,255,0.92)', t2: 'rgba(255,255,255,0.5)', t3: 'rgba(255,255,255,0.2)',
+  t1: 'rgba(255,255,255,0.95)', t2: 'rgba(255,255,255,0.75)', t3: 'rgba(255,255,255,0.5)',
   amber: '#F59E0B', teal: '#14B8A6', violet: '#8B5CF6', sky: '#38BDF8', emerald: '#10B981',
 }
 const card: React.CSSProperties = { background: C.card, border: `1px solid ${C.border}`, borderRadius: 16 }

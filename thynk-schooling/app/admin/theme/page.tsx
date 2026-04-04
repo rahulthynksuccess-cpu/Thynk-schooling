@@ -269,6 +269,18 @@ const PAGES = [
   { label:'💬 Admin — Counselling',  url: '/admin/counselling',   sections:[
     { key:'admin-counselling',   label:'Counselling Manager'   },
   ]},
+  { label:'⚙️ Admin — Settings',    url: '/admin/settings',      sections:[
+    { key:'admin-settings',      label:'Settings Page'         },
+  ]},
+  { label:'🔗 Admin — Integrations', url: '/admin/integrations',  sections:[
+    { key:'admin-integrations',  label:'Integrations Page'     },
+  ]},
+  { label:'💲 Admin — Lead Pricing', url: '/admin/lead-pricing',  sections:[
+    { key:'admin-lead-pricing',  label:'Lead Pricing Page'     },
+  ]},
+  { label:'🗂️ Admin — Dropdowns',   url: '/admin/dropdown',      sections:[
+    { key:'admin-dropdown',      label:'Dropdown Manager'      },
+  ]},
 ]
 
 /* ─── Helpers ─── */
@@ -1120,6 +1132,71 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
           </div>
           <div>
             <SR label="H1 size" k="contactH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-integrations': return (
+      <div>
+        <Heading text="Admin — Integrations Page" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Inputs</label>
+            <CP label="Page background"  k="adminBg"        t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminCardBg"    t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminBorder"    t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminText"      t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"    t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted" t={t} onChange={onChange} />
+          </div>
+        </G2>
+        <div style={{ marginTop:12, padding:'10px 14px', background:'rgba(184,134,11,0.08)', borderRadius:'8px', fontFamily:'Inter,sans-serif', fontSize:'12px', color:'#718096', borderLeft:'3px solid #B8860B' }}>
+          💡 Integrations inherits global admin colours. Change Page/Card/Border/Accent above.
+        </div>
+      </div>
+    )
+
+    case 'admin-lead-pricing': return (
+      <div>
+        <Heading text="Admin — Lead Pricing Page" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"        t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminCardBg"    t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminBorder"    t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography & Accent</label>
+            <CP label="Heading colour"   k="adminText"      t={t} onChange={onChange} />
+            <CP label="Accent / gold"    k="adminAccent"    t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted" t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-dropdown': return (
+      <div>
+        <Heading text="Admin — Dropdown Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Tags</label>
+            <CP label="Page background"  k="adminBg"        t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminCardBg"    t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminBorder"    t={t} onChange={onChange} />
+            <CP label="Tag background"   k="adminCitiesTagBg"    t={t} onChange={onChange} />
+            <CP label="Tag text colour"  k="adminCitiesTagColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminText"      t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"    t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted" t={t} onChange={onChange} />
           </div>
         </G2>
       </div>
