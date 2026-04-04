@@ -5,146 +5,238 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
-  LayoutDashboard, Users, FileText, Star, Zap, TrendingUp,
+  LayoutDashboard, Users, FileText, Star, Zap,
   ShoppingCart, Package, Settings, ChevronRight,
   BarChart3, GraduationCap, LogOut, Menu, X,
-  ArrowUpRight, AlertCircle, CheckCircle2, Clock,
-  Loader2, MapPin
+  ArrowUpRight, CheckCircle2, Clock,
+  Loader2, MapPin, Sparkles, Phone, Flame,
+  ArrowUp, ArrowDown
 } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import {
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
+  PieChart, Pie, Cell,
+} from 'recharts'
 import { useAuthStore } from '@/store/authStore'
 import { Lead, LeadCredits, SchoolDashboardStats } from '@/types'
 import toast from 'react-hot-toast'
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface AnalyticsPoint { date: string; leads: number; applications: number }
+
+// ─── Nav ──────────────────────────────────────────────────────────────────────
 const NAV = [
-  { icon: LayoutDashboard, label: 'Dashboard',     href: '/dashboard/school' },
-  { icon: Users,           label: 'Leads',          href: '/dashboard/school/leads' },
-  { icon: FileText,        label: 'Applications',   href: '/dashboard/school/applications' },
-  { icon: Star,            label: 'Reviews',        href: '/dashboard/school/reviews' },
-  { icon: Package,         label: 'Lead Packages',  href: '/dashboard/school/packages' },
-  { icon: BarChart3,       label: 'Analytics',      href: '/dashboard/school/analytics' },
-  { icon: Settings,        label: 'School Profile', href: '/school/complete-profile' },
+  { icon: LayoutDashboard, label: 'Dashboard',     href: '/dashboard/school',              badge: null },
+  { icon: Users,           label: 'Leads',          href: '/dashboard/school/leads',        badge: 'new' },
+  { icon: FileText,        label: 'Applications',   href: '/dashboard/school/applications', badge: null },
+  { icon: Star,            label: 'Reviews',        href: '/dashboard/school/reviews',      badge: null },
+  { icon: Package,         label: 'Lead Packages',  href: '/dashboard/school/packages',     badge: null },
+  { icon: BarChart3,       label: 'Analytics',      href: '/dashboard/school/analytics',    badge: null },
+  { icon: Settings,        label: 'School Profile', href: '/school/complete-profile',       badge: null },
 ]
 
-function Sidebar({ active, onClose, credits }: { active: string; onClose?: () => void; credits?: any }) {
+// ─── Animated Counter ─────────────────────────────────────────────────────────
+function AnimatedNumber({ value }: { value: number }) {
+  const [displayed, setDisplayed] = useState(0)
+  useEffect(() => {
+    if (value === 0) { setDisplayed(0); return }
+    const start = 0; const end = value; const duration = 1200
+    const startTime = performance.now()
+    const step = (now: number) => {
+      const p = Math.min((now - startTime) / duration, 1)
+      const eased = 1 - Math.pow(1 - p, 3)
+      setDisplayed(Math.round(start + (end - start) * eased))
+      if (p < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [value])
+  return <>{displayed.toLocaleString('en-IN')}</>
+}
+
+// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="chart-tooltip">
+      <div className="tooltip-label">{label}</div>
+      {payload.map((p: any) => (
+        <div key={p.dataKey} className="tooltip-row">
+          <span className="tooltip-dot" style={{ background: p.color }} />
+          <span className="tooltip-name">{p.name}</span>
+          <span className="tooltip-value">{p.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+function Sidebar({ active, onClose, credits }: { active: string; onClose?: () => void; credits?: LeadCredits }) {
   const { user, logout } = useAuthStore()
   const router = useRouter()
   return (
-    <aside style={{ width: 256, display: 'flex', flexDirection: 'column', height: '100%', background: '#FFFFFF', borderRight: '1px solid rgba(13,17,23,0.08)' }}>
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(13,17,23,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#B8860B,#E5B64A)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(184,134,11,0.3)' }}>
-            <GraduationCap style={{ width: 18, height: 18, color: '#fff' }} />
-          </div>
+    <aside className="dash-sidebar">
+      <div className="sidebar-header">
+        <Link href="/" className="sidebar-brand">
+          <div className="brand-icon"><GraduationCap size={18} color="#fff" /></div>
           <div>
-            <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 15, color: '#0D1117', lineHeight: 1 }}>Thynk Schooling</div>
-            <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 10, color: '#B8860B', fontWeight: 600, letterSpacing: '.08em', textTransform: 'uppercase', marginTop: 2 }}>School Portal</div>
+            <div className="brand-name">Thynk Schooling</div>
+            <div className="brand-tag">School Portal</div>
           </div>
         </Link>
-        {onClose && <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X style={{ width: 16, height: 16, color: '#718096' }} /></button>}
+        {onClose && <button onClick={onClose} className="sidebar-close"><X size={15} /></button>}
       </div>
-      <div style={{ margin: '12px 12px 4px', background: 'linear-gradient(135deg,#FEF7E0,#FAF7F2)', border: '1px solid rgba(184,134,11,0.15)', borderRadius: 12, padding: '12px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#B8860B,#E5B64A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 17, color: '#fff', flexShrink: 0 }}>
-            {(user?.fullName || user?.phone || 'S')[0].toUpperCase()}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullName || 'School Admin'}</div>
-            <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#B8860B', fontWeight: 600 }}>School Administrator</div>
-          </div>
+      <div className="sidebar-user">
+        <div className="user-avatar">{(user?.fullName || user?.phone || 'S')[0].toUpperCase()}</div>
+        <div className="user-info">
+          <div className="user-name">{user?.fullName || 'School Admin'}</div>
+          <div className="user-role"><span className="role-dot" />Administrator</div>
         </div>
-        {credits && (
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(184,134,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#718096' }}>Lead Credits</span>
-            <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 14, color: '#B8860B' }}>{credits.availableCredits}</span>
-          </div>
-        )}
       </div>
-      <nav style={{ flex: 1, padding: '8px 10px', overflowY: 'auto' }}>
-        {NAV.map(({ icon: Icon, label, href }) => {
+      {credits && (
+        <div className="sidebar-credits">
+          <Zap size={13} color="#F59E0B" />
+          <span className="credits-label">Lead Credits</span>
+          <span className="credits-value">{credits.availableCredits}</span>
+        </div>
+      )}
+      <nav className="sidebar-nav">
+        {NAV.map(({ icon: Icon, label, href, badge }) => {
           const isActive = active === href
           return (
-            <Link key={href} href={href} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, marginBottom: 2, textDecoration: 'none', transition: 'all .15s', background: isActive ? 'linear-gradient(135deg,rgba(184,134,11,0.1),rgba(184,134,11,0.04))' : 'transparent', color: isActive ? '#B8860B' : '#4A5568', fontFamily: 'DM Sans,sans-serif', fontWeight: isActive ? 600 : 400, fontSize: 13, borderLeft: isActive ? '3px solid #B8860B' : '3px solid transparent' }}>
-              <Icon style={{ width: 16, height: 16, flexShrink: 0 }} />
-              <span style={{ flex: 1 }}>{label}</span>
-              {isActive && <ChevronRight style={{ width: 13, height: 13, opacity: .5 }} />}
+            <Link key={href} href={href} className={`nav-item${isActive ? ' nav-active' : ''}`}>
+              <div className="nav-icon-wrap"><Icon size={15} /></div>
+              <span className="nav-label">{label}</span>
+              {badge === 'new' && <span className="nav-badge">New</span>}
+              {isActive && <ChevronRight size={12} className="nav-chevron" />}
             </Link>
           )
         })}
       </nav>
-      <div style={{ padding: '10px', borderTop: '1px solid rgba(13,17,23,0.07)' }}>
-        <button onClick={() => { logout(); router.replace('/login') }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#E53E3E' }}>
-          <LogOut style={{ width: 16, height: 16 }} /> Sign Out
+      <div className="sidebar-footer">
+        <button onClick={() => { logout(); router.replace('/login') }} className="logout-btn">
+          <LogOut size={14} /><span>Sign Out</span>
         </button>
       </div>
     </aside>
   )
 }
 
-function StatCard({ icon: Icon, label, value, sub, color, href }: any) {
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+function StatCard({ icon: Icon, label, value, sub, color, href, trend, trendVal, delay = 0 }: any) {
+  const isUp = trend === 'up'
   const inner = (
-    <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px', position: 'relative', overflow: 'hidden', transition: 'all .2s', height: '100%' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,${color},${color}40)`, borderRadius: '14px 14px 0 0' }} />
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 10, background: `${color}12`, border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon style={{ width: 18, height: 18, color }} />
-        </div>
-        {href && <ArrowUpRight style={{ width: 14, height: 14, color: '#A0ADB8' }} />}
+    <motion.div className="stat-card" style={{ '--card-color': color } as any}
+      initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -4, boxShadow: '0 20px 40px rgba(0,0,0,0.1)' }}
+    >
+      <div className="stat-glow" />
+      <div className="stat-top">
+        <div className="stat-icon-wrap"><Icon size={17} color={color} /></div>
+        {trend && (
+          <div className={`stat-trend trend-${isUp ? 'up' : 'down'}`}>
+            {isUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
+            {trendVal}
+          </div>
+        )}
       </div>
-      <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 34, color: '#0D1117', lineHeight: 1, letterSpacing: '-1px', marginBottom: 4 }}>
-        {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
+      <div className="stat-value">
+        {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
       </div>
-      <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096' }}>{label}</div>
-      {sub && <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color, fontWeight: 600, marginTop: 6 }}>{sub}</div>}
-    </div>
+      <div className="stat-label">{label}</div>
+      {sub && <div className="stat-sub">{sub}</div>}
+      <div className="stat-bar" />
+    </motion.div>
   )
-  if (href) return <Link href={href} style={{ textDecoration: 'none', display: 'block', height: '100%' }}>{inner}</Link>
+  if (href) return <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link>
   return inner
 }
 
-function LeadRow({ lead, onBuy, buying }: { lead: Lead; onBuy: (id: string) => void; buying: boolean }) {
-  const statusColors: Record<string, string> = { new: '#16A34A', contacted: '#2563EB', interested: '#B8860B', lost: '#718096' }
-  const color = statusColors[lead.status] || '#718096'
+// ─── Credit Ring ──────────────────────────────────────────────────────────────
+function CreditRing({ credits }: { credits: LeadCredits }) {
+  const data = [
+    { name: 'Used',      value: credits.usedCredits,      fill: '#E5E7EB' },
+    { name: 'Available', value: Math.max(credits.availableCredits, 0), fill: '#F59E0B' },
+  ]
+  if (data[0].value === 0 && data[1].value === 0) data[1].value = 1
   return (
-    <tr style={{ borderBottom: '1px solid rgba(13,17,23,0.05)' }}>
-      <td style={{ padding: '12px 16px' }}>
-        <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117' }}>{lead.isPurchased ? lead.fullName : lead.maskedName}</div>
-        <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#718096', marginTop: 2 }}>{lead.childName} · Class {lead.classApplyingFor}</div>
-      </td>
-      <td style={{ padding: '12px 16px' }}>
-        <div style={{ fontFamily: 'monospace', fontSize: 13, color: lead.isPurchased ? '#0D1117' : '#718096' }}>{lead.isPurchased ? lead.fullPhone : lead.maskedPhone}</div>
-      </td>
-      <td style={{ padding: '12px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#4A5568' }}>
-          <MapPin style={{ width: 12, height: 12, color: '#B8860B' }} />{lead.city}
-        </div>
-      </td>
-      <td style={{ padding: '12px 16px' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px', borderRadius: 99, background: `${color}12`, border: `1px solid ${color}30`, fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 600, color }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: color, display: 'inline-block' }} />{lead.status}
-        </span>
-      </td>
-      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-        {lead.isPurchased ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 99, background: '#F0FDF4', border: '1px solid #BBF7D0', fontFamily: 'DM Sans,sans-serif', fontSize: 11, fontWeight: 600, color: '#16A34A' }}>
-            <CheckCircle2 style={{ width: 11, height: 11 }} /> Unlocked
-          </span>
-        ) : (
-          <button onClick={() => onBuy(lead.id)} disabled={buying} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, background: '#0D1117', border: 'none', color: '#FAF7F2', cursor: buying ? 'not-allowed' : 'pointer', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 500, opacity: buying ? .6 : 1 }}>
-            {buying ? <Loader2 style={{ width: 12, height: 12, animation: 'spin 1s linear infinite' }} /> : <ShoppingCart style={{ width: 12, height: 12 }} />}
-            Buy Lead
-          </button>
-        )}
-      </td>
-    </tr>
+    <div className="credit-ring-wrap">
+      <ResponsiveContainer width={140} height={140}>
+        <PieChart>
+          <Pie data={data} cx={65} cy={65} innerRadius={48} outerRadius={62}
+            dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
+            {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="credit-ring-center">
+        <div className="credit-ring-val"><AnimatedNumber value={credits.availableCredits} /></div>
+        <div className="credit-ring-sub">credits</div>
+      </div>
+    </div>
   )
 }
 
+// ─── Lead Row ─────────────────────────────────────────────────────────────────
+function LeadRow({ lead, onBuy, buying, index }: { lead: Lead; onBuy: (id: string) => void; buying: boolean; index: number }) {
+  const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
+    new:             { color: '#10B981', bg: '#D1FAE5', label: 'New' },
+    contacted:       { color: '#3B82F6', bg: '#DBEAFE', label: 'Contacted' },
+    interested:      { color: '#F59E0B', bg: '#FEF3C7', label: 'Interested' },
+    not_interested:  { color: '#6B7280', bg: '#F3F4F6', label: 'Not Interested' },
+    admitted:        { color: '#8B5CF6', bg: '#EDE9FE', label: 'Admitted' },
+    lost:            { color: '#EF4444', bg: '#FEE2E2', label: 'Lost' },
+  }
+  const st = statusConfig[lead.status] || statusConfig.new
+  return (
+    <motion.tr className="lead-row"
+      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.05 }}
+    >
+      <td className="lead-td lead-td-first">
+        <div className="lead-avatar">{(lead.isPurchased ? lead.fullName : lead.maskedName || '?')[0]}</div>
+        <div>
+          <div className="lead-name">{lead.isPurchased ? lead.fullName : lead.maskedName}</div>
+          <div className="lead-meta">{lead.childName} · Class {lead.classApplyingFor}</div>
+        </div>
+      </td>
+      <td className="lead-td">
+        <div className="lead-phone" style={{ opacity: lead.isPurchased ? 1 : 0.45 }}>
+          <Phone size={11} color="#9CA3AF" />
+          {lead.isPurchased ? lead.fullPhone : lead.maskedPhone}
+        </div>
+      </td>
+      <td className="lead-td">
+        <div className="lead-city"><MapPin size={11} color="#F59E0B" />{lead.city}</div>
+      </td>
+      <td className="lead-td">
+        <span className="status-chip" style={{ color: st.color, background: st.bg }}>
+          <span className="status-dot" style={{ background: st.color }} />{st.label}
+        </span>
+      </td>
+      <td className="lead-td lead-td-action">
+        {lead.isPurchased ? (
+          <span className="unlocked-chip"><CheckCircle2 size={11} /> Unlocked</span>
+        ) : (
+          <motion.button onClick={() => onBuy(lead.id)} disabled={buying} className="buy-btn"
+            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+            {buying ? <Loader2 size={12} className="spin" /> : <ShoppingCart size={12} />}
+            Buy Lead
+          </motion.button>
+        )}
+      </td>
+    </motion.tr>
+  )
+}
+
+// ─── Main Export ──────────────────────────────────────────────────────────────
 export function SchoolDashboardClient() {
   const router = useRouter()
   const { user, accessToken } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [activeChart, setActiveChart] = useState<'area' | 'bar'>('area')
   const queryClient = useQueryClient()
 
   useEffect(() => { setMounted(true) }, [])
@@ -158,200 +250,507 @@ export function SchoolDashboardClient() {
   }, [mounted, accessToken, user, router])
 
   const enabled = !!accessToken && mounted
-  const { data: stats, isLoading: statsLoading } = useQuery<SchoolDashboardStats>({ queryKey: ['school-dashboard-stats'], queryFn: () => fetch('/api/schools/me/dashboard-stats',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 2*60*1000 })
-  const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({ queryKey: ['school-leads',{limit:8}], queryFn: () => fetch('/api/leads?limit=8',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 60*1000 })
-  const { data: credits } = useQuery<LeadCredits>({ queryKey: ['lead-credits'], queryFn: () => fetch('/api/lead-credits',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 60*1000 })
-  const { data: analyticsData } = useQuery<{ date: string; leads: number; applications: number }[]>({ queryKey: ['school-analytics-30d'], queryFn: () => fetch('/api/schools/me/analytics?days=30',{cache:'no-store',credentials:'include'}).then(r=>r.json()), enabled, staleTime: 5*60*1000 })
+
+  const { data: stats, isLoading: statsLoading } = useQuery<SchoolDashboardStats>({
+    queryKey: ['school-dashboard-stats'],
+    queryFn: () => fetch('/api/schools/me/dashboard-stats', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    enabled, staleTime: 2 * 60 * 1000,
+  })
+  const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({
+    queryKey: ['school-leads', { limit: 8 }],
+    queryFn: () => fetch('/api/leads?limit=8', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    enabled, staleTime: 60 * 1000,
+  })
+  const { data: credits } = useQuery<LeadCredits>({
+    queryKey: ['lead-credits'],
+    queryFn: () => fetch('/api/lead-credits', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    enabled, staleTime: 60 * 1000,
+  })
+  const { data: analyticsRaw } = useQuery<{ leads: any[]; applications: any[] }>({
+    queryKey: ['school-analytics-30d'],
+    queryFn: () => fetch('/api/schools/me/analytics?days=30', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    enabled, staleTime: 5 * 60 * 1000,
+  })
+
+  // Merge leads + apps into one series
+  const analyticsData: AnalyticsPoint[] = (() => {
+    if (!analyticsRaw) return []
+    const map: Record<string, AnalyticsPoint> = {}
+    ;(analyticsRaw.leads || []).forEach(({ day, count }: any) => {
+      map[day] = { date: day, leads: Number(count), applications: 0 }
+    })
+    ;(analyticsRaw.applications || []).forEach(({ day, count }: any) => {
+      if (map[day]) map[day].applications = Number(count)
+      else map[day] = { date: day, leads: 0, applications: Number(count) }
+    })
+    return Object.values(map).sort((a, b) => a.date.localeCompare(b.date)).map(d => ({
+      ...d,
+      date: new Date(d.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+    }))
+  })()
 
   const [buyingId, setBuyingId] = useState<string | null>(null)
   const buyLeadMutation = useMutation({
-    mutationFn: async (leadId: string) => { setBuyingId(leadId); return fetch(`/api/leads?id=${leadId}&action=purchase`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'}}).then(r=>r.json()) },
-    onSuccess: () => { toast.success('Lead unlocked!'); queryClient.invalidateQueries({queryKey:['school-leads']}); queryClient.invalidateQueries({queryKey:['lead-credits']}); setBuyingId(null) },
+    mutationFn: async (leadId: string) => {
+      setBuyingId(leadId)
+      return fetch(`/api/leads?id=${leadId}&action=purchase`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      }).then(r => r.json())
+    },
+    onSuccess: () => {
+      toast.success('Lead unlocked!')
+      queryClient.invalidateQueries({ queryKey: ['school-leads'] })
+      queryClient.invalidateQueries({ queryKey: ['lead-credits'] })
+      setBuyingId(null)
+    },
     onError: () => { toast.error('Failed to purchase lead.'); setBuyingId(null) },
   })
 
   if (!mounted || !accessToken || !user || user.role !== 'school_admin') {
     return (
-      <div style={{ minHeight: '100vh', background: '#FAF7F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ width: 48, height: 48, borderRadius: 12, background: 'linear-gradient(135deg,#B8860B,#E5B64A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 4px 20px rgba(184,134,11,0.3)' }}>
-            <Loader2 style={{ width: 24, height: 24, color: '#fff', animation: 'spin 1s linear infinite' }} />
-          </div>
-          <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 14, color: '#718096' }}>Loading…</div>
-        </div>
+      <div className="dash-loading">
+        <motion.div className="loading-spinner"
+          animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
+          <GraduationCap size={22} color="#F59E0B" />
+        </motion.div>
+        <div className="loading-text">Loading dashboard…</div>
       </div>
     )
   }
 
   const leads = leadsData?.data ?? []
+
   const STAT_CARDS = [
-    { icon: Users,    label: 'Total Leads',      value: stats?.totalLeads ?? 0,       sub: `+${stats?.newLeadsToday ?? 0} today`, color: '#B8860B', href: '/dashboard/school/leads' },
-    { icon: FileText, label: 'Applications',      value: stats?.totalApplications ?? 0, sub: undefined,                           color: '#2563EB', href: '/dashboard/school/applications' },
-    { icon: Star,     label: 'Average Rating',    value: stats?.avgRating ? `${stats.avgRating.toFixed(1)}★` : '—', sub: undefined, color: '#16A34A', href: '/dashboard/school/reviews' },
-    { icon: Zap,      label: 'Lead Credits',       value: credits?.availableCredits ?? 0, sub: 'Click to buy more',               color: '#7C3AED', href: '/dashboard/school/packages' },
+    { icon: Users,    label: 'Total Leads',    value: stats?.totalLeads ?? 0,        color: '#F59E0B', href: '/dashboard/school/leads',        trend: 'up', trendVal: `+${stats?.newLeadsToday ?? 0} today`, sub: 'Parent enquiries' },
+    { icon: FileText, label: 'Applications',   value: stats?.totalApplications ?? 0, color: '#6366F1', href: '/dashboard/school/applications', trend: null, trendVal: null, sub: 'Admission requests' },
+    { icon: Star,     label: 'Avg Rating',     value: stats?.avgRating ? parseFloat(stats.avgRating.toFixed(1)) : 0, color: '#10B981', href: '/dashboard/school/reviews', trend: null, trendVal: null, sub: 'Parent reviews' },
+    { icon: Zap,      label: 'Lead Credits',   value: credits?.availableCredits ?? 0, color: '#EC4899', href: '/dashboard/school/packages', trend: null, trendVal: null, sub: 'Available to unlock' },
   ]
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#FAF7F2', overflow: 'hidden', fontFamily: 'DM Sans,sans-serif' }}>
-      <style>{`@media(min-width:1024px){.lg-only{display:flex!important}}@media(max-width:1023px){.mobile-btn{display:flex!important}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
+    <>
+      <style>{STYLES}</style>
+      <div className="dash-root">
 
-      <div className="lg-only" style={{ display: 'none', flexDirection: 'column', flexShrink: 0 }}>
-        <Sidebar active="/dashboard/school" credits={credits} />
-      </div>
-
-      {sidebarOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
-          <div style={{ width: 256, display: 'flex', flexDirection: 'column' }}>
-            <Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} />
-          </div>
-          <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setSidebarOpen(false)} />
+        {/* Desktop Sidebar */}
+        <div className="dash-sidebar-desktop">
+          <Sidebar active="/dashboard/school" credits={credits} />
         </div>
-      )}
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', height: 64, background: '#fff', borderBottom: '1px solid rgba(13,17,23,0.08)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="mobile-btn" onClick={() => setSidebarOpen(true)} style={{ display: 'none', background: 'none', border: '1px solid rgba(13,17,23,0.12)', borderRadius: 8, padding: 7, cursor: 'pointer' }}>
-              <Menu style={{ width: 16, height: 16, color: '#4A5568' }} />
-            </button>
-            <div>
-              <h1 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 22, color: '#0D1117', margin: 0, lineHeight: 1 }}>School Dashboard</h1>
-              <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: 0, marginTop: 2 }}>Good to see you, {user.fullName?.split(' ')[0] || 'Admin'}</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {credits && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: '#FEF7E0', border: '1px solid rgba(184,134,11,0.2)', borderRadius: 9 }}>
-                <Zap style={{ width: 14, height: 14, color: '#B8860B' }} />
-                <span style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 700, fontSize: 14, color: '#0D1117' }}>{credits.availableCredits}</span>
-                <span style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#B8860B' }}>credits</span>
-              </div>
-            )}
-            <Link href="/dashboard/school/packages" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#0D1117', borderRadius: 8, color: '#FAF7F2', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 500 }}>
-              Buy Credits
-            </Link>
-          </div>
-        </header>
-
-        <main style={{ flex: 1, overflowY: 'auto', padding: 'clamp(16px,3vw,28px)' }}>
-          {stats && stats.profileCompleteness < 100 && (
-            <div style={{ background: '#FEF7E0', border: '1px solid rgba(184,134,11,0.25)', borderRadius: 12, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <AlertCircle style={{ width: 18, height: 18, color: '#B8860B', flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 13, color: '#0D1117' }}>Profile {stats.profileCompleteness}% complete — finish to get 3× more leads</div>
-                  <div style={{ width: 200, height: 4, background: 'rgba(184,134,11,0.15)', borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${stats.profileCompleteness}%`, background: 'linear-gradient(90deg,#B8860B,#E5B64A)', borderRadius: 99 }} />
-                  </div>
-                </div>
-              </div>
-              <Link href="/school/complete-profile" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#B8860B', borderRadius: 8, color: '#fff', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 600, flexShrink: 0 }}>
-                Complete Profile <ChevronRight style={{ width: 14, height: 14 }} />
-              </Link>
-            </div>
+        {/* Mobile Sidebar */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div className="mobile-overlay"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.div className="mobile-sidebar-wrap"
+                initial={{ x: -260 }} animate={{ x: 0 }} exit={{ x: -260 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
+                <Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} />
+              </motion.div>
+              <div className="overlay-backdrop" onClick={() => setSidebarOpen(false)} />
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
-            {statsLoading
-              ? Array.from({ length: 4 }).map((_, i) => <div key={i} style={{ height: 140, background: '#fff', border: '1px solid rgba(13,17,23,0.07)', borderRadius: 14, animation: 'pulse 1.5s ease-in-out infinite' }} />)
-              : STAT_CARDS.map(card => <StatCard key={card.label} {...card} />)
-            }
-          </div>
+        {/* Main */}
+        <div className="dash-main">
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 280px', gap: 16, marginBottom: 24 }}>
-            <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div>
-                  <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: 0 }}>Lead Activity</h3>
-                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: '2px 0 0' }}>Last 30 days</p>
-                </div>
-                <div style={{ display: 'flex', gap: 12, fontFamily: 'DM Sans,sans-serif', fontSize: 11 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#718096' }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#B8860B', display: 'inline-block' }} /> Leads</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#718096' }}><span style={{ width: 10, height: 10, borderRadius: 3, background: '#2563EB', display: 'inline-block' }} /> Applications</span>
-                </div>
-              </div>
-              {(analyticsData ?? []).length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={analyticsData ?? []} barSize={10} barGap={3}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(13,17,23,0.05)" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fill: '#A0ADB8', fontSize: 10, fontFamily: 'DM Sans' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#A0ADB8', fontSize: 10, fontFamily: 'DM Sans' }} axisLine={false} tickLine={false} />
-                    <Tooltip contentStyle={{ background: '#fff', border: '1px solid rgba(13,17,23,0.1)', borderRadius: 10, fontFamily: 'DM Sans', boxShadow: '0 4px 20px rgba(13,17,23,0.1)' }} />
-                    <Bar dataKey="leads" name="Leads" fill="#B8860B" radius={[4,4,0,0]} />
-                    <Bar dataKey="applications" name="Applications" fill="#2563EB" radius={[4,4,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div style={{ height: 200, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  <BarChart3 style={{ width: 36, height: 36, color: '#E2E8F0' }} />
-                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#A0ADB8', margin: 0 }}>No data yet — start receiving leads!</p>
-                </div>
-              )}
-            </div>
-
-            <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: '0 0 16px' }}>Lead Credits</h3>
-              {credits ? (
-                <>
-                  <div style={{ textAlign: 'center', padding: '16px 0', background: 'linear-gradient(135deg,#FEF7E0,#FAF7F2)', borderRadius: 10, marginBottom: 16 }}>
-                    <div style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 52, color: '#B8860B', lineHeight: 1 }}>{credits.availableCredits}</div>
-                    <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', marginTop: 4 }}>credits available</div>
-                    {credits.expiresAt && <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 11, color: '#A0ADB8', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Clock style={{ width: 11, height: 11 }} />Expires {new Date(credits.expiresAt).toLocaleDateString('en-IN')}</div>}
-                  </div>
-                  {[['Total Purchased', credits.totalCredits], ['Used', credits.usedCredits], ['Remaining', credits.availableCredits]].map(([l, v]) => (
-                    <div key={l as string} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'DM Sans,sans-serif', fontSize: 12, marginBottom: 8 }}>
-                      <span style={{ color: '#718096' }}>{l}</span><span style={{ fontWeight: 600, color: '#0D1117' }}>{v}</span>
-                    </div>
-                  ))}
-                  <Link href="/dashboard/school/packages" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', background: '#0D1117', borderRadius: 8, color: '#FAF7F2', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 500, marginTop: 'auto' }}>Buy More Credits</Link>
-                </>
-              ) : (
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, textAlign: 'center' }}>
-                  <Package style={{ width: 36, height: 36, color: '#E2E8F0' }} />
-                  <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#A0ADB8', margin: 0 }}>No credits yet</p>
-                  <Link href="/dashboard/school/packages" style={{ padding: '8px 18px', background: '#B8860B', borderRadius: 8, color: '#fff', textDecoration: 'none', fontFamily: 'DM Sans,sans-serif', fontSize: 13, fontWeight: 600 }}>Buy Lead Package</Link>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 14, overflow: 'hidden' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(13,17,23,0.07)' }}>
+          {/* Header */}
+          <header className="dash-header">
+            <div className="header-left">
+              <button className="menu-btn" onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>
               <div>
-                <h3 style={{ fontFamily: "'Cormorant Garamond',Georgia,serif", fontWeight: 700, fontSize: 18, color: '#0D1117', margin: 0 }}>Recent Leads</h3>
-                <p style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 12, color: '#718096', margin: '2px 0 0' }}>{leadsData?.total ? `${leadsData.total} total leads` : 'Parents looking for schools like yours'}</p>
+                <h1 className="header-title">School Dashboard</h1>
+                <p className="header-sub">Welcome back, {user.fullName?.split(' ')[0] || 'Admin'} 👋</p>
               </div>
-              <Link href="/dashboard/school/leads" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#B8860B', textDecoration: 'none', fontWeight: 600 }}>
-                View All <ChevronRight style={{ width: 14, height: 14 }} />
+            </div>
+            <div className="header-right">
+              {credits && (
+                <div className="header-credits">
+                  <Zap size={13} color="#F59E0B" />
+                  <span className="hc-val">{credits.availableCredits}</span>
+                  <span className="hc-label">credits</span>
+                </div>
+              )}
+              <Link href="/dashboard/school/packages" className="header-buy-btn">
+                <Sparkles size={13} /> Buy Credits
               </Link>
             </div>
-            {leadsLoading ? (
-              <div style={{ padding: 20 }}>{Array.from({length:4}).map((_,i)=><div key={i} style={{ height:52, background:'rgba(13,17,23,0.04)', borderRadius:8, marginBottom:8, animation:'pulse 1.5s ease-in-out infinite' }} />)}</div>
-            ) : leads.length === 0 ? (
-              <div style={{ padding: '48px 20px', textAlign: 'center' }}>
-                <Users style={{ width: 36, height: 36, color: '#E2E8F0', margin: '0 auto 12px' }} />
-                <div style={{ fontFamily: 'DM Sans,sans-serif', fontWeight: 600, fontSize: 14, color: '#0D1117', marginBottom: 6 }}>No leads yet</div>
-                <div style={{ fontFamily: 'DM Sans,sans-serif', fontSize: 13, color: '#718096' }}>Complete your school profile to start receiving leads.</div>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ background: '#FAF7F2', borderBottom: '1px solid rgba(13,17,23,0.06)' }}>
-                      {['Parent / Child', 'Phone', 'City', 'Status', 'Action'].map(h => (
-                        <th key={h} style={{ padding: '10px 16px', textAlign: h==='Action'?'right':'left', fontFamily:'DM Sans,sans-serif', fontSize:11, fontWeight:600, letterSpacing:'1.2px', textTransform:'uppercase', color:'#A0ADB8' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leads.map(lead => <LeadRow key={lead.id} lead={lead} onBuy={id => buyLeadMutation.mutate(id)} buying={buyingId === lead.id} />)}
-                  </tbody>
-                </table>
-              </div>
+          </header>
+
+          {/* Scrollable content */}
+          <main className="dash-content">
+
+            {/* Profile Banner */}
+            {stats && (stats as any).profileCompleteness < 100 && (
+              <motion.div className="profile-banner"
+                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                <div className="banner-left">
+                  <div className="banner-icon"><Flame size={16} color="#F59E0B" /></div>
+                  <div>
+                    <div className="banner-title">
+                      Profile {(stats as any).profileCompleteness}% complete — finish to get 3× more leads
+                    </div>
+                    <div className="banner-progress-wrap">
+                      <div className="banner-progress-bar">
+                        <motion.div className="banner-progress-fill"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${(stats as any).profileCompleteness}%` }}
+                          transition={{ duration: 1, ease: 'easeOut' }} />
+                      </div>
+                      <span className="banner-pct">{(stats as any).profileCompleteness}%</span>
+                    </div>
+                  </div>
+                </div>
+                <Link href="/school/complete-profile" className="banner-cta">
+                  Complete Now <ChevronRight size={14} />
+                </Link>
+              </motion.div>
             )}
-          </div>
-        </main>
+
+            {/* Stats */}
+            <div className="stats-grid">
+              {statsLoading
+                ? Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="stat-skeleton" style={{ animationDelay: `${i * 0.1}s` }} />
+                  ))
+                : STAT_CARDS.map((card, i) => <StatCard key={card.label} {...card} delay={i * 0.08} />)
+              }
+            </div>
+
+            {/* Charts Row */}
+            <div className="charts-row">
+
+              {/* Activity Chart */}
+              <motion.div className="chart-card"
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+                <div className="chart-header">
+                  <div>
+                    <h3 className="chart-title">Activity Overview</h3>
+                    <p className="chart-sub">Leads & applications · last 30 days</p>
+                  </div>
+                  <div className="chart-controls">
+                    <button className={`chart-toggle${activeChart === 'area' ? ' toggle-active' : ''}`} onClick={() => setActiveChart('area')}>Area</button>
+                    <button className={`chart-toggle${activeChart === 'bar' ? ' toggle-active' : ''}`} onClick={() => setActiveChart('bar')}>Bar</button>
+                  </div>
+                </div>
+                <div className="chart-legend">
+                  <span className="legend-item"><span className="legend-dot" style={{ background: '#F59E0B' }} />Leads</span>
+                  <span className="legend-item"><span className="legend-dot" style={{ background: '#6366F1' }} />Applications</span>
+                </div>
+                {analyticsData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={220}>
+                    {activeChart === 'area' ? (
+                      <AreaChart data={analyticsData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="gApps" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#6366F1" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                        <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Area type="monotone" dataKey="leads" name="Leads" stroke="#F59E0B" strokeWidth={2} fill="url(#gLeads)" dot={false} activeDot={{ r: 5, fill: '#F59E0B' }} />
+                        <Area type="monotone" dataKey="applications" name="Applications" stroke="#6366F1" strokeWidth={2} fill="url(#gApps)" dot={false} activeDot={{ r: 5, fill: '#6366F1' }} />
+                      </AreaChart>
+                    ) : (
+                      <BarChart data={analyticsData} barSize={8} barGap={3} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+                        <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar dataKey="leads" name="Leads" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="applications" name="Applications" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    )}
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="chart-empty">
+                    <BarChart3 size={40} color="#E5E7EB" />
+                    <p>No activity yet — complete your profile to start receiving leads</p>
+                  </div>
+                )}
+              </motion.div>
+
+              {/* Credits Card */}
+              <motion.div className="credits-card"
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+                <h3 className="chart-title" style={{ marginBottom: 4 }}>Lead Credits</h3>
+                <p className="chart-sub" style={{ marginBottom: 16 }}>Unlock parent contact details</p>
+                {credits ? (
+                  <>
+                    <CreditRing credits={credits} />
+                    <div className="credit-stats">
+                      {[
+                        { label: 'Total Purchased', val: credits.totalCredits,     color: '#374151' },
+                        { label: 'Used',            val: credits.usedCredits,      color: '#EF4444' },
+                        { label: 'Available',       val: credits.availableCredits, color: '#10B981' },
+                      ].map(({ label, val, color }) => (
+                        <div key={label} className="credit-stat-row">
+                          <span className="cs-label">{label}</span>
+                          <span className="cs-val" style={{ color }}>{val}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {credits.expiresAt && (
+                      <div className="credit-expiry">
+                        <Clock size={11} color="#9CA3AF" />
+                        Expires {new Date(credits.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </div>
+                    )}
+                    <Link href="/dashboard/school/packages" className="credits-buy-btn">
+                      <Package size={14} /> Buy More Credits
+                    </Link>
+                  </>
+                ) : (
+                  <div className="credits-empty">
+                    <Package size={40} color="#E5E7EB" />
+                    <p>No credits yet</p>
+                    <Link href="/dashboard/school/packages" className="credits-buy-btn">Buy Lead Package</Link>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+
+            {/* Leads Table */}
+            <motion.div className="leads-card"
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+              <div className="leads-header">
+                <div>
+                  <h3 className="chart-title">Recent Leads</h3>
+                  <p className="chart-sub">{leadsData?.total ? `${leadsData.total} total leads` : 'Parents looking for schools like yours'}</p>
+                </div>
+                <Link href="/dashboard/school/leads" className="view-all-btn">
+                  View All <ChevronRight size={13} />
+                </Link>
+              </div>
+
+              {leadsLoading ? (
+                <div className="leads-skeleton">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="lead-skel-row" style={{ animationDelay: `${i * 0.08}s` }} />
+                  ))}
+                </div>
+              ) : leads.length === 0 ? (
+                <div className="leads-empty">
+                  <Users size={44} color="#E5E7EB" />
+                  <div className="leads-empty-title">No leads yet</div>
+                  <div className="leads-empty-sub">Complete your school profile to start receiving leads.</div>
+                  <Link href="/school/complete-profile" className="leads-empty-cta">
+                    Complete Profile <ChevronRight size={13} />
+                  </Link>
+                </div>
+              ) : (
+                <div className="leads-table-wrap">
+                  <table className="leads-table">
+                    <thead>
+                      <tr>
+                        {['Parent / Child', 'Phone', 'City', 'Status', 'Action'].map(h => (
+                          <th key={h} className="leads-th" style={{ textAlign: h === 'Action' ? 'right' : 'left' }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {leads.map((lead, i) => (
+                        <LeadRow key={lead.id} lead={lead} index={i}
+                          onBuy={id => buyLeadMutation.mutate(id)}
+                          buying={buyingId === lead.id} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </motion.div>
+
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --gold: #F59E0B; --gold-light: #FEF3C7; --indigo: #6366F1;
+  --green: #10B981; --pink: #EC4899; --red: #EF4444;
+  --bg: #F7F8FC; --surface: #fff; --border: rgba(0,0,0,0.07);
+  --text: #111827; --muted: #6B7280;
+  --sidebar-w: 252px; --radius: 16px;
+  --font: 'Outfit', sans-serif; --serif: 'Playfair Display', Georgia, serif;
+}
+
+.dash-root { display:flex; height:100vh; background:var(--bg); font-family:var(--font); overflow:hidden; }
+.dash-sidebar-desktop { display:none; width:var(--sidebar-w); flex-shrink:0; height:100%; }
+@media(min-width:1024px){ .dash-sidebar-desktop { display:flex; flex-direction:column; } }
+.dash-main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+
+/* Sidebar */
+.dash-sidebar { width:var(--sidebar-w); height:100%; display:flex; flex-direction:column; background:#fff; border-right:1px solid var(--border); }
+.sidebar-header { padding:20px 18px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.sidebar-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
+.brand-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#F59E0B,#FBBF24); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(245,158,11,.35); flex-shrink:0; }
+.brand-name { font-family:var(--serif); font-weight:700; font-size:14px; color:var(--text); line-height:1; }
+.brand-tag { font-size:9px; font-weight:600; color:var(--gold); letter-spacing:.1em; text-transform:uppercase; margin-top:2px; }
+.sidebar-close { background:none; border:none; cursor:pointer; padding:4px; color:var(--muted); }
+.sidebar-user { display:flex; align-items:center; gap:10px; margin:12px 12px 8px; padding:12px 14px; background:linear-gradient(135deg,#FFFBEB,#FEF9EE); border:1px solid rgba(245,158,11,.15); border-radius:12px; }
+.user-avatar { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#F59E0B,#FBBF24); display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-weight:700; font-size:16px; color:#fff; flex-shrink:0; }
+.user-info { min-width:0; }
+.user-name { font-weight:600; font-size:13px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.user-role { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--gold); font-weight:500; margin-top:2px; }
+.role-dot { width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 0 2px rgba(16,185,129,.2); animation:pdot 2s ease-in-out infinite; }
+@keyframes pdot { 0%,100%{box-shadow:0 0 0 2px rgba(16,185,129,.2)} 50%{box-shadow:0 0 0 4px rgba(16,185,129,.08)} }
+.sidebar-credits { display:flex; align-items:center; gap:6px; margin:0 12px 8px; padding:8px 14px; background:rgba(245,158,11,.06); border:1px solid rgba(245,158,11,.15); border-radius:8px; font-size:12px; }
+.credits-label { flex:1; color:var(--muted); }
+.credits-value { font-weight:700; font-size:14px; color:var(--gold); }
+.sidebar-nav { flex:1; overflow-y:auto; padding:6px 10px; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:10px; margin-bottom:2px; text-decoration:none; font-size:13px; font-weight:400; color:var(--muted); transition:all .15s ease; border-left:3px solid transparent; }
+.nav-item:hover { background:rgba(0,0,0,.04); color:var(--text); }
+.nav-active { background:rgba(245,158,11,.08)!important; color:#D97706!important; font-weight:600!important; border-left-color:#F59E0B!important; }
+.nav-icon-wrap { width:28px; height:28px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.nav-label { flex:1; }
+.nav-badge { font-size:9px; font-weight:700; padding:2px 6px; border-radius:99px; background:var(--green); color:#fff; text-transform:uppercase; letter-spacing:.05em; }
+.nav-chevron { opacity:.5; }
+.sidebar-footer { padding:10px; border-top:1px solid var(--border); }
+.logout-btn { width:100%; display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:9px; background:none; border:none; cursor:pointer; font-family:var(--font); font-size:13px; color:var(--red); transition:background .15s; }
+.logout-btn:hover { background:rgba(239,68,68,.06); }
+
+/* Header */
+.dash-header { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:66px; background:#fff; border-bottom:1px solid var(--border); flex-shrink:0; gap:12px; }
+.header-left { display:flex; align-items:center; gap:14px; }
+.menu-btn { display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:none; border:1px solid var(--border); border-radius:9px; cursor:pointer; color:var(--muted); flex-shrink:0; }
+@media(min-width:1024px){ .menu-btn { display:none; } }
+.header-title { font-family:var(--serif); font-weight:700; font-size:20px; color:var(--text); line-height:1; }
+.header-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.header-right { display:flex; align-items:center; gap:10px; }
+.header-credits { display:flex; align-items:center; gap:6px; padding:7px 12px; background:#FFFBEB; border:1px solid rgba(245,158,11,.25); border-radius:9px; }
+.hc-val { font-weight:700; font-size:14px; color:var(--text); }
+.hc-label { font-size:11px; color:var(--gold); }
+.header-buy-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:9px; background:linear-gradient(135deg,#F59E0B,#FBBF24); color:#fff; font-weight:600; font-size:13px; text-decoration:none; box-shadow:0 4px 12px rgba(245,158,11,.35); transition:all .2s; }
+.header-buy-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(245,158,11,.4); }
+
+/* Content */
+.dash-content { flex:1; overflow-y:auto; padding:clamp(16px,2.5vw,28px); }
+
+/* Profile Banner */
+.profile-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; background:linear-gradient(135deg,#FFFBEB,#FEF9EE); border:1px solid rgba(245,158,11,.25); border-radius:var(--radius); margin-bottom:22px; }
+.banner-left { display:flex; align-items:center; gap:14px; }
+.banner-icon { width:38px; height:38px; border-radius:10px; background:rgba(245,158,11,.12); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.banner-title { font-weight:600; font-size:13px; color:var(--text); margin-bottom:8px; }
+.banner-progress-wrap { display:flex; align-items:center; gap:10px; }
+.banner-progress-bar { width:180px; height:5px; background:rgba(245,158,11,.15); border-radius:99px; overflow:hidden; }
+.banner-progress-fill { height:100%; background:linear-gradient(90deg,#F59E0B,#FBBF24); border-radius:99px; }
+.banner-pct { font-size:12px; font-weight:600; color:var(--gold); }
+.banner-cta { display:inline-flex; align-items:center; gap:5px; padding:8px 16px; border-radius:9px; background:var(--gold); color:#fff; text-decoration:none; font-weight:600; font-size:12px; white-space:nowrap; flex-shrink:0; transition:all .2s; }
+.banner-cta:hover { background:#D97706; }
+
+/* Stats */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-bottom:20px; }
+.stat-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:22px 20px; position:relative; overflow:hidden; cursor:default; }
+.stat-glow { position:absolute; top:-40px; right:-40px; width:100px; height:100px; border-radius:50%; background:var(--card-color,#F59E0B); opacity:.06; filter:blur(20px); pointer-events:none; }
+.stat-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
+.stat-icon-wrap { width:40px; height:40px; border-radius:11px; background:rgba(0,0,0,.04); display:flex; align-items:center; justify-content:center; }
+.stat-trend { display:flex; align-items:center; gap:3px; font-size:11px; font-weight:600; padding:3px 7px; border-radius:99px; }
+.trend-up { color:#10B981; background:#D1FAE5; }
+.trend-down { color:#EF4444; background:#FEE2E2; }
+.stat-value { font-family:var(--serif); font-weight:700; font-size:34px; color:var(--text); line-height:1; letter-spacing:-1px; margin-bottom:5px; }
+.stat-label { font-size:12px; color:var(--muted); font-weight:500; }
+.stat-sub { font-size:11px; color:var(--muted); margin-top:5px; }
+.stat-bar { position:absolute; bottom:0; left:0; right:0; height:3px; background:var(--card-color,#F59E0B); opacity:.35; border-radius:0 0 16px 16px; }
+.stat-skeleton { height:148px; border-radius:var(--radius); background:linear-gradient(90deg,#f0f0f0 25%,#f7f7f7 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* Charts */
+.charts-row { display:grid; grid-template-columns:1fr 260px; gap:16px; margin-bottom:20px; }
+@media(max-width:900px){ .charts-row { grid-template-columns:1fr; } }
+.chart-card, .credits-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:22px 22px 18px; }
+.credits-card { display:flex; flex-direction:column; align-items:center; text-align:center; }
+.chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:6px; }
+.chart-title { font-family:var(--serif); font-weight:700; font-size:18px; color:var(--text); }
+.chart-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.chart-controls { display:flex; gap:4px; background:#F3F4F6; border-radius:8px; padding:3px; }
+.chart-toggle { padding:4px 10px; border-radius:6px; border:none; font-family:var(--font); font-size:11px; font-weight:500; cursor:pointer; background:transparent; color:var(--muted); transition:all .15s; }
+.toggle-active { background:#fff!important; color:var(--text)!important; font-weight:600!important; box-shadow:0 1px 3px rgba(0,0,0,.1)!important; }
+.chart-legend { display:flex; gap:16px; margin-bottom:16px; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+.legend-dot { width:10px; height:10px; border-radius:3px; }
+.chart-empty { height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+.chart-empty p { font-size:13px; color:var(--muted); text-align:center; max-width:200px; }
+.chart-tooltip { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px 14px; box-shadow:0 8px 24px rgba(0,0,0,.1); font-family:var(--font); }
+.tooltip-label { font-size:11px; color:var(--muted); margin-bottom:6px; font-weight:500; }
+.tooltip-row { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:2px; }
+.tooltip-dot { width:8px; height:8px; border-radius:2px; }
+.tooltip-name { color:var(--muted); flex:1; }
+.tooltip-value { font-weight:700; color:var(--text); }
+
+/* Credits card */
+.credit-ring-wrap { position:relative; margin-bottom:12px; }
+.credit-ring-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; }
+.credit-ring-val { font-family:var(--serif); font-weight:700; font-size:30px; color:var(--gold); line-height:1; }
+.credit-ring-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.credit-stats { width:100%; margin-bottom:10px; }
+.credit-stat-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.04); font-size:12px; }
+.cs-label { color:var(--muted); }
+.cs-val { font-weight:700; }
+.credit-expiry { display:flex; align-items:center; gap:5px; font-size:11px; color:#9CA3AF; margin-bottom:12px; }
+.credits-buy-btn { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; padding:11px 16px; background:var(--text); border-radius:10px; color:#fff; text-decoration:none; font-weight:600; font-size:13px; transition:all .2s; margin-top:auto; }
+.credits-buy-btn:hover { background:#1F2937; transform:translateY(-1px); }
+.credits-empty { display:flex; flex-direction:column; align-items:center; gap:10px; flex:1; justify-content:center; }
+.credits-empty p { font-size:13px; color:var(--muted); }
+
+/* Leads Table */
+.leads-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
+.leads-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
+.view-all-btn { display:inline-flex; align-items:center; gap:4px; font-size:13px; color:var(--gold); text-decoration:none; font-weight:600; transition:color .15s; }
+.view-all-btn:hover { color:#D97706; }
+.leads-table-wrap { overflow-x:auto; }
+.leads-table { width:100%; border-collapse:collapse; }
+.leads-th { padding:10px 18px; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#9CA3AF; background:#FAFAFA; border-bottom:1px solid var(--border); }
+.lead-row { border-bottom:1px solid rgba(0,0,0,.04); transition:background .15s; }
+.lead-row:hover { background:rgba(245,158,11,.02); }
+.lead-row:last-child { border-bottom:none; }
+.lead-td { padding:13px 18px; vertical-align:middle; }
+.lead-td-first { display:flex; align-items:center; gap:10px; }
+.lead-td-action { text-align:right; }
+.lead-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.3)); border:1px solid rgba(245,158,11,.2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--gold); flex-shrink:0; font-family:var(--serif); }
+.lead-name { font-weight:600; font-size:13px; color:var(--text); }
+.lead-meta { font-size:11px; color:var(--muted); margin-top:2px; }
+.lead-phone { display:flex; align-items:center; gap:5px; font-size:12px; color:#4B5563; font-family:'Courier New',monospace; }
+.lead-city { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); }
+.status-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:99px; font-size:11px; font-weight:600; }
+.status-dot { width:5px; height:5px; border-radius:50%; }
+.unlocked-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:99px; background:#D1FAE5; color:#10B981; font-size:11px; font-weight:600; }
+.buy-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; background:var(--text); border:none; color:#fff; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:500; transition:background .2s; }
+.buy-btn:disabled { opacity:.5; cursor:not-allowed; }
+.buy-btn:not(:disabled):hover { background:#1F2937; }
+.leads-skeleton { padding:16px 22px; }
+.lead-skel-row { height:52px; border-radius:9px; background:linear-gradient(90deg,#f5f5f5 25%,#fafafa 50%,#f5f5f5 75%); background-size:200% 100%; margin-bottom:8px; animation:shimmer 1.5s infinite; }
+.leads-empty { padding:52px 20px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; }
+.leads-empty-title { font-weight:600; font-size:15px; color:var(--text); }
+.leads-empty-sub { font-size:13px; color:var(--muted); max-width:300px; }
+.leads-empty-cta { display:inline-flex; align-items:center; gap:5px; padding:9px 18px; border-radius:9px; background:var(--gold); color:#fff; text-decoration:none; font-weight:600; font-size:13px; margin-top:4px; }
+
+/* Mobile overlay */
+.mobile-overlay { position:fixed; inset:0; z-index:50; display:flex; }
+.mobile-sidebar-wrap { width:var(--sidebar-w); height:100%; flex-shrink:0; }
+.overlay-backdrop { flex:1; background:rgba(0,0,0,.4); }
+
+/* Loading */
+.dash-loading { min-height:100vh; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-family:var(--font); }
+.loading-spinner { width:50px; height:50px; border-radius:14px; background:linear-gradient(135deg,#F59E0B,#FBBF24); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(245,158,11,.35); }
+.loading-text { font-size:14px; color:var(--muted); }
+
+/* Utils */
+.spin { animation:spin-kf 1s linear infinite; }
+@keyframes spin-kf { to { transform:rotate(360deg); } }
+`
