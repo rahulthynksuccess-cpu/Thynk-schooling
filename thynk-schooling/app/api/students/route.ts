@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   await ensure()
   try {
     const userId = getUserId(req)
-    const rows = await db.query(`SELECT * FROM students WHERE parent_id=$1 ORDER BY created_at`, [userId])
+    const rows = await db.query(`SELECT id, parent_id AS "parentId", full_name AS "fullName", full_name, class_level AS "classLevel", class_level, board_preference AS "boardPreference", board_preference, created_at FROM students WHERE parent_id=$1 ORDER BY created_at`, [userId])
     return NextResponse.json(rows.rows)
   } catch { return NextResponse.json([]) }
 }
