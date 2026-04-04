@@ -142,7 +142,7 @@ function StepBar({ step }: { step: number }) {
 /* ── Page ── */
 export default function ParentCompleteProfilePage() {
   const router = useRouter()
-  const { setUser, user } = useAuthStore()
+  const { setUser, user, accessToken, setAccessToken } = useAuthStore()
   const [step, setStep] = useState(0)
   const [dir,  setDir ] = useState(1)
 
@@ -167,9 +167,25 @@ export default function ParentCompleteProfilePage() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      await fetch('/api/parent-profiles',{ method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(parentData) })
-      if (childData.fullName) await fetch('/api/students',{ method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(childData) })
-      if (user) await fetch('/api/auth/complete-profile',{ method:'PUT', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ fullName:parentData.fullName, profileCompleted:true }) })
+      const token = accessToken || localStorage.getItem('ts_access_token') || ''
+      const authHeaders: Record<string,string> = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      }
+      const [profileRes] = await Promise.all([
+        fetch('/api/parent-profiles', { method:'POST', credentials:'include', headers: authHeaders, body:JSON.stringify(parentData) }),
+        childData.fullName ? fetch('/api/students', { method:'POST', credentials:'include', headers: authHeaders, body:JSON.stringify(childData) }) : Promise.resolve(null),
+      ])
+      if (!profileRes.ok) {
+        const err = await profileRes.json().catch(() => ({}))
+        throw new Error(err.message || err.error || 'Failed to save profile')
+      }
+      if (user) {
+        await fetch('/api/auth/complete-profile', {
+          method:'PUT', credentials:'include', headers: authHeaders,
+          body:JSON.stringify({ fullName: parentData.fullName, profileCompleted: true }),
+        })
+      }
     },
     onSuccess: () => {
       if (user) setUser({ ...user, fullName:parentData.fullName, profileCompleted:true })
