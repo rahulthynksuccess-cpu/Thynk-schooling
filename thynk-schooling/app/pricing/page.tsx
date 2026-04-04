@@ -8,15 +8,13 @@ import { Footer } from '@/components/layout/Footer'
 import { Check, ArrowRight, Zap, Star } from 'lucide-react'
 import Link from 'next/link'
 import { LeadPackage } from '@/types'
+import { useContent } from '@/hooks/useContent'
 
-const PLANS=[
-  {name:'Free',price:0,label:'₹0',period:'forever',desc:'Get listed and start receiving leads.',color:'#4A5568',features:['5 lead credits per month','Basic school profile','Up to 5 photos','Standard listing placement','Email support'],cta:'Get Started Free',href:'/register?role=school',hot:false},
-  {name:'Silver',price:2999,label:'₹2,999',period:'/month',desc:'For schools serious about admissions.',color:'#718096',features:['25 lead credits per month','Verified school badge','Unlimited photos & video','Enhanced listing placement','Analytics dashboard','Priority email support'],cta:'Start Silver',href:'/register?role=school&plan=silver',hot:false},
-  {name:'Gold',price:5999,label:'₹5,999',period:'/month',desc:'Most popular — best ROI for growing schools.',color:'#B8860B',features:['75 lead credits per month','Featured school badge','Top placement in search','Full analytics & reports','School profile video','Dedicated account manager','WhatsApp support'],cta:'Start Gold',href:'/register?role=school&plan=gold',hot:true},
-  {name:'Platinum',price:9999,label:'₹9,999',period:'/month',desc:'For chains and premium institutions.',color:'#553C9A',features:['Unlimited lead credits','Top-of-search placement','Homepage featured listing','AI-optimised profile','Multi-branch management','SLA-backed account manager'],cta:'Start Platinum',href:'/register?role=school&plan=platinum',hot:false},
-]
+// ── Plan colours by index / key (fallback palette) ──────────────────────────
+const PLAN_COLORS = ['#4A5568','#718096','#B8860B','#553C9A','#0D6EFD','#198754','#DC3545','#FD7E14']
 
-const FAQ=[
+// ── Default FAQ items (overridden by content controller) ─────────────────────
+const DEFAULT_FAQ=[
   {q:'What is a lead credit?',a:'One lead credit = one parent enquiry. When a parent fills an admission form for your school, you use a credit to unlock their full contact details.'},
   {q:'Can I try before I pay?',a:'Yes! Our Free plan lets you list your school and receive 5 lead credits every month, forever. No credit card required.'},
   {q:'Do credits roll over?',a:'Monthly plan credits do not roll over. However, bulk credit packs you purchase separately never expire.'},
@@ -24,11 +22,37 @@ const FAQ=[
   {q:'Is there a setup fee?',a:'Never. Listing is free, plans are monthly with no lock-in, and you can cancel anytime.'},
 ]
 
+interface SubPlan {
+  id: string; planKey: string; name: string; description: string
+  price: number; leadsPerMonth: number; features: string[]
+  isHot: boolean; cta: string; sortOrder: number; isActive: boolean
+}
+
 export default function PricingPage() {
   const [openFaq,setOpenFaq]=useState<number|null>(null)
+  const pricingContent = useContent('pricing')
+  const {data:subPlans,isLoading:plansLoading}=useQuery<SubPlan[]>({
+    queryKey:['subscription-plans'],
+    queryFn:()=>fetch('/api/admin?action=subscription-plans').then(r=>r.json()),
+    staleTime:5*60*1000,
+  })
   const {data:packages}=useQuery<{data:LeadPackage[]}>({queryKey:['packages'],queryFn:()=>fetch('/api/admin/lead-pricing').then(r=>r.json()),staleTime:5*60*1000})
   const faqRef=useRef(null)
   const faqInView=useInView(faqRef,{once:true})
+
+  const activePlans = (subPlans??[]).filter(p=>p.isActive)
+
+  // Build FAQ from content controller values, falling back to defaults
+  const FAQ = DEFAULT_FAQ.map((def,i)=>({
+    q: pricingContent?.[`faq${i+1}q`] || def.q,
+    a: pricingContent?.[`faq${i+1}a`] || def.a,
+  }))
+
+  const formatPrice = (paise:number) => {
+    if (paise===0) return { label:'₹0', period:'forever' }
+    const rs = Math.round(paise/100)
+    return { label:`₹${rs.toLocaleString('en-IN')}`, period:'/month' }
+  }
 
   return (
     <>
@@ -71,44 +95,55 @@ export default function PricingPage() {
         <section style={{background:'#F5F0E8',padding:'clamp(72px,10vw,120px) 0',position:'relative',overflow:'hidden'}}>
           <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:'"Cormorant Garamond",serif',fontSize:'clamp(150px,22vw,300px)',fontWeight:700,color:'rgba(13,17,23,0.022)',whiteSpace:'nowrap',pointerEvents:'none',userSelect:'none',letterSpacing:'-8px'}}>PLANS</div>
           <div style={{maxWidth:'1600px',margin:'0 auto',padding:'0 clamp(24px,5vw,80px)',position:'relative'}}>
-            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'clamp(12px,2vw,20px)'}} className="grid-3">
-              {PLANS.map((plan,i)=>(
-                <motion.div key={plan.name} initial={{opacity:0,y:40,scale:.94}} whileInView={{opacity:1,y:0,scale:1}} viewport={{once:true,amount:.1}} transition={{delay:i*.1,duration:.65,ease:[.22,1,.36,1]}}>
-                  <div className={`pricing-card${plan.hot?' hot':''}`} style={{height:'100%',display:'flex',flexDirection:'column',position:'relative'}}>
-                    {plan.hot&&(
-                      <div style={{position:'absolute',top:-14,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#B8860B,#E8C547)',color:'#0D1117',fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',padding:'4px 16px',borderRadius:100,whiteSpace:'nowrap',boxShadow:'0 4px 20px rgba(184,134,11,0.4)'}}>
-                        ⚡ Most Popular
-                      </div>
-                    )}
-                    <div style={{marginBottom:24}}>
-                      <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#0D1117',marginBottom:4}}>{plan.name}</div>
-                      <div style={{fontFamily:'Inter,sans-serif',fontSize:12,color:'#718096',fontWeight:300}}>{plan.desc}</div>
-                    </div>
-                    <div style={{marginBottom:28}}>
-                      <span style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.2rem,4vw,3.2rem)',color:plan.hot?'#B8860B':'#0D1117',letterSpacing:'-2px'}}>{plan.label}</span>
-                      <span style={{fontFamily:'Inter,sans-serif',fontSize:13,color:'#A0ADB8',fontWeight:300,marginLeft:4}}>{plan.period}</span>
-                    </div>
-                    <div style={{display:'flex',flexDirection:'column',gap:10,flex:1,marginBottom:28}}>
-                      {plan.features.map(f=>(
-                        <div key={f} style={{display:'flex',alignItems:'flex-start',gap:10,fontFamily:'Inter,sans-serif',fontSize:13,color:'#4A5568',fontWeight:300}}>
-                          <div style={{width:18,height:18,borderRadius:'50%',background:plan.hot?'rgba(184,134,11,0.12)':'rgba(13,17,23,0.06)',border:`1px solid ${plan.hot?'rgba(184,134,11,0.25)':'rgba(13,17,23,0.1)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
-                            <Check style={{width:10,height:10,color:plan.hot?'#B8860B':'#4A5568'}}/>
+            {plansLoading ? (
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))',gap:'clamp(12px,2vw,20px)'}}>
+                {Array.from({length:4}).map((_,i)=>(
+                  <div key={i} style={{height:480,borderRadius:16,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s infinite'}}/>
+                ))}
+              </div>
+            ) : (
+              <div style={{display:'grid',gridTemplateColumns:`repeat(${Math.min(activePlans.length||4,4)},1fr)`,gap:'clamp(12px,2vw,20px)'}} className="grid-3">
+                {activePlans.map((plan,i)=>{
+                  const {label,period}=formatPrice(plan.price)
+                  return (
+                    <motion.div key={plan.id} initial={{opacity:0,y:40,scale:.94}} whileInView={{opacity:1,y:0,scale:1}} viewport={{once:true,amount:.1}} transition={{delay:i*.1,duration:.65,ease:[.22,1,.36,1]}}>
+                      <div className={`pricing-card${plan.isHot?' hot':''}`} style={{height:'100%',display:'flex',flexDirection:'column',position:'relative'}}>
+                        {plan.isHot&&(
+                          <div style={{position:'absolute',top:-14,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#B8860B,#E8C547)',color:'#0D1117',fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',padding:'4px 16px',borderRadius:100,whiteSpace:'nowrap',boxShadow:'0 4px 20px rgba(184,134,11,0.4)'}}>
+                            ⚡ Most Popular
                           </div>
-                          {f}
+                        )}
+                        <div style={{marginBottom:24}}>
+                          <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#0D1117',marginBottom:4}}>{plan.name}</div>
+                          <div style={{fontFamily:'Inter,sans-serif',fontSize:12,color:'#718096',fontWeight:300}}>{plan.description}</div>
                         </div>
-                      ))}
-                    </div>
-                    <Link href={plan.href} className={plan.hot?'btn btn-gold':'btn btn-dark'} style={{textAlign:'center',justifyContent:'center',display:'flex'}}>
-                      {plan.cta} <ArrowRight style={{width:14,height:14}}/>
-                    </Link>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+                        <div style={{marginBottom:28}}>
+                          <span style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.2rem,4vw,3.2rem)',color:plan.isHot?'#B8860B':'#0D1117',letterSpacing:'-2px'}}>{label}</span>
+                          <span style={{fontFamily:'Inter,sans-serif',fontSize:13,color:'#A0ADB8',fontWeight:300,marginLeft:4}}>{period}</span>
+                        </div>
+                        <div style={{display:'flex',flexDirection:'column',gap:10,flex:1,marginBottom:28}}>
+                          {plan.features.map(f=>(
+                            <div key={f} style={{display:'flex',alignItems:'flex-start',gap:10,fontFamily:'Inter,sans-serif',fontSize:13,color:'#4A5568',fontWeight:300}}>
+                              <div style={{width:18,height:18,borderRadius:'50%',background:plan.isHot?'rgba(184,134,11,0.12)':'rgba(13,17,23,0.06)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.25)':'rgba(13,17,23,0.1)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
+                                <Check style={{width:10,height:10,color:plan.isHot?'#B8860B':'#4A5568'}}/>
+                              </div>
+                              {f}
+                            </div>
+                          ))}
+                        </div>
+                        <Link href={`/register?role=school&plan=${plan.planKey}`} className={plan.isHot?'btn btn-gold':'btn btn-dark'} style={{textAlign:'center',justifyContent:'center',display:'flex'}}>
+                          {plan.cta} <ArrowRight style={{width:14,height:14}}/>
+                        </Link>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </section>
 
-        {/* ── CREDIT PACKS ── */}
+                {/* ── CREDIT PACKS ── */}
         {(packages?.data?.length??0)>0&&(
           <section style={{background:'#FDFAF5',padding:'clamp(72px,10vw,120px) 0'}}>
             <div style={{maxWidth:'1600px',margin:'0 auto',padding:'0 clamp(24px,5vw,80px)'}}>
@@ -117,7 +152,7 @@ export default function PricingPage() {
                 <h2 className="section-title">Buy <em className="shimmer-text" style={{fontStyle:'italic'}}>Lead Credits</em> in Bulk</h2>
                 <p className="section-sub" style={{maxWidth:480,margin:'16px auto 0'}}>Credits never expire. Combine with any plan.</p>
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'clamp(10px,1.5vw,16px)'}} className="grid-3">
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'clamp(10px,1.5vw,16px)'}} className="grid-3">
                 {packages!.data.map((p,i)=>(
                   <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:i*.08,duration:.55,ease:[.22,1,.36,1]}}
                     className="card hover-lift" style={{padding:'clamp(20px,3vw,32px)',textAlign:'center'}}>

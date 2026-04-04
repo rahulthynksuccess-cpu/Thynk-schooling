@@ -162,9 +162,9 @@ export default function LeadPackagesPage() {
       </div>
 
       {/* Package grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'14px' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'14px' }}>
         {isLoading
-          ? Array.from({ length:4 }).map((_,i) => (
+          ? Array.from({ length:5 }).map((_,i) => (
               <div key={i} style={{ ...card, height:'220px', animation:'pulse 1.5s infinite' }} />
             ))
           : (packages ?? []).map((pkg, i) => (

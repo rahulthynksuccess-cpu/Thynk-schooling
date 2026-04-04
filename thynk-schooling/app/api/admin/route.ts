@@ -345,6 +345,103 @@ async function saveContent(req: NextRequest) {
   return Response.json({ message: 'Saved' })
 }
 
+// ─── subscription plans ───────────────────────────────────────────────────────
+const DEFAULT_SUB_PLANS = [
+  { name:'Free',    price_paise:0,     description:'Get listed and start receiving leads.',          features:['5 lead credits per month','Basic school profile','Up to 5 photos','Standard listing placement','Email support'],                                                                                  leads_per_month:5,   is_hot:false, cta:'Get Started Free', plan_key:'free' },
+  { name:'Silver',  price_paise:299900,description:'For schools serious about admissions.',          features:['25 lead credits per month','Verified school badge','Unlimited photos & video','Enhanced listing placement','Analytics dashboard','Priority email support'],                                    leads_per_month:25,  is_hot:false, cta:'Start Silver',     plan_key:'silver' },
+  { name:'Gold',    price_paise:599900,description:'Most popular — best ROI for growing schools.',   features:['75 lead credits per month','Featured school badge','Top placement in search','Full analytics & reports','School profile video','Dedicated account manager','WhatsApp support'],                leads_per_month:75,  is_hot:true,  cta:'Start Gold',       plan_key:'gold' },
+  { name:'Platinum',price_paise:999900,description:'For chains and premium institutions.',           features:['Unlimited lead credits','Top-of-search placement','Homepage featured listing','AI-optimised profile','Multi-branch management','SLA-backed account manager'],                                  leads_per_month:-1,  is_hot:false, cta:'Start Platinum',   plan_key:'platinum' },
+]
+
+async function ensureSubPlansTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS subscription_plans (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      plan_key      VARCHAR(50) NOT NULL UNIQUE,
+      name          VARCHAR(200) NOT NULL,
+      description   TEXT,
+      price_paise   INTEGER NOT NULL DEFAULT 0,
+      leads_per_month INTEGER NOT NULL DEFAULT 0,
+      features      TEXT NOT NULL DEFAULT '[]',
+      is_hot        BOOLEAN DEFAULT false,
+      cta           VARCHAR(200) NOT NULL DEFAULT 'Get Started',
+      sort_order    INTEGER NOT NULL DEFAULT 0,
+      is_active     BOOLEAN DEFAULT true,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+  const count = await db.query('SELECT COUNT(*) FROM subscription_plans').catch(() => ({ rows:[{ count:'0' }] }))
+  if (parseInt(count.rows[0].count) === 0) {
+    for (let i = 0; i < DEFAULT_SUB_PLANS.length; i++) {
+      const p = DEFAULT_SUB_PLANS[i]
+      await db.query(
+        `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (plan_key) DO NOTHING`,
+        [p.plan_key, p.name, p.description, p.price_paise, p.leads_per_month, JSON.stringify(p.features), p.is_hot, p.cta, i]
+      ).catch(() => {})
+    }
+  }
+}
+
+function toSubPlan(row: any) {
+  let features: string[] = []
+  try { features = JSON.parse(row.features) } catch { features = [] }
+  return {
+    id: row.id, planKey: row.plan_key, name: row.name, description: row.description || '',
+    price: row.price_paise, leadsPerMonth: row.leads_per_month,
+    features, isHot: row.is_hot, cta: row.cta, sortOrder: row.sort_order, isActive: row.is_active,
+  }
+}
+
+async function getSubPlans() {
+  await ensureSubPlansTable()
+  const rows = await db.query('SELECT * FROM subscription_plans ORDER BY sort_order ASC, price_paise ASC')
+  return NextResponse.json(rows.rows.map(toSubPlan))
+}
+
+async function saveSubPlan(req: NextRequest) {
+  await ensureSubPlansTable()
+  const body = await req.json()
+  const { planKey, name, description, price, leadsPerMonth, features, isHot, cta, sortOrder, isActive } = body
+  if (!planKey || !name) return NextResponse.json({ error: 'planKey and name are required' }, { status: 400 })
+  const res = await db.query(
+    `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order,is_active)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     ON CONFLICT (plan_key) DO UPDATE SET
+       name=$2, description=$3, price_paise=$4, leads_per_month=$5,
+       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10
+     RETURNING *`,
+    [planKey, name, description||'', price??0, leadsPerMonth??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true]
+  )
+  return NextResponse.json(toSubPlan(res.rows[0]))
+}
+
+async function updateSubPlan(req: NextRequest) {
+  await ensureSubPlansTable()
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const body = await req.json()
+  const sets: string[] = []; const params: any[] = []
+  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadsPerMonth:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active' }
+  for (const [k, col] of Object.entries(map)) {
+    if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
+  }
+  if (body.features !== undefined) { params.push(JSON.stringify(body.features)); sets.push(`features=$${params.length}`) }
+  if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+  params.push(id)
+  const res = await db.query(`UPDATE subscription_plans SET ${sets.join(',')} WHERE id=$${params.length} RETURNING *`, params)
+  if (!res.rows.length) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+  return NextResponse.json(toSubPlan(res.rows[0]))
+}
+
+async function deleteSubPlan(req: NextRequest) {
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  await db.query('DELETE FROM subscription_plans WHERE id=$1', [id])
+  return NextResponse.json({ success: true })
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const THEME_DEFAULTS = { containerWidth:1600, ivory:'#FAF7F2', ivory2:'#F5F0E8', ivory3:'#EDE5D8', ink:'#0D1117', ink2:'#1C2333', inkMuted:'#4A5568', inkFaint:'#A0ADB8', gold:'#B8860B', gold2:'#C9960D', goldLight:'#E8C547', goldWash:'#FEF7E0' }
 
 async function getTheme() {
@@ -549,6 +646,7 @@ export async function GET(req: NextRequest) {
       case 'media':                 return await getMedia()
       case 'cities':                return await getCities()
       case 'lead-pricing-defaults': return await getLeadPricingDefaults()
+      case 'subscription-plans':    return await getSubPlans()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
@@ -568,6 +666,7 @@ export async function POST(req: NextRequest) {
       case 'cities':         return await saveCities(req)
       case 'notifications':  return await sendNotification(req)
       case 'seed-demo':      return await seedDemo()
+      case 'subscription-plans': return await saveSubPlan(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -583,6 +682,7 @@ export async function PUT(req: NextRequest) {
       case 'reviews':               return await updateAdminReview(req)
       case 'counselling':           return await updateAdminCounselling(req)
       case 'lead-pricing-defaults': return await saveLeadPricingDefaults(req)
+      case 'subscription-plans':    return await updateSubPlan(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin PUT:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -594,6 +694,7 @@ export async function DELETE(req: NextRequest) {
     switch (action) {
       case 'reviews': return await deleteAdminReview(req)
       case 'cities':  return await deleteCity(req)
+      case 'subscription-plans': return await deleteSubPlan(req)
       case 'theme':
         await db.query("DELETE FROM site_settings WHERE key='theme'").catch(() => {})
         return NextResponse.json({ success: true })

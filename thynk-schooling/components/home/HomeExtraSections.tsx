@@ -1,5 +1,5 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, useInView } from 'framer-motion'
 import { MapPin, ArrowRight, Star, BookOpen, CheckCircle2, TrendingUp, Shield, Zap } from 'lucide-react'
@@ -240,11 +240,22 @@ export function CounsellingCTA() {
 export function ForSchoolsCTA() {
   const ref=useRef(null)
   const inView=useInView(ref,{once:true,amount:.15})
-  const PLANS=[
-    {name:'Free',price:'₹0',leads:'5 leads/mo',hot:false,sub:'Basic profile · 5 images'},
-    {name:'Silver',price:'₹2,999',leads:'25 leads/mo',hot:false,sub:'Verified badge · Analytics'},
-    {name:'Gold',price:'₹5,999',leads:'75 leads/mo',hot:true,sub:'Featured listing · Priority'},
-    {name:'Platinum',price:'₹9,999',leads:'Unlimited',hot:false,sub:'Top placement · Manager'},
+  const [plans,setPlans]=useState<{id:string,name:string,price:number,leadsPerMonth:number,isHot:boolean,description:string}[]>([])
+  useEffect(()=>{
+    fetch('/api/admin?action=subscription-plans')
+      .then(r=>r.json())
+      .then((data:any[])=>{
+        const active=data.filter((p:any)=>p.isActive).slice(0,4)
+        setPlans(active)
+      })
+      .catch(()=>{})
+  },[])
+  // fallback while loading
+  const displayPlans = plans.length>0 ? plans : [
+    {id:'f',name:'Free',    price:0,     leadsPerMonth:5,  isHot:false,description:'Basic profile · 5 images'},
+    {id:'s',name:'Silver',  price:299900,leadsPerMonth:25, isHot:false,description:'Verified badge · Analytics'},
+    {id:'g',name:'Gold',    price:599900,leadsPerMonth:75, isHot:true, description:'Featured listing · Priority'},
+    {id:'p',name:'Platinum',price:999900,leadsPerMonth:-1, isHot:false,description:'Top placement · Manager'},
   ]
   const PERKS=[
     {icon:<Shield style={{width:15,height:15}}/>,t:'Free school listing — no upfront cost ever'},
@@ -283,22 +294,26 @@ export function ForSchoolsCTA() {
           </motion.div>
           <motion.div initial={{opacity:0,x:28}} animate={inView?{opacity:1,x:0}:{}} transition={{duration:.7,delay:.1,ease:[.22,1,.36,1]}} style={{display:'flex',flexDirection:'column',gap:'clamp(10px,1.5vw,14px)'}}>
             <div style={{fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',color:'#B8860B',marginBottom:4}}>Pricing Plans</div>
-            {PLANS.map((p,i)=>(
-              <motion.div key={p.name} initial={{opacity:0,x:16}} animate={inView?{opacity:1,x:0}:{}} transition={{delay:.1+i*.07,duration:.5}}
-                style={{background:p.hot?'linear-gradient(135deg,#FDFAF0,#FEF7E0)':'#fff',border:p.hot?'1.5px solid rgba(184,134,11,0.3)':'1.5px solid rgba(13,17,23,0.07)',borderRadius:14,padding:'clamp(14px,2vw,20px) clamp(16px,2vw,24px)',display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:p.hot?'0 4px 24px rgba(184,134,11,0.12)':'none',transition:'all .22s cubic-bezier(.22,1,.36,1)',position:'relative',cursor:'default'}}
-                onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.transform='translateX(4px)';el.style.boxShadow=`0 8px 32px rgba(184,134,11,${p.hot?.18:.08})`}}
-                onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.transform='';el.style.boxShadow=p.hot?'0 4px 24px rgba(184,134,11,0.12)':'none'}}>
-                {p.hot&&<div style={{position:'absolute',top:'-11px',right:16,background:'linear-gradient(135deg,#B8860B,#C9960D)',color:'#fff',fontFamily:'Inter,sans-serif',fontSize:9,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',padding:'3px 10px',borderRadius:100,boxShadow:'0 2px 8px rgba(184,134,11,0.3)'}}>Most Popular</div>}
+            {displayPlans.map((p,i)=>{
+              const priceLabel = p.price===0 ? '₹0' : `₹${Math.round(p.price/100).toLocaleString('en-IN')}`
+              const leadsLabel = p.leadsPerMonth===-1 ? 'Unlimited' : `${p.leadsPerMonth} leads/mo`
+              return (
+              <motion.div key={p.id} initial={{opacity:0,x:16}} animate={inView?{opacity:1,x:0}:{}} transition={{delay:.1+i*.07,duration:.5}}
+                style={{background:p.isHot?'linear-gradient(135deg,#FDFAF0,#FEF7E0)':'#fff',border:p.isHot?'1.5px solid rgba(184,134,11,0.3)':'1.5px solid rgba(13,17,23,0.07)',borderRadius:14,padding:'clamp(14px,2vw,20px) clamp(16px,2vw,24px)',display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:p.isHot?'0 4px 24px rgba(184,134,11,0.12)':'none',transition:'all .22s cubic-bezier(.22,1,.36,1)',position:'relative',cursor:'default'}}
+                onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.transform='translateX(4px)';el.style.boxShadow=`0 8px 32px rgba(184,134,11,${p.isHot?.18:.08})`}}
+                onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.transform='';el.style.boxShadow=p.isHot?'0 4px 24px rgba(184,134,11,0.12)':'none'}}>
+                {p.isHot&&<div style={{position:'absolute',top:'-11px',right:16,background:'linear-gradient(135deg,#B8860B,#C9960D)',color:'#fff',fontFamily:'Inter,sans-serif',fontSize:9,fontWeight:700,letterSpacing:'.1em',textTransform:'uppercase',padding:'3px 10px',borderRadius:100,boxShadow:'0 2px 8px rgba(184,134,11,0.3)'}}>Most Popular</div>}
                 <div>
                   <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(15px,1.6vw,18px)',color:'#0D1117',marginBottom:3}}>{p.name}</div>
-                  <div style={{fontFamily:'Inter,sans-serif',fontSize:11,color:'#A0ADB8'}}>{p.sub} · {p.leads}</div>
+                  <div style={{fontFamily:'Inter,sans-serif',fontSize:11,color:'#A0ADB8'}}>{p.description} · {leadsLabel}</div>
                 </div>
                 <div style={{textAlign:'right'}}>
-                  <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(16px,1.8vw,22px)',color:p.hot?'#B8860B':'#0D1117'}}>{p.price}</div>
-                  <div style={{fontFamily:'Inter,sans-serif',fontSize:10,color:'#A0ADB8'}}>/month</div>
+                  <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(16px,1.8vw,22px)',color:p.isHot?'#B8860B':'#0D1117'}}>{priceLabel}</div>
+                  <div style={{fontFamily:'Inter,sans-serif',fontSize:10,color:'#A0ADB8'}}>{p.price===0?'forever':'/month'}</div>
                 </div>
               </motion.div>
-            ))}
+              )
+            })}            ))}
             <Link href="/pricing" style={{alignSelf:'flex-start',display:'inline-flex',alignItems:'center',gap:8,fontFamily:'Inter,sans-serif',fontSize:13,fontWeight:600,color:'#B8860B',textDecoration:'none',padding:'10px 18px',border:'1.5px solid rgba(184,134,11,0.3)',borderRadius:9,transition:'all .22s',marginTop:4}}
               onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background='#B8860B';el.style.color='#fff'}}
               onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background='transparent';el.style.color='#B8860B'}}>
