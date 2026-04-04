@@ -168,10 +168,17 @@ export default function AdminDropdownPage() {
   const fetchValues = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/dropdowns/${activeKey}`)
+      const res = await fetch(`/api/settings/dropdown?category=${activeKey}&includeInactive=true`)
       if (!res.ok) throw new Error('Failed')
       const data = await res.json()
-      setValues(data.values || [])
+      const opts = data.options || []
+      setValues(opts.map((o: any) => ({
+        id: o.id,
+        name: o.label,
+        slug: o.value,
+        active: o.isActive ?? true,
+        sortOrder: o.sortOrder,
+      })))
     } catch {
       setValues([])
     } finally {
@@ -187,17 +194,15 @@ export default function AdminDropdownPage() {
   }, [activeKey, fetchValues])
 
   const handleToggle = async (id: string, current: boolean) => {
-    // Optimistic update
     setValues((prev) => prev.map((v) => v.id === id ? { ...v, active: !current } : v))
     try {
-      await fetch(`/api/admin/dropdowns/${activeKey}/${id}`, {
-        method: 'PATCH',
+      await fetch(`/api/settings/dropdown?id=${id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !current }),
+        body: JSON.stringify({ isActive: !current }),
       })
       showToast(`Value ${!current ? 'activated' : 'deactivated'}`)
     } catch {
-      // Revert on error
       setValues((prev) => prev.map((v) => v.id === id ? { ...v, active: current } : v))
       showToast('Failed to update', 'error')
     }
@@ -205,14 +210,14 @@ export default function AdminDropdownPage() {
 
   const handleEdit = async (id: string, name: string) => {
     if (!name.trim()) return
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '_')
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '')
     setValues((prev) => prev.map((v) => v.id === id ? { ...v, name, slug } : v))
     setEditingId(null)
     try {
-      await fetch(`/api/admin/dropdowns/${activeKey}/${id}`, {
-        method: 'PATCH',
+      await fetch(`/api/settings/dropdown?id=${id}`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ label: name }),
       })
       showToast('Value updated')
     } catch {
@@ -225,7 +230,7 @@ export default function AdminDropdownPage() {
     if (!confirm('Delete this dropdown value? This cannot be undone.')) return
     setValues((prev) => prev.filter((v) => v.id !== id))
     try {
-      await fetch(`/api/admin/dropdowns/${activeKey}/${id}`, { method: 'DELETE' })
+      await fetch(`/api/settings/dropdown?id=${id}`, { method: 'DELETE' })
       showToast('Value deleted')
     } catch {
       showToast('Failed to delete', 'error')
@@ -236,17 +241,25 @@ export default function AdminDropdownPage() {
   const handleAdd = async (name: string) => {
     setAddingNew(false)
     const tempId = `temp-${Date.now()}`
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '_') + '_'
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/(^_|_$)/g, '') 
     const optimistic: DropdownValue = { id: tempId, name, slug, active: true, sortOrder: values.length + 1 }
     setValues((prev) => [...prev, optimistic])
     try {
-      const res = await fetch(`/api/admin/dropdowns/${activeKey}`, {
+      const res = await fetch(`/api/settings/dropdown`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ category: activeKey, label: name, value: slug }),
       })
       const data = await res.json()
-      setValues((prev) => prev.map((v) => v.id === tempId ? data.value : v))
+      const added = data.option || data.value
+      if (added) {
+        setValues((prev) => prev.map((v) => v.id === tempId ? {
+          id: added.id, name: added.label, slug: added.value,
+          active: added.isActive ?? true, sortOrder: added.sortOrder
+        } : v))
+      } else {
+        fetchValues()
+      }
       showToast('Value added')
     } catch {
       setValues((prev) => prev.filter((v) => v.id !== tempId))
@@ -258,7 +271,7 @@ export default function AdminDropdownPage() {
     if (!confirm('This will seed default values for all categories. Existing values will not be overwritten. Continue?')) return
     setSeeding(true)
     try {
-      await fetch('/api/admin/dropdowns/seed', { method: 'POST' })
+      await fetch('/api/settings/dropdown/seed', { method: 'POST' })
       showToast('Default values seeded successfully')
       fetchValues()
     } catch {
