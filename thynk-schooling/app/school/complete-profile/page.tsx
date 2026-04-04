@@ -1,108 +1,375 @@
 'use client'
 export const dynamic = 'force-dynamic'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  GraduationCap, ArrowRight, ArrowLeft, Save, Loader2, Upload,
-  MapPin, Phone, Mail, Globe, DollarSign, Users, BookOpen,
-  CheckCircle2, X, School, Building2, Trophy, Languages,
-  Music, Dumbbell, FlaskConical, Check
+  GraduationCap, ArrowRight, ArrowLeft, Save, Loader2,
+  Upload, MapPin, Phone, Mail, Globe, DollarSign,
+  School, Building2, CheckCircle2, X, Star,
 } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
-/* ── design tokens (matches site globals) ── */
-const C = {
-  bg:     '#FAF7F2',
-  card:   '#FFFFFF',
-  bdr:    'rgba(13,17,23,0.1)',
-  ink:    '#0D1117',
-  muted:  '#718096',
-  faint:  '#A0ADB8',
-  gold:   '#B8860B',
-  goldBg: '#FEF7E0',
-  serif:  "'Cormorant Garamond',Georgia,serif",
-  sans:   "'Inter',system-ui,sans-serif",
+/* ── Types ───────────────────────────────────────────────────── */
+type FD = Record<string, string | string[] | number | boolean>
+interface AmenityOption {
+  id: string; category: string; label: string; value: string; icon?: string
 }
 
-const inp: React.CSSProperties = {
-  width: '100%', padding: '10px 14px',
-  border: `1.5px solid ${C.bdr}`, borderRadius: 10,
-  fontSize: 13, fontFamily: C.sans, color: C.ink,
-  background: C.card, outline: 'none', boxSizing: 'border-box' as const,
-  transition: 'border-color .18s, box-shadow .18s',
-}
-const inpFocus: React.CSSProperties = { borderColor: C.gold, boxShadow: `0 0 0 3px rgba(184,134,11,0.1)` }
-const lbl: React.CSSProperties = {
-  display: 'block', fontSize: 10.5, fontWeight: 700,
-  letterSpacing: '.08em', textTransform: 'uppercase' as const,
-  color: C.faint, marginBottom: 5, fontFamily: C.sans,
-}
-
+/* ── Steps ───────────────────────────────────────────────────── */
 const STEPS = [
-  { label: 'Basic Info',        short: 'Basics',   icon: School },
-  { label: 'Type & Board',      short: 'Type',     icon: GraduationCap },
-  { label: 'Classes & Fees',    short: 'Fees',     icon: DollarSign },
-  { label: 'Facilities',        short: 'Facilities',icon: Building2 },
-  { label: 'Location',          short: 'Location', icon: MapPin },
-  { label: 'Contact & Media',   short: 'Contact',  icon: Phone },
+  { label: 'Basic Info',      sub: 'Name, tagline & description',      icon: School },
+  { label: 'Type & Board',    sub: 'School type, boards & policies',    icon: GraduationCap },
+  { label: 'Classes & Fees',  sub: 'Class range, fees & admission',     icon: DollarSign },
+  { label: 'Features',        sub: 'Facilities, sports & activities',   icon: Star },
+  { label: 'Location',        sub: 'Address & GPS coordinates',         icon: MapPin },
+  { label: 'Contact & Media', sub: 'Phone, email & photos',             icon: Phone },
 ]
 
-type FD = Record<string, string | string[] | number | boolean>
+const AMENITY_TABS = [
+  { key: 'facility',        label: 'Facilities' },
+  { key: 'sport',           label: 'Sports' },
+  { key: 'language',        label: 'Languages' },
+  { key: 'infrastructure',  label: 'Infrastructure' },
+  { key: 'extracurricular', label: 'Extracurricular' },
+]
 
-const MAX_MB = 2
-const MAX_BYTES = MAX_MB * 1024 * 1024
-const IMG_TYPES = ['image/jpeg','image/png','image/webp']
+const MAX_BYTES = 1 * 1024 * 1024
+const IMG_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
+/* ── Inline CSS (scoped with sp- prefix) ─────────────────────── */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,600&family=Instrument+Sans:wght@400;500;600&display=swap');
+.sp *{box-sizing:border-box;margin:0;padding:0}
+.sp{
+  --cream:#F7F3ED;--cream2:#EFE9DF;--ink:#1C1814;--rust:#C84B1F;--rust2:#E05A2A;
+  --muted:#7A6E65;--ghost:#B5ADA6;--bdr:#DDD5C8;--white:#FFFFFF;
+  --serif:'Fraunces',Georgia,serif;--sans:'Instrument Sans',system-ui,sans-serif;
+  font-family:var(--sans);background:var(--cream);color:var(--ink);
+  display:flex;min-height:100vh;
+}
+/* Sidebar */
+.sp-sidebar{width:280px;flex-shrink:0;background:var(--ink);position:sticky;top:0;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.sp-sb-brand{padding:28px 24px 22px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sp-sb-icon{width:38px;height:38px;background:var(--rust);border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sp-sb-name{font-family:var(--serif);font-size:18px;color:#fff;font-weight:600}
+.sp-sb-name span{color:var(--rust2)}
+.sp-sb-steps{flex:1;padding:16px 0;overflow-y:auto;scrollbar-width:none}
+.sp-sb-steps::-webkit-scrollbar{display:none}
+.sp-sb-step{display:flex;align-items:center;gap:12px;padding:11px 24px;position:relative;transition:background .2s}
+.sp-sb-step.active{background:rgba(255,255,255,.07)}
+.sp-sb-step.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rust2);border-radius:0 2px 2px 0}
+.sp-sb-num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0;transition:all .25s}
+.sp-sb-step.done .sp-sb-num{background:rgba(200,75,31,.25);color:var(--rust2)}
+.sp-sb-step.active .sp-sb-num{background:var(--rust);color:#fff}
+.sp-sb-step.todo .sp-sb-num{background:rgba(255,255,255,.06);color:rgba(255,255,255,.25)}
+.sp-sb-label{font-size:13px;font-weight:600;line-height:1.2}
+.sp-sb-step.active .sp-sb-label{color:#fff}
+.sp-sb-step.done .sp-sb-label{color:rgba(255,255,255,.6)}
+.sp-sb-step.todo .sp-sb-label{color:rgba(255,255,255,.28)}
+.sp-sb-sub{font-size:11px;margin-top:1px}
+.sp-sb-step.active .sp-sb-sub{color:rgba(255,255,255,.4)}
+.sp-sb-step.done .sp-sb-sub{color:rgba(255,255,255,.22)}
+.sp-sb-step.todo .sp-sb-sub{color:rgba(255,255,255,.15)}
+.sp-sb-prog{padding:18px 24px 24px;border-top:1px solid rgba(255,255,255,.08)}
+.sp-sb-prog-meta{display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.3);margin-bottom:8px}
+.sp-sb-prog-meta span{color:var(--rust2);font-weight:700}
+.sp-sb-track{height:3px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden}
+.sp-sb-fill{height:100%;background:linear-gradient(90deg,var(--rust),var(--rust2));border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1)}
+/* Main */
+.sp-main{flex:1;overflow-y:auto;max-height:100vh}
+.sp-main-inner{padding:48px 56px;max-width:680px}
+.sp-eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--rust);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sp-eyebrow::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bdr),transparent)}
+.sp-title{font-family:var(--serif);font-size:38px;color:var(--ink);line-height:1.1;font-weight:600;margin-bottom:8px}
+.sp-title em{font-style:italic;color:var(--rust)}
+.sp-desc{font-size:14px;color:var(--muted);margin-bottom:36px;line-height:1.6;max-width:500px}
+/* Fields */
+.sp-field{margin-bottom:20px}
+.sp-lbl{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ghost);margin-bottom:7px}
+.sp-req{color:var(--rust)}
+.sp-inp,.sp-sel,.sp-ta{width:100%;padding:12px 16px;border:1.5px solid var(--bdr);border-radius:12px;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--white);outline:none;transition:border .18s,box-shadow .18s;appearance:none}
+.sp-inp:focus,.sp-sel:focus,.sp-ta:focus{border-color:var(--rust);box-shadow:0 0 0 3px rgba(200,75,31,.12)}
+.sp-inp::placeholder,.sp-ta::placeholder{color:var(--ghost)}
+.sp-ta{resize:none;line-height:1.65}
+.sp-sel-wrap{position:relative}
+.sp-sel-wrap::after{content:'▾';position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--ghost);pointer-events:none;font-size:12px}
+.sp-sel{cursor:pointer;padding-right:36px}
+.sp-with-icon{position:relative}
+.sp-with-icon .sp-inp{padding-left:40px}
+.sp-fi{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--ghost);pointer-events:none;display:flex}
+.sp-pfx{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-weight:600;color:var(--muted);font-size:14px;pointer-events:none}
+.sp-pfx-inp{padding-left:26px !important}
+.sp-g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* Chips */
+.sp-chip-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:14px;background:var(--cream);border:1.5px solid var(--bdr);border-radius:12px;min-height:52px}
+.sp-chip{padding:7px 14px;border-radius:99px;font-size:12px;font-weight:600;border:1.5px solid var(--bdr);color:var(--muted);cursor:pointer;transition:all .15s;background:var(--white);font-family:var(--sans)}
+.sp-chip:hover{border-color:var(--rust);color:var(--rust);background:rgba(200,75,31,.05)}
+.sp-chip.on{background:rgba(200,75,31,.1);border-color:var(--rust);color:var(--rust)}
+.sp-no-opts{font-size:12px;color:var(--ghost);font-style:italic}
+/* Toggle */
+.sp-tog-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--cream);border:1.5px solid var(--bdr);border-radius:12px}
+.sp-tog-label{font-size:14px;font-weight:500;color:var(--ink)}
+.sp-tog{position:relative;width:44px;height:25px;cursor:pointer;flex-shrink:0}
+.sp-tog input{opacity:0;width:0;height:0}
+.sp-sl{position:absolute;inset:0;background:var(--bdr);border-radius:99px;transition:.25s}
+.sp-sl:before{content:'';position:absolute;width:19px;height:19px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.sp-tog input:checked+.sp-sl{background:var(--rust)}
+.sp-tog input:checked+.sp-sl:before{transform:translateX(19px)}
+/* Amenity */
+.sp-a-nav{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-bottom:16px;padding-bottom:2px}
+.sp-a-nav::-webkit-scrollbar{display:none}
+.sp-a-tab{padding:8px 16px;border-radius:10px;font-size:12px;font-weight:600;border:1.5px solid var(--bdr);cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .18s;font-family:var(--sans);background:var(--white);color:var(--muted)}
+.sp-a-tab:hover{border-color:var(--rust);color:var(--rust)}
+.sp-a-tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.sp-a-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:8px}
+.sp-a-chip{display:flex;align-items:center;gap:8px;padding:10px 13px;border:1.5px solid var(--bdr);border-radius:11px;cursor:pointer;transition:all .15s;background:var(--white);font-size:13px;font-weight:500;color:var(--muted);font-family:var(--sans);width:100%;text-align:left}
+.sp-a-chip:hover{border-color:var(--rust);background:rgba(200,75,31,.04);color:var(--rust)}
+.sp-a-chip.on{background:rgba(200,75,31,.08);border-color:var(--rust);color:var(--rust);font-weight:600}
+.sp-a-icon{font-size:17px;flex-shrink:0}
+.sp-a-check{margin-left:auto;flex-shrink:0;color:var(--rust)}
+.sp-a-count{font-size:12px;color:var(--rust);font-weight:600;margin-top:12px}
+.sp-a-empty{font-size:13px;color:var(--ghost);padding:24px;text-align:center;background:var(--cream);border:1.5px dashed var(--bdr);border-radius:12px}
+/* Upload */
+.sp-upload{border:2px dashed var(--bdr);border-radius:14px;padding:26px;text-align:center;cursor:pointer;transition:border .2s,background .2s;display:block}
+.sp-upload:hover{border-color:var(--rust);background:rgba(200,75,31,.03)}
+.sp-upload-icon{width:46px;height:46px;background:rgba(200,75,31,.1);border-radius:13px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.sp-upload-text{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px}
+.sp-upload-hint{font-size:11px;color:var(--ghost)}
+.sp-file-prev{display:flex;align-items:center;gap:12px;padding:12px 14px;background:rgba(200,75,31,.06);border:1.5px solid rgba(200,75,31,.25);border-radius:12px}
+.sp-file-thumb{width:44px;height:44px;border-radius:9px;object-fit:cover;flex-shrink:0}
+.sp-file-name{font-size:13px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp-file-size{font-size:11px;color:var(--ghost)}
+/* Divider */
+.sp-divider{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ghost);margin:24px 0 16px;display:flex;align-items:center;gap:10px}
+.sp-divider::after{content:'';flex:1;height:1px;background:var(--bdr)}
+/* Info box */
+.sp-info{padding:14px 16px;background:linear-gradient(135deg,rgba(200,75,31,.08),rgba(200,75,31,.04));border:1.5px solid rgba(200,75,31,.2);border-radius:12px;font-size:13px;color:var(--muted);line-height:1.6}
+/* Nav */
+.sp-nav{position:sticky;bottom:0;background:rgba(247,243,237,.96);backdrop-filter:blur(12px);border-top:1px solid var(--bdr);padding:16px 56px;display:flex;gap:12px;margin:0 -56px}
+.sp-btn-back{padding:12px 22px;border-radius:12px;border:1.5px solid var(--bdr);background:transparent;font-family:var(--sans);font-size:14px;font-weight:600;color:var(--muted);cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .18s}
+.sp-btn-back:hover:not(:disabled){border-color:var(--ink);color:var(--ink)}
+.sp-btn-back:disabled{opacity:.3;cursor:default}
+.sp-btn-next{flex:1;padding:13px 24px;border-radius:12px;border:none;background:var(--ink);font-family:var(--sans);font-size:14px;font-weight:600;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;box-shadow:0 4px 16px rgba(28,24,20,.18)}
+.sp-btn-next:hover:not(:disabled){background:var(--rust);transform:translateY(-1px);box-shadow:0 6px 20px rgba(200,75,31,.3)}
+.sp-btn-next:disabled{opacity:.5;cursor:default;transform:none}
+.sp-note{font-size:12px;color:var(--ghost);line-height:1.5;margin-top:6px}
+@keyframes sp-spin{to{transform:rotate(360deg)}}
+@media(max-width:700px){
+  .sp-sidebar{display:none}
+  .sp-main-inner{padding:28px 20px}
+  .sp-nav{padding:14px 20px;margin:0 -20px}
+  .sp-g2{grid-template-columns:1fr}
+}
+`
+
+/* ── Amenities hook ──────────────────────────────────────────── */
+function useAmenityOptions() {
+  return useQuery<AmenityOption[]>({
+    queryKey: ['amenity-options'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/amenities')
+      const data = await res.json()
+      return data.options || []
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+/* ── Sub-components ──────────────────────────────────────────── */
+function Field({ label, required, children, note }: {
+  label: string; required?: boolean; children: React.ReactNode; note?: string
+}) {
+  return (
+    <div className="sp-field">
+      <label className="sp-lbl">{label}{required && <span className="sp-req"> *</span>}</label>
+      {children}
+      {note && <p className="sp-note">{note}</p>}
+    </div>
+  )
+}
+
+function DynSel({ label, fieldKey, options, isLoading, required, formData, set, placeholder }: {
+  label: string; fieldKey: string; options: { label: string; value: string }[]
+  isLoading?: boolean; required?: boolean; formData: FD
+  set: (k: string, v: string) => void; placeholder?: string
+}) {
+  return (
+    <Field label={label} required={required}>
+      <div className="sp-sel-wrap">
+        <select
+          className="sp-sel"
+          value={(formData[fieldKey] as string) || ''}
+          onChange={e => set(fieldKey, e.target.value)}
+          disabled={isLoading}
+          style={{ color: (formData[fieldKey] as string) ? 'var(--ink)' : 'var(--ghost)' }}
+        >
+          <option value="">{isLoading ? 'Loading…' : (placeholder || `Select ${label}`)}</option>
+          {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+    </Field>
+  )
+}
+
+function MultiChip({ label, fieldKey, options, isLoading, formData, toggle }: {
+  label: string; fieldKey: string; options: { label: string; value: string }[]
+  isLoading?: boolean; formData: FD; toggle: (k: string, v: string) => void
+}) {
+  const selected = (formData[fieldKey] as string[]) || []
+  return (
+    <Field label={label}>
+      <div className="sp-chip-wrap">
+        {isLoading
+          ? <span className="sp-no-opts">Loading options…</span>
+          : options.length === 0
+            ? <span className="sp-no-opts">No options configured yet — add them in Admin → Settings</span>
+            : options.map(o => (
+              <button
+                key={o.value} type="button"
+                className={`sp-chip${selected.includes(o.value) ? ' on' : ''}`}
+                onClick={() => toggle(fieldKey, o.value)}
+              >{o.label}</button>
+            ))
+        }
+      </div>
+    </Field>
+  )
+}
+
+function ImageUpload({ label, hint, file, onChange }: {
+  label: string; hint: string; file: File | null; onChange: (f: File | null) => void
+}) {
+  const handleFile = (f: File | null) => {
+    if (!f) { onChange(null); return }
+    if (!IMG_TYPES.includes(f.type)) { toast.error(`${label}: JPG, PNG or WEBP only`); return }
+    if (f.size > MAX_BYTES) { toast.error(`${label} too large — max 1 MB`); return }
+    onChange(f)
+  }
+  return (
+    <Field label={label}>
+      {file ? (
+        <div className="sp-file-prev">
+          <img className="sp-file-thumb" src={URL.createObjectURL(file)} alt="preview" />
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <div className="sp-file-name">{file.name}</div>
+            <div className="sp-file-size">{(file.size / 1024).toFixed(0)} KB</div>
+          </div>
+          <button type="button" onClick={() => onChange(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ghost)', padding: 4 }}>
+            <X size={15} />
+          </button>
+        </div>
+      ) : (
+        <label className="sp-upload">
+          <input type="file" accept={IMG_TYPES.join(',')} style={{ display: 'none' }}
+            onChange={e => { handleFile(e.target.files?.[0] ?? null); e.target.value = '' }} />
+          <div className="sp-upload-icon"><Upload size={20} color="var(--rust)" /></div>
+          <div className="sp-upload-text">Upload {label}</div>
+          <div className="sp-upload-hint">{hint}</div>
+        </label>
+      )}
+    </Field>
+  )
+}
+
+/* ── Amenities Step ──────────────────────────────────────────── */
+function AmenitiesStep({ selectedIds, toggle }: {
+  selectedIds: string[]; toggle: (id: string) => void
+}) {
+  const [activeTab, setActiveTab] = useState('facility')
+  const { data: allOptions = [], isLoading } = useAmenityOptions()
+  const tabOptions = allOptions.filter(o => o.category === activeTab)
+
+  return (
+    <>
+      <div className="sp-eyebrow">Step 4 of 6 — Features</div>
+      <h1 className="sp-title">What makes your<br /><em>school stand out?</em></h1>
+      <p className="sp-desc">Select everything your school offers. Parents use this to compare and shortlist.</p>
+
+      <div className="sp-a-nav">
+        {AMENITY_TABS.map(t => (
+          <button key={t.key} type="button"
+            className={`sp-a-tab${activeTab === t.key ? ' on' : ''}`}
+            onClick={() => setActiveTab(t.key)}
+          >{t.label}</button>
+        ))}
+      </div>
+
+      {isLoading ? (
+        <div className="sp-a-empty">Loading options…</div>
+      ) : tabOptions.length === 0 ? (
+        <div className="sp-a-empty">
+          No options yet for this category.<br />
+          <strong style={{ color: 'var(--rust)' }}>Admin → Amenities</strong> to add them.
+        </div>
+      ) : (
+        <div className="sp-a-grid">
+          {tabOptions.map(opt => {
+            const on = selectedIds.includes(opt.id)
+            return (
+              <button key={opt.id} type="button"
+                className={`sp-a-chip${on ? ' on' : ''}`}
+                onClick={() => toggle(opt.id)}
+              >
+                {opt.icon && <span className="sp-a-icon">{opt.icon}</span>}
+                <span style={{ flex: 1 }}>{opt.label}</span>
+                {on && <CheckCircle2 className="sp-a-check" size={15} />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {selectedIds.length > 0 && (
+        <p className="sp-a-count">
+          ✓ {selectedIds.length} feature{selectedIds.length > 1 ? 's' : ''} selected across all categories
+        </p>
+      )}
+    </>
+  )
+}
+
+/* ── Main Page ───────────────────────────────────────────────── */
 export default function SchoolCompleteProfilePage() {
   const router = useRouter()
   const { setUser, user } = useAuthStore()
   const [step, setStep] = useState(0)
-  const [focused, setFocused] = useState('')
-  const [formData, setFormData] = useState<FD>({
-    board: [], facilities: [], sports: [], extraCurricular: [],
-    languagesOffered: [], infrastructure: [], admissionOpen: false,
-  })
-  const [logoFile,  setLogoFile]  = useState<File | null>(null)
+  const [formData, setFormData] = useState<FD>({ board: [], admissionOpen: false })
+  const [logoFile, setLogoFile] = useState<File | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([])
 
-  /* all dropdowns from DB — zero hardcoding */
-  const { options: boards         } = useDropdown('board')
-  const { options: schoolTypes    } = useDropdown('school_type')
-  const { options: genderPolicies } = useDropdown('gender_policy')
-  const { options: mediums        } = useDropdown('medium')
-  const { options: religions      } = useDropdown('religion')
-  const { options: recognitions   } = useDropdown('recognition')
-  const { options: classLevels    } = useDropdown('class_level')
-  const { options: states         } = useDropdown('state')
-  const { options: cities, isLoading: citiesLoading } = useDropdown('city', {
-    parentValue: formData.state as string,
-    enabled: !!formData.state,
-  })
-  const { options: academicYears  } = useDropdown('academic_year')
-  const { options: facilitiesOpts } = useDropdown('facility')
-  const { options: sportsOpts     } = useDropdown('sport')
-  const { options: extraCurrOpts  } = useDropdown('extra_curricular')
-  const { options: languageOpts   } = useDropdown('language')
-
-  const set = (k: string, v: FD[string]) => setFormData(p => ({ ...p, [k]: v }))
+  const set   = (k: string, v: FD[string]) => setFormData(p => ({ ...p, [k]: v }))
+  const setS  = (k: string, v: string)     => set(k, v)
   const toggle = (k: string, v: string) => {
     const arr = (formData[k] as string[]) || []
     set(k, arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v])
   }
-  const f = (id: string): React.CSSProperties => focused === id ? inpFocus : {}
+  const toggleAmenity = (id: string) =>
+    setSelectedAmenityIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
 
-  const handleImg = (file: File | null, setter: (f: File | null) => void, label: string) => {
-    if (!file) { setter(null); return }
-    if (!IMG_TYPES.includes(file.type)) { toast.error(`${label}: JPG, PNG or WEBP only`); return }
-    if (file.size > MAX_BYTES) { toast.error(`${label} too large. Max ${MAX_MB} MB`); return }
-    setter(file)
-  }
+  /* ── All dropdowns from DB ── */
+  const { options: boards,         isLoading: lBoards }   = useDropdown('board')
+  const { options: schoolTypes,    isLoading: lTypes }     = useDropdown('school_type')
+  const { options: genderPolicies, isLoading: lGender }    = useDropdown('gender_policy')
+  const { options: mediums,        isLoading: lMedium }    = useDropdown('medium')
+  const { options: religions,      isLoading: lReligion }  = useDropdown('religion')
+  const { options: recognitions,   isLoading: lRecog }     = useDropdown('recognition')
+  const { options: classLevels,    isLoading: lClass }     = useDropdown('class_level')
+  const { options: states,         isLoading: lStates }    = useDropdown('state')
+  const { options: cities,         isLoading: lCities }    = useDropdown('city', {
+    parentValue: formData.state as string,
+    enabled: !!formData.state,
+  })
+  const { options: academicYears,  isLoading: lAcYear }    = useDropdown('academic_year')
 
+  /* ── Save ── */
   const saveMutation = useMutation({
     mutationFn: async () => {
       const fd = new FormData()
@@ -110,6 +377,7 @@ export default function SchoolCompleteProfilePage() {
         if (Array.isArray(v)) v.forEach(i => fd.append(k, i))
         else fd.append(k, String(v))
       })
+      selectedAmenityIds.forEach(id => fd.append('amenityId', id))
       if (logoFile)  fd.append('logo',  logoFile)
       if (coverFile) fd.append('cover', coverFile)
       const r = await fetch('/api/schools/profile', { method: 'POST', credentials: 'include', body: fd })
@@ -118,7 +386,11 @@ export default function SchoolCompleteProfilePage() {
       return data
     },
     onSuccess: async () => {
-      await fetch('/api/auth/complete-profile', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profileCompleted: true }) })
+      await fetch('/api/auth/complete-profile', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileCompleted: true }),
+      })
       if (user) setUser({ ...user, profileCompleted: true })
       toast.success('School profile saved! 🎉')
       router.push('/dashboard/school')
@@ -126,427 +398,339 @@ export default function SchoolCompleteProfilePage() {
     onError: (err: any) => toast.error(err?.message || 'Failed to save. Please try again.'),
   })
 
-  /* ── sub-components ── */
-  const Field = ({ id, label, required, children }: { id: string; label: string; required?: boolean; children: React.ReactNode }) => (
-    <div>
-      <label style={lbl}>{label}{required && <span style={{ color: C.gold, marginLeft: 3 }}>*</span>}</label>
-      {children}
-    </div>
-  )
+  const pct    = Math.round(((step + 1) / STEPS.length) * 100)
+  const isLast = step === STEPS.length - 1
+  const isFirst = step === 0
 
-  const Sel = ({ id, label, fieldKey, options, required, disabled, placeholder }: {
-    id: string; label: string; fieldKey: string
-    options: { label: string; value: string }[]; required?: boolean; disabled?: boolean; placeholder?: string
-  }) => (
-    <Field id={id} label={label} required={required}>
-      <select
-        value={(formData[fieldKey] as string) || ''}
-        onChange={e => set(fieldKey, e.target.value)}
-        disabled={disabled}
-        onFocus={() => setFocused(id)} onBlur={() => setFocused('')}
-        style={{ ...inp, ...f(id), cursor: 'pointer', appearance: 'none' as const, opacity: disabled ? 0.55 : 1,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: 32,
-          color: (formData[fieldKey] as string) ? C.ink : C.faint,
-        }}
-      >
-        <option value="">{placeholder || `Select ${label}`}</option>
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </Field>
-  )
+  /* ── Step content ── */
+  const renderStep = () => {
+    /* Step 0 — Basic Info */
+    if (step === 0) return (
+      <>
+        <div className="sp-eyebrow">Step 1 of 6 — Getting started</div>
+        <h1 className="sp-title">Your school's<br /><em>first impression</em></h1>
+        <p className="sp-desc">These details appear at the top of your public profile — make them compelling.</p>
 
-  const MultiToggle = ({ label, fieldKey, options, icon: Icon, color }: {
-    label: string; fieldKey: string; options: { label: string; value: string }[]; icon?: any; color?: string
-  }) => {
-    if (!options.length) return null
-    const selected = (formData[fieldKey] as string[]) || []
-    const col = color || C.gold
-    return (
-      <div style={{ background: '#FAFAFA', border: `1px solid ${C.bdr}`, borderRadius: 14, padding: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 12 }}>
-          {Icon && <div style={{ width: 28, height: 28, borderRadius: 7, background: `${col}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon style={{ width: 14, height: 14, color: col }} />
-          </div>}
-          <span style={{ fontFamily: C.sans, fontSize: 12, fontWeight: 700, color: C.ink, textTransform: 'uppercase' as const, letterSpacing: '.08em' }}>{label}</span>
-          {selected.length > 0 && <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: col, background: `${col}15`, padding: '2px 8px', borderRadius: 99 }}>{selected.length} selected</span>}
+        <Field label="School Name" required>
+          <input className="sp-inp" value={(formData.name as string) || ''} onChange={e => set('name', e.target.value)} placeholder="e.g. Delhi Public School, Sector 132" />
+        </Field>
+        <div className="sp-g2">
+          <Field label="Tagline">
+            <input className="sp-inp" value={(formData.tagline as string) || ''} onChange={e => set('tagline', e.target.value)} placeholder="e.g. Empowering Minds, Shaping Futures" />
+          </Field>
+          <Field label="Affiliation Number">
+            <input className="sp-inp" value={(formData.affiliationNo as string) || ''} onChange={e => set('affiliationNo', e.target.value)} placeholder="e.g. 2730071" />
+          </Field>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-          {options.map(o => {
-            const on = selected.includes(o.value)
-            return (
-              <button key={o.value} type="button" onClick={() => toggle(fieldKey, o.value)}
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${on ? col : C.bdr}`, background: on ? `${col}10` : C.card, cursor: 'pointer', fontFamily: C.sans, fontSize: 12, fontWeight: on ? 600 : 400, color: on ? col : C.muted, transition: 'all .15s' }}>
-                {on && <Check style={{ width: 10, height: 10, strokeWidth: 3 }} />}
-                {o.label}
-              </button>
-            )
-          })}
+        <Field label="School Description" required>
+          <textarea className="sp-ta sp-inp" rows={4}
+            value={(formData.description as string) || ''}
+            onChange={e => set('description', e.target.value)}
+            placeholder="Describe your school's vision, teaching philosophy, values, and what makes it truly unique for a parent reading this…"
+          />
+        </Field>
+        <Field label="Year Established">
+          <input className="sp-inp" style={{ maxWidth: 160 }} type="number"
+            value={(formData.foundingYear as number) || ''}
+            onChange={e => set('foundingYear', Number(e.target.value))}
+            placeholder="e.g. 1978" min={1800} max={new Date().getFullYear()} />
+        </Field>
+      </>
+    )
+
+    /* Step 1 — Type & Board */
+    if (step === 1) return (
+      <>
+        <div className="sp-eyebrow">Step 2 of 6 — Classification</div>
+        <h1 className="sp-title">Type, boards &<br /><em>policies</em></h1>
+        <p className="sp-desc">Help parents filter and find you based on what matters most to their family.</p>
+
+        <div className="sp-g2">
+          <DynSel label="School Type"           fieldKey="schoolType"          options={schoolTypes}    isLoading={lTypes}   required formData={formData} set={setS} />
+          <DynSel label="Gender Policy"         fieldKey="genderPolicy"        options={genderPolicies} isLoading={lGender}  required formData={formData} set={setS} />
+          <DynSel label="Medium of Instruction" fieldKey="mediumOfInstruction" options={mediums}        isLoading={lMedium}  required formData={formData} set={setS} />
+          <DynSel label="Religion / Affiliation" fieldKey="religion"           options={religions}      isLoading={lReligion}         formData={formData} set={setS} />
+          <DynSel label="Recognition"           fieldKey="recognition"         options={recognitions}   isLoading={lRecog}            formData={formData} set={setS} />
         </div>
-      </div>
+        <div className="sp-g2">
+          <Field label="Total Students">
+            <input className="sp-inp" type="number"
+              value={(formData.totalStudents as number) || ''}
+              onChange={e => set('totalStudents', Number(e.target.value))}
+              placeholder="e.g. 1,500" />
+          </Field>
+          <Field label="Student : Teacher Ratio">
+            <input className="sp-inp"
+              value={(formData.studentTeacherRatio as string) || ''}
+              onChange={e => set('studentTeacherRatio', e.target.value)}
+              placeholder="e.g. 25:1" />
+          </Field>
+        </div>
+        <MultiChip label="Board(s) of Education" fieldKey="board" options={boards} isLoading={lBoards} formData={formData} toggle={toggle} />
+      </>
+    )
+
+    /* Step 2 — Classes & Fees */
+    if (step === 2) return (
+      <>
+        <div className="sp-eyebrow">Step 3 of 6 — Fees & classes</div>
+        <h1 className="sp-title">Classes &<br /><em>fee structure</em></h1>
+        <p className="sp-desc">Transparent fee information builds trust and helps parents decide faster.</p>
+
+        <div className="sp-g2">
+          <DynSel label="Classes From" fieldKey="classesFrom" options={classLevels} isLoading={lClass} required formData={formData} set={setS} placeholder="Select starting class" />
+          <DynSel label="Classes To"   fieldKey="classesTo"   options={classLevels} isLoading={lClass} required formData={formData} set={setS} placeholder="Select ending class" />
+        </div>
+
+        <div className="sp-divider">Monthly Tuition Fee (₹)</div>
+        <div className="sp-g2">
+          <Field label="Minimum">
+            <div style={{ position: 'relative' }}>
+              <span className="sp-pfx">₹</span>
+              <input className="sp-inp sp-pfx-inp" type="number"
+                value={(formData.monthlyFeeMin as number) || ''}
+                onChange={e => set('monthlyFeeMin', Number(e.target.value))}
+                placeholder="e.g. 3,000" />
+            </div>
+          </Field>
+          <Field label="Maximum">
+            <div style={{ position: 'relative' }}>
+              <span className="sp-pfx">₹</span>
+              <input className="sp-inp sp-pfx-inp" type="number"
+                value={(formData.monthlyFeeMax as number) || ''}
+                onChange={e => set('monthlyFeeMax', Number(e.target.value))}
+                placeholder="e.g. 10,000" />
+            </div>
+          </Field>
+        </div>
+        <Field label="Annual / Admission Fee (₹)">
+          <div style={{ position: 'relative', maxWidth: 220 }}>
+            <span className="sp-pfx">₹</span>
+            <input className="sp-inp sp-pfx-inp" type="number"
+              value={(formData.annualFee as number) || ''}
+              onChange={e => set('annualFee', Number(e.target.value))}
+              placeholder="e.g. 25,000" />
+          </div>
+        </Field>
+
+        <div className="sp-divider">Admission Info</div>
+        <div style={{ maxWidth: 240, marginBottom: 16 }}>
+          <DynSel label="Academic Year" fieldKey="admissionAcademicYear" options={academicYears} isLoading={lAcYear} formData={formData} set={setS} />
+        </div>
+        <div className="sp-tog-row">
+          <span className="sp-tog-label">Admissions currently open</span>
+          <label className="sp-tog">
+            <input type="checkbox" checked={!!formData.admissionOpen}
+              onChange={e => set('admissionOpen', e.target.checked)} />
+            <span className="sp-sl" />
+          </label>
+        </div>
+      </>
+    )
+
+    /* Step 3 — Features (Amenities) */
+    if (step === 3) return (
+      <AmenitiesStep selectedIds={selectedAmenityIds} toggle={toggleAmenity} />
+    )
+
+    /* Step 4 — Location */
+    if (step === 4) return (
+      <>
+        <div className="sp-eyebrow">Step 5 of 6 — Location</div>
+        <h1 className="sp-title">Where will parents<br /><em>find you?</em></h1>
+        <p className="sp-desc">Accurate location ensures you appear in the right area searches and map results.</p>
+
+        <Field label="Street Address" required>
+          <input className="sp-inp"
+            value={(formData.addressLine1 as string) || ''}
+            onChange={e => set('addressLine1', e.target.value)}
+            placeholder="e.g. Plot No. 12, Sector 132, Noida" />
+        </Field>
+        <div className="sp-g2">
+          <DynSel label="State" fieldKey="state" options={states} isLoading={lStates} required formData={formData} set={setS} />
+          <Field label="City" required>
+            <div className="sp-sel-wrap">
+              <select className="sp-sel"
+                value={(formData.city as string) || ''}
+                onChange={e => set('city', e.target.value)}
+                disabled={!formData.state || lCities}
+                style={{ color: (formData.city as string) ? 'var(--ink)' : 'var(--ghost)' }}
+              >
+                <option value="">
+                  {!formData.state ? 'Select state first' : lCities ? 'Loading…' : 'Select city'}
+                </option>
+                {cities.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </Field>
+          <Field label="Locality / Area">
+            <input className="sp-inp"
+              value={(formData.locality as string) || ''}
+              onChange={e => set('locality', e.target.value)}
+              placeholder="e.g. Sector 18" />
+          </Field>
+          <Field label="Pincode" required>
+            <input className="sp-inp"
+              value={(formData.pincode as string) || ''}
+              onChange={e => set('pincode', e.target.value.replace(/\D/, '').slice(0, 6))}
+              placeholder="e.g. 201301" maxLength={6} />
+          </Field>
+          <Field label="Latitude (GPS)">
+            <input className="sp-inp" type="number" step="0.0000001"
+              value={(formData.latitude as number) || ''}
+              onChange={e => set('latitude', Number(e.target.value))}
+              placeholder="e.g. 28.5355" />
+          </Field>
+          <Field label="Longitude (GPS)">
+            <input className="sp-inp" type="number" step="0.0000001"
+              value={(formData.longitude as number) || ''}
+              onChange={e => set('longitude', Number(e.target.value))}
+              placeholder="e.g. 77.3910" />
+          </Field>
+        </div>
+        <p className="sp-note">
+          📍 Right-click your school on Google Maps → "What's here?" to get GPS coordinates.
+        </p>
+      </>
+    )
+
+    /* Step 5 — Contact & Media (Last) */
+    if (step === 5) return (
+      <>
+        <div className="sp-eyebrow">Step 6 of 6 — Almost there!</div>
+        <h1 className="sp-title">Contact info &<br /><em>your best photos</em></h1>
+        <p className="sp-desc">Add contact details and upload images — then your profile goes live!</p>
+
+        <div className="sp-g2">
+          <Field label="School Phone">
+            <div className="sp-with-icon" style={{ position: 'relative' }}>
+              <span className="sp-fi"><Phone size={15} /></span>
+              <input className="sp-inp"
+                value={(formData.phone as string) || ''}
+                onChange={e => set('phone', e.target.value)}
+                placeholder="+91 98765 43210" />
+            </div>
+          </Field>
+          <Field label="School Email">
+            <div className="sp-with-icon" style={{ position: 'relative' }}>
+              <span className="sp-fi"><Mail size={15} /></span>
+              <input className="sp-inp" type="email"
+                value={(formData.email as string) || ''}
+                onChange={e => set('email', e.target.value)}
+                placeholder="admissions@school.edu.in" />
+            </div>
+          </Field>
+        </div>
+        <Field label="Website URL">
+          <div className="sp-with-icon" style={{ position: 'relative' }}>
+            <span className="sp-fi"><Globe size={15} /></span>
+            <input className="sp-inp"
+              value={(formData.websiteUrl as string) || ''}
+              onChange={e => set('websiteUrl', e.target.value)}
+              placeholder="https://www.yourschool.edu.in" />
+          </div>
+        </Field>
+        <Field label="Principal Name">
+          <input className="sp-inp"
+            value={(formData.principalName as string) || ''}
+            onChange={e => set('principalName', e.target.value)}
+            placeholder="e.g. Dr. Ranjana Sharma" />
+        </Field>
+
+        <div className="sp-divider">School Photos</div>
+        <div className="sp-g2">
+          <ImageUpload label="School Logo"  hint="Square · JPG, PNG, WEBP · Max 1 MB"         file={logoFile}  onChange={setLogoFile} />
+          <ImageUpload label="Cover Photo"  hint="1200×400px recommended · Max 1 MB"           file={coverFile} onChange={setCoverFile} />
+        </div>
+        <div className="sp-info" style={{ marginTop: 20 }}>
+          <strong style={{ color: 'var(--rust)' }}>Almost done!</strong> After saving, you can upload additional gallery photos, manage your team, and configure lead preferences from your school dashboard.
+        </div>
+      </>
     )
   }
 
-  const ImageField = ({ label, hint, file, onChange }: { label: string; hint: string; file: File | null; onChange: (f: File | null) => void }) => (
-    <Field id={label} label={label}>
-      {file ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', border: `1.5px solid ${C.gold}`, borderRadius: 10, background: C.goldBg }}>
-          <img src={URL.createObjectURL(file)} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontFamily: C.sans, fontSize: 13, fontWeight: 600, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</div>
-            <div style={{ fontFamily: C.sans, fontSize: 11, color: C.faint }}>{(file.size / 1024).toFixed(0)} KB</div>
-          </div>
-          <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.faint, padding: 4 }}><X style={{ width: 15, height: 15 }} /></button>
-        </div>
-      ) : (
-        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '20px', border: `1.5px dashed ${C.bdr}`, borderRadius: 10, cursor: 'pointer', background: '#FAFAFA', transition: 'border-color .18s' }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = C.gold}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = C.bdr}>
-          <Upload style={{ width: 20, height: 20, color: C.faint }} />
-          <span style={{ fontFamily: C.sans, fontSize: 13, fontWeight: 600, color: C.muted }}>Upload {label}</span>
-          <span style={{ fontFamily: C.sans, fontSize: 11, color: C.faint }}>{hint}</span>
-          <input type="file" accept={IMG_TYPES.join(',')} style={{ display: 'none' }} onChange={e => { handleImg(e.target.files?.[0] ?? null, onChange, label); e.target.value = '' }} />
-        </label>
-      )}
-    </Field>
-  )
-
-  const Toggle = ({ label, fieldKey }: { label: string; fieldKey: string }) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#FAFAFA', border: `1px solid ${C.bdr}`, borderRadius: 10 }}>
-      <span style={{ fontFamily: C.sans, fontSize: 13, fontWeight: 500, color: C.ink }}>{label}</span>
-      <button type="button" onClick={() => set(fieldKey, !formData[fieldKey])}
-        style={{ width: 40, height: 22, borderRadius: 99, background: formData[fieldKey] ? C.gold : '#D1D5DB', position: 'relative', border: 'none', cursor: 'pointer', transition: 'background .2s', flexShrink: 0 }}>
-        <span style={{ position: 'absolute', top: 3, left: formData[fieldKey] ? 21 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-      </button>
-    </div>
-  )
-
-  const grid2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }
-  const gap = (n = 14): React.CSSProperties => ({ display: 'flex', flexDirection: 'column', gap: n })
-
-  /* ══════════════════════════════════════
-     STEP CONTENT
-  ══════════════════════════════════════ */
-  const STEPS_CONTENT = [
-
-    /* ── Step 0: Basic Info ── */
-    <div key="basic" style={gap()}>
-      <div style={grid2}>
-        <div style={{ gridColumn: '1/-1' }}>
-          <Field id="name" label="School Name" required>
-            <input value={(formData.name as string)||''} onChange={e=>set('name',e.target.value)}
-              placeholder="e.g. Delhi Public School, Sector 132"
-              onFocus={()=>setFocused('name')} onBlur={()=>setFocused('')}
-              style={{...inp,...f('name')}} />
-          </Field>
-        </div>
-        <Field id="tagline" label="Tagline">
-          <input value={(formData.tagline as string)||''} onChange={e=>set('tagline',e.target.value)}
-            placeholder="e.g. Empowering Minds, Shaping Futures"
-            onFocus={()=>setFocused('tagline')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('tagline')}} />
-        </Field>
-        <Field id="affNo" label="Affiliation No.">
-          <input value={(formData.affiliationNo as string)||''} onChange={e=>set('affiliationNo',e.target.value)}
-            placeholder="e.g. 2730071"
-            onFocus={()=>setFocused('affNo')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('affNo')}} />
-        </Field>
-        <Field id="founded" label="Year Established">
-          <input type="number" value={(formData.foundingYear as number)||''} onChange={e=>set('foundingYear',Number(e.target.value))}
-            placeholder="e.g. 1985" min={1800} max={new Date().getFullYear()}
-            onFocus={()=>setFocused('founded')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('founded')}} />
-        </Field>
-        <div style={{ gridColumn: '1/-1' }}>
-          <Field id="desc" label="School Description" required>
-            <textarea value={(formData.description as string)||''} onChange={e=>set('description',e.target.value)}
-              placeholder="Describe your school's vision, values, and what makes it unique…"
-              rows={3} onFocus={()=>setFocused('desc')} onBlur={()=>setFocused('')}
-              style={{...inp,...f('desc'),resize:'none',lineHeight:1.6}} />
-          </Field>
-        </div>
-      </div>
-    </div>,
-
-    /* ── Step 1: Type & Board ── */
-    <div key="typeboard" style={gap()}>
-      <div style={grid2}>
-        <Sel id="stype" label="School Type" fieldKey="schoolType" options={schoolTypes} required />
-        <Sel id="gender" label="Gender Policy" fieldKey="genderPolicy" options={genderPolicies} required />
-        <Sel id="medium" label="Medium of Instruction" fieldKey="mediumOfInstruction" options={mediums} required />
-        <Sel id="religion" label="Religion / Affiliation" fieldKey="religion" options={religions} />
-        <Sel id="recog" label="Recognition" fieldKey="recognition" options={recognitions} />
-        <div style={{ gridColumn: '1/-1' }}>
-          <MultiToggle label="Board(s) of Education" fieldKey="board" options={boards} icon={BookOpen} color={C.gold} />
-        </div>
-        <Field id="students" label="Total Students">
-          <input type="number" value={(formData.totalStudents as number)||''} onChange={e=>set('totalStudents',Number(e.target.value))}
-            placeholder="e.g. 1500" onFocus={()=>setFocused('students')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('students')}} />
-        </Field>
-        <Field id="ratio" label="Student:Teacher Ratio">
-          <input value={(formData.studentTeacherRatio as string)||''} onChange={e=>set('studentTeacherRatio',e.target.value)}
-            placeholder="e.g. 25:1" onFocus={()=>setFocused('ratio')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('ratio')}} />
-        </Field>
-      </div>
-    </div>,
-
-    /* ── Step 2: Classes & Fees ── */
-    <div key="fees" style={gap()}>
-      <div style={grid2}>
-        <Sel id="cfrom" label="Classes From" fieldKey="classesFrom" options={classLevels} required />
-        <Sel id="cto"   label="Classes To"   fieldKey="classesTo"   options={classLevels} required />
-      </div>
-      <div>
-        <label style={lbl}>Monthly Fee Range (₹)</label>
-        <div style={grid2}>
-          <input type="number" value={(formData.monthlyFeeMin as number)||''} onChange={e=>set('monthlyFeeMin',Number(e.target.value))}
-            placeholder="Min e.g. 3,000" onFocus={()=>setFocused('fmin')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('fmin')}} />
-          <input type="number" value={(formData.monthlyFeeMax as number)||''} onChange={e=>set('monthlyFeeMax',Number(e.target.value))}
-            placeholder="Max e.g. 10,000" onFocus={()=>setFocused('fmax')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('fmax')}} />
-        </div>
-      </div>
-      <Field id="annualFee" label="Annual / Admission Fee (₹)">
-        <input type="number" value={(formData.annualFee as number)||''} onChange={e=>set('annualFee',Number(e.target.value))}
-          placeholder="e.g. 25,000" onFocus={()=>setFocused('annualFee')} onBlur={()=>setFocused('')}
-          style={{...inp,...f('annualFee')}} />
-      </Field>
-      <div style={gap(8)}>
-        <Sel id="acYear" label="Admission Academic Year" fieldKey="admissionAcademicYear" options={academicYears} />
-        <Toggle label="Admissions Currently Open" fieldKey="admissionOpen" />
-      </div>
-    </div>,
-
-    /* ── Step 3: Facilities (NEW COMPREHENSIVE STEP) ── */
-    <div key="facilities" style={gap(12)}>
-      <MultiToggle label="Facilities & Infrastructure" fieldKey="facilities"     options={facilitiesOpts} icon={Building2}  color="#2563EB" />
-      <MultiToggle label="Sports"                      fieldKey="sports"         options={sportsOpts}     icon={Trophy}      color="#059669" />
-      <MultiToggle label="Extra Curricular Activities" fieldKey="extraCurricular" options={extraCurrOpts} icon={Music}       color="#7C3AED" />
-      <MultiToggle label="Languages Offered"           fieldKey="languagesOffered" options={languageOpts} icon={Languages}   color="#B45309" />
-      {/* fallback message if none of the dropdowns have data yet */}
-      {!facilitiesOpts.length && !sportsOpts.length && !extraCurrOpts.length && !languageOpts.length && (
-        <div style={{ textAlign: 'center', padding: '32px 20px', border: `1.5px dashed ${C.bdr}`, borderRadius: 14, background: '#FAFAFA' }}>
-          <Building2 style={{ width: 28, height: 28, color: C.faint, margin: '0 auto 10px' }} />
-          <div style={{ fontFamily: C.sans, fontSize: 13, fontWeight: 600, color: C.muted, marginBottom: 4 }}>No options yet</div>
-          <div style={{ fontFamily: C.sans, fontSize: 12, color: C.faint }}>
-            Ask your Super Admin to add Facilities, Sports, Extra Curricular and Language options in<br />
-            <strong style={{ color: C.gold }}>Admin → Settings → Dropdown Settings</strong>
-          </div>
-        </div>
-      )}
-    </div>,
-
-    /* ── Step 4: Location ── */
-    <div key="location" style={gap()}>
-      <Field id="addr" label="Street Address" required>
-        <input value={(formData.addressLine1 as string)||''} onChange={e=>set('addressLine1',e.target.value)}
-          placeholder="e.g. Plot No. 12, Sector 132, Noida"
-          onFocus={()=>setFocused('addr')} onBlur={()=>setFocused('')}
-          style={{...inp,...f('addr')}} />
-      </Field>
-      <div style={grid2}>
-        <Sel id="state" label="State" fieldKey="state" options={states} required />
-        <Field id="city" label="City" required>
-          <select value={(formData.city as string)||''} onChange={e=>set('city',e.target.value)}
-            disabled={!formData.state || citiesLoading}
-            onFocus={()=>setFocused('city')} onBlur={()=>setFocused('')}
-            style={{ ...inp,...f('city'), cursor:'pointer', appearance:'none' as const, opacity:!formData.state?0.55:1,
-              backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239CA3AF' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-              backgroundRepeat:'no-repeat',backgroundPosition:'right 12px center',paddingRight:32,
-              color:(formData.city as string)?C.ink:C.faint }}>
-            <option value="">{!formData.state?'Select state first':citiesLoading?'Loading…':'Select City'}</option>
-            {cities.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </Field>
-        <Field id="locality" label="Locality / Area">
-          <input value={(formData.locality as string)||''} onChange={e=>set('locality',e.target.value)}
-            placeholder="e.g. Sector 18" onFocus={()=>setFocused('locality')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('locality')}} />
-        </Field>
-        <Field id="pin" label="Pincode" required>
-          <input value={(formData.pincode as string)||''} onChange={e=>set('pincode',e.target.value.replace(/\D/,'').slice(0,6))}
-            placeholder="e.g. 201301" maxLength={6} onFocus={()=>setFocused('pin')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('pin')}} />
-        </Field>
-        <Field id="lat" label="Latitude (GPS)">
-          <input type="number" step="0.0000001" value={(formData.latitude as number)||''} onChange={e=>set('latitude',Number(e.target.value))}
-            placeholder="e.g. 28.5355" onFocus={()=>setFocused('lat')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('lat')}} />
-        </Field>
-        <Field id="lng" label="Longitude (GPS)">
-          <input type="number" step="0.0000001" value={(formData.longitude as number)||''} onChange={e=>set('longitude',Number(e.target.value))}
-            placeholder="e.g. 77.3910" onFocus={()=>setFocused('lng')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('lng')}} />
-        </Field>
-      </div>
-      <div style={{ fontSize: 11, color: C.faint, fontFamily: C.sans, display: 'flex', alignItems: 'center', gap: 5 }}>
-        <MapPin style={{ width: 12, height: 12, color: C.gold, flexShrink: 0 }} />
-        GPS coordinates help show your school on maps. Get them from Google Maps by right-clicking your school location.
-      </div>
-    </div>,
-
-    /* ── Step 5: Contact & Media (LAST — triggers save) ── */
-    <div key="contact" style={gap()}>
-      <div style={grid2}>
-        <Field id="phone" label="School Phone">
-          <div style={{ position: 'relative' }}>
-            <Phone style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: C.faint }} />
-            <input value={(formData.phone as string)||''} onChange={e=>set('phone',e.target.value)}
-              placeholder="+91 98765 43210"
-              onFocus={()=>setFocused('phone')} onBlur={()=>setFocused('')}
-              style={{...inp,...f('phone'),paddingLeft:36}} />
-          </div>
-        </Field>
-        <Field id="email" label="School Email">
-          <div style={{ position: 'relative' }}>
-            <Mail style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: C.faint }} />
-            <input type="email" value={(formData.email as string)||''} onChange={e=>set('email',e.target.value)}
-              placeholder="admissions@school.edu.in"
-              onFocus={()=>setFocused('email')} onBlur={()=>setFocused('')}
-              style={{...inp,...f('email'),paddingLeft:36}} />
-          </div>
-        </Field>
-        <Field id="web" label="Website URL">
-          <div style={{ position: 'relative' }}>
-            <Globe style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: C.faint }} />
-            <input value={(formData.websiteUrl as string)||''} onChange={e=>set('websiteUrl',e.target.value)}
-              placeholder="https://www.yourschool.edu.in"
-              onFocus={()=>setFocused('web')} onBlur={()=>setFocused('')}
-              style={{...inp,...f('web'),paddingLeft:36}} />
-          </div>
-        </Field>
-        <Field id="principal" label="Principal Name">
-          <input value={(formData.principalName as string)||''} onChange={e=>set('principalName',e.target.value)}
-            placeholder="e.g. Dr. Ranjana Sharma"
-            onFocus={()=>setFocused('principal')} onBlur={()=>setFocused('')}
-            style={{...inp,...f('principal')}} />
-        </Field>
-      </div>
-      <div style={grid2}>
-        <ImageField label="School Logo" hint="Square · JPG/PNG/WEBP · Max 2 MB" file={logoFile} onChange={setLogoFile} />
-        <ImageField label="Cover Photo" hint="1200×400px recommended · Max 2 MB" file={coverFile} onChange={setCoverFile} />
-      </div>
-      <div style={{ padding: '12px 14px', background: C.goldBg, border: `1px solid rgba(184,134,11,0.2)`, borderRadius: 10, fontFamily: C.sans, fontSize: 12, color: C.muted, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <CheckCircle2 style={{ width: 14, height: 14, color: C.gold, flexShrink: 0 }} />
-        After saving, you can upload more gallery images from your school dashboard.
-      </div>
-    </div>,
-  ]
-
-  const isLast = step === STEPS.length - 1
-  const pct = Math.round(((step + 1) / STEPS.length) * 100)
-
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: C.sans }}>
-      <style>{`
-        @keyframes spin{to{transform:rotate(360deg)}}
-        * { box-sizing: border-box; }
-        input[type=number]::-webkit-inner-spin-button { opacity: 0.4 }
-      `}</style>
+    <>
+      <style>{CSS}</style>
+      <div className="sp">
 
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '28px 16px 48px' }}>
+        {/* ── SIDEBAR ── */}
+        <aside className="sp-sidebar">
+          <div className="sp-sb-brand">
+            <div className="sp-sb-icon">
+              <GraduationCap size={20} color="white" />
+            </div>
+            <div className="sp-sb-name">Thynk<span>Schooling</span></div>
+          </div>
 
-        {/* Logo */}
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 24, textDecoration: 'none' }}>
-          <div style={{ width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#B8860B,#D4A520)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 12px rgba(184,134,11,0.3)' }}>
-            <GraduationCap style={{ width: 19, height: 19, color: '#fff' }} />
-          </div>
-          <span style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 20, color: C.ink }}>
-            Thynk<span style={{ color: C.gold }}>Schooling</span>
-          </span>
-        </Link>
-
-        {/* Progress bar */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: C.faint, fontWeight: 500 }}>Step {step + 1} of {STEPS.length} — {STEPS[step].label}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: C.gold }}>{pct}%</span>
-          </div>
-          <div style={{ height: 4, background: '#E9E5DE', borderRadius: 99, overflow: 'hidden' }}>
-            <motion.div animate={{ width: `${pct}%` }} transition={{ duration: 0.4, ease: 'easeInOut' }}
-              style={{ height: '100%', background: `linear-gradient(90deg,${C.gold},#D4A520)`, borderRadius: 99 }} />
-          </div>
-          {/* Step pills */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto', paddingBottom: 2 }}>
+          <div className="sp-sb-steps">
             {STEPS.map((s, i) => {
-              const Icon = s.icon
-              const done = i < step, active = i === step
+              const cls = i < step ? 'done' : i === step ? 'active' : 'todo'
               return (
-                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 99, flexShrink: 0, transition: 'all .2s',
-                  background: active ? C.gold : done ? `${C.gold}18` : 'rgba(13,17,23,0.05)',
-                  border: `1px solid ${active ? C.gold : done ? `${C.gold}30` : 'transparent'}`,
-                  color: active ? '#fff' : done ? C.gold : C.faint,
-                }}>
-                  {done
-                    ? <CheckCircle2 style={{ width: 11, height: 11 }} />
-                    : <Icon style={{ width: 11, height: 11 }} />
-                  }
-                  <span style={{ fontSize: 11, fontWeight: active || done ? 600 : 400 }}>{s.short}</span>
+                <div key={s.label} className={`sp-sb-step ${cls}`}>
+                  <div className="sp-sb-num">
+                    {i < step
+                      ? <CheckCircle2 size={13} />
+                      : <span>{i + 1}</span>
+                    }
+                  </div>
+                  <div>
+                    <div className="sp-sb-label">{s.label}</div>
+                    <div className="sp-sb-sub">{s.sub}</div>
+                  </div>
                 </div>
               )
             })}
           </div>
-        </div>
 
-        {/* Card */}
-        <div style={{ background: C.card, borderRadius: 20, border: `1px solid ${C.bdr}`, boxShadow: '0 4px 32px rgba(13,17,23,0.07)', overflow: 'hidden' }}>
-          {/* Card header */}
-          <div style={{ padding: '20px 24px 0', borderBottom: `1px solid ${C.bdr}`, paddingBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-            {(() => { const Icon = STEPS[step].icon; return (
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: C.goldBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon style={{ width: 17, height: 17, color: C.gold }} />
-              </div>
-            )})()}
-            <div>
-              <h2 style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 20, color: C.ink, margin: 0, lineHeight: 1.2 }}>{STEPS[step].label}</h2>
-              <p style={{ fontFamily: C.sans, fontSize: 11, color: C.faint, margin: '2px 0 0' }}>
-                {['Fill in your school\'s basic details', 'Select type, boards and policies', 'Set class range, fees and admission info', 'Add facilities, sports and activities from your options', 'Enter your school\'s location details', 'Add contact info and upload images to save your profile'][step]}
-              </p>
+          <div className="sp-sb-prog">
+            <div className="sp-sb-prog-meta">
+              Profile completion <span>{pct}%</span>
+            </div>
+            <div className="sp-sb-track">
+              <div className="sp-sb-fill" style={{ width: `${pct}%` }} />
             </div>
           </div>
+        </aside>
 
-          {/* Card body */}
-          <div style={{ padding: '20px 24px' }}>
+        {/* ── MAIN ── */}
+        <main className="sp-main">
+          <div className="sp-main-inner">
             <AnimatePresence mode="wait">
-              <motion.div key={step} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={{ duration: 0.22 }}>
-                {STEPS_CONTENT[step]}
+              <motion.div
+                key={step}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.22, ease: 'easeOut' }}
+              >
+                {renderStep()}
               </motion.div>
             </AnimatePresence>
-          </div>
 
-          {/* Card footer nav */}
-          <div style={{ display: 'flex', gap: 10, padding: '16px 24px', borderTop: `1px solid ${C.bdr}`, background: '#FAFAFA' }}>
-            <button type="button" onClick={() => setStep(s => s - 1)} disabled={step === 0}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 18px', borderRadius: 10, border: `1.5px solid ${C.bdr}`, background: C.card, color: step === 0 ? C.faint : C.muted, cursor: step === 0 ? 'not-allowed' : 'pointer', fontFamily: C.sans, fontSize: 13, fontWeight: 500, opacity: step === 0 ? 0.5 : 1, transition: 'all .15s' }}>
-              <ArrowLeft style={{ width: 14, height: 14 }} /> Back
-            </button>
-            {isLast ? (
-              <button type="button" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 24px', borderRadius: 10, border: 'none', background: saveMutation.isPending ? C.faint : C.gold, color: '#fff', cursor: saveMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: C.sans, fontSize: 13, fontWeight: 600, transition: 'all .15s', boxShadow: saveMutation.isPending ? 'none' : '0 3px 12px rgba(184,134,11,0.3)' }}>
-                {saveMutation.isPending
-                  ? <><Loader2 style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} /> Saving profile…</>
-                  : <><Save style={{ width: 14, height: 14 }} /> Save Profile & Go to Dashboard</>
-                }
+            {/* Nav */}
+            <div className="sp-nav">
+              <button className="sp-btn-back" onClick={() => setStep(s => s - 1)} disabled={isFirst}>
+                <ArrowLeft size={14} /> Back
               </button>
-            ) : (
-              <button type="button" onClick={() => setStep(s => s + 1)}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 24px', borderRadius: 10, border: 'none', background: C.ink, color: '#FAF7F2', cursor: 'pointer', fontFamily: C.sans, fontSize: 13, fontWeight: 500, transition: 'background .2s' }}
-                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = C.gold}
-                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = C.ink}>
-                Continue <ArrowRight style={{ width: 14, height: 14 }} />
-              </button>
-            )}
+              {isLast ? (
+                <button className="sp-btn-next" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
+                  style={{ background: saveMutation.isPending ? 'var(--ghost)' : 'var(--rust)' }}>
+                  {saveMutation.isPending
+                    ? <><Loader2 size={15} style={{ animation: 'sp-spin 1s linear infinite' }} /> Saving…</>
+                    : <><Save size={15} /> Save Profile & Go to Dashboard</>
+                  }
+                </button>
+              ) : (
+                <button className="sp-btn-next" onClick={() => setStep(s => s + 1)}>
+                  Continue <ArrowRight size={14} />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        </main>
 
-        <p style={{ textAlign: 'center', fontFamily: C.sans, fontSize: 11, color: C.faint, marginTop: 14 }}>
-          You can update your profile at any time from the school dashboard.
-        </p>
       </div>
-    </div>
+    </>
   )
 }
