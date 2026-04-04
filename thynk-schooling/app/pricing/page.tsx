@@ -36,7 +36,8 @@ export default function PricingPage() {
     queryFn:()=>fetch('/api/admin?action=subscription-plans').then(r=>r.json()),
     staleTime:5*60*1000,
   })
-  const {data:packages}=useQuery<{data:LeadPackage[]}>({queryKey:['packages'],queryFn:()=>fetch('/api/admin/lead-pricing').then(r=>r.json()),staleTime:5*60*1000})
+  const {data:packagesRaw}=useQuery<LeadPackage[]|{data:LeadPackage[]}>({queryKey:['packages'],queryFn:()=>fetch('/api/admin/lead-pricing').then(r=>r.json()),staleTime:5*60*1000})
+  const packages = Array.isArray(packagesRaw) ? { data: packagesRaw } : (packagesRaw as {data:LeadPackage[]}|undefined)
   const faqRef=useRef(null)
   const faqInView=useInView(faqRef,{once:true})
 
@@ -157,8 +158,8 @@ export default function PricingPage() {
                   <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:i*.08,duration:.55,ease:[.22,1,.36,1]}}
                     className="card hover-lift" style={{padding:'clamp(20px,3vw,32px)',textAlign:'center'}}>
                     <div style={{fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'#B8860B',marginBottom:12}}>{p.credits} Credits</div>
-                    <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:36,color:'#0D1117',letterSpacing:'-1.5px',marginBottom:4}}>₹{p.price.toLocaleString('en-IN')}</div>
-                    <div style={{fontFamily:'Inter,sans-serif',fontSize:12,color:'#A0ADB8',marginBottom:20}}>₹{Math.round(p.price/p.credits)} per credit</div>
+                    <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:36,color:'#0D1117',letterSpacing:'-1.5px',marginBottom:4}}>₹{Math.round(p.price/100).toLocaleString('en-IN')}</div>
+                    <div style={{fontFamily:'Inter,sans-serif',fontSize:12,color:'#A0ADB8',marginBottom:20}}>₹{Math.round(p.price/100/p.credits)} per credit</div>
                     <Link href="/register?role=school" className="btn btn-outline-gold" style={{display:'flex',justifyContent:'center',fontSize:13}}>Buy Pack</Link>
                   </motion.div>
                 ))}

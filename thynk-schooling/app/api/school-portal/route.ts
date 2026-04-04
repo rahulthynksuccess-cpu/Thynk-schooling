@@ -27,7 +27,8 @@ async function ensureLeads() {
 }
 
 async function ensureLeadPackages() {
-  await db.query(`CREATE TABLE IF NOT EXISTS lead_packages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(200) NOT NULL, description TEXT, leads_count INTEGER NOT NULL DEFAULT 10, price_paise INTEGER NOT NULL DEFAULT 29900, is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await db.query(`CREATE TABLE IF NOT EXISTS lead_packages (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name VARCHAR(200) NOT NULL, description TEXT, leads_count INTEGER NOT NULL DEFAULT 10, price_paise INTEGER NOT NULL DEFAULT 29900, validity_days INTEGER NOT NULL DEFAULT 365, is_active BOOLEAN DEFAULT true, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS validity_days INTEGER NOT NULL DEFAULT 365`).catch(() => {})
 }
 
 // ─── leads ────────────────────────────────────────────────────────────────────
@@ -62,18 +63,43 @@ async function patchLead(req: NextRequest) {
 
 // ─── lead-packages ────────────────────────────────────────────────────────────
 
+function toPackageShape(row: any) {
+  return {
+    id:           row.id,
+    name:         row.name,
+    description:  row.description || null,
+    leadCredits:  row.leads_count,
+    price:        row.price_paise,
+    validityDays: row.validity_days ?? 365,
+    isActive:     row.is_active,
+    // pricing page compat fields
+    credits:      row.leads_count,
+  }
+}
+
 async function getLeadPackages(req: NextRequest) {
   await ensureLeadPackages()
   const all = new URL(req.url).searchParams.get('all')
   const rows = await db.query(`SELECT * FROM lead_packages WHERE ${all ? '1=1' : 'is_active=true'} ORDER BY price_paise ASC`)
-  return NextResponse.json(rows.rows)
+  const mapped = rows.rows.map(toPackageShape)
+  return NextResponse.json(mapped)
 }
 
 async function createLeadPackage(req: NextRequest) {
   await ensureLeadPackages()
-  const { name, description, leadsCount, pricePaise } = await req.json()
-  const row = await db.query(`INSERT INTO lead_packages (name,description,leads_count,price_paise) VALUES ($1,$2,$3,$4) RETURNING *`, [name, description, leadsCount, pricePaise])
-  return NextResponse.json(row.rows[0])
+  const body = await req.json()
+  // Accept both admin naming (leadCredits/price/validityDays) and legacy (leadsCount/pricePaise)
+  const name         = body.name
+  const description  = body.description || null
+  const leadsCount   = body.leadCredits  ?? body.leadsCount  ?? 10
+  const pricePaise   = body.price        ?? body.pricePaise  ?? 29900
+  const validityDays = body.validityDays ?? 365
+  const isActive     = body.isActive     !== undefined ? body.isActive : true
+  const row = await db.query(
+    `INSERT INTO lead_packages (name,description,leads_count,price_paise,validity_days,is_active) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+    [name, description, leadsCount, pricePaise, validityDays, isActive]
+  )
+  return NextResponse.json(toPackageShape(row.rows[0]))
 }
 
 async function updateLeadPackage(req: NextRequest) {
@@ -83,13 +109,16 @@ async function updateLeadPackage(req: NextRequest) {
   const sets: string[] = []; const params: any[] = []
   if (body.name        !== undefined) { params.push(body.name);        sets.push(`name=$${params.length}`) }
   if (body.description !== undefined) { params.push(body.description); sets.push(`description=$${params.length}`) }
-  if (body.leadsCount  !== undefined) { params.push(body.leadsCount);  sets.push(`leads_count=$${params.length}`) }
-  if (body.pricePaise  !== undefined) { params.push(body.pricePaise);  sets.push(`price_paise=$${params.length}`) }
-  if (body.isActive    !== undefined) { params.push(body.isActive);    sets.push(`is_active=$${params.length}`) }
+  const leadsCount = body.leadCredits ?? body.leadsCount
+  const pricePaise = body.price       ?? body.pricePaise
+  if (leadsCount   !== undefined) { params.push(leadsCount);        sets.push(`leads_count=$${params.length}`) }
+  if (pricePaise   !== undefined) { params.push(pricePaise);        sets.push(`price_paise=$${params.length}`) }
+  if (body.validityDays !== undefined) { params.push(body.validityDays); sets.push(`validity_days=$${params.length}`) }
+  if (body.isActive     !== undefined) { params.push(body.isActive);     sets.push(`is_active=$${params.length}`) }
   if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
   params.push(id)
   const row = await db.query(`UPDATE lead_packages SET ${sets.join(',')} WHERE id=$${params.length} RETURNING *`, params)
-  return NextResponse.json(row.rows[0])
+  return NextResponse.json(toPackageShape(row.rows[0]))
 }
 
 async function deleteLeadPackage(req: NextRequest) {
