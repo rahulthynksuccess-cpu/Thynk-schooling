@@ -510,8 +510,8 @@ export function AddChildPageClient() {
   const [saving, setSaving] = useState(false)
   useEffect(() => { setMounted(true) }, [])
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
-  const { data: boards } = useQuery<any[]>({ queryKey: ['dd-board'], queryFn: () => fetch('/api/settings/dropdown?category=board').then(r=>r.json()).then(d=>d.options||[]), staleTime: 10*60*1000 })
-  const { data: classes } = useQuery<any[]>({ queryKey: ['dd-class'], queryFn: () => fetch('/api/settings/dropdown?category=class_level').then(r=>r.json()).then(d=>d.options||[]), staleTime: 10*60*1000 })
+  const { data: boards } = useQuery<any[]>({ queryKey: ['dd-board'], queryFn: () => fetch('/api/settings/dropdown?category=board').then(r=>r.json()).then(d=>d.options||[]), staleTime: 0 })
+  const { data: classes } = useQuery<any[]>({ queryKey: ['dd-class'], queryFn: () => fetch('/api/settings/dropdown?category=class_level').then(r=>r.json()).then(d=>d.options||[]), staleTime: 0 })
   const handleSubmit = async () => {
     if (!form.fullName.trim()) return
     setSaving(true)
