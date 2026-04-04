@@ -9,8 +9,8 @@ import toast from 'react-hot-toast'
 
 const TABS = ['All', 'Pending', 'Called', 'Completed', 'No Answer']
 
-const cell: React.CSSProperties   = { padding: '11px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,.05)' }
-const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '11px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.05)', whiteSpace: 'nowrap' }
+const cell: React.CSSProperties   = { padding: '11px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: 'var(--admin-counselling-heading-color,#E2E8F0)', borderBottom: '1px solid rgba(255,255,255,.05)' }
+const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '11px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--admin-text-muted,rgba(255,255,255,0.75))', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-counselling-card-border,rgba(255,255,255,0.07))', background: 'var(--admin-counselling-card-bg,rgba(255,255,255,.05))', whiteSpace: 'nowrap' }
 
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   pending:   { bg: 'rgba(251,191,36,.12)', color: '#FBBF24' },
@@ -45,7 +45,7 @@ export default function AdminCounsellingPage() {
   })
 
   return (
-    <AdminLayout title="Free Counselling" subtitle="Manage parent callback requests and session status">
+    <AdminLayout pageClass="admin-page-counselling" title="Free Counselling" subtitle="Manage parent callback requests and session status">
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
         {[
@@ -55,14 +55,14 @@ export default function AdminCounsellingPage() {
           { label: 'No Answer',      value: sessions.filter(s=>s.status==='no_answer').length,   color: '#F87171' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
+            style={{ background: 'var(--admin-counselling-card-bg,#111820)', border: '1px solid var(--admin-counselling-card-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
             <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value}</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--admin-counselling-card-bg,#111820)', border: '1px solid var(--admin-counselling-card-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
             <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />

@@ -63,7 +63,7 @@ export default function LeadPricingPage() {
   ]
 
   return (
-    <AdminLayout title="Lead Pricing" subtitle="Set platform-wide default and floor/ceiling prices for leads">
+    <AdminLayout pageClass="admin-page-settings" title="Lead Pricing" subtitle="Set platform-wide default and floor/ceiling prices for leads">
 
       {/* Summary cards */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'14px', marginBottom:'24px' }}>

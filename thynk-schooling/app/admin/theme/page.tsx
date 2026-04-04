@@ -86,6 +86,46 @@ const DEFAULT: Record<string, any> = {
   /* Dashboard */
   dashboardBg: '#FAF7F2', dashboardCardBg: '#FFFFFF',
   dashboardHeadingSize: 26, dashboardHeadingColor: '#0D1117',
+  /* Admin — per-page card & font overrides */
+  adminAnalyticsCardBg: '#111820', adminAnalyticsCardBorder: '#1E2A3A',
+  adminAnalyticsHeadingColor: 'rgba(255,255,255,0.9)', adminAnalyticsHeadingSize: 22,
+  adminAnalyticsStatBg: '#0D1117', adminAnalyticsStatColor: '#B8860B',
+  adminUsersCardBg: '#111820', adminUsersCardBorder: '#1E2A3A',
+  adminUsersHeadingColor: 'rgba(255,255,255,0.9)', adminUsersHeadingSize: 22,
+  adminUsersRowBg: 'rgba(255,255,255,0.03)', adminUsersRowBgAlt: 'rgba(255,255,255,0.06)',
+  adminAppsCardBg: '#111820', adminAppsCardBorder: '#1E2A3A',
+  adminAppsHeadingColor: 'rgba(255,255,255,0.9)', adminAppsHeadingSize: 22,
+  adminAppsStatusBadgeBg: 'rgba(184,134,11,0.15)', adminAppsStatusBadgeColor: '#B8860B',
+  adminLeadsCardBg: '#111820', adminLeadsCardBorder: '#1E2A3A',
+  adminLeadsHeadingColor: 'rgba(255,255,255,0.9)', adminLeadsHeadingSize: 22,
+  adminLeadsTagBg: 'rgba(184,134,11,0.15)', adminLeadsTagColor: '#B8860B',
+  adminReviewsCardBg: '#111820', adminReviewsCardBorder: '#1E2A3A',
+  adminReviewsHeadingColor: 'rgba(255,255,255,0.9)', adminReviewsHeadingSize: 22,
+  adminReviewsStarColor: '#B8860B',
+  adminCounsellingCardBg: '#111820', adminCounsellingCardBorder: '#1E2A3A',
+  adminCounsellingHeadingColor: 'rgba(255,255,255,0.9)', adminCounsellingHeadingSize: 22,
+  adminSchoolsCardBg: '#111820', adminSchoolsCardBorder: '#1E2A3A',
+  adminSchoolsHeadingColor: 'rgba(255,255,255,0.9)', adminSchoolsHeadingSize: 22,
+  adminPaymentsCardBg: '#111820', adminPaymentsCardBorder: '#1E2A3A',
+  adminPaymentsHeadingColor: 'rgba(255,255,255,0.9)', adminPaymentsHeadingSize: 22,
+  adminPackagesCardBg: '#111820', adminPackagesCardBorder: '#1E2A3A',
+  adminPackagesHeadingColor: 'rgba(255,255,255,0.9)', adminPackagesHeadingSize: 22,
+  /* Admin — Notifications page */
+  adminNotificationsCardBg: '#111820', adminNotificationsCardBorder: '#1E2A3A',
+  adminNotificationsHeadingColor: 'rgba(255,255,255,0.9)', adminNotificationsHeadingSize: 22,
+  adminNotificationsBadgeBg: 'rgba(184,134,11,0.18)', adminNotificationsBadgeColor: '#B8860B',
+  /* Admin — SEO Manager page */
+  adminSeoCardBg: '#111820', adminSeoCardBorder: '#1E2A3A',
+  adminSeoHeadingColor: 'rgba(255,255,255,0.9)', adminSeoHeadingSize: 22,
+  adminSeoInputBg: '#0D1117', adminSeoInputBorder: '#1E2A3A',
+  /* Admin — Media & Brand page */
+  adminMediaCardBg: '#111820', adminMediaCardBorder: '#1E2A3A',
+  adminMediaHeadingColor: 'rgba(255,255,255,0.9)', adminMediaHeadingSize: 22,
+  adminMediaUploadBg: 'rgba(184,134,11,0.07)', adminMediaUploadBorder: '#B8860B',
+  /* Admin — Cities Manager page */
+  adminCitiesCardBg: '#111820', adminCitiesCardBorder: '#1E2A3A',
+  adminCitiesHeadingColor: 'rgba(255,255,255,0.9)', adminCitiesHeadingSize: 22,
+  adminCitiesTagBg: 'rgba(184,134,11,0.15)', adminCitiesTagColor: '#B8860B',
   /* Footer */
   footerBg: '#0D1117', footerTextColor: 'rgba(250,247,242,0.4)',
   footerLinkHover: '#B8860B', footerTextSize: 13,
@@ -213,6 +253,21 @@ const PAGES = [
   ]},
   { label:'📦 Admin — Packages',     url: '/admin/packages',      sections:[
     { key:'admin-packages',  label:'Lead Packages'      },
+  ]},
+  { label:'🔔 Admin — Notifications', url: '/admin/notifications', sections:[
+    { key:'admin-notifications', label:'Notifications'         },
+  ]},
+  { label:'🔍 Admin — SEO Manager',  url: '/admin/seo',           sections:[
+    { key:'admin-seo',           label:'SEO Manager'           },
+  ]},
+  { label:'🖼️ Admin — Media & Brand', url: '/admin/media',        sections:[
+    { key:'admin-media',         label:'Media & Brand'         },
+  ]},
+  { label:'🏙️ Admin — Cities Mgr',  url: '/admin/cities',        sections:[
+    { key:'admin-cities',        label:'Cities Manager'        },
+  ]},
+  { label:'💬 Admin — Counselling',  url: '/admin/counselling',   sections:[
+    { key:'admin-counselling',   label:'Counselling Manager'   },
   ]},
 ]
 
@@ -715,37 +770,313 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       </div>
     )
 
-    case 'admin-analytics':
-    case 'admin-schools':
-    case 'admin-users':
-    case 'admin-apps':
-    case 'admin-leads':
-    case 'admin-payments':
-    case 'admin-reviews':
-    case 'admin-packages':
-    case 'admin-counselling':
-    case 'admin-settings':
-    case 'admin-seo':
-    case 'admin-media': return (
+    case 'admin-analytics': return (
       <div>
-        <Heading text="Admin Panel — Global Style" />
+        <Heading text="Admin — Analytics Page" />
         <G2>
           <div>
-            <label style={lbl}>Admin Background</label>
-            <CP label="Page background"  k="adminBg"           t={t} onChange={onChange} />
-            <CP label="Card background"  k="adminCardBg"       t={t} onChange={onChange} />
-            <CP label="Sidebar bg"       k="adminSidebarBg"    t={t} onChange={onChange} />
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"    k="adminBg"                    t={t} onChange={onChange} />
+            <CP label="Card background"    k="adminAnalyticsCardBg"       t={t} onChange={onChange} />
+            <CP label="Card border"        k="adminAnalyticsCardBorder"   t={t} onChange={onChange} />
+            <CP label="Stat block bg"      k="adminAnalyticsStatBg"       t={t} onChange={onChange} />
+            <CP label="Stat number colour" k="adminAnalyticsStatColor"    t={t} onChange={onChange} />
           </div>
           <div>
-            <label style={lbl}>Admin Text</label>
-            <CP label="Heading colour"   k="adminHeadingColor" t={t} onChange={onChange} />
-            <CP label="Accent colour"    k="adminSidebarActiveColor" t={t} onChange={onChange} />
-            <SR label="Heading size"     k="adminHeadingSize" min={16} max={40} t={t} onChange={onChange} />
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"     k="adminAnalyticsHeadingColor" t={t} onChange={onChange} />
+            <SR label="Heading size"       k="adminAnalyticsHeadingSize"  min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"      k="adminAccent"                t={t} onChange={onChange} />
+            <CP label="Muted text"         k="adminTextMuted"             t={t} onChange={onChange} />
           </div>
         </G2>
-        <div style={{ marginTop:12, padding:'12px', background:'rgba(184,134,11,0.06)', borderRadius:'8px', fontFamily:'Inter,sans-serif', fontSize:'12px', color:'#718096' }}>
-          💡 Admin pages share a global dark style. Changes here affect all admin tabs.
-        </div>
+      </div>
+    )
+
+    case 'admin-users': return (
+      <div>
+        <Heading text="Admin — Users Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Rows</label>
+            <CP label="Page background"  k="adminBg"                  t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminUsersCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminUsersCardBorder"     t={t} onChange={onChange} />
+            <CP label="Row background"   k="adminUsersRowBg"          t={t} onChange={onChange} />
+            <CP label="Alt row bg"       k="adminUsersRowBgAlt"       t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminUsersHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminUsersHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"              t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"           t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-apps': return (
+      <div>
+        <Heading text="Admin — Applications" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Status</label>
+            <CP label="Page background"    k="adminBg"                     t={t} onChange={onChange} />
+            <CP label="Card background"    k="adminAppsCardBg"             t={t} onChange={onChange} />
+            <CP label="Card border"        k="adminAppsCardBorder"         t={t} onChange={onChange} />
+            <CP label="Status badge bg"    k="adminAppsStatusBadgeBg"      t={t} onChange={onChange} />
+            <CP label="Status badge text"  k="adminAppsStatusBadgeColor"   t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"     k="adminAppsHeadingColor"       t={t} onChange={onChange} />
+            <SR label="Heading size"       k="adminAppsHeadingSize"        min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"      k="adminAccent"                 t={t} onChange={onChange} />
+            <CP label="Muted text"         k="adminTextMuted"              t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-leads': return (
+      <div>
+        <Heading text="Admin — Leads Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Tags</label>
+            <CP label="Page background"  k="adminBg"                  t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminLeadsCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminLeadsCardBorder"     t={t} onChange={onChange} />
+            <CP label="Tag background"   k="adminLeadsTagBg"          t={t} onChange={onChange} />
+            <CP label="Tag text colour"  k="adminLeadsTagColor"       t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminLeadsHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminLeadsHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"              t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"           t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-reviews': return (
+      <div>
+        <Heading text="Admin — Reviews" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Stars</label>
+            <CP label="Page background"  k="adminBg"                    t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminReviewsCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminReviewsCardBorder"     t={t} onChange={onChange} />
+            <CP label="Star colour"      k="adminReviewsStarColor"      t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminReviewsHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminReviewsHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"             t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-counselling': return (
+      <div>
+        <Heading text="Admin — Counselling Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                        t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminCounsellingCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminCounsellingCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminCounsellingHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminCounsellingHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                    t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"                 t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-schools': return (
+      <div>
+        <Heading text="Admin — Schools Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                    t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminSchoolsCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminSchoolsCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminSchoolsHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminSchoolsHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"             t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-payments': return (
+      <div>
+        <Heading text="Admin — Payments" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                     t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminPaymentsCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminPaymentsCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminPaymentsHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminPaymentsHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                 t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"              t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-packages': return (
+      <div>
+        <Heading text="Admin — Lead Packages" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                      t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminPackagesCardBg"          t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminPackagesCardBorder"      t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminPackagesHeadingColor"    t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminPackagesHeadingSize"     min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                  t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"               t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-notifications': return (
+      <div>
+        <Heading text="Admin — Notifications" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Badges</label>
+            <CP label="Page background"     k="adminBg"                            t={t} onChange={onChange} />
+            <CP label="Card background"     k="adminNotificationsCardBg"           t={t} onChange={onChange} />
+            <CP label="Card border"         k="adminNotificationsCardBorder"       t={t} onChange={onChange} />
+            <CP label="Badge background"    k="adminNotificationsBadgeBg"          t={t} onChange={onChange} />
+            <CP label="Badge text colour"   k="adminNotificationsBadgeColor"       t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"      k="adminNotificationsHeadingColor"     t={t} onChange={onChange} />
+            <SR label="Heading size"        k="adminNotificationsHeadingSize"      min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"       k="adminAccent"                        t={t} onChange={onChange} />
+            <CP label="Muted text"          k="adminTextMuted"                     t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-seo': return (
+      <div>
+        <Heading text="Admin — SEO Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Inputs</label>
+            <CP label="Page background"  k="adminBg"                  t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminSeoCardBg"           t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminSeoCardBorder"       t={t} onChange={onChange} />
+            <CP label="Input background" k="adminSeoInputBg"          t={t} onChange={onChange} />
+            <CP label="Input border"     k="adminSeoInputBorder"      t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminSeoHeadingColor"     t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminSeoHeadingSize"      min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"              t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"           t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-media': return (
+      <div>
+        <Heading text="Admin — Media & Brand" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Upload Zone</label>
+            <CP label="Page background"   k="adminBg"                   t={t} onChange={onChange} />
+            <CP label="Card background"   k="adminMediaCardBg"          t={t} onChange={onChange} />
+            <CP label="Card border"       k="adminMediaCardBorder"      t={t} onChange={onChange} />
+            <CP label="Upload zone bg"    k="adminMediaUploadBg"        t={t} onChange={onChange} />
+            <CP label="Upload zone border" k="adminMediaUploadBorder"   t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"    k="adminMediaHeadingColor"    t={t} onChange={onChange} />
+            <SR label="Heading size"      k="adminMediaHeadingSize"     min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"     k="adminAccent"               t={t} onChange={onChange} />
+            <CP label="Muted text"        k="adminTextMuted"            t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-cities': return (
+      <div>
+        <Heading text="Admin — Cities Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Tags</label>
+            <CP label="Page background"  k="adminBg"                    t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminCitiesCardBg"          t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminCitiesCardBorder"      t={t} onChange={onChange} />
+            <CP label="Tag background"   k="adminCitiesTagBg"           t={t} onChange={onChange} />
+            <CP label="Tag text colour"  k="adminCitiesTagColor"        t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminCitiesHeadingColor"    t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminCitiesHeadingSize"     min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"             t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-settings': return (
+      <div>
+        <Heading text="Admin — Settings" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"        t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminCardBg"    t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminBorder"    t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminText"      t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"    t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted" t={t} onChange={onChange} />
+          </div>
+        </G2>
       </div>
     )
 
@@ -875,6 +1206,75 @@ function buildThemeCssText(t: Record<string,any>): string {
   --admin-text: ${co('adminText','rgba(255,255,255,0.9)')};
   --admin-text-muted: ${co('adminTextMuted','rgba(255,255,255,0.45)')};
   --admin-text-faint: ${co('adminTextFaint','rgba(255,255,255,0.25)')};
+  --admin-analytics-card-bg: ${co('adminAnalyticsCardBg','#111820')};
+  --admin-analytics-card-border: ${co('adminAnalyticsCardBorder','#1E2A3A')};
+  --admin-analytics-heading-color: ${co('adminAnalyticsHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-analytics-heading-size: ${px('adminAnalyticsHeadingSize',22)};
+  --admin-analytics-stat-bg: ${co('adminAnalyticsStatBg','#0D1117')};
+  --admin-analytics-stat-color: ${co('adminAnalyticsStatColor','#B8860B')};
+  --admin-users-card-bg: ${co('adminUsersCardBg','#111820')};
+  --admin-users-card-border: ${co('adminUsersCardBorder','#1E2A3A')};
+  --admin-users-heading-color: ${co('adminUsersHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-users-heading-size: ${px('adminUsersHeadingSize',22)};
+  --admin-users-row-bg: ${co('adminUsersRowBg','rgba(255,255,255,0.03)')};
+  --admin-users-row-bg-alt: ${co('adminUsersRowBgAlt','rgba(255,255,255,0.06)')};
+  --admin-apps-card-bg: ${co('adminAppsCardBg','#111820')};
+  --admin-apps-card-border: ${co('adminAppsCardBorder','#1E2A3A')};
+  --admin-apps-heading-color: ${co('adminAppsHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-apps-heading-size: ${px('adminAppsHeadingSize',22)};
+  --admin-apps-status-badge-bg: ${co('adminAppsStatusBadgeBg','rgba(184,134,11,0.15)')};
+  --admin-apps-status-badge-color: ${co('adminAppsStatusBadgeColor','#B8860B')};
+  --admin-leads-card-bg: ${co('adminLeadsCardBg','#111820')};
+  --admin-leads-card-border: ${co('adminLeadsCardBorder','#1E2A3A')};
+  --admin-leads-heading-color: ${co('adminLeadsHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-leads-heading-size: ${px('adminLeadsHeadingSize',22)};
+  --admin-leads-tag-bg: ${co('adminLeadsTagBg','rgba(184,134,11,0.15)')};
+  --admin-leads-tag-color: ${co('adminLeadsTagColor','#B8860B')};
+  --admin-reviews-card-bg: ${co('adminReviewsCardBg','#111820')};
+  --admin-reviews-card-border: ${co('adminReviewsCardBorder','#1E2A3A')};
+  --admin-reviews-heading-color: ${co('adminReviewsHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-reviews-heading-size: ${px('adminReviewsHeadingSize',22)};
+  --admin-reviews-star-color: ${co('adminReviewsStarColor','#B8860B')};
+  --admin-counselling-card-bg: ${co('adminCounsellingCardBg','#111820')};
+  --admin-counselling-card-border: ${co('adminCounsellingCardBorder','#1E2A3A')};
+  --admin-counselling-heading-color: ${co('adminCounsellingHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-counselling-heading-size: ${px('adminCounsellingHeadingSize',22)};
+  --admin-schools-card-bg: ${co('adminSchoolsCardBg','#111820')};
+  --admin-schools-card-border: ${co('adminSchoolsCardBorder','#1E2A3A')};
+  --admin-schools-heading-color: ${co('adminSchoolsHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-schools-heading-size: ${px('adminSchoolsHeadingSize',22)};
+  --admin-payments-card-bg: ${co('adminPaymentsCardBg','#111820')};
+  --admin-payments-card-border: ${co('adminPaymentsCardBorder','#1E2A3A')};
+  --admin-payments-heading-color: ${co('adminPaymentsHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-payments-heading-size: ${px('adminPaymentsHeadingSize',22)};
+  --admin-packages-card-bg: ${co('adminPackagesCardBg','#111820')};
+  --admin-packages-card-border: ${co('adminPackagesCardBorder','#1E2A3A')};
+  --admin-packages-heading-color: ${co('adminPackagesHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-packages-heading-size: ${px('adminPackagesHeadingSize',22)};
+  --admin-notifications-card-bg: ${co('adminNotificationsCardBg','#111820')};
+  --admin-notifications-card-border: ${co('adminNotificationsCardBorder','#1E2A3A')};
+  --admin-notifications-heading-color: ${co('adminNotificationsHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-notifications-heading-size: ${px('adminNotificationsHeadingSize',22)};
+  --admin-notifications-badge-bg: ${co('adminNotificationsBadgeBg','rgba(184,134,11,0.18)')};
+  --admin-notifications-badge-color: ${co('adminNotificationsBadgeColor','#B8860B')};
+  --admin-seo-card-bg: ${co('adminSeoCardBg','#111820')};
+  --admin-seo-card-border: ${co('adminSeoCardBorder','#1E2A3A')};
+  --admin-seo-heading-color: ${co('adminSeoHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-seo-heading-size: ${px('adminSeoHeadingSize',22)};
+  --admin-seo-input-bg: ${co('adminSeoInputBg','#0D1117')};
+  --admin-seo-input-border: ${co('adminSeoInputBorder','#1E2A3A')};
+  --admin-media-card-bg: ${co('adminMediaCardBg','#111820')};
+  --admin-media-card-border: ${co('adminMediaCardBorder','#1E2A3A')};
+  --admin-media-heading-color: ${co('adminMediaHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-media-heading-size: ${px('adminMediaHeadingSize',22)};
+  --admin-media-upload-bg: ${co('adminMediaUploadBg','rgba(184,134,11,0.07)')};
+  --admin-media-upload-border: ${co('adminMediaUploadBorder','#B8860B')};
+  --admin-cities-card-bg: ${co('adminCitiesCardBg','#111820')};
+  --admin-cities-card-border: ${co('adminCitiesCardBorder','#1E2A3A')};
+  --admin-cities-heading-color: ${co('adminCitiesHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-cities-heading-size: ${px('adminCitiesHeadingSize',22)};
+  --admin-cities-tag-bg: ${co('adminCitiesTagBg','rgba(184,134,11,0.15)')};
+  --admin-cities-tag-color: ${co('adminCitiesTagColor','#B8860B')};
 }`
 }
 
@@ -979,6 +1379,76 @@ function applyToDom(t: Record<string,any>) {
   s('--admin-text',        String(t.adminText       || 'rgba(255,255,255,0.9)'))
   s('--admin-text-muted',  String(t.adminTextMuted  || 'rgba(255,255,255,0.45)'))
   s('--admin-text-faint',  String(t.adminTextFaint  || 'rgba(255,255,255,0.25)'))
+  // Per-page admin vars
+  s('--admin-analytics-card-bg',           String(t.adminAnalyticsCardBg        || '#111820'))
+  s('--admin-analytics-card-border',       String(t.adminAnalyticsCardBorder    || '#1E2A3A'))
+  s('--admin-analytics-heading-color',     String(t.adminAnalyticsHeadingColor  || 'rgba(255,255,255,0.9)'))
+  s('--admin-analytics-heading-size',      `${t.adminAnalyticsHeadingSize || 22}px`)
+  s('--admin-analytics-stat-bg',           String(t.adminAnalyticsStatBg        || '#0D1117'))
+  s('--admin-analytics-stat-color',        String(t.adminAnalyticsStatColor     || '#B8860B'))
+  s('--admin-users-card-bg',               String(t.adminUsersCardBg            || '#111820'))
+  s('--admin-users-card-border',           String(t.adminUsersCardBorder        || '#1E2A3A'))
+  s('--admin-users-heading-color',         String(t.adminUsersHeadingColor      || 'rgba(255,255,255,0.9)'))
+  s('--admin-users-heading-size',          `${t.adminUsersHeadingSize || 22}px`)
+  s('--admin-users-row-bg',                String(t.adminUsersRowBg             || 'rgba(255,255,255,0.03)'))
+  s('--admin-users-row-bg-alt',            String(t.adminUsersRowBgAlt          || 'rgba(255,255,255,0.06)'))
+  s('--admin-apps-card-bg',                String(t.adminAppsCardBg             || '#111820'))
+  s('--admin-apps-card-border',            String(t.adminAppsCardBorder         || '#1E2A3A'))
+  s('--admin-apps-heading-color',          String(t.adminAppsHeadingColor       || 'rgba(255,255,255,0.9)'))
+  s('--admin-apps-heading-size',           `${t.adminAppsHeadingSize || 22}px`)
+  s('--admin-apps-status-badge-bg',        String(t.adminAppsStatusBadgeBg      || 'rgba(184,134,11,0.15)'))
+  s('--admin-apps-status-badge-color',     String(t.adminAppsStatusBadgeColor   || '#B8860B'))
+  s('--admin-leads-card-bg',               String(t.adminLeadsCardBg            || '#111820'))
+  s('--admin-leads-card-border',           String(t.adminLeadsCardBorder        || '#1E2A3A'))
+  s('--admin-leads-heading-color',         String(t.adminLeadsHeadingColor      || 'rgba(255,255,255,0.9)'))
+  s('--admin-leads-heading-size',          `${t.adminLeadsHeadingSize || 22}px`)
+  s('--admin-leads-tag-bg',                String(t.adminLeadsTagBg             || 'rgba(184,134,11,0.15)'))
+  s('--admin-leads-tag-color',             String(t.adminLeadsTagColor          || '#B8860B'))
+  s('--admin-reviews-card-bg',             String(t.adminReviewsCardBg          || '#111820'))
+  s('--admin-reviews-card-border',         String(t.adminReviewsCardBorder      || '#1E2A3A'))
+  s('--admin-reviews-heading-color',       String(t.adminReviewsHeadingColor    || 'rgba(255,255,255,0.9)'))
+  s('--admin-reviews-heading-size',        `${t.adminReviewsHeadingSize || 22}px`)
+  s('--admin-reviews-star-color',          String(t.adminReviewsStarColor       || '#B8860B'))
+  s('--admin-counselling-card-bg',         String(t.adminCounsellingCardBg      || '#111820'))
+  s('--admin-counselling-card-border',     String(t.adminCounsellingCardBorder  || '#1E2A3A'))
+  s('--admin-counselling-heading-color',   String(t.adminCounsellingHeadingColor|| 'rgba(255,255,255,0.9)'))
+  s('--admin-counselling-heading-size',    `${t.adminCounsellingHeadingSize || 22}px`)
+  s('--admin-schools-card-bg',             String(t.adminSchoolsCardBg          || '#111820'))
+  s('--admin-schools-card-border',         String(t.adminSchoolsCardBorder      || '#1E2A3A'))
+  s('--admin-schools-heading-color',       String(t.adminSchoolsHeadingColor    || 'rgba(255,255,255,0.9)'))
+  s('--admin-schools-heading-size',        `${t.adminSchoolsHeadingSize || 22}px`)
+  s('--admin-payments-card-bg',            String(t.adminPaymentsCardBg         || '#111820'))
+  s('--admin-payments-card-border',        String(t.adminPaymentsCardBorder     || '#1E2A3A'))
+  s('--admin-payments-heading-color',      String(t.adminPaymentsHeadingColor   || 'rgba(255,255,255,0.9)'))
+  s('--admin-payments-heading-size',       `${t.adminPaymentsHeadingSize || 22}px`)
+  s('--admin-packages-card-bg',            String(t.adminPackagesCardBg         || '#111820'))
+  s('--admin-packages-card-border',        String(t.adminPackagesCardBorder     || '#1E2A3A'))
+  s('--admin-packages-heading-color',      String(t.adminPackagesHeadingColor   || 'rgba(255,255,255,0.9)'))
+  s('--admin-packages-heading-size',       `${t.adminPackagesHeadingSize || 22}px`)
+  s('--admin-notifications-card-bg',       String(t.adminNotificationsCardBg    || '#111820'))
+  s('--admin-notifications-card-border',   String(t.adminNotificationsCardBorder|| '#1E2A3A'))
+  s('--admin-notifications-heading-color', String(t.adminNotificationsHeadingColor|| 'rgba(255,255,255,0.9)'))
+  s('--admin-notifications-heading-size',  `${t.adminNotificationsHeadingSize || 22}px`)
+  s('--admin-notifications-badge-bg',      String(t.adminNotificationsBadgeBg   || 'rgba(184,134,11,0.18)'))
+  s('--admin-notifications-badge-color',   String(t.adminNotificationsBadgeColor|| '#B8860B'))
+  s('--admin-seo-card-bg',                 String(t.adminSeoCardBg              || '#111820'))
+  s('--admin-seo-card-border',             String(t.adminSeoCardBorder          || '#1E2A3A'))
+  s('--admin-seo-heading-color',           String(t.adminSeoHeadingColor        || 'rgba(255,255,255,0.9)'))
+  s('--admin-seo-heading-size',            `${t.adminSeoHeadingSize || 22}px`)
+  s('--admin-seo-input-bg',                String(t.adminSeoInputBg             || '#0D1117'))
+  s('--admin-seo-input-border',            String(t.adminSeoInputBorder         || '#1E2A3A'))
+  s('--admin-media-card-bg',               String(t.adminMediaCardBg            || '#111820'))
+  s('--admin-media-card-border',           String(t.adminMediaCardBorder        || '#1E2A3A'))
+  s('--admin-media-heading-color',         String(t.adminMediaHeadingColor      || 'rgba(255,255,255,0.9)'))
+  s('--admin-media-heading-size',          `${t.adminMediaHeadingSize || 22}px`)
+  s('--admin-media-upload-bg',             String(t.adminMediaUploadBg          || 'rgba(184,134,11,0.07)'))
+  s('--admin-media-upload-border',         String(t.adminMediaUploadBorder      || '#B8860B'))
+  s('--admin-cities-card-bg',              String(t.adminCitiesCardBg           || '#111820'))
+  s('--admin-cities-card-border',          String(t.adminCitiesCardBorder       || '#1E2A3A'))
+  s('--admin-cities-heading-color',        String(t.adminCitiesHeadingColor     || 'rgba(255,255,255,0.9)'))
+  s('--admin-cities-heading-size',         `${t.adminCitiesHeadingSize || 22}px`)
+  s('--admin-cities-tag-bg',               String(t.adminCitiesTagBg            || 'rgba(184,134,11,0.15)'))
+  s('--admin-cities-tag-color',            String(t.adminCitiesTagColor         || '#B8860B'))
 }
 
 export default function AdminThemePage() {

@@ -15,9 +15,14 @@ import {
 } from 'recharts'
 
 const T = {
-  bg:'#04080F', card:'#0C1422', border:'rgba(255,255,255,0.07)',
-  t1:'rgba(255,255,255,0.95)', t2:'rgba(255,255,255,0.55)', t3:'rgba(255,255,255,0.25)',
-  gold:'#F5A623', blue:'#4F8EF7', green:'#00E5A0', purple:'#9B72FF',
+  bg:'var(--admin-bg,#04080F)',
+  card:'var(--admin-card-bg,#0C1422)',
+  border:'var(--admin-border,rgba(255,255,255,0.07))',
+  t1:'var(--admin-text,rgba(255,255,255,0.95))',
+  t2:'var(--admin-text-muted,rgba(255,255,255,0.55))',
+  t3:'var(--admin-text-faint,rgba(255,255,255,0.25))',
+  gold:'var(--admin-accent,#F5A623)',
+  blue:'#4F8EF7', green:'#00E5A0', purple:'#9B72FF',
   red:'#FF5757', orange:'#FF7A2E',
 }
 const card: React.CSSProperties = { background:T.card, border:`1px solid ${T.border}`, borderRadius:16 }
@@ -105,7 +110,7 @@ export default function AdminDashboardPage(){
     {icon:Star,      label:'Reviews',         value:(data?.totalReviews||0).toLocaleString('en-IN'),                    sub:`${data?.pendingReviews||0} to moderate`,    trendUp:null, color:T.orange, href:'/admin/reviews'},
   ]
   return (
-    <AdminLayout title="Dashboard" subtitle="Platform overview — live data">
+    <AdminLayout pageClass="admin-page-overview" title="Dashboard" subtitle="Platform overview — live data">
       <style>{`@keyframes tskel{0%,100%{opacity:1}50%{opacity:0.4}}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}.ds{animation:fadeUp 0.4s ease both}`}</style>
 
       {/* KPI Row */}

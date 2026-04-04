@@ -38,7 +38,7 @@ export default function AdminPaymentsPage() {
   const todayAmount  = data?.todayAmount  || 0
 
   return (
-    <AdminLayout title="Payments" subtitle="All transactions — lead purchases, package payments">
+    <AdminLayout pageClass="admin-page-payments" title="Payments" subtitle="All transactions — lead purchases, package payments">
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
         {[
@@ -48,14 +48,14 @@ export default function AdminPaymentsPage() {
           { label: 'Completed',          value: String(payments.filter(p=>p.status==='completed').length),      color: '#FBBF24' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
+            style={{ background: 'var(--admin-payments-card-bg,#111820)', border: '1px solid var(--admin-payments-card-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
             <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: s.value.startsWith('₹') ? '20px' : '30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value}</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--admin-payments-card-bg,#111820)', border: '1px solid var(--admin-payments-card-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
             <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />

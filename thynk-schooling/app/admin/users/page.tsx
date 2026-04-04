@@ -190,7 +190,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <AdminLayout title="Users Manager" subtitle="All parents, school admins — view activity, IP logs and manage access">
+    <AdminLayout pageClass="admin-page-users" title="Users Manager" subtitle="All parents, school admins — view activity, IP logs and manage access">
 
       {/* Stat Cards */}
       <div className="admin-stat-grid">

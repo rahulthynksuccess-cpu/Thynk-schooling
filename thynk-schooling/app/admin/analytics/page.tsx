@@ -15,9 +15,14 @@ import {
 } from 'recharts'
 
 const T = {
-  bg:'#04080F', card:'#0C1422', border:'rgba(255,255,255,0.07)',
-  t1:'rgba(255,255,255,0.95)', t2:'rgba(255,255,255,0.55)', t3:'rgba(255,255,255,0.25)',
-  gold:'#F5A623', blue:'#4F8EF7', green:'#00E5A0', purple:'#9B72FF',
+  bg:'var(--admin-bg,#04080F)',
+  card:'var(--admin-analytics-card-bg,#0C1422)',
+  border:'var(--admin-analytics-card-border,rgba(255,255,255,0.07))',
+  t1:'var(--admin-analytics-heading-color,rgba(255,255,255,0.95))',
+  t2:'var(--admin-text-muted,rgba(255,255,255,0.55))',
+  t3:'var(--admin-text-faint,rgba(255,255,255,0.25))',
+  gold:'var(--admin-analytics-stat-color,#F5A623)',
+  blue:'#4F8EF7', green:'#00E5A0', purple:'#9B72FF',
   red:'#FF5757', orange:'#FF7A2E', cyan:'#06D6F5', pink:'#F472B6',
 }
 const card: React.CSSProperties = { background:T.card, border:`1px solid ${T.border}`, borderRadius:16 }
@@ -125,7 +130,7 @@ export default function AdminAnalyticsPage(){
     {icon:FileCheck,label:'Applications',  value:data?.totalApps   ||673,  trend:data?.appsTrend   ||31,  color:T.orange},
   ]
   return (
-    <AdminLayout title="Analytics" subtitle="Platform performance, growth trends and key metrics">
+    <AdminLayout pageClass="admin-page-analytics" title="Analytics" subtitle="Platform performance, growth trends and key metrics">
       <style>{`@keyframes tskel{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
 
       {/* ── Report Tabs ── */}

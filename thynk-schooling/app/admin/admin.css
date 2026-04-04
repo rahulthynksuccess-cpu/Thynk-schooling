@@ -459,3 +459,59 @@ body:has(.admin-root) {
 }
 .admin-main ::-webkit-scrollbar { width: 3px; height: 3px; }
 .admin-main ::-webkit-scrollbar-thumb { background: rgba(45,212,191,0.13); border-radius: 99px; }
+
+/* ── THEME CONTROLLER BRIDGE — maps theme page vars into admin CSS vars ── */
+:root {
+  --a-bg:     var(--admin-bg,     #060D1F);
+  --a-card:   var(--admin-card-bg,#0C1428);
+  --a-border: var(--admin-border, rgba(255,255,255,0.07));
+  --a-t1:     var(--admin-text,   rgba(255,255,255,0.95));
+  --a-t2:     var(--admin-text-muted, rgba(255,255,255,0.55));
+  --a-t3:     var(--admin-text-faint, rgba(255,255,255,0.25));
+  --a-gold:   var(--admin-accent, #B8860B);
+  --a-sidebar:var(--admin-sidebar-bg, #07101F);
+  --a-header: var(--admin-header-bg,  rgba(6,13,31,0.97));
+}
+
+/* Per-page card overrides via data attribute on AdminLayout wrapper */
+.admin-page-analytics  { --a-card: var(--admin-analytics-card-bg,  #111820); --a-border: var(--admin-analytics-card-border, #1E2A3A); --a-t1: var(--admin-analytics-heading-color, rgba(255,255,255,0.9)); }
+.admin-page-users      { --a-card: var(--admin-users-card-bg,       #111820); --a-border: var(--admin-users-card-border,     #1E2A3A); --a-t1: var(--admin-users-heading-color,     rgba(255,255,255,0.9)); }
+.admin-page-apps       { --a-card: var(--admin-apps-card-bg,        #111820); --a-border: var(--admin-apps-card-border,      #1E2A3A); --a-t1: var(--admin-apps-heading-color,      rgba(255,255,255,0.9)); }
+.admin-page-leads      { --a-card: var(--admin-leads-card-bg,       #111820); --a-border: var(--admin-leads-card-border,     #1E2A3A); --a-t1: var(--admin-leads-heading-color,     rgba(255,255,255,0.9)); }
+.admin-page-reviews    { --a-card: var(--admin-reviews-card-bg,     #111820); --a-border: var(--admin-reviews-card-border,   #1E2A3A); --a-t1: var(--admin-reviews-heading-color,   rgba(255,255,255,0.9)); }
+.admin-page-counselling{ --a-card: var(--admin-counselling-card-bg, #111820); --a-border: var(--admin-counselling-card-border,#1E2A3A); --a-t1: var(--admin-counselling-heading-color,rgba(255,255,255,0.9)); }
+.admin-page-schools    { --a-card: var(--admin-schools-card-bg,     #111820); --a-border: var(--admin-schools-card-border,   #1E2A3A); --a-t1: var(--admin-schools-heading-color,   rgba(255,255,255,0.9)); }
+.admin-page-payments   { --a-card: var(--admin-payments-card-bg,    #111820); --a-border: var(--admin-payments-card-border,  #1E2A3A); --a-t1: var(--admin-payments-heading-color,  rgba(255,255,255,0.9)); }
+.admin-page-packages   { --a-card: var(--admin-packages-card-bg,    #111820); --a-border: var(--admin-packages-card-border,  #1E2A3A); --a-t1: var(--admin-packages-heading-color,  rgba(255,255,255,0.9)); }
+.admin-page-notifications{ --a-card: var(--admin-notifications-card-bg,#111820); --a-border: var(--admin-notifications-card-border,#1E2A3A); --a-t1: var(--admin-notifications-heading-color,rgba(255,255,255,0.9)); }
+.admin-page-seo        { --a-card: var(--admin-seo-card-bg,         #111820); --a-border: var(--admin-seo-card-border,       #1E2A3A); --a-t1: var(--admin-seo-heading-color,       rgba(255,255,255,0.9)); }
+.admin-page-media      { --a-card: var(--admin-media-card-bg,       #111820); --a-border: var(--admin-media-card-border,     #1E2A3A); --a-t1: var(--admin-media-heading-color,     rgba(255,255,255,0.9)); }
+.admin-page-cities     { --a-card: var(--admin-cities-card-bg,      #111820); --a-border: var(--admin-cities-card-border,    #1E2A3A); --a-t1: var(--admin-cities-heading-color,    rgba(255,255,255,0.9)); }
+
+/* Heading size per-page */
+.admin-page-analytics  .admin-header-title { font-size: var(--admin-analytics-heading-size,  22px) !important; }
+.admin-page-users      .admin-header-title { font-size: var(--admin-users-heading-size,       22px) !important; }
+.admin-page-apps       .admin-header-title { font-size: var(--admin-apps-heading-size,        22px) !important; }
+.admin-page-leads      .admin-header-title { font-size: var(--admin-leads-heading-size,       22px) !important; }
+.admin-page-reviews    .admin-header-title { font-size: var(--admin-reviews-heading-size,     22px) !important; }
+.admin-page-counselling .admin-header-title{ font-size: var(--admin-counselling-heading-size, 22px) !important; }
+.admin-page-schools    .admin-header-title { font-size: var(--admin-schools-heading-size,     22px) !important; }
+.admin-page-payments   .admin-header-title { font-size: var(--admin-payments-heading-size,    22px) !important; }
+.admin-page-packages   .admin-header-title { font-size: var(--admin-packages-heading-size,    22px) !important; }
+.admin-page-notifications .admin-header-title { font-size: var(--admin-notifications-heading-size, 22px) !important; }
+.admin-page-seo        .admin-header-title { font-size: var(--admin-seo-heading-size,         22px) !important; }
+.admin-page-media      .admin-header-title { font-size: var(--admin-media-heading-size,       22px) !important; }
+.admin-page-cities     .admin-header-title { font-size: var(--admin-cities-heading-size,      22px) !important; }
+
+/* Badge/tag/star colour overrides */
+.admin-page-leads       .badge-tag  { background: var(--admin-leads-tag-bg, rgba(184,134,11,0.15)); color: var(--admin-leads-tag-color, #B8860B); }
+.admin-page-reviews     .star-icon  { color: var(--admin-reviews-star-color, #FBBF24); fill: var(--admin-reviews-star-color, #FBBF24); }
+.admin-page-apps        .badge      { background: var(--admin-apps-status-badge-bg, rgba(184,134,11,0.15)); color: var(--admin-apps-status-badge-color, #B8860B); }
+.admin-page-notifications .notif-badge { background: var(--admin-notifications-badge-bg, rgba(184,134,11,0.18)); color: var(--admin-notifications-badge-color, #B8860B); }
+.admin-page-cities      .city-tag   { background: var(--admin-cities-tag-bg, rgba(184,134,11,0.15)); color: var(--admin-cities-tag-color, #B8860B); }
+.admin-page-seo         input, .admin-page-seo textarea, .admin-page-seo select { background: var(--admin-seo-input-bg, #0D1117); border-color: var(--admin-seo-input-border, #1E2A3A); }
+.admin-page-media       .upload-zone { background: var(--admin-media-upload-bg, rgba(184,134,11,0.07)); border-color: var(--admin-media-upload-border, #B8860B); }
+.admin-page-users       .table-data-row:nth-child(odd)  { background: var(--admin-users-row-bg,     rgba(255,255,255,0.03)); }
+.admin-page-users       .table-data-row:nth-child(even) { background: var(--admin-users-row-bg-alt, rgba(255,255,255,0.06)); }
+.admin-page-overview { --a-card: var(--admin-card-bg, #0C1428); --a-border: var(--admin-border, rgba(255,255,255,0.07)); --a-t1: var(--admin-text, rgba(255,255,255,0.9)); }
+.admin-page-overview .admin-header-title { font-size: var(--admin-heading-size, 22px) !important; }

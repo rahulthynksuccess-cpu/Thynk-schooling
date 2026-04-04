@@ -15,7 +15,7 @@ const TEMPLATES = [
 ]
 
 const lbl: React.CSSProperties = { display: 'block', fontSize: '10px', fontWeight: 700, letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,.3)', marginBottom: '7px', fontFamily: 'DM Sans,sans-serif' }
-const inp: React.CSSProperties = { width: '100%', padding: '10px 13px', background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid rgba(255,255,255,.08)', borderRadius: '9px', color: 'var(--admin-text,rgba(255,255,255,0.9))', fontSize: '13px', fontFamily: 'DM Sans,sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s' }
+const inp: React.CSSProperties = { width: '100%', padding: '10px 13px', background: 'var(--admin-notifications-card-bg,#111820)', border: '1px solid var(--admin-notifications-card-border,rgba(255,255,255,.08))', borderRadius: '9px', color: 'var(--admin-text,rgba(255,255,255,0.9))', fontSize: '13px', fontFamily: 'DM Sans,sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color .2s' }
 
 export default function AdminNotificationsPage() {
   const [audience, setAudience] = useState<'all' | 'parents' | 'schools'>('all')
@@ -38,7 +38,7 @@ export default function AdminNotificationsPage() {
   ]
 
   return (
-    <AdminLayout title="Notifications" subtitle="Send push notifications or in-app messages to users">
+    <AdminLayout pageClass="admin-page-notifications" title="Notifications" subtitle="Send push notifications or in-app messages to users">
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '20px', alignItems: 'start' }}>
 
         {/* Compose */}

@@ -38,7 +38,7 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <AdminLayout title="Integrations" subtitle="Gmail & WhatsApp configuration">
+    <AdminLayout pageClass="admin-page-settings" title="Integrations" subtitle="Gmail & WhatsApp configuration">
       <div style={{ display:'flex', gap:'8px', marginBottom:'24px' }}>
         {[{k:'email',icon:'📧',l:'Email / Gmail'},{k:'whatsapp',icon:'💬',l:'WhatsApp'}].map(t=>(
           <button key={t.k} onClick={()=>setTab(t.k as any)}

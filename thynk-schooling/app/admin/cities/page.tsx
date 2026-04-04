@@ -113,10 +113,10 @@ export default function AdminCitiesPage() {
   const update = (slug: string, key: keyof City, val: string) =>
     setCities(prev => prev.map(c => c.slug === slug ? { ...c, [key]: val } : c))
 
-  const inp: React.CSSProperties = { background:'var(--admin-card-bg,rgba(255,255,255,0.06))', border:'1px solid rgba(255,255,255,0.1)', borderRadius:7, padding:'7px 11px', color:'#fff', fontFamily:'DM Sans,sans-serif', fontSize:13, outline:'none' }
+  const inp: React.CSSProperties = { background:'var(--admin-cities-card-bg,#111820)', border:'1px solid var(--admin-cities-card-border,rgba(255,255,255,0.1))', borderRadius:7, padding:'7px 11px', color:'#fff', fontFamily:'DM Sans,sans-serif', fontSize:13, outline:'none' }
 
   return (
-    <AdminLayout title="SEO Cities Manager" subtitle="Manage all city pages and footer city links — used for SEO">
+    <AdminLayout pageClass="admin-page-cities" title="SEO Cities Manager" subtitle="Manage all city pages and footer city links — used for SEO">
       {/* Toolbar */}
       <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:16, alignItems:'center' }}>
         <span style={{ color:'var(--admin-text-muted,rgba(255,255,255,0.4))', fontSize:13, fontFamily:'DM Sans,sans-serif' }}>{cities.length} cities</span>
@@ -129,7 +129,7 @@ export default function AdminCitiesPage() {
       </div>
 
       {/* Add new */}
-      <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid rgba(184,134,11,0.2)', borderRadius:10, padding:'10px 14px' }}>
+      <div style={{ display:'flex', gap:8, marginBottom:16, alignItems:'center', background:'var(--admin-cities-card-bg,#111820)', border:'1px solid var(--admin-cities-card-border,rgba(184,134,11,0.2))', borderRadius:10, padding:'10px 14px' }}>
         <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key==='Enter' && addCity()} placeholder="City name…" style={{ ...inp, flex:1 }} />
         <select value={newState} onChange={e => setNewState(e.target.value)} style={{ ...inp, width:190 }}>
           <option value="">Select state…</option>

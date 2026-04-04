@@ -607,7 +607,7 @@ export default function AdminContentPage() {
   const readyCount = Object.values(savedGroups).filter(Boolean).length
 
   return (
-    <AdminLayout title="Content & Style Manager" subtitle="Edit text, colours and sizes — changes apply live">
+    <AdminLayout pageClass="admin-page-settings" title="Content & Style Manager" subtitle="Edit text, colours and sizes — changes apply live">
 
       {/* Top bar */}
       <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', padding:'12px 16px', background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px' }}>

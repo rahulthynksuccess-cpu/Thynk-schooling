@@ -280,7 +280,7 @@ export default function AdminDropdownPage() {
   )
 
   return (
-    <AdminLayout title="Dropdown Settings" subtitle="Single source of truth — all dropdown values across the platform">
+    <AdminLayout pageClass="admin-page-settings" title="Dropdown Settings" subtitle="Single source of truth — all dropdown values across the platform">
 
       {/* Alert banner */}
       <div className="admin-alert gold">

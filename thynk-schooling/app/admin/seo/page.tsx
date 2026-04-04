@@ -181,11 +181,11 @@ export default function AdminSEOPage() {
   const allPresets = [...(PRESET_PARAMS.global || []), ...(PRESET_PARAMS[activePage] || [])].filter(k => !params.find(p => p.key === k))
 
   return (
-    <AdminLayout title="SEO Manager" subtitle="Manage meta tags, Open Graph, schema markup and all SEO parameters per page">
+    <AdminLayout pageClass="admin-page-seo" title="SEO Manager" subtitle="Manage meta tags, Open Graph, schema markup and all SEO parameters per page">
       <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16, height: 'calc(100vh - 120px)' }}>
 
         {/* Page selector */}
-        <div style={{ background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:12, overflow:'hidden', height:'fit-content' }}>
+        <div style={{ background:'var(--admin-seo-card-bg,#111820)', border:'1px solid var(--admin-seo-card-border,rgba(255,255,255,0.07))', borderRadius:12, overflow:'hidden', height:'fit-content' }}>
           {PAGE_KEYS.map(p => (
             <button key={p.key} onClick={() => setActivePage(p.key)} style={{
               width:'100%', padding:'11px 14px', border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)',
@@ -201,7 +201,7 @@ export default function AdminSEOPage() {
         <div style={{ display:'flex', flexDirection:'column', gap:12, overflow:'hidden' }}>
 
           {/* Toolbar */}
-          <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:12, padding:'12px 16px' }}>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:8, alignItems:'center', background:'var(--admin-seo-card-bg,#111820)', border:'1px solid var(--admin-seo-card-border,rgba(255,255,255,0.07))', borderRadius:12, padding:'12px 16px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, background:'var(--admin-card-bg,rgba(255,255,255,0.06))', borderRadius:8, padding:'7px 12px', flex:1, minWidth:180 }}>
               <Search style={{ width:14, height:14, color:'var(--admin-text-faint,rgba(255,255,255,0.3))', flexShrink:0 }} />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search parameters…"
@@ -248,7 +248,7 @@ export default function AdminSEOPage() {
 
           {/* Bulk add */}
           {bulkMode && (
-            <div style={{ background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:12, padding:16 }}>
+            <div style={{ background:'var(--admin-seo-card-bg,#111820)', border:'1px solid var(--admin-seo-card-border,rgba(255,255,255,0.07))', borderRadius:12, padding:16 }}>
               <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:12, color:'var(--admin-text-muted,rgba(255,255,255,0.4))', marginBottom:8 }}>
                 Paste parameters as <code style={{ color:'#E8C547' }}>key=value</code> — one per line. You can add 500+ at once.
               </p>

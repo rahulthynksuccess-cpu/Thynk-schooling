@@ -103,7 +103,7 @@ export default function AdminMediaPage() {
   }
 
   return (
-    <AdminLayout title="Media & Branding" subtitle="Update logo, images, social links and contact info — all editable, nothing hardcoded">
+    <AdminLayout pageClass="admin-page-media" title="Media & Branding" subtitle="Update logo, images, social links and contact info — all editable, nothing hardcoded">
 
       {/* Save bar */}
       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:16 }}>

@@ -9,14 +9,14 @@ import toast from 'react-hot-toast'
 
 const TABS = ['All', 'Pending', 'Approved', 'Flagged']
 
-const cell: React.CSSProperties   = { padding: '12px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: '#E2E8F0', borderBottom: '1px solid rgba(255,255,255,.05)' }
-const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '11px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.75)', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))', background: 'rgba(255,255,255,.05)', whiteSpace: 'nowrap' }
+const cell: React.CSSProperties   = { padding: '12px 14px', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', color: 'var(--admin-reviews-heading-color,#E2E8F0)', borderBottom: '1px solid rgba(255,255,255,.05)' }
+const hdCell: React.CSSProperties = { padding: '9px 14px', fontSize: '11px', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--admin-text-muted,rgba(255,255,255,0.75))', fontFamily: 'DM Sans,sans-serif', borderBottom: '1px solid var(--admin-reviews-card-border,rgba(255,255,255,0.07))', background: 'var(--admin-reviews-card-bg,rgba(255,255,255,.05))', whiteSpace: 'nowrap' }
 
 function StarRating({ rating }: { rating: number }) {
   return (
     <div style={{ display: 'flex', gap: '2px' }}>
       {[1,2,3,4,5].map(s => (
-        <Star key={s} style={{ width: '12px', height: '12px', fill: s<=rating ? '#FBBF24' : 'transparent', color: s<=rating ? '#FBBF24' : 'rgba(255,255,255,.2)' }} />
+        <Star key={s} style={{ width: '12px', height: '12px', fill: s<=rating ? 'var(--admin-reviews-star-color,#FBBF24)' : 'transparent', color: s<=rating ? 'var(--admin-reviews-star-color,#FBBF24)' : 'rgba(255,255,255,.2)' }} />
       ))}
     </div>
   )
@@ -60,7 +60,7 @@ export default function AdminReviewsPage() {
   })
 
   return (
-    <AdminLayout title="Reviews" subtitle="Moderate parent reviews before they appear on school profiles">
+    <AdminLayout pageClass="admin-page-reviews" title="Reviews" subtitle="Moderate parent reviews before they appear on school profiles">
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
@@ -71,14 +71,14 @@ export default function AdminReviewsPage() {
           { label: 'Flagged',       value: reviews.filter(r=>r.status==='flagged').length,  color: '#F87171' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-            style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
+            style={{ background: 'var(--admin-reviews-card-bg,#111820)', border: '1px solid var(--admin-reviews-card-border,rgba(255,255,255,0.07))', borderRadius: '12px', padding: '16px' }}>
             <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '30px', color: s.color, lineHeight: 1, marginBottom: '4px' }}>{s.value}</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.4)', fontFamily: 'DM Sans,sans-serif', textTransform: 'uppercase', letterSpacing: '.08em' }}>{s.label}</div>
           </motion.div>
         ))}
       </div>
 
-      <div style={{ background: 'var(--admin-bg,#0D1117)', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--admin-reviews-card-bg,#111820)', border: '1px solid var(--admin-reviews-card-border,rgba(255,255,255,0.07))', borderRadius: '14px', overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px', borderBottom: '1px solid var(--admin-border,rgba(255,255,255,0.07))' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flex: 1, background: 'var(--admin-card-bg,rgba(255,255,255,0.04))', border: '1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius: '8px', padding: '7px 11px' }}>
             <Search style={{ width: '13px', height: '13px', color: 'rgba(255,255,255,.3)', flexShrink: 0 }} />

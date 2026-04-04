@@ -8,9 +8,9 @@ import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LeadPackage } from '@/types'
 
-const card: React.CSSProperties   = { background:'var(--admin-card-bg,#0F1623)', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'14px', padding:'20px' }
+const card: React.CSSProperties   = { background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', borderRadius:'14px', padding:'20px' }
 const lbl: React.CSSProperties    = { display:'block', fontSize:'11px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'6px', fontFamily:'DM Sans,sans-serif' }
-const inp: React.CSSProperties    = { width:'100%', padding:'10px 13px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', borderRadius:'8px', color:'#fff', fontSize:'13px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
+const inp: React.CSSProperties    = { width:'100%', padding:'10px 13px', background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', borderRadius:'8px', color:'#fff', fontSize:'13px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
 
 interface PackageForm {
   name: string
@@ -93,7 +93,7 @@ function PackageModal({ pkg, onClose, onSave }: {
           </div>
 
           <div style={{ display:'flex', gap:'10px', paddingTop:'4px' }}>
-            <button onClick={onClose} style={{ flex:1, padding:'11px', borderRadius:'8px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'13px', fontFamily:'DM Sans,sans-serif', fontWeight:500 }}>
+            <button onClick={onClose} style={{ flex:1, padding:'11px', borderRadius:'8px', background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'13px', fontFamily:'DM Sans,sans-serif', fontWeight:500 }}>
               Cancel
             </button>
             <button onClick={() => { if (!form.name || form.leadCredits < 1) { toast.error('Name and credits are required'); return } onSave(form) }}
@@ -152,7 +152,7 @@ export default function LeadPackagesPage() {
   }
 
   return (
-    <AdminLayout title="Lead Packages" subtitle="Create and manage bulk lead credit packages for schools">
+    <AdminLayout pageClass="admin-page-packages" title="Lead Packages" subtitle="Create and manage bulk lead credit packages for schools">
 
       <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'20px' }}>
         <button onClick={() => { setModalPkg(null); setModalOpen(true) }}
@@ -194,7 +194,7 @@ export default function LeadPackagesPage() {
                 )}
                 <div style={{ display:'flex', gap:'8px', paddingTop:'12px', borderTop:'1px solid #1E2A52' }}>
                   <button onClick={() => { setModalPkg(pkg); setModalOpen(true) }}
-                    style={{ flex:1, padding:'8px', borderRadius:'7px', background:'var(--admin-card-bg,rgba(255,255,255,0.04))', border:'1px solid var(--admin-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'12px', fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
+                    style={{ flex:1, padding:'8px', borderRadius:'7px', background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'12px', fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
                     <Pencil style={{ width:'12px', height:'12px' }} /> Edit
                   </button>
                   <button onClick={() => { if (confirm(`Delete "${pkg.name}"?`)) deleteMutation.mutate(pkg.id) }}

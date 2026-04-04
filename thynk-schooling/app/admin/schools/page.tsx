@@ -43,10 +43,10 @@ export default function AdminSchoolsPage() {
 
   const schools = data?.data ?? [], total = data?.total ?? 0
 
-  const card: React.CSSProperties = { background: 'var(--admin-card-bg,#0F1623)', border: '1px solid var(--admin-border,rgba(255,255,255,0.08))', borderRadius: 14 }
+  const card: React.CSSProperties = { background: 'var(--admin-schools-card-bg,#111820)', border: '1px solid var(--admin-schools-card-border,rgba(255,255,255,0.08))', borderRadius: 14 }
 
   return (
-    <AdminLayout title="Schools Manager" subtitle="Verify, feature and manage all schools on the platform">
+    <AdminLayout pageClass="admin-page-schools" title="Schools Manager" subtitle="Verify, feature and manage all schools on the platform">
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
 
       {/* Summary */}

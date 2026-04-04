@@ -136,7 +136,7 @@ export default function AdminApplicationsPage() {
   const FILTERS = ['All', 'Pending', 'Shortlisted', 'Contacted', 'Admitted', 'Rejected']
 
   return (
-    <AdminLayout title="Applications" subtitle="All parent school applications across the platform">
+    <AdminLayout pageClass="admin-page-apps" title="Applications" subtitle="All parent school applications across the platform">
 
       {/* Stats */}
       <div className="admin-stat-grid">
