@@ -301,7 +301,10 @@ export function ParentDashboardClient() {
                   {child.full_name || child.fullName}
                 </div>
                 <div style={{ fontFamily: C.sans, fontSize: 11, color: C.faint, marginTop: 2 }}>
-                  {[child.class_level || child.classLevel, child.board_preference || child.boardPreference].filter(Boolean).join(' · ') || 'Profile added'}
+                  {[
+                    child.applyingForClass || child.applying_for_class || child.currentClass || child.current_class || child.classLevel || child.class_level,
+                    child.academicYear || child.academic_year || child.boardPreference || child.board_preference
+                  ].filter(Boolean).join(' · ') || 'Profile added'}
                 </div>
               </div>
               <Link href={`/schools`}
@@ -473,7 +476,12 @@ export function ChildrenPageClient() {
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-                {[{ l: 'Class', v: child.class_level || child.classLevel }, { l: 'Board', v: child.board_preference || child.boardPreference }].map(f => f.v && (
+                {[
+                { l: 'Applying For', v: child.applyingForClass || child.applying_for_class || child.currentClass || child.current_class || child.classLevel || child.class_level },
+                { l: 'Academic Year', v: child.academicYear || child.academic_year },
+                { l: 'Gender', v: child.gender },
+                { l: 'Board', v: child.boardPreference || child.board_preference },
+              ].map(f => f.v && (
                   <div key={f.l} style={{ padding: '8px 12px', background: C.bg, borderRadius: 9, border: `1px solid ${C.bdr}` }}>
                     <div style={{ fontFamily: C.sans, fontSize: 10, fontWeight: 700, color: C.faint, textTransform: 'uppercase', letterSpacing: '.08em' }}>{f.l}</div>
                     <div style={{ fontFamily: C.sans, fontSize: 13, fontWeight: 600, color: C.ink, marginTop: 2 }}>{f.v}</div>

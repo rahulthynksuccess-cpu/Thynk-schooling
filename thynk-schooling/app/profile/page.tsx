@@ -370,7 +370,10 @@ export default function ProfilePage() {
                     <div>
                       <div style={{ fontFamily: C.sans, fontWeight: 600, fontSize: 13, color: C.ink }}>{child.full_name || child.fullName}</div>
                       <div style={{ fontFamily: C.sans, fontSize: 11, color: C.faint, marginTop: 2 }}>
-                        {[child.class_level || child.classLevel, child.board_preference || child.boardPreference].filter(Boolean).join(' · ') || 'Profile added'}
+                        {[
+                          child.applyingForClass || child.applying_for_class || child.currentClass || child.current_class || child.classLevel || child.class_level,
+                          child.academicYear || child.academic_year || child.boardPreference || child.board_preference
+                        ].filter(Boolean).join(' · ') || 'Profile added'}
                       </div>
                     </div>
                   </div>
