@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   GraduationCap, ArrowRight, ArrowLeft, Save, Loader2,
@@ -16,9 +16,6 @@ import toast from 'react-hot-toast'
 
 /* ── Types ── */
 type FD = Record<string, string | string[] | number | boolean>
-interface AmenityOption {
-  id: string; category: string; label: string; value: string; icon?: string
-}
 
 /* ── Steps ── */
 const STEPS = [
@@ -39,11 +36,11 @@ const STEP_META = [
   { badge: 'Step 6 of 6 — Almost there!',    h1: 'Contact info &',   h2: 'your best photos',   desc: 'Add contact details and upload images — then your profile goes live!' },
 ]
 
+/* FIX 4: Removed 'infrastructure' tab */
 const AMENITY_TABS = [
   { key: 'facility',        label: 'Facilities' },
   { key: 'sport',           label: 'Sports' },
   { key: 'language',        label: 'Languages' },
-  { key: 'infrastructure',  label: 'Infrastructure' },
   { key: 'extracurricular', label: 'Extracurricular' },
 ]
 
@@ -140,7 +137,6 @@ const CSS = `
 .sp-a-chip{display:flex;align-items:center;gap:9px;padding:11px 14px;border:1.5px solid var(--bdr);border-radius:12px;cursor:pointer;transition:all .15s;background:var(--white);font-size:13px;font-weight:500;color:var(--muted);font-family:'Cabinet Grotesk',sans-serif;width:100%;text-align:left}
 .sp-a-chip:hover{border-color:var(--brand);background:var(--brand-pale);color:var(--brand)}
 .sp-a-chip.on{background:var(--brand-pale);border-color:var(--brand);color:var(--brand);font-weight:700}
-.sp-a-icon{font-size:18px;flex-shrink:0}
 .sp-a-chk{margin-left:auto;flex-shrink:0;color:var(--brand)}
 .sp-a-count{font-size:13px;color:var(--brand);font-weight:700;margin-top:12px}
 .sp-a-empty{font-size:13px;color:var(--ghost);padding:28px;text-align:center;background:rgba(255,255,255,.5);border:1.5px dashed var(--bdr);border-radius:14px;line-height:1.6}
@@ -174,18 +170,6 @@ const CSS = `
   .sp-g2{grid-template-columns:1fr}
 }
 `
-
-function useAmenityOptions() {
-  return useQuery<AmenityOption[]>({
-    queryKey: ['amenity-options'],
-    queryFn: async () => {
-      const res = await fetch('/api/admin/amenities')
-      const data = await res.json()
-      return data.options || []
-    },
-    staleTime: 5 * 60 * 1000,
-  })
-}
 
 function Field({ label, required, children, note }: {
   label: string; required?: boolean; children: React.ReactNode; note?: string
@@ -292,10 +276,34 @@ function StepHeader({ step }: { step: number }) {
   )
 }
 
-function AmenitiesStep({ selectedIds, toggle }: { selectedIds: string[]; toggle: (id: string) => void }) {
+/* ── FIX 4: AmenitiesStep now uses useDropdown per category instead of /api/admin/amenities ── */
+function AmenitiesStep({ formData, toggle }: {
+  formData: FD
+  toggle: (k: string, v: string) => void
+}) {
   const [activeTab, setActiveTab] = useState('facility')
-  const { data: allOptions = [], isLoading } = useAmenityOptions()
-  const tabOptions = allOptions.filter(o => o.category === activeTab)
+
+  /* Each tab maps to its own dropdown category key in the DB */
+  const { options: facilities,        isLoading: lFac  } = useDropdown('facility')
+  const { options: sports,            isLoading: lSport } = useDropdown('sport')
+  const { options: languages,         isLoading: lLang  } = useDropdown('language')
+  const { options: extracurriculars,  isLoading: lExtra } = useDropdown('extracurricular')
+
+  const TAB_DATA: Record<string, { options: { label: string; value: string }[]; isLoading: boolean; fieldKey: string }> = {
+    facility:        { options: facilities,       isLoading: lFac,   fieldKey: 'facilities' },
+    sport:           { options: sports,           isLoading: lSport, fieldKey: 'sports' },
+    language:        { options: languages,        isLoading: lLang,  fieldKey: 'languages' },
+    extracurricular: { options: extracurriculars, isLoading: lExtra, fieldKey: 'extracurriculars' },
+  }
+
+  const current = TAB_DATA[activeTab]
+  const selectedInTab = (formData[current.fieldKey] as string[]) || []
+
+  /* Total selected across all tabs */
+  const totalSelected = AMENITY_TABS.reduce((acc, t) => {
+    return acc + ((formData[TAB_DATA[t.key].fieldKey] as string[]) || []).length
+  }, 0)
+
   return (
     <>
       <StepHeader step={3} />
@@ -307,23 +315,22 @@ function AmenitiesStep({ selectedIds, toggle }: { selectedIds: string[]; toggle:
           >{t.label}</button>
         ))}
       </div>
-      {isLoading ? (
+      {current.isLoading ? (
         <div className="sp-a-empty">Loading options…</div>
-      ) : tabOptions.length === 0 ? (
+      ) : current.options.length === 0 ? (
         <div className="sp-a-empty">
           No options configured yet.<br />
-          Go to <strong style={{ color: 'var(--brand)' }}>Admin → Amenities</strong> to add them.
+          Go to <strong style={{ color: 'var(--brand)' }}>Admin → Settings → Dropdowns</strong> and add options under the &ldquo;{activeTab}&rdquo; category.
         </div>
       ) : (
         <div className="sp-a-grid">
-          {tabOptions.map(opt => {
-            const on = selectedIds.includes(opt.id)
+          {current.options.map(opt => {
+            const on = selectedInTab.includes(opt.value)
             return (
-              <button key={opt.id} type="button"
+              <button key={opt.value} type="button"
                 className={`sp-a-chip${on ? ' on' : ''}`}
-                onClick={() => toggle(opt.id)}
+                onClick={() => toggle(current.fieldKey, opt.value)}
               >
-                {opt.icon && <span className="sp-a-icon">{opt.icon}</span>}
                 <span style={{ flex: 1 }}>{opt.label}</span>
                 {on && <CheckCircle2 className="sp-a-chk" size={15} />}
               </button>
@@ -331,8 +338,8 @@ function AmenitiesStep({ selectedIds, toggle }: { selectedIds: string[]; toggle:
           })}
         </div>
       )}
-      {selectedIds.length > 0 && (
-        <p className="sp-a-count">✓ {selectedIds.length} feature{selectedIds.length > 1 ? 's' : ''} selected across all categories</p>
+      {totalSelected > 0 && (
+        <p className="sp-a-count">✓ {totalSelected} feature{totalSelected > 1 ? 's' : ''} selected across all categories</p>
       )}
     </>
   )
@@ -342,10 +349,12 @@ export default function SchoolCompleteProfilePage() {
   const router = useRouter()
   const { setUser, user } = useAuthStore()
   const [step, setStep] = useState(0)
-  const [formData, setFormData] = useState<FD>({ board: [], admissionOpen: false })
+  const [formData, setFormData] = useState<FD>({
+    board: [], admissionOpen: false,
+    facilities: [], sports: [], languages: [], extracurriculars: [],
+  })
   const [logoFile,  setLogoFile]  = useState<File | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
-  const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([])
 
   const set    = (k: string, v: FD[string]) => setFormData(p => ({ ...p, [k]: v }))
   const setS   = (k: string, v: string)     => set(k, v)
@@ -353,14 +362,12 @@ export default function SchoolCompleteProfilePage() {
     const arr = (formData[k] as string[]) || []
     set(k, arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v])
   }
-  const toggleAmenity = (id: string) =>
-    setSelectedAmenityIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
 
   const { options: boards,         isLoading: lBoards }  = useDropdown('board')
   const { options: schoolTypes,    isLoading: lTypes }    = useDropdown('school_type')
   const { options: genderPolicies, isLoading: lGender }   = useDropdown('gender_policy')
   const { options: mediums,        isLoading: lMedium }   = useDropdown('medium')
-  const { options: religions,      isLoading: lReligion } = useDropdown('religion')
+  /* FIX 1: religion removed — no longer fetched or rendered */
   const { options: recognitions,   isLoading: lRecog }    = useDropdown('recognition')
   const { options: classLevels,    isLoading: lClass }    = useDropdown('class_level')
   const { options: states,         isLoading: lStates }   = useDropdown('state')
@@ -377,7 +384,6 @@ export default function SchoolCompleteProfilePage() {
         if (Array.isArray(v)) v.forEach(i => fd.append(k, i))
         else fd.append(k, String(v))
       })
-      selectedAmenityIds.forEach(id => fd.append('amenityId', id))
       if (logoFile)  fd.append('logo',  logoFile)
       if (coverFile) fd.append('cover', coverFile)
       const r = await fetch('/api/schools/profile', { method: 'POST', credentials: 'include', body: fd })
@@ -403,6 +409,7 @@ export default function SchoolCompleteProfilePage() {
   const isFirst = step === 0
 
   const renderStep = () => {
+    /* ── STEP 0: Basic Info ── */
     if (step === 0) return (
       <>
         <StepHeader step={0} />
@@ -432,15 +439,16 @@ export default function SchoolCompleteProfilePage() {
       </>
     )
 
+    /* ── STEP 1: Type & Board ── */
+    /* FIX 1: Religion / Affiliation field removed entirely */
     if (step === 1) return (
       <>
         <StepHeader step={1} />
         <div className="sp-g2">
-          <DynSel label="School Type"            fieldKey="schoolType"          options={schoolTypes}    isLoading={lTypes}    required formData={formData} set={setS} />
-          <DynSel label="Gender Policy"          fieldKey="genderPolicy"        options={genderPolicies} isLoading={lGender}   required formData={formData} set={setS} />
-          <DynSel label="Medium of Instruction"  fieldKey="mediumOfInstruction" options={mediums}        isLoading={lMedium}   required formData={formData} set={setS} />
-          <DynSel label="Religion / Affiliation" fieldKey="religion"            options={religions}      isLoading={lReligion}          formData={formData} set={setS} />
-          <DynSel label="Recognition"            fieldKey="recognition"         options={recognitions}   isLoading={lRecog}             formData={formData} set={setS} />
+          <DynSel label="School Type"           fieldKey="schoolType"          options={schoolTypes}    isLoading={lTypes}   required formData={formData} set={setS} />
+          <DynSel label="Gender Policy"         fieldKey="genderPolicy"        options={genderPolicies} isLoading={lGender}  required formData={formData} set={setS} />
+          <DynSel label="Medium of Instruction" fieldKey="mediumOfInstruction" options={mediums}        isLoading={lMedium}  required formData={formData} set={setS} />
+          <DynSel label="Recognition"           fieldKey="recognition"         options={recognitions}   isLoading={lRecog}            formData={formData} set={setS} />
         </div>
         <div className="sp-g2">
           <Field label="Total Students">
@@ -450,10 +458,13 @@ export default function SchoolCompleteProfilePage() {
             <input className="sp-inp" value={(formData.studentTeacherRatio as string) || ''} onChange={e => set('studentTeacherRatio', e.target.value)} placeholder="e.g. 25:1" />
           </Field>
         </div>
+        {/* FIX 2: Board uses MultiChip with boards from useDropdown('board') — dynamic from DB */}
         <MultiChip label="Board(s) of Education" fieldKey="board" options={boards} isLoading={lBoards} formData={formData} toggle={toggle} />
       </>
     )
 
+    /* ── STEP 2: Classes & Fees ── */
+    /* FIX 3: "Monthly Tuition Fee" → "Average Monthly Tuition Fee" */
     if (step === 2) return (
       <>
         <StepHeader step={2} />
@@ -461,7 +472,7 @@ export default function SchoolCompleteProfilePage() {
           <DynSel label="Classes From" fieldKey="classesFrom" options={classLevels} isLoading={lClass} required placeholder="Select starting class" formData={formData} set={setS} />
           <DynSel label="Classes To"   fieldKey="classesTo"   options={classLevels} isLoading={lClass} required placeholder="Select ending class"   formData={formData} set={setS} />
         </div>
-        <div className="sp-divider">Monthly Tuition Fee (₹)</div>
+        <div className="sp-divider">Average Monthly Tuition Fee (₹)</div>
         <div className="sp-g2">
           <Field label="Minimum">
             <div style={{ position: 'relative' }}>
@@ -496,8 +507,11 @@ export default function SchoolCompleteProfilePage() {
       </>
     )
 
-    if (step === 3) return <AmenitiesStep selectedIds={selectedAmenityIds} toggle={toggleAmenity} />
+    /* ── STEP 3: Features / Amenities ── */
+    /* FIX 4: Uses useDropdown per category; Infrastructure removed */
+    if (step === 3) return <AmenitiesStep formData={formData} toggle={toggle} />
 
+    /* ── STEP 4: Location ── */
     if (step === 4) return (
       <>
         <StepHeader step={4} />
@@ -532,10 +546,11 @@ export default function SchoolCompleteProfilePage() {
             <input className="sp-inp" type="number" step="0.0000001" value={(formData.longitude as number) || ''} onChange={e => set('longitude', Number(e.target.value))} placeholder="e.g. 77.3910" />
           </Field>
         </div>
-        <p className="sp-note">📍 Right-click your school on Google Maps → "What's here?" to get GPS coordinates.</p>
+        <p className="sp-note">📍 Right-click your school on Google Maps → &ldquo;What&apos;s here?&rdquo; to get GPS coordinates.</p>
       </>
     )
 
+    /* ── STEP 5: Contact & Media ── */
     if (step === 5) return (
       <>
         <StepHeader step={5} />
@@ -568,7 +583,7 @@ export default function SchoolCompleteProfilePage() {
           <ImageUpload label="Cover Photo"  hint="1200×400px recommended · Max 1 MB"    file={coverFile} onChange={setCoverFile} />
         </div>
         <div className="sp-info" style={{ marginTop: 20 }}>
-          <strong style={{ color: 'var(--brand)' }}>You're almost done!</strong> After saving, upload gallery photos and manage all settings from your school dashboard.
+          <strong style={{ color: 'var(--brand)' }}>You&apos;re almost done!</strong> After saving, upload gallery photos and manage all settings from your school dashboard.
         </div>
       </>
     )
@@ -600,7 +615,6 @@ export default function SchoolCompleteProfilePage() {
                     </div>
                     <div>
                       <div className="sp-sb-lbl">{s.label}</div>
-                      <div className="sp-sb-sub">{s.sub}</div>
                     </div>
                   </div>
                   {i < STEPS.length - 1 && <div className="sp-sb-conn" />}
@@ -643,7 +657,7 @@ export default function SchoolCompleteProfilePage() {
                 <button className="sp-btn-next sp-btn-save" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
                   {saveMutation.isPending
                     ? <><Loader2 size={16} style={{ animation: 'sp-spin 1s linear infinite' }} /> Saving…</>
-                    : <><Save size={15} /> Save Profile & Go to Dashboard</>
+                    : <><Save size={15} /> Save Profile &amp; Go to Dashboard</>
                   }
                 </button>
               ) : (
