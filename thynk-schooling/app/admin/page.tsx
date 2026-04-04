@@ -19,8 +19,8 @@ const T = {
   card:'var(--admin-card-bg,#0C1422)',
   border:'var(--admin-border,rgba(255,255,255,0.07))',
   t1:'var(--admin-text,rgba(255,255,255,0.95))',
-  t2:'var(--admin-text-muted,rgba(255,255,255,0.55))',
-  t3:'var(--admin-text-faint,rgba(255,255,255,0.25))',
+  t2:'var(--admin-text-muted,rgba(255,255,255,0.75))',
+  t3:'var(--admin-text-faint,rgba(255,255,255,0.5))',
   gold:'var(--admin-accent,#F5A623)',
   blue:'#4F8EF7', green:'#00E5A0', purple:'#9B72FF',
   red:'#FF5757', orange:'#FF7A2E',
@@ -134,7 +134,7 @@ export default function AdminDashboardPage(){
           <ResponsiveContainer width="100%" height={155}>
             <PieChart>
               <Pie data={data?.schoolsByBoard||[]} cx="50%" cy="50%" innerRadius={42} outerRadius={68} paddingAngle={3} dataKey="value">
-                {schoolsByBoard.map((e,i)=><Cell key={i} fill={e.color} stroke="transparent"/>)}
+                {(data?.schoolsByBoard||[]).map((e:any,i:number)=><Cell key={i} fill={e.color} stroke="transparent"/>)}
               </Pie>
               <Tooltip content={<ChartTip/>}/>
             </PieChart>
