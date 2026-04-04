@@ -137,8 +137,8 @@ async function getSeedStatus() {
 export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'dropdown') return getDropdown(req)
-    if (action === 'seed')     return getSeedStatus()
+    if (action === 'dropdown') return await getDropdown(req)
+    if (action === 'seed')     return await getSeedStatus()
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
@@ -146,8 +146,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'dropdown') return createDropdownOption(req)
-    if (action === 'seed')     return seedDropdown()
+    if (action === 'dropdown') return await createDropdownOption(req)
+    if (action === 'seed')     return await seedDropdown()
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'dropdown') return updateDropdownOption(req)
+    if (action === 'dropdown') return await updateDropdownOption(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
@@ -163,7 +163,7 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'dropdown') return deleteDropdownOption(req)
+    if (action === 'dropdown') return await deleteDropdownOption(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
