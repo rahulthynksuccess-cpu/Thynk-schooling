@@ -313,7 +313,7 @@ export function ForSchoolsCTA() {
                 </div>
               </motion.div>
               )
-            })}            ))}
+            })}
             <Link href="/pricing" style={{alignSelf:'flex-start',display:'inline-flex',alignItems:'center',gap:8,fontFamily:'Inter,sans-serif',fontSize:13,fontWeight:600,color:'#B8860B',textDecoration:'none',padding:'10px 18px',border:'1.5px solid rgba(184,134,11,0.3)',borderRadius:9,transition:'all .22s',marginTop:4}}
               onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background='#B8860B';el.style.color='#fff'}}
               onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background='transparent';el.style.color='#B8860B'}}>
