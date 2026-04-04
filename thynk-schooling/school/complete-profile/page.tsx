@@ -1,7 +1,7 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -347,14 +347,18 @@ function AmenitiesStep({ formData, toggle }: {
 
 export default function SchoolCompleteProfilePage() {
   const router = useRouter()
-  const { setUser, user } = useAuthStore()
+  const { setUser, user, accessToken } = useAuthStore()
   const [step, setStep] = useState(0)
+  const [mounted, setMounted] = useState(false)
   const [formData, setFormData] = useState<FD>({
     board: [], admissionOpen: false,
     facilities: [], sports: [], languages: [], extracurriculars: [],
   })
   const [logoFile,  setLogoFile]  = useState<File | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
+
+  // Prevent AnimatePresence hydration mismatch between SSR and client
+  useEffect(() => { setMounted(true) }, [])
 
   const set    = (k: string, v: FD[string]) => setFormData(p => ({ ...p, [k]: v }))
   const setS   = (k: string, v: string)     => set(k, v)
@@ -386,15 +390,28 @@ export default function SchoolCompleteProfilePage() {
       })
       if (logoFile)  fd.append('logo',  logoFile)
       if (coverFile) fd.append('cover', coverFile)
-      const r = await fetch('/api/schools/profile', { method: 'POST', credentials: 'include', body: fd })
+
+      // Get token from localStorage as fallback for cookie
+      const token = accessToken || localStorage.getItem('ts_access_token') || ''
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+
+      const r = await fetch('/api/schools/profile', {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: fd,
+      })
       const data = await r.json()
       if (!r.ok) throw data
       return data
     },
     onSuccess: async () => {
+      const token = accessToken || localStorage.getItem('ts_access_token') || ''
+      const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {}
       await fetch('/api/auth/complete-profile', {
         method: 'PUT', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({ profileCompleted: true }),
       })
       if (user) setUser({ ...user, profileCompleted: true })
@@ -588,6 +605,8 @@ export default function SchoolCompleteProfilePage() {
       </>
     )
   }
+
+  if (!mounted) return null
 
   return (
     <>
