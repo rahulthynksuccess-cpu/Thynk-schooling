@@ -253,7 +253,7 @@ export function SchoolDashboardClient() {
 
   const { data: stats, isLoading: statsLoading } = useQuery<SchoolDashboardStats>({
     queryKey: ['school-dashboard-stats'],
-    queryFn: () => fetch('/api/schools/me/dashboard-stats', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/schools?action=dashboard-stats', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
     enabled, staleTime: 2 * 60 * 1000,
   })
   const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({
@@ -268,7 +268,7 @@ export function SchoolDashboardClient() {
   })
   const { data: analyticsRaw } = useQuery<{ leads: any[]; applications: any[] }>({
     queryKey: ['school-analytics-30d'],
-    queryFn: () => fetch('/api/schools/me/analytics?days=30', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/schools?action=analytics&days=30', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
     enabled, staleTime: 5 * 60 * 1000,
   })
 
