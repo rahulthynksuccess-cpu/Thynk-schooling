@@ -104,8 +104,8 @@ async function deleteLeadPackage(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'leads')         return getLeads(req)
-    if (action === 'lead-packages') return getLeadPackages(req)
+    if (action === 'leads')         return await getLeads(req)
+    if (action === 'lead-packages') return await getLeadPackages(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'lead-packages') return createLeadPackage(req)
+    if (action === 'lead-packages') return await createLeadPackage(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'lead-packages') return updateLeadPackage(req)
+    if (action === 'lead-packages') return await updateLeadPackage(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
@@ -129,7 +129,7 @@ export async function PUT(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'leads') return patchLead(req)
+    if (action === 'leads') return await patchLead(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
@@ -137,7 +137,7 @@ export async function PATCH(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'lead-packages') return deleteLeadPackage(req)
+    if (action === 'lead-packages') return await deleteLeadPackage(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
