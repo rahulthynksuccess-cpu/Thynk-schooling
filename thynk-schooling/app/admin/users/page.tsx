@@ -168,24 +168,24 @@ export default function AdminUsersPage() {
   }, [query])
 
   const handleExport = async () => {
-    const res = await fetch('/api/admin/users/export')
+    const res = await fetch('/api/admin?action=users&export=1')
     if (!res.ok) return
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url; a.download = 'users.xlsx'; a.click()
+    a.href = url; a.download = 'users.csv'; a.click()
     URL.revokeObjectURL(url)
   }
 
   const handleSuspend = async (userId: string) => {
     if (!confirm('Suspend this user?')) return
-    await fetch(`/api/admin/users/${userId}/suspend`, { method: 'POST' })
+    await fetch(`/api/admin?action=users&id=${userId}&op=suspend`, { method: 'PATCH' })
     fetchUsers()
   }
 
   const handleDelete = async (userId: string) => {
     if (!confirm('Permanently delete this user? This cannot be undone.')) return
-    await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+    await fetch(`/api/admin?action=users&id=${userId}`, { method: 'DELETE' })
     fetchUsers()
   }
 

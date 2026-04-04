@@ -95,8 +95,11 @@ export async function GET(req: NextRequest) {
            l.id, l.status, l.is_purchased AS "isPurchased",
            l.child_name AS "childName", l.class_applying_for AS "classApplyingFor",
            l.city, l.created_at AS "createdAt",
-           u.full_name AS "fullName",
-           u.phone AS "fullPhone"
+           l.message, l.how_did_you_hear AS "howDidYouHear",
+           l.source,
+           COALESCE(u.full_name, l.parent_name) AS "fullName",
+           COALESCE(u.phone,    l.phone)        AS "fullPhone",
+           COALESCE(u.email,    l.email)        AS "fullEmail"
          FROM leads l
          LEFT JOIN users u ON u.id = l.parent_id
          WHERE l.school_id = $1
@@ -109,11 +112,12 @@ export async function GET(req: NextRequest) {
 
     const data = dataRes.rows.map(row => ({
       ...row,
-      maskedName: maskName(row.fullName || 'Parent'),
+      maskedName:  maskName(row.fullName || 'Parent'),
       maskedPhone: maskPhone(row.fullPhone || ''),
-      // Only expose real name/phone if purchased
-      fullName: row.isPurchased ? row.fullName : undefined,
+      // Only expose real contact details if purchased
+      fullName:  row.isPurchased ? row.fullName  : undefined,
       fullPhone: row.isPurchased ? row.fullPhone : undefined,
+      fullEmail: row.isPurchased ? row.fullEmail : undefined,
     }))
 
     return NextResponse.json({ data, total: Number(countRes.rows[0].count), page, limit })

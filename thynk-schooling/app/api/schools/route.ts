@@ -98,6 +98,17 @@ function getBool(fd: FormData, key: string): boolean { const v = getStr(fd, key)
 
 async function listSchools(req: NextRequest) {
   const { searchParams } = new URL(req.url)
+
+  // Direct school lookup by UUID (used by /apply/[schoolId] page)
+  const schoolId = searchParams.get('schoolId')
+  if (schoolId) {
+    const res = await db.query(
+      'SELECT id, name, city, state, logo_url, school_type, board, monthly_fee_min, monthly_fee_max FROM schools WHERE id=$1',
+      [schoolId]
+    ).catch(() => ({ rows: [] }))
+    return NextResponse.json({ school: res.rows[0] || null })
+  }
+
   const city = searchParams.get('city'), state = searchParams.get('state')
   const board = searchParams.get('board')
   const query = searchParams.get('query') || searchParams.get('search') || searchParams.get('q')
@@ -112,15 +123,15 @@ async function listSchools(req: NextRequest) {
   const extra: Record<string, string | null> = { feeMin: searchParams.get('feeMin'), feeMax: searchParams.get('feeMax'), rating: searchParams.get('rating'), isFeatured: searchParams.get('isFeatured'), type: searchParams.get('type'), gender_policy: searchParams.get('gender_policy'), medium: searchParams.get('medium'), facilities: searchParams.get('facilities'), sports: searchParams.get('sports'), extra_curricular: searchParams.get('extra_curricular'), language: searchParams.get('language') }
   if (extra.facilities)      { params.push(`%${extra.facilities}%`);      conditions.push(`facilities::text ILIKE $${params.length}`) }
   if (extra.sports)          { params.push(`%${extra.sports}%`);          conditions.push(`sports::text ILIKE $${params.length}`) }
-  if (extra.extra_curricular){ params.push(`%${extra.extra_curricular}%`);conditions.push(`extra_curricular::text ILIKE $${params.length}`) }
-  if (extra.language)        { params.push(`%${extra.language}%`);        conditions.push(`languages_offered::text ILIKE $${params.length}`) }
-  if (extra.feeMin)          { params.push(extra.feeMin);                 conditions.push(`fee_min >= $${params.length}`) }
-  if (extra.feeMax)          { params.push(extra.feeMax);                 conditions.push(`fee_max <= $${params.length}`) }
+  if (extra.extra_curricular){ params.push(`%${extra.extra_curricular}%`);conditions.push(`extracurriculars::text ILIKE $${params.length}`) }
+  if (extra.language)        { params.push(`%${extra.language}%`);        conditions.push(`languages::text ILIKE $${params.length}`) }
+  if (extra.feeMin)          { params.push(extra.feeMin);                 conditions.push(`monthly_fee_min >= $${params.length}`) }
+  if (extra.feeMax)          { params.push(extra.feeMax);                 conditions.push(`monthly_fee_max <= $${params.length}`) }
   if (extra.rating)          { params.push(extra.rating);                 conditions.push(`rating >= $${params.length}`) }
   if (extra.isFeatured)      {                                             conditions.push('is_featured = true') }
-  if (extra.type)            { params.push(extra.type);                   conditions.push(`type ILIKE $${params.length}`) }
+  if (extra.type)            { params.push(extra.type);                   conditions.push(`school_type ILIKE $${params.length}`) }
   if (extra.gender_policy)   { params.push(extra.gender_policy);          conditions.push(`gender_policy ILIKE $${params.length}`) }
-  if (extra.medium)          { params.push(extra.medium);                 conditions.push(`medium ILIKE $${params.length}`) }
+  if (extra.medium)          { params.push(extra.medium);                 conditions.push(`medium_of_instruction ILIKE $${params.length}`) }
   const where = conditions.join(' AND ')
   const countRes = await db.query(`SELECT COUNT(*) FROM schools WHERE ${where}`, params)
   const total = parseInt(countRes.rows[0].count)

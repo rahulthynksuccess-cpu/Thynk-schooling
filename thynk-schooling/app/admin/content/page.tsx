@@ -496,12 +496,7 @@ function FieldRow({ field, value, onChange }: { field: Field; value: string; onC
 }
 
 export default function AdminContentPage() {
-  const [values,       setValues]      = useState<Record<string,string>>(() => {
-    // Pre-populate with defaults immediately so fields are never blank while loading
-    const d: Record<string,string> = {}
-    PAGES.forEach(p => p.sections.forEach(s => s.fields.forEach(f => { d[f.id] = f.default })))
-    return d
-  })
+  const [values,       setValues]      = useState<Record<string,string>>({})
   const [activeGroup,  setActiveGroup] = useState('Homepage')
   const [openSections, setOpenSections]= useState<Record<string,boolean>>({ 'hero-text':true })
   const [savedGroups,  setSavedGroups] = useState<Record<string,boolean>>({})
@@ -649,12 +644,7 @@ export default function AdminContentPage() {
         {/* Left sidebar */}
         <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', position:'sticky', top:'80px' }}>
           {PAGES.map(page => (
-            <button key={page.label} onClick={() => {
-                setActiveGroup(page.label)
-                // Auto-open the first section of the newly selected page
-                const pg = PAGES.find(p => p.label === page.label)
-                if (pg?.sections[0]) setOpenSections({ [pg.sections[0].id]: true })
-              }}
+            <button key={page.label} onClick={() => setActiveGroup(page.label)}
               style={{ width:'100%', display:'flex', alignItems:'center', gap:'10px', padding:'11px 14px', border:'none', borderBottom:'1px solid rgba(13,17,23,0.05)', cursor:'pointer', textAlign:'left' as const,
                 background: activeGroup===page.label ? 'rgba(184,134,11,0.07)' : '#fff',
                 borderLeft: activeGroup===page.label ? '3px solid #B8860B' : '3px solid transparent' }}>

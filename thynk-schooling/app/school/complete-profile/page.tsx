@@ -398,7 +398,7 @@ export default function SchoolCompleteProfilePage() {
       if (token) headers['Authorization'] = `Bearer ${token}`
       const tokenParam = token ? `?__token=${encodeURIComponent(token)}` : ''
 
-      const r = await fetch(`/api/schools/profile${tokenParam}`, {
+      const r = await fetch(`/api/schools?action=profile${tokenParam ? '&' + tokenParam.slice(1) : ''}`, {
         method: 'POST',
         credentials: 'include',
         headers,
@@ -412,7 +412,7 @@ export default function SchoolCompleteProfilePage() {
       const token = accessToken || localStorage.getItem('ts_access_token') || ''
       const authHeader = token ? { 'Authorization': `Bearer ${token}` } : {}
       const tokenParam = token ? `?__token=${encodeURIComponent(token)}` : ''
-      await fetch(`/api/auth/complete-profile${tokenParam}`, {
+      await fetch(`/api/auth?action=complete-profile${tokenParam ? '&' + tokenParam.slice(1) : ''}`, {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({ profileCompleted: true }),

@@ -86,7 +86,7 @@ export default function ParentCompleteProfilePage() {
     mutationFn: async () => {
       await fetch('/api/parent-profiles', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pData) })
       if (cData.fullName) await fetch('/api/students', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cData) })
-      if (user) await fetch('/api/auth/complete-profile', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: pData.fullName, profileCompleted: true }) })
+      if (user) await fetch('/api/auth?action=complete-profile', { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fullName: pData.fullName, profileCompleted: true }) })
     },
     onSuccess: () => {
       if (user) setUser({ ...user, fullName: pData.fullName, profileCompleted: true })

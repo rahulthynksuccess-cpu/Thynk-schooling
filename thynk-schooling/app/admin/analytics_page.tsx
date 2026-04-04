@@ -60,7 +60,7 @@ export default function AdminAnalyticsPage() {
   const [leadsTab, setLeadsTab] = useState<'leads'|'revenue'>('leads')
   const { data, isLoading } = useQuery({
     queryKey: ['admin-analytics'],
-    queryFn: () => fetch('/api/admin/analytics', { cache: 'no-store' }).then(r => r.json()),
+    queryFn: () => fetch('/api/admin?action=analytics', { cache: 'no-store' }).then(r => r.json()),
     staleTime: 3 * 60 * 1000,
   })
 

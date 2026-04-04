@@ -57,7 +57,7 @@ function AnalyticsCards() {
   const [stats, setStats] = useState<any>({})
   const [loading, setLoading] = useState(true)
   useEffect(() => {
-    fetch('/api/schools/me/analytics',{cache:'no-store'}).then(r=>r.json()).then(d=>setStats(d)).catch(()=>{}).finally(()=>setLoading(false))
+    fetch('/api/schools?action=analytics',{cache:'no-store'}).then(r=>r.json()).then(d=>setStats(d)).catch(()=>{}).finally(()=>setLoading(false))
   },[])
   const cards = [
     {label:'Profile Views',value:stats.profileViews||'—',icon:'👁️',color:'#B8860B'},

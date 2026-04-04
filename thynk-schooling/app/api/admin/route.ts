@@ -162,9 +162,10 @@ async function getAdminUsers(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const role = searchParams.get('role'), search = searchParams.get('search') || searchParams.get('q') || ''
   const status = searchParams.get('status')
-  const limit = Math.min(50, Number(searchParams.get('limit') || 20))
+  const isExport = searchParams.get('export') === '1'
+  const limit = isExport ? 10000 : Math.min(50, Number(searchParams.get('limit') || 20))
   const page = Math.max(1, Number(searchParams.get('page') || 1))
-  const offset = (page - 1) * limit
+  const offset = isExport ? 0 : (page - 1) * limit
   const conds: string[] = ["u.role!='super_admin'"]; const params: unknown[] = []; let idx = 1
   if (role && role !== 'suspended') { conds.push(`u.role=$${idx++}`); params.push(role) }
   if (status === 'suspended' || role === 'suspended') { conds.push(`u.is_active=$${idx++}`); params.push(false) }
@@ -177,6 +178,20 @@ async function getAdminUsers(req: NextRequest) {
     db.query("SELECT COUNT(*) FROM users WHERE role='school_admin'").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM users WHERE is_active=false").catch(() => ({ rows: [{ count: 0 }] })),
   ])
+
+  if (isExport) {
+    const header = 'Name,Phone,Email,Role,School,Status,Joined\n'
+    const csvRows = rows.rows.map((r: any) =>
+      [r.full_name||'', r.phone||'', r.email||'', r.role||'', r.school_name||'',
+       r.is_active===false?'suspended':'active',
+       new Date(r.created_at).toLocaleDateString('en-IN')
+      ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')
+    ).join('\n')
+    return new Response(header + csvRows, {
+      headers: { 'Content-Type': 'text/csv', 'Content-Disposition': 'attachment; filename="users.csv"' }
+    })
+  }
+
   const total = Number(ct.rows[0].count)
   const users = rows.rows.map((r: any) => ({
     id: r.id, fullName: r.full_name || '—', phone: r.phone || '—', email: r.email || null,
@@ -689,7 +704,8 @@ export async function PUT(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const action = new URL(req.url).searchParams.get('action')
+  const url = new URL(req.url)
+  const action = url.searchParams.get('action')
   try {
     switch (action) {
       case 'reviews': return await deleteAdminReview(req)
@@ -698,15 +714,31 @@ export async function DELETE(req: NextRequest) {
       case 'theme':
         await db.query("DELETE FROM site_settings WHERE key='theme'").catch(() => {})
         return NextResponse.json({ success: true })
+      case 'users': {
+        const id = url.searchParams.get('id')
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+        await db.query('DELETE FROM users WHERE id=$1', [id])
+        return NextResponse.json({ success: true })
+      }
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin DELETE:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
-
 export async function PATCH(req: NextRequest) {
-  const action = new URL(req.url).searchParams.get('action')
+  const url = new URL(req.url)
+  const action = url.searchParams.get('action')
   try {
     if (action === 'users-activity') return await getUserActivity(req)
+    if (action === 'users') {
+      // suspend: ?action=users&id=X&op=suspend
+      const id = url.searchParams.get('id')
+      const op = url.searchParams.get('op')
+      if (id && op === 'suspend') {
+        await db.query('UPDATE users SET is_active=false WHERE id=$1', [id])
+        return NextResponse.json({ success: true })
+      }
+      return await updateAdminUser(req)
+    }
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
