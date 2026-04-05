@@ -5,6 +5,7 @@ import { motion, useInView, AnimatePresence } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
+import { Marquee } from '@/components/ui/Marquee'
 import { Check, ArrowRight, Star, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { useContent } from '@/hooks/useContent'
@@ -205,6 +206,7 @@ export default function PricingPage() {
 
       <Navbar />
       <main className="pricing-page-root" style={{ paddingTop: 72 }}>
+        <Marquee variant="gold" speed={34} />
 
         {/* ── HERO ── */}
         <section style={{ position: 'relative', padding: 'clamp(72px,10vw,120px) 0 clamp(56px,8vw,96px)', display: 'flex', alignItems: 'center', overflow: 'hidden' }}>
@@ -458,6 +460,7 @@ export default function PricingPage() {
             </Link>
           </motion.div>
         </section>
+        <Marquee variant="dark" speed={40} />
 
       </main>
       <Footer />
