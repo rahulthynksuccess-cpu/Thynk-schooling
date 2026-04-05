@@ -7,7 +7,8 @@ import Link from 'next/link'
 import {
   Search, MapPin, Star, BadgeCheck, GraduationCap,
   X, LayoutGrid, List, ChevronDown, ArrowRight,
-  SlidersHorizontal, Plus, Check, Sparkles
+  SlidersHorizontal, Plus, Check, Sparkles, BookOpen,
+  Users, Award, Trophy
 } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
@@ -49,7 +50,6 @@ async function fetchSchools(f: Filters): Promise<PaginatedResponse<School>> {
   return res.json()
 }
 
-/* ─── useClickOutside ─── */
 function useClickOutside(ref: React.RefObject<HTMLDivElement | null>, cb: () => void) {
   useEffect(() => {
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) cb() }
@@ -58,7 +58,6 @@ function useClickOutside(ref: React.RefObject<HTMLDivElement | null>, cb: () => 
   }, [ref, cb])
 }
 
-/* ─── dropdown portal wrapper ─── */
 const DROP_ANIM = {
   initial:  { opacity: 0, y: -8, scale: 0.97 },
   animate:  { opacity: 1, y: 0,  scale: 1 },
@@ -66,7 +65,6 @@ const DROP_ANIM = {
   transition: { duration: 0.18, ease: [0.22,1,0.36,1] }
 }
 
-/* ─── Single-select pill dropdown ─── */
 function SelectPill({ label, icon, value, options, onChange }: {
   label: string; icon?: string
   value: string; options: { label: string; value: string }[]
@@ -134,7 +132,6 @@ function SelectPill({ label, icon, value, options, onChange }: {
   )
 }
 
-/* ─── Multi-select checkbox pill ─── */
 function MultiPill({ label, icon, options, selected, onChange }: {
   label: string; icon?: string
   options: { label: string; value: string }[]
@@ -205,7 +202,6 @@ function MultiPill({ label, icon, options, selected, onChange }: {
   )
 }
 
-/* ─── Fee range pill ─── */
 function FeePill({ feeMin, feeMax, onChange }: {
   feeMin?: number; feeMax?: number; onChange: (min?: number, max?: number) => void
 }) {
@@ -265,7 +261,6 @@ function FeePill({ feeMin, feeMax, onChange }: {
   )
 }
 
-/* ─── More Filters panel ─── */
 function MoreFilters({ filters, onChange }: { filters: Filters; onChange: (k: string, v: unknown) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -349,10 +344,10 @@ function MoreFilters({ filters, onChange }: { filters: Filters; onChange: (k: st
               </div>
             </div>
             <div className="p-5">
-              <ToggleGroup title="Facilities"            emoji="🏗️" opts={facilities} fieldKey="facilities"     />
-              <ToggleGroup title="Sports"                emoji="⚽" opts={sports}     fieldKey="sports"          />
-              <ToggleGroup title="Extra Curricular"      emoji="🎭" opts={extraCurr}  fieldKey="extraCurricular" />
-              <ToggleGroup title="Languages Offered"     emoji="🗣️" opts={languages}  fieldKey="language"        />
+              <ToggleGroup title="Facilities"       emoji="🏗️" opts={facilities} fieldKey="facilities"     />
+              <ToggleGroup title="Sports"           emoji="⚽" opts={sports}     fieldKey="sports"          />
+              <ToggleGroup title="Extra Curricular" emoji="🎭" opts={extraCurr}  fieldKey="extraCurricular" />
+              <ToggleGroup title="Languages"        emoji="🗣️" opts={languages}  fieldKey="language"        />
             </div>
             <div className="sticky bottom-0 bg-white border-t border-[rgba(13,17,23,0.07)] p-4 rounded-b-2xl">
               <button onClick={() => setOpen(false)}
@@ -367,72 +362,273 @@ function MoreFilters({ filters, onChange }: { filters: Filters; onChange: (k: st
   )
 }
 
-/* ─── School card ─── */
-function SchoolCard({ school }: { school: School }) {
+/* ─── PREMIUM School Card (Grid) ─── */
+const COVER_BG = [
+  'linear-gradient(135deg,#F5EFE0,#EDE2C8)',
+  'linear-gradient(135deg,#E8F0E8,#D4E8D4)',
+  'linear-gradient(135deg,#E8E4F5,#D8D0EE)',
+  'linear-gradient(135deg,#F5E8E4,#EED0C8)',
+  'linear-gradient(135deg,#E4EFF5,#C8DDE8)',
+]
+
+function SchoolCardGrid({ school, i }: { school: School; i: number }) {
   return (
-    <Link href={`/schools/${school.slug}`} className="card-hover block p-5 flex gap-4 items-start" style={{ borderRadius: 16 }}>
-      <div className="w-[72px] h-[72px] rounded-2xl overflow-hidden bg-ivory-2 flex-shrink-0 border border-[rgba(13,17,23,0.07)] flex items-center justify-center">
-        {school.logoUrl
-          ? <img src={school.logoUrl} alt={school.name} className="w-full h-full object-contain p-2" loading="lazy" />
-          : <GraduationCap className="w-8 h-8 text-ink-faint" />}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <div>
-            <h3 className="font-display font-bold text-ink text-[17px] leading-tight group-hover:text-gold transition-colors"
-              style={{ fontFamily: 'var(--font-serif)' }}>{school.name}</h3>
-            <div className="flex items-center gap-1 text-ink-muted text-xs mt-0.5">
-              <MapPin className="w-3 h-3 text-gold" />{school.city}{school.state ? `, ${school.state}` : ''}
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {school.isVerified && <span className="badge-green text-[10px]"><BadgeCheck className="w-3 h-3" />Verified</span>}
-            {school.isFeatured && <span className="badge-gold text-[10px]">⭐ Featured</span>}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1.5 my-2.5">
-          {school.board.slice(0, 2).map(b => <span key={b} className="badge-gold text-[10px]">{b}</span>)}
-          {school.schoolType && <span className="badge-light text-[10px]">{school.schoolType}</span>}
-          {school.genderPolicy && <span className="badge-light text-[10px]">{school.genderPolicy}</span>}
-          {school.mediumOfInstruction && <span className="badge-light text-[10px]">{school.mediumOfInstruction}</span>}
-        </div>
-        <div className="flex items-center justify-between pt-2.5 border-t border-[rgba(13,17,23,0.06)]">
-          <div className="flex items-center gap-3 text-xs">
-            <span className="flex items-center gap-1">
-              <Star className="w-3.5 h-3.5 fill-gold text-gold" />
-              <span className="font-bold text-ink">{school.avgRating.toFixed(1)}</span>
-              <span className="text-ink-faint">({school.totalReviews})</span>
-            </span>
-            {school.classesFrom && school.classesTo &&
-              <span className="text-ink-muted">Class {school.classesFrom}–{school.classesTo}</span>}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: i * 0.05, duration: 0.4, ease: [0.22,1,0.36,1] }}
+    >
+      <Link href={`/schools/${school.slug}`} className="school-card-grid block" style={{
+        borderRadius: 20, overflow: 'hidden',
+        background: '#fff', border: '1px solid rgba(13,17,23,0.08)',
+        boxShadow: '0 2px 12px rgba(13,17,23,0.06)',
+        textDecoration: 'none', display: 'flex', flexDirection: 'column',
+        transition: 'all 0.3s ease',
+      }}>
+        {/* Cover */}
+        <div style={{
+          height: 180,
+          background: school.coverImageUrl ? undefined : COVER_BG[i % COVER_BG.length],
+          position: 'relative', overflow: 'hidden', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {school.coverImageUrl
+            ? <img src={school.coverImageUrl} alt={school.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s ease' }}
+                className="school-card-img" loading="lazy" />
+            : <GraduationCap style={{ width: 44, height: 44, color: 'rgba(13,17,23,0.15)' }} />
+          }
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(13,17,23,0.25) 0%, transparent 55%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', gap: 5 }}>
+            {school.isVerified && (
+              <span style={{ display:'inline-flex', alignItems:'center', gap:3, background:'rgba(22,163,74,0.9)', color:'#fff', fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:100, fontFamily:'Inter,sans-serif', backdropFilter:'blur(4px)' }}>
+                <BadgeCheck style={{ width:10, height:10 }} /> Verified
+              </span>
+            )}
+            {school.isFeatured && (
+              <span style={{ display:'inline-flex', alignItems:'center', gap:3, background:'rgba(184,134,11,0.9)', color:'#fff', fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:100, fontFamily:'Inter,sans-serif', backdropFilter:'blur(4px)' }}>
+                ★ Featured
+              </span>
+            )}
           </div>
           {school.monthlyFeeMin && (
-            <span className="font-display font-bold text-gold text-sm">
-              ₹{school.monthlyFeeMin.toLocaleString('en-IN')}
-              <span className="text-ink-faint font-sans font-normal text-xs">/mo</span>
-            </span>
+            <div style={{ position:'absolute', bottom:10, right:10, background:'rgba(0,0,0,0.55)', backdropFilter:'blur(6px)', borderRadius:8, padding:'3px 9px' }}>
+              <span style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:13, color:'#fff' }}>
+                ₹{school.monthlyFeeMin.toLocaleString('en-IN')}
+              </span>
+              <span style={{ fontFamily:'Inter,sans-serif', fontSize:10, color:'rgba(255,255,255,0.65)', marginLeft:2 }}>/mo</span>
+            </div>
           )}
         </div>
-      </div>
-    </Link>
+
+        {/* Body */}
+        <div style={{ padding: '16px 18px 18px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+          <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:10 }}>
+            <div style={{ width:42, height:42, borderRadius:10, flexShrink:0, background:'#F5F0E8', border:'1px solid rgba(13,17,23,0.08)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+              {school.logoUrl
+                ? <img src={school.logoUrl} alt={school.name} style={{ width:'100%', height:'100%', objectFit:'contain', padding:5 }} loading="lazy" />
+                : <GraduationCap style={{ width:18, height:18, color:'#B8860B' }} />
+              }
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <h3 style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:16, color:'#0D1117', lineHeight:1.25, marginBottom:3, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                {school.name}
+              </h3>
+              <div style={{ display:'flex', alignItems:'center', gap:3, fontFamily:'Inter,sans-serif', fontSize:11, color:'#7A8694' }}>
+                <MapPin style={{ width:10, height:10, color:'#B8860B', flexShrink:0 }} />
+                <span style={{ whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  {school.city}{school.state ? `, ${school.state}` : ''}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Badges */}
+          <div style={{ display:'flex', gap:5, flexWrap:'wrap', marginBottom:10 }}>
+            {school.board.slice(0,2).map(b => (
+              <span key={b} style={{ background:'rgba(184,134,11,0.08)', border:'1px solid rgba(184,134,11,0.22)', color:'#9A6F0B', fontSize:10, fontWeight:700, fontFamily:'Inter,sans-serif', padding:'2px 8px', borderRadius:100 }}>{b}</span>
+            ))}
+            {school.schoolType && <span style={{ background:'rgba(13,17,23,0.05)', border:'1px solid rgba(13,17,23,0.1)', color:'#5A6472', fontSize:10, fontWeight:600, fontFamily:'Inter,sans-serif', padding:'2px 8px', borderRadius:100 }}>{school.schoolType}</span>}
+          </div>
+
+          {/* Class + students */}
+          <div style={{ display:'flex', gap:10, marginBottom:12 }}>
+            {school.classesFrom && school.classesTo && (
+              <div style={{ display:'flex', alignItems:'center', gap:4, fontFamily:'Inter,sans-serif', fontSize:11, color:'#5A6472' }}>
+                <BookOpen style={{ width:11, height:11 }} />
+                Class {school.classesFrom}–{school.classesTo}
+              </div>
+            )}
+            {school.totalStudents && (
+              <div style={{ display:'flex', alignItems:'center', gap:4, fontFamily:'Inter,sans-serif', fontSize:11, color:'#5A6472' }}>
+                <Users style={{ width:11, height:11 }} />
+                {school.totalStudents.toLocaleString('en-IN')}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'auto', paddingTop:10, borderTop:'1px solid rgba(13,17,23,0.06)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+              <div style={{ display:'flex', gap:1 }}>
+                {[1,2,3,4,5].map(s => (
+                  <Star key={s} style={{ width:11, height:11, fill: s<=Math.round(school.avgRating)?'#B8860B':'transparent', color: s<=Math.round(school.avgRating)?'#B8860B':'#D0D5DB' }} />
+                ))}
+              </div>
+              <span style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:13, color:'#0D1117' }}>{school.avgRating.toFixed(1)}</span>
+              <span style={{ fontFamily:'Inter,sans-serif', fontSize:10, color:'#A0ADB8' }}>({school.totalReviews})</span>
+            </div>
+            <span style={{ fontFamily:'Inter,sans-serif', fontSize:11, fontWeight:600, color:'#B8860B', display:'flex', alignItems:'center', gap:3 }}>
+              View <ArrowRight style={{ width:11, height:11 }} />
+            </span>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   )
 }
 
-function SkeletonCard() {
+/* ─── List Card ─── */
+function SchoolCardList({ school, i }: { school: School; i: number }) {
   return (
-    <div className="card p-5 flex gap-4">
-      <div className="skeleton w-[72px] h-[72px] rounded-2xl flex-shrink-0" />
-      <div className="flex-1 space-y-2.5">
-        <div className="skeleton h-5 w-2/3 rounded-lg" />
-        <div className="skeleton h-3.5 w-1/3 rounded-lg" />
-        <div className="flex gap-2 mt-1"><div className="skeleton h-5 w-16 rounded-full" /><div className="skeleton h-5 w-16 rounded-full" /></div>
-        <div className="skeleton h-3.5 w-1/2 rounded-lg" />
+    <motion.div
+      initial={{ opacity: 0, x: -12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: i * 0.04, duration: 0.35, ease: [0.22,1,0.36,1] }}
+    >
+      <Link href={`/schools/${school.slug}`} className="school-card-list block" style={{
+        borderRadius: 16, background: '#fff', border: '1px solid rgba(13,17,23,0.08)',
+        boxShadow: '0 2px 8px rgba(13,17,23,0.05)', textDecoration: 'none',
+        display: 'flex', gap: 0, overflow: 'hidden', transition: 'all 0.25s ease',
+      }}>
+        {/* Thumbnail */}
+        <div style={{ width: 120, flexShrink: 0, position: 'relative', overflow: 'hidden', background: COVER_BG[i % COVER_BG.length], display:'flex', alignItems:'center', justifyContent:'center' }}>
+          {school.coverImageUrl
+            ? <img src={school.coverImageUrl} alt={school.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.5s ease' }} className="school-card-img" loading="lazy" />
+            : <GraduationCap style={{ width:32, height:32, color:'rgba(13,17,23,0.15)' }} />
+          }
+        </div>
+
+        {/* Logo circle on top of thumbnail */}
+        <div style={{ padding: '16px 20px', display:'flex', flex:1, gap:14, alignItems:'flex-start' }}>
+          <div style={{ width:52, height:52, borderRadius:12, flexShrink:0, background:'#F5F0E8', border:'1px solid rgba(13,17,23,0.08)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden' }}>
+            {school.logoUrl
+              ? <img src={school.logoUrl} alt={school.name} style={{ width:'100%', height:'100%', objectFit:'contain', padding:6 }} loading="lazy" />
+              : <GraduationCap style={{ width:22, height:22, color:'#B8860B' }} />
+            }
+          </div>
+
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom:4 }}>
+              <div>
+                <h3 style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:18, color:'#0D1117', lineHeight:1.2, marginBottom:4 }}>{school.name}</h3>
+                <div style={{ display:'flex', alignItems:'center', gap:4, fontFamily:'Inter,sans-serif', fontSize:12, color:'#7A8694' }}>
+                  <MapPin style={{ width:11, height:11, color:'#B8860B' }} />
+                  {school.city}{school.state ? `, ${school.state}` : ''}
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:5, flexShrink:0 }}>
+                {school.isVerified && (
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:3, background:'rgba(22,163,74,0.1)', color:'#16a34a', border:'1px solid rgba(22,163,74,0.25)', fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:100, fontFamily:'Inter,sans-serif' }}>
+                    <BadgeCheck style={{ width:10, height:10 }} /> Verified
+                  </span>
+                )}
+                {school.isFeatured && (
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:3, background:'rgba(184,134,11,0.1)', color:'#9A6F0B', border:'1px solid rgba(184,134,11,0.22)', fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:100, fontFamily:'Inter,sans-serif' }}>
+                    ★ Featured
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginBottom:10 }}>
+              {school.board.slice(0,3).map(b => (
+                <span key={b} style={{ background:'rgba(184,134,11,0.08)', border:'1px solid rgba(184,134,11,0.22)', color:'#9A6F0B', fontSize:10, fontWeight:700, fontFamily:'Inter,sans-serif', padding:'3px 9px', borderRadius:100 }}>{b}</span>
+              ))}
+              {school.schoolType && <span style={{ background:'rgba(13,17,23,0.05)', border:'1px solid rgba(13,17,23,0.1)', color:'#5A6472', fontSize:10, fontWeight:600, fontFamily:'Inter,sans-serif', padding:'3px 9px', borderRadius:100 }}>{school.schoolType}</span>}
+              {school.genderPolicy && <span style={{ background:'rgba(13,17,23,0.05)', border:'1px solid rgba(13,17,23,0.1)', color:'#5A6472', fontSize:10, fontWeight:600, fontFamily:'Inter,sans-serif', padding:'3px 9px', borderRadius:100 }}>{school.genderPolicy}</span>}
+            </div>
+
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingTop:10, borderTop:'1px solid rgba(13,17,23,0.06)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <div style={{ display:'flex', gap:1 }}>
+                    {[1,2,3,4,5].map(s => (
+                      <Star key={s} style={{ width:12, height:12, fill: s<=Math.round(school.avgRating)?'#B8860B':'transparent', color: s<=Math.round(school.avgRating)?'#B8860B':'#D0D5DB' }} />
+                    ))}
+                  </div>
+                  <span style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:14, color:'#0D1117' }}>{school.avgRating.toFixed(1)}</span>
+                  <span style={{ fontFamily:'Inter,sans-serif', fontSize:11, color:'#A0ADB8' }}>({school.totalReviews})</span>
+                </div>
+                {school.classesFrom && school.classesTo && (
+                  <div style={{ display:'flex', alignItems:'center', gap:4, fontFamily:'Inter,sans-serif', fontSize:12, color:'#5A6472' }}>
+                    <BookOpen style={{ width:12, height:12 }} />
+                    Class {school.classesFrom}–{school.classesTo}
+                  </div>
+                )}
+                {school.totalStudents && (
+                  <div style={{ display:'flex', alignItems:'center', gap:4, fontFamily:'Inter,sans-serif', fontSize:12, color:'#5A6472' }}>
+                    <Users style={{ width:12, height:12 }} />
+                    {school.totalStudents.toLocaleString('en-IN')} students
+                  </div>
+                )}
+              </div>
+              {school.monthlyFeeMin && (
+                <span style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:16, color:'#B8860B' }}>
+                  ₹{school.monthlyFeeMin.toLocaleString('en-IN')}
+                  <span style={{ fontFamily:'Inter,sans-serif', fontWeight:400, fontSize:11, color:'#A0ADB8' }}>/mo</span>
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
+  )
+}
+
+function SkeletonGrid() {
+  return (
+    <div style={{ borderRadius:20, overflow:'hidden', background:'#fff', border:'1px solid rgba(13,17,23,0.08)' }}>
+      <div className="skeleton" style={{ height:180, borderRadius:0 }} />
+      <div style={{ padding:18 }}>
+        <div style={{ display:'flex', gap:10, marginBottom:12 }}>
+          <div className="skeleton" style={{ width:42, height:42, borderRadius:10, flexShrink:0 }} />
+          <div style={{ flex:1 }}>
+            <div className="skeleton" style={{ height:15, width:'65%', marginBottom:7 }} />
+            <div className="skeleton" style={{ height:11, width:'40%' }} />
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:5, marginBottom:12 }}>
+          <div className="skeleton" style={{ height:18, width:50, borderRadius:100 }} />
+          <div className="skeleton" style={{ height:18, width:50, borderRadius:100 }} />
+        </div>
+        <div className="skeleton" style={{ height:11, width:'55%' }} />
       </div>
     </div>
   )
 }
 
-/* ─── Guest modal ─── */
+function SkeletonList() {
+  return (
+    <div style={{ borderRadius:16, background:'#fff', border:'1px solid rgba(13,17,23,0.08)', display:'flex', overflow:'hidden' }}>
+      <div className="skeleton" style={{ width:120, flexShrink:0 }} />
+      <div style={{ padding:'16px 20px', flex:1, display:'flex', gap:14 }}>
+        <div className="skeleton" style={{ width:52, height:52, borderRadius:12, flexShrink:0 }} />
+        <div style={{ flex:1 }}>
+          <div className="skeleton" style={{ height:18, width:'55%', marginBottom:8 }} />
+          <div className="skeleton" style={{ height:12, width:'35%', marginBottom:12 }} />
+          <div style={{ display:'flex', gap:5, marginBottom:12 }}>
+            <div className="skeleton" style={{ height:18, width:50, borderRadius:100 }} />
+            <div className="skeleton" style={{ height:18, width:50, borderRadius:100 }} />
+          </div>
+          <div className="skeleton" style={{ height:12, width:'50%' }} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function GuestModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
@@ -473,7 +669,6 @@ function GuestModal({ onClose }: { onClose: () => void }) {
   )
 }
 
-/* ─── Active filter chip ─── */
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <motion.span
@@ -496,16 +691,24 @@ function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
 export function SchoolListingClient() {
   const searchParams = useSearchParams()
   const { isAuthenticated } = useAuthStore()
+
+  // read ?featured=true from URL to show featured-first mode
+  const urlFeatured = searchParams.get('featured') === 'true'
+
   const [filters, setFilters] = useState<Filters>({
     ...INIT,
-    query: searchParams.get('q') || undefined,
-    city:  searchParams.get('city') || undefined,
+    query:      searchParams.get('q')    || undefined,
+    city:       searchParams.get('city') || undefined,
+    isFeatured: urlFeatured || undefined,
   })
-  const [applied, setApplied] = useState<Filters>({ ...INIT })
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const [applied, setApplied] = useState<Filters>({
+    ...INIT,
+    isFeatured: urlFeatured || undefined,
+  })
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showGuest, setShowGuest] = useState(false)
+  const [userHasSearched, setUserHasSearched] = useState(false)
 
-  /* all dropdowns from DB — zero hardcoding */
   const { options: states  } = useDropdown('state')
   const { options: cities  } = useDropdown('city', { parentValue: filters.state || undefined, enabled: true })
   const { options: boards  } = useDropdown('board')
@@ -530,57 +733,82 @@ export function SchoolListingClient() {
 
   const search = useCallback(() => {
     if (!isAuthenticated) { setShowGuest(true); return }
-    setApplied({ ...filters, page: 1 })
+    // When user actively searches, lift featured-only restriction
+    setUserHasSearched(true)
+    setApplied({ ...filters, page: 1, isFeatured: undefined })
   }, [isAuthenticated, filters])
 
-  const reset = useCallback(() => { setFilters(INIT); setApplied(INIT) }, [])
+  const reset = useCallback(() => {
+    setFilters({ ...INIT, isFeatured: urlFeatured || undefined })
+    setApplied({ ...INIT, isFeatured: urlFeatured || undefined })
+    setUserHasSearched(false)
+  }, [urlFeatured])
 
   const schools = data?.data ?? []
   const total   = data?.total ?? 0
   const totalPg = data?.totalPages ?? 1
 
-  /* build active chips */
-  type Chip = { label: string; clear: () => void }
-  const chips: Chip[] = []
+  type ChipData = { label: string; clear: () => void }
+  const chips: ChipData[] = []
   if (applied.state)        chips.push({ label: `🗺 ${applied.state}`, clear: () => { set('state', undefined); set('city', undefined); setApplied(f => ({...f, state: undefined, city: undefined})) }})
   if (applied.city)         chips.push({ label: `📍 ${applied.city}`,  clear: () => { set('city', undefined);  setApplied(f => ({...f, city: undefined})) }})
   if (applied.schoolType)   chips.push({ label: applied.schoolType,    clear: () => set('schoolType', undefined) })
   if (applied.genderPolicy) chips.push({ label: applied.genderPolicy,  clear: () => set('genderPolicy', undefined) })
   if (applied.medium)       chips.push({ label: applied.medium,        clear: () => set('medium', undefined) })
-  applied.board?.forEach(b =>            chips.push({ label: b, clear: () => set('board', applied.board?.filter(x => x !== b)) }))
-  applied.facilities?.forEach(f =>       chips.push({ label: `🏗 ${f}`, clear: () => set('facilities', applied.facilities?.filter(x => x !== f)) }))
-  applied.sports?.forEach(s =>           chips.push({ label: `⚽ ${s}`, clear: () => set('sports', applied.sports?.filter(x => x !== s)) }))
-  applied.extraCurricular?.forEach(e =>  chips.push({ label: `🎭 ${e}`, clear: () => set('extraCurricular', applied.extraCurricular?.filter(x => x !== e)) }))
-  applied.language?.forEach(l =>         chips.push({ label: `🗣 ${l}`, clear: () => set('language', applied.language?.filter(x => x !== l)) }))
+  applied.board?.forEach(b =>           chips.push({ label: b, clear: () => set('board', applied.board?.filter(x => x !== b)) }))
+  applied.facilities?.forEach(f =>      chips.push({ label: `🏗 ${f}`, clear: () => set('facilities', applied.facilities?.filter(x => x !== f)) }))
+  applied.sports?.forEach(s =>          chips.push({ label: `⚽ ${s}`, clear: () => set('sports', applied.sports?.filter(x => x !== s)) }))
+  applied.extraCurricular?.forEach(e => chips.push({ label: `🎭 ${e}`, clear: () => set('extraCurricular', applied.extraCurricular?.filter(x => x !== e)) }))
+  applied.language?.forEach(l =>        chips.push({ label: `🗣 ${l}`, clear: () => set('language', applied.language?.filter(x => x !== l)) }))
 
   const activeFilterCount = [
     filters.state, filters.city, filters.schoolType, filters.genderPolicy, filters.medium,
-    filters.feeMin, filters.feeMax, filters.rating, filters.isFeatured,
+    filters.feeMin, filters.feeMax, filters.rating,
   ].filter(Boolean).length +
     (filters.board?.length ?? 0) + (filters.facilities?.length ?? 0) +
     (filters.sports?.length ?? 0) + (filters.extraCurricular?.length ?? 0) +
     (filters.language?.length ?? 0)
 
+  const isFeaturedMode = urlFeatured && !userHasSearched
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--schools-page-bg, #FAF7F2)' }}>
+      <style>{`
+        .school-card-grid:hover { box-shadow: 0 16px 48px rgba(13,17,23,0.14) !important; transform: translateY(-3px); }
+        .school-card-list:hover { box-shadow: 0 8px 32px rgba(13,17,23,0.12) !important; }
+        .school-card-grid:hover .school-card-img,
+        .school-card-list:hover .school-card-img { transform: scale(1.05); }
+      `}</style>
       <AnimatePresence>{showGuest && <GuestModal onClose={() => setShowGuest(false)} />}</AnimatePresence>
 
       {/* ─── Hero ─── */}
       <div className="border-b border-[rgba(13,17,23,0.07)]" style={{ background: 'var(--hero-bg, #FAF7F2)' }}>
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <motion.h1
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}
-            className="font-display font-bold text-ink mb-1"
-            style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px,4vw,42px)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
-            {filters.city
-              ? <>Schools in <span style={{ color: 'var(--gold)' }}>{filters.city}</span></>
-              : filters.state
-                ? <>Schools in <span style={{ color: 'var(--gold)' }}>{filters.state}</span></>
-                : <>Find Schools <span style={{ color: 'var(--gold)' }}>Across India</span></>}
-          </motion.h1>
-          <p className="text-ink-muted text-sm mb-7">Search, compare and shortlist from 12,000+ verified schools</p>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+            {isFeaturedMode && (
+              <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(184,134,11,0.1)', border:'1px solid rgba(184,134,11,0.25)', borderRadius:100, padding:'5px 14px', marginBottom:10 }}>
+                <Star style={{ width:12, height:12, fill:'#B8860B', color:'#B8860B' }} />
+                <span style={{ fontFamily:'Inter,sans-serif', fontSize:12, fontWeight:700, color:'#9A6F0B' }}>Showing Featured Schools</span>
+              </div>
+            )}
+            <h1
+              className="font-display font-bold text-ink mb-1"
+              style={{ fontFamily: 'var(--font-serif)', fontSize: 'clamp(28px,4vw,42px)', letterSpacing: '-0.02em', lineHeight: 1.15 }}>
+              {filters.city
+                ? <>Schools in <span style={{ color: 'var(--gold)' }}>{filters.city}</span></>
+                : filters.state
+                  ? <>Schools in <span style={{ color: 'var(--gold)' }}>{filters.state}</span></>
+                  : isFeaturedMode
+                    ? <>Featured Schools <span style={{ color: 'var(--gold)' }}>Across India</span></>
+                    : <>Find Schools <span style={{ color: 'var(--gold)' }}>Across India</span></>}
+            </h1>
+          </motion.div>
+          <p className="text-ink-muted text-sm mb-7">
+            {isFeaturedMode
+              ? 'Top verified featured schools — search to explore all schools'
+              : 'Search, compare and shortlist from 12,000+ verified schools'}
+          </p>
 
-          {/* Search + button — same row */}
           <div className="flex gap-3 max-w-2xl mb-6">
             <div className="flex items-center gap-3 flex-1 bg-white border border-[rgba(13,17,23,0.14)] rounded-2xl px-4 py-3 focus-within:border-gold focus-within:shadow-[0_0_0_3px_rgba(184,134,11,0.1)] transition-all duration-200"
               style={{ boxShadow: '0 2px 8px rgba(13,17,23,0.06)' }}>
@@ -609,12 +837,11 @@ export function SchoolListingClient() {
             </button>
           </div>
 
-          {/* ─── Filter pills bar ─── */}
+          {/* Filter pills */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-ink-faint mr-1 flex-shrink-0">
               <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
             </span>
-
             <SelectPill label="State"         icon="🗺️" value={filters.state || ''}        options={states}  onChange={v => set('state', v || undefined)} />
             <SelectPill label="City"          icon="📍" value={filters.city  || ''}        options={cities}  onChange={v => set('city',  v || undefined)} />
             <MultiPill  label="Board"         icon="📚" options={boards}  selected={filters.board        ?? []} onChange={v => set('board',        v.length ? v : undefined)} />
@@ -627,9 +854,7 @@ export function SchoolListingClient() {
               { label: '4+ Stars', value: '4' }, { label: '4.5+ Stars', value: '4.5' },
             ]} selected={filters.rating ? [String(filters.rating)] : []}
               onChange={v => set('rating', v.length ? Number(v[v.length - 1]) : undefined)} />
-
             <MoreFilters filters={filters} onChange={set} />
-
             {activeFilterCount > 0 && (
               <button onClick={reset}
                 className="flex items-center gap-1.5 h-9 px-3 rounded-full text-xs font-semibold text-ink-muted hover:text-ink transition-colors duration-150">
@@ -650,8 +875,6 @@ export function SchoolListingClient() {
 
       {/* ─── Results ─── */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-        {/* Active chips */}
         <AnimatePresence>
           {chips.length > 0 && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -665,7 +888,7 @@ export function SchoolListingClient() {
           <p className="text-ink-muted text-sm">
             {isLoading
               ? <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border-2 border-gold border-t-transparent animate-spin inline-block" /> Searching…</span>
-              : <><span className="font-bold text-ink">{total.toLocaleString('en-IN')}</span> schools found
+              : <><span className="font-bold text-ink">{total.toLocaleString('en-IN')}</span> {isFeaturedMode ? 'featured schools' : 'schools'} found
                 {isFetching && !isLoading && <span className="ml-2 text-gold text-xs animate-pulse">Updating…</span>}
               </>}
           </p>
@@ -678,37 +901,58 @@ export function SchoolListingClient() {
               <option value="fee_desc">Fee: High → Low</option>
             </select>
             <div className="flex border border-[rgba(13,17,23,0.12)] rounded-xl overflow-hidden bg-white">
-              <button onClick={() => setViewMode('list')}
-                className={clsx('p-2 transition-colors', viewMode === 'list' ? 'bg-ink text-ivory' : 'text-ink-muted hover:bg-ivory')}>
-                <List className="w-4 h-4" />
-              </button>
               <button onClick={() => setViewMode('grid')}
                 className={clsx('p-2 transition-colors', viewMode === 'grid' ? 'bg-ink text-ivory' : 'text-ink-muted hover:bg-ivory')}>
                 <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button onClick={() => setViewMode('list')}
+                className={clsx('p-2 transition-colors', viewMode === 'list' ? 'bg-ink text-ivory' : 'text-ink-muted hover:bg-ivory')}>
+                <List className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className={clsx('gap-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' : 'flex flex-col')}>
-          {isLoading
-            ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-            : schools.length === 0
-              ? (
-                <div className="col-span-full py-24 flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-ivory-2 border border-[rgba(13,17,23,0.07)] flex items-center justify-center">
-                    <Search className="w-7 h-7 text-ink-faint" />
+        {viewMode === 'grid' ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+            {isLoading
+              ? Array.from({ length: 9 }).map((_, i) => <SkeletonGrid key={i} />)
+              : schools.length === 0
+                ? (
+                  <div style={{ gridColumn: '1 / -1', paddingBlock: 96, display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
+                    <div style={{ width:64, height:64, borderRadius:20, background:'rgba(13,17,23,0.05)', border:'1px solid rgba(13,17,23,0.08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <Search style={{ width:28, height:28, color:'rgba(13,17,23,0.2)' }} />
+                    </div>
+                    <h3 style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, color:'#0D1117', fontSize:22 }}>No Schools Found</h3>
+                    <p style={{ fontFamily:'Inter,sans-serif', fontSize:14, color:'#7A8694', textAlign:'center', maxWidth:320 }}>Try different filters or a broader search term.</p>
+                    <button onClick={reset} style={{ marginTop:4, padding:'10px 24px', borderRadius:12, background:'#0D1117', color:'#fff', fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:14, border:'none', cursor:'pointer' }}>
+                      Reset Filters
+                    </button>
                   </div>
-                  <h3 className="font-display font-bold text-ink text-xl" style={{ fontFamily: 'var(--font-serif)' }}>No Schools Found</h3>
-                  <p className="text-ink-muted text-sm text-center max-w-sm">Try different filters or a broader search term.</p>
-                  <button onClick={reset}
-                    className="mt-1 px-6 py-2.5 rounded-xl bg-ink text-ivory text-sm font-semibold hover:bg-gold transition-colors duration-200">
-                    Reset Filters
-                  </button>
-                </div>
-              )
-              : schools.map(school => <SchoolCard key={school.id} school={school} />)}
-        </div>
+                )
+                : schools.map((s, i) => <SchoolCardGrid key={s.id} school={s} i={i} />)
+            }
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {isLoading
+              ? Array.from({ length: 8 }).map((_, i) => <SkeletonList key={i} />)
+              : schools.length === 0
+                ? (
+                  <div style={{ paddingBlock: 96, display:'flex', flexDirection:'column', alignItems:'center', gap:16 }}>
+                    <div style={{ width:64, height:64, borderRadius:20, background:'rgba(13,17,23,0.05)', border:'1px solid rgba(13,17,23,0.08)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <Search style={{ width:28, height:28, color:'rgba(13,17,23,0.2)' }} />
+                    </div>
+                    <h3 style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, color:'#0D1117', fontSize:22 }}>No Schools Found</h3>
+                    <button onClick={reset} style={{ padding:'10px 24px', borderRadius:12, background:'#0D1117', color:'#fff', fontFamily:'Inter,sans-serif', fontWeight:600, fontSize:14, border:'none', cursor:'pointer' }}>
+                      Reset Filters
+                    </button>
+                  </div>
+                )
+                : schools.map((s, i) => <SchoolCardList key={s.id} school={s} i={i} />)
+            }
+          </div>
+        )}
 
         {!isLoading && totalPg > 1 && (
           <div className="flex items-center justify-center gap-3 mt-10">
