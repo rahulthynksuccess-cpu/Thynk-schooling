@@ -842,3 +842,78 @@ body:has(.admin-root) {
   font-size: 12px !important;
   color: rgba(255,255,255,0.70) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   FIX: Page Content & Lead Pricing — inputs on white cards
+   Must come LAST so they beat the global white-text overrides
+═══════════════════════════════════════════════════════════ */
+
+/* All inputs/textareas inside the page-settings main area */
+.admin-page-settings .admin-main input:not([type=range]):not([type=color]):not([type=checkbox]):not([type=radio]),
+.admin-page-settings .admin-main textarea,
+.admin-page-settings .admin-main .a-input {
+  color-scheme: light !important;
+  background: #ffffff !important;
+  color: #0D1117 !important;
+  border-color: #DDD5C8 !important;
+  font-size: 13.5px !important;
+}
+
+.admin-page-settings .admin-main input::placeholder,
+.admin-page-settings .admin-main textarea::placeholder,
+.admin-page-settings .admin-main .a-input::placeholder {
+  color: #A0ADB8 !important;
+}
+
+/* Labels, field names, section headers — must be dark on white cards */
+.admin-page-settings .admin-main .a-label,
+.admin-page-settings .admin-content .field-label,
+.admin-page-settings .admin-content label {
+  color: #5A6478 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.13em !important;
+}
+
+/* Section card headings (Hero Section — Text, etc.) */
+.admin-page-settings .admin-main .section-heading,
+.admin-page-settings .admin-main h3 {
+  color: #0D1117 !important;
+}
+
+/* The content-manager card itself should be white/cream */
+.admin-page-settings .content-section-card,
+.admin-page-settings .page-section-card {
+  background: #FEFCF8 !important;
+  border-color: #EDE5D8 !important;
+}
+
+/* Reset button text */
+.admin-page-settings .admin-main .btn-reset,
+.admin-page-settings .admin-main button[class*="reset" i] {
+  color: #8A9AB0 !important;
+}
+
+/* ── CRITICAL: Override !important white-text on inline-styled inputs ──
+   The global rule uses !important which defeats inline styles.
+   These rules must be MORE SPECIFIC and also !important to win. */
+.admin-page-settings .admin-main input[type="text"],
+.admin-page-settings .admin-main input[type="number"],
+.admin-page-settings .admin-main input[type="email"],
+.admin-page-settings .admin-main input[type="url"],
+.admin-page-settings .admin-main input[type="search"],
+.admin-page-settings .admin-main input[type="tel"],
+.admin-page-settings .admin-main input:not([type="range"]):not([type="color"]):not([type="checkbox"]):not([type="radio"]) {
+  color: #0D1117 !important;
+  background: #ffffff !important;
+  color-scheme: light !important;
+}
+.admin-page-settings .admin-main textarea {
+  color: #0D1117 !important;
+  background: #ffffff !important;
+  color-scheme: light !important;
+}
+.admin-page-settings .admin-main input::placeholder,
+.admin-page-settings .admin-main textarea::placeholder {
+  color: #A0ADB8 !important;
+}
