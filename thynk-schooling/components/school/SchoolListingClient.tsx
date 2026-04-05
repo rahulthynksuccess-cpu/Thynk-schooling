@@ -704,12 +704,12 @@ export function SchoolListingClient() {
             )}
             <h1 className="font-display font-bold text-ink mb-1" style={{ fontFamily:'var(--font-serif)', fontSize:'clamp(28px,4vw,42px)', letterSpacing:'-0.02em', lineHeight:1.15 }}>
               {filters.city
-                ? <>Schools in <span style={{ color:'var(--gold)' }}>{filters.city}</span></>
+                ? <>Schools in <em style={{ color:'var(--gold)' }}>{filters.city}</em></>
                 : filters.state
-                  ? <>Schools in <span style={{ color:'var(--gold)' }}>{filters.state}</span></>
+                  ? <>Schools in <em style={{ color:'var(--gold)' }}>{filters.state}</em></>
                   : isFeaturedMode
-                    ? <>Featured Schools <span style={{ color:'var(--gold)' }}>Across India</span></>
-                    : <>Find Schools <span style={{ color:'var(--gold)' }}>Across India</span></>}
+                    ? <>Featured Schools <em style={{ color:'var(--gold)', fontStyle:'italic' }}>Across India</em></>
+                    : <>Find Schools <em style={{ color:'var(--gold)', fontStyle:'italic' }}>Across India</em></>}
             </h1>
           </motion.div>
 

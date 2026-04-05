@@ -361,7 +361,7 @@ export function SchoolDashboardClient() {
             <div className="header-left">
               <button className="menu-btn" onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>
               <div>
-                <h1 className="header-title">School Dashboard</h1>
+                <h1 className="header-title">School <em style={{fontStyle:"italic",color:"var(--gold,#B8860B)"}}>Dashboard</em></h1>
                 <p className="header-sub">Welcome back, {user.fullName?.split(' ')[0] || 'Admin'} 👋</p>
               </div>
             </div>
