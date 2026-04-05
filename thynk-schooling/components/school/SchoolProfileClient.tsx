@@ -132,7 +132,7 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
             <div className="flex flex-wrap gap-2 mb-2">
               {school.isVerified && <span className="badge-green text-xs"><BadgeCheck className="w-3 h-3" /> Verified</span>}
               {school.isFeatured && <span className="badge-orange text-xs">⭐ Featured</span>}
-              {school.board.map(b => <span key={b} className="badge-orange text-xs">{b}</span>)}
+              {(school.board||[]).map(b => <span key={b} className="badge-orange text-xs">{b}</span>)}
             </div>
             <h1 className="font-display font-bold text-2xl sm:text-3xl text-white leading-tight">{school.name}</h1>
           </div>
@@ -150,8 +150,8 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                 <Star key={s} className={clsx('w-4 h-4', s <= Math.round(school.avgRating) ? 'text-orange-400 fill-orange-400' : 'text-navy-600')} />
               ))}
             </div>
-            <span className="font-display font-bold text-white text-sm">{school.avgRating.toFixed(1)}</span>
-            <span className="text-navy-400 text-xs">({school.totalReviews} reviews)</span>
+            <span className="font-display font-bold text-white text-sm">{(Number(school.avgRating)||0).toFixed(1)}</span>
+            <span className="text-navy-400 text-xs">({school.totalReviews||0} reviews)</span>
           </div>
           {school.phone && (
             <a href={`tel:${school.phone}`} className="flex items-center gap-1.5 text-navy-300 text-sm hover:text-orange-400 transition-colors">
@@ -202,7 +202,7 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                   <h2 className="font-display font-bold text-white text-xl mb-4">School Details</h2>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
-                      { label: 'Board',        value: school.board.join(', ')       },
+                      { label: 'Board',        value: (school.board||[]).join(', ') },
                       { label: 'School Type',  value: school.schoolType             },
                       { label: 'Gender',       value: school.genderPolicy           },
                       { label: 'Medium',       value: school.mediumOfInstruction    },
@@ -415,7 +415,7 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                   <div className="flex gap-0.5">
                     {[1,2,3,4,5].map(s => <Star key={s} className={clsx('w-3.5 h-3.5', s <= Math.round(school.avgRating) ? 'text-orange-400 fill-orange-400' : 'text-navy-600')} />)}
                   </div>
-                  <span className="text-white text-sm font-bold">{school.avgRating.toFixed(1)}</span>
+                  <span className="text-white text-sm font-bold">{(Number(school.avgRating)||0).toFixed(1)}</span>
                 </div>
               </div>
 

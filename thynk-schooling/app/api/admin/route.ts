@@ -917,7 +917,16 @@ export async function GET(req: NextRequest) {
       case 'overview':              return await getOverview()
       case 'analytics':             return await getAnalytics()
       case 'schools':               return await getAdminSchools(req)
-      case 'users':                 return await getAdminUsers(req)
+      case 'users': {
+        const uid = new URL(req.url).searchParams.get('id')
+        if (uid) {
+          const r = await db.query(`SELECT u.id, COALESCE(u.full_name,u.name) AS full_name, COALESCE(u.phone,u.mobile) AS phone, u.email, u.role, COALESCE(u.is_active,true) AS is_active, u.profile_completed, u.last_login_at, u.created_at, s.name AS school_name FROM users u LEFT JOIN schools s ON s.admin_user_id=u.id WHERE u.id=$1`, [uid]).catch(() => ({ rows: [] }))
+          if (!r.rows.length) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+          const u = r.rows[0]
+          return NextResponse.json({ user: { id: u.id, fullName: u.full_name||'—', phone: u.phone||'—', email: u.email||null, role: u.role, school: u.school_name||null, schoolName: u.school_name||null, profileDone: u.profile_completed||false, lastLogin: u.last_login_at||null, joinedAt: u.created_at, status: u.is_active===false?'suspended':'active' } })
+        }
+        return await getAdminUsers(req)
+      }
       case 'applications':          return await getAdminApplications(req)
       case 'reviews':               return await getAdminReviews(req)
       case 'leads':                 return await getAdminLeads(req)
