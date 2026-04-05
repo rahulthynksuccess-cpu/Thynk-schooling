@@ -109,37 +109,109 @@ async function listSchools(req: NextRequest) {
     return NextResponse.json({ school: res.rows[0] || null })
   }
 
-  const city = searchParams.get('city'), state = searchParams.get('state')
-  const board = searchParams.get('board')
-  const query = searchParams.get('query') || searchParams.get('search') || searchParams.get('q')
-  const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
-  const limit = Math.min(50, parseInt(searchParams.get('limit') || '20'))
-  const offset = (page - 1) * limit
-  const conditions: string[] = ['1=1']; const params: any[] = []
-  if (city)  { params.push(city);          conditions.push(`city ILIKE $${params.length}`) }
-  if (state) { params.push(state);         conditions.push(`state ILIKE $${params.length}`) }
-  if (board) { params.push(`%${board}%`);  conditions.push(`board::text ILIKE $${params.length}`) }
-  if (query) { params.push(`%${query}%`);  conditions.push(`(name ILIKE $${params.length} OR city ILIKE $${params.length} OR board::text ILIKE $${params.length})`) }
-  const extra: Record<string, string | null> = { feeMin: searchParams.get('feeMin'), feeMax: searchParams.get('feeMax'), rating: searchParams.get('rating'), isFeatured: searchParams.get('isFeatured'), type: searchParams.get('type'), gender_policy: searchParams.get('gender_policy'), medium: searchParams.get('medium'), facilities: searchParams.get('facilities'), sports: searchParams.get('sports'), extra_curricular: searchParams.get('extra_curricular'), language: searchParams.get('language') }
-  if (extra.facilities)      { params.push(`%${extra.facilities}%`);      conditions.push(`facilities::text ILIKE $${params.length}`) }
-  if (extra.sports)          { params.push(`%${extra.sports}%`);          conditions.push(`sports::text ILIKE $${params.length}`) }
-  if (extra.extra_curricular){ params.push(`%${extra.extra_curricular}%`);conditions.push(`extracurriculars::text ILIKE $${params.length}`) }
-  if (extra.language)        { params.push(`%${extra.language}%`);        conditions.push(`languages::text ILIKE $${params.length}`) }
-  if (extra.feeMin)          { params.push(extra.feeMin);                 conditions.push(`monthly_fee_min >= $${params.length}`) }
-  if (extra.feeMax)          { params.push(extra.feeMax);                 conditions.push(`monthly_fee_max <= $${params.length}`) }
-  if (extra.rating)          { params.push(extra.rating);                 conditions.push(`rating >= $${params.length}`) }
-  if (extra.isFeatured)      {                                             conditions.push('is_featured = true') }
-  if (extra.type)            { params.push(extra.type);                   conditions.push(`school_type ILIKE $${params.length}`) }
-  if (extra.gender_policy)   { params.push(extra.gender_policy);          conditions.push(`gender_policy ILIKE $${params.length}`) }
-  if (extra.medium)          { params.push(extra.medium);                 conditions.push(`medium_of_instruction ILIKE $${params.length}`) }
+  const city     = searchParams.get('city')
+  const state    = searchParams.get('state')
+  const board    = searchParams.get('board')
+  const query    = searchParams.get('query') || searchParams.get('search') || searchParams.get('q')
+  const pincode  = searchParams.get('pincode')
+  const userLat  = parseFloat(searchParams.get('lat')    || '')
+  const userLng  = parseFloat(searchParams.get('lng')    || '')
+  const radiusKm = parseFloat(searchParams.get('radius') || '10')
+  const sortBy   = searchParams.get('sortBy') || 'rating'
+  const page     = Math.max(1, parseInt(searchParams.get('page')  || '1'))
+  const limit    = Math.min(50, parseInt(searchParams.get('limit') || '20'))
+  const offset   = (page - 1) * limit
+
+  const useGPS     = !isNaN(userLat) && !isNaN(userLng)
+  const usePincode = !!pincode && /^\d{6}$/.test(pincode)
+
+  // ── VISIBILITY RULE: only profile_completed schools, not suspended ──────────
+  const conditions: string[] = [
+    'profile_completed = true',
+    '(is_active = true OR is_active IS NULL)',
+  ]
+  const params: any[] = []
+
+  // ── GPS proximity (Haversine bounding box + exact formula) ─────────────────
+  if (useGPS) {
+    const latDelta = radiusKm / 111.0
+    const lngDelta = radiusKm / (111.0 * Math.cos(userLat * Math.PI / 180))
+    params.push(userLat - latDelta, userLat + latDelta)
+    conditions.push(`latitude BETWEEN $${params.length - 1} AND $${params.length}`)
+    params.push(userLng - lngDelta, userLng + lngDelta)
+    conditions.push(`longitude BETWEEN $${params.length - 1} AND $${params.length}`)
+    params.push(userLat, userLng, radiusKm)
+    const pL = params.length
+    conditions.push(
+      `(6371 * acos(LEAST(1.0, cos(radians($${pL-2})) * cos(radians(latitude)) * cos(radians(longitude) - radians($${pL-1})) + sin(radians($${pL-2})) * sin(radians(latitude))))) <= $${pL}`
+    )
+  }
+
+  // ── Exact pincode match (takes priority over city when no GPS) ─────────────
+  if (usePincode && !useGPS) {
+    params.push(pincode)
+    conditions.push(`pincode = $${params.length}`)
+  }
+
+  // ── Standard filters ───────────────────────────────────────────────────────
+  if (city  && !usePincode && !useGPS) { params.push(city);  conditions.push(`city ILIKE $${params.length}`) }
+  if (state && !useGPS)                { params.push(state); conditions.push(`state ILIKE $${params.length}`) }
+  if (board)  { params.push(`%${board}%`);  conditions.push(`board::text ILIKE $${params.length}`) }
+  if (query)  { params.push(`%${query}%`);  conditions.push(`(name ILIKE $${params.length} OR city ILIKE $${params.length} OR board::text ILIKE $${params.length} OR pincode ILIKE $${params.length})`) }
+
+  const extra: Record<string, string | null> = {
+    feeMin: searchParams.get('feeMin'), feeMax: searchParams.get('feeMax'),
+    rating: searchParams.get('rating'), isFeatured: searchParams.get('isFeatured'),
+    type: searchParams.get('type'), gender_policy: searchParams.get('gender_policy'),
+    medium: searchParams.get('medium'), facilities: searchParams.get('facilities'),
+    sports: searchParams.get('sports'), extra_curricular: searchParams.get('extra_curricular'),
+    language: searchParams.get('language'),
+  }
+  if (extra.facilities)       { params.push(`%${extra.facilities}%`);       conditions.push(`facilities::text ILIKE $${params.length}`) }
+  if (extra.sports)           { params.push(`%${extra.sports}%`);           conditions.push(`sports::text ILIKE $${params.length}`) }
+  if (extra.extra_curricular) { params.push(`%${extra.extra_curricular}%`); conditions.push(`extracurriculars::text ILIKE $${params.length}`) }
+  if (extra.language)         { params.push(`%${extra.language}%`);         conditions.push(`languages::text ILIKE $${params.length}`) }
+  if (extra.feeMin)           { params.push(Number(extra.feeMin));           conditions.push(`monthly_fee_min >= $${params.length}`) }
+  if (extra.feeMax)           { params.push(Number(extra.feeMax));           conditions.push(`monthly_fee_max <= $${params.length}`) }
+  if (extra.rating)           { params.push(Number(extra.rating));           conditions.push(`rating >= $${params.length}`) }
+  if (extra.isFeatured)       { conditions.push('is_featured = true') }
+  if (extra.type)             { params.push(extra.type);         conditions.push(`school_type ILIKE $${params.length}`) }
+  if (extra.gender_policy)    { params.push(extra.gender_policy); conditions.push(`gender_policy ILIKE $${params.length}`) }
+  if (extra.medium)           { params.push(extra.medium);       conditions.push(`medium_of_instruction ILIKE $${params.length}`) }
+
   const where = conditions.join(' AND ')
+
+  // ── Distance column for GPS sort ───────────────────────────────────────────
+  let distCol = ''
+  let distParams: any[] = []
+  if (useGPS) {
+    distParams = [userLat, userLng]
+    const pBase = params.length
+    distCol = `, ROUND((6371 * acos(LEAST(1.0, cos(radians($${pBase+1})) * cos(radians(latitude)) * cos(radians(longitude) - radians($${pBase+2})) + sin(radians($${pBase+1})) * sin(radians(latitude)))))::numeric, 1) AS distance_km`
+  }
+
+  // ── Sort order ─────────────────────────────────────────────────────────────
+  let orderBy = 'is_featured DESC NULLS LAST, rating DESC NULLS LAST, created_at DESC'
+  if (useGPS)                   orderBy = 'distance_km ASC NULLS LAST, is_featured DESC NULLS LAST'
+  else if (sortBy === 'fee_asc')  orderBy = 'monthly_fee_min ASC NULLS LAST'
+  else if (sortBy === 'fee_desc') orderBy = 'monthly_fee_min DESC NULLS LAST'
+  else if (sortBy === 'newest')   orderBy = 'created_at DESC'
+
   const countRes = await db.query(`SELECT COUNT(*) FROM schools WHERE ${where}`, params)
   const total = parseInt(countRes.rows[0].count)
-  params.push(limit, offset)
-  const dataRes = await db.query(`SELECT * FROM schools WHERE ${where} ORDER BY is_featured DESC NULLS LAST, created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`, params)
+
+  const allParams = [...params, ...distParams, limit, offset]
+  const dataRes = await db.query(
+    `SELECT *${distCol} FROM schools WHERE ${where} ORDER BY ${orderBy} LIMIT $${allParams.length - 1} OFFSET $${allParams.length}`,
+    allParams
+  )
+
   const data = dataRes.rows.map((s: any) => ({
     id: s.id, name: s.name || '—', slug: s.slug || '',
     city: s.city || '—', state: s.state || null,
+    pincode: s.pincode || null,
+    latitude: s.latitude ? Number(s.latitude) : null,
+    longitude: s.longitude ? Number(s.longitude) : null,
     board: Array.isArray(s.board) ? s.board : [],
     schoolType: s.school_type || null,
     genderPolicy: s.gender_policy || null,
@@ -161,9 +233,11 @@ async function listSchools(req: NextRequest) {
     extraCurricular: Array.isArray(s.extracurriculars) ? s.extracurriculars : [],
     languagesOffered: Array.isArray(s.languages) ? s.languages : [],
     tags: [],
+    ...(s.distance_km !== undefined ? { distanceKm: Number(s.distance_km) } : {}),
   }))
   return NextResponse.json({ data, total, page, limit, totalPages: Math.ceil(total / limit) })
 }
+
 
 async function getProfile(req: NextRequest) {
   await ensureSchoolsTable()

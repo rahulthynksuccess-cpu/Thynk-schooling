@@ -46,7 +46,7 @@ export default function ParentCompleteProfilePage() {
   const [focused, setFocused] = useState('')
 
   const [pData, setPData] = useState({
-    fullName: '', state: '', city: '', locality: '',
+    fullName: '', state: '', city: '', locality: '', pincode: '',
     occupation: '', annualIncomeRange: '', religion: '',
     budgetMin: '', budgetMax: '', howDidYouHear: '',
   })
@@ -188,6 +188,20 @@ export default function ParentCompleteProfilePage() {
                       <option value="">Select Occupation</option>
                       {occupations.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
+                  </div>
+
+                  {/* Pincode */}
+                  <div style={fieldWrap}>
+                    <label style={lbl}>Pincode</label>
+                    <input
+                      value={pData.pincode}
+                      onChange={e => pSet('pincode', e.target.value.replace(/\D/g,'').slice(0,6))}
+                      onFocus={() => setFocused('pincode')} onBlur={() => setFocused('')}
+                      placeholder="6-digit pincode"
+                      inputMode="numeric"
+                      maxLength={6}
+                      style={{ ...baseInput, ...f('pincode') }}
+                    />
                   </div>
 
                   {/* Annual Income */}

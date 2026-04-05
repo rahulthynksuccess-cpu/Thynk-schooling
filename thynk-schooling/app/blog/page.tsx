@@ -2,7 +2,6 @@
 export const dynamic = 'force-dynamic'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { Marquee } from '@/components/ui/Marquee'
 import Link from 'next/link'
 import { ArrowRight, Clock } from 'lucide-react'
 
@@ -28,7 +27,6 @@ export default function BlogPage() {
     <>
       <Navbar />
       <main style={{ background: '#FAF7F2', paddingTop: '80px' }}>
-        <Marquee variant="light" speed={36} />
 
         {/* Header */}
         <section style={{ background: '#F5F0E8', padding: '56px 48px', borderBottom: '1px solid rgba(13,17,23,0.08)' }}>
@@ -76,7 +74,6 @@ export default function BlogPage() {
             </div>
           </div>
         </section>
-        <Marquee variant="dark" speed={42} />
       </main>
       <Footer />
     </>

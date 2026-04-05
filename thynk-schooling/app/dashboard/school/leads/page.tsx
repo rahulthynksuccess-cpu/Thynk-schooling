@@ -172,12 +172,14 @@ function LeadsContent() {
   })
   const credits = creditsData?.availableCredits ?? 0
 
-  const { data, isLoading } = useQuery<{ data: any[]; total: number }>({
+  const { data, isLoading } = useQuery<{ data?: any[]; total?: number; error?: string; message?: string }>({
     queryKey: ['school-leads-full'],
     queryFn: () => fetch('/api/leads?limit=50', { cache:'no-store', credentials:'include' }).then(r => r.json()),
     staleTime: 30 * 1000,
   })
   const leads = data?.data ?? []
+  const isProfileIncomplete = data?.error === 'PROFILE_INCOMPLETE'
+  const isAccountSuspended  = data?.error === 'ACCOUNT_SUSPENDED'
 
   const buyMutation = useMutation({
     mutationFn: (leadId: string) => {
@@ -202,6 +204,47 @@ function LeadsContent() {
       {Array.from({length:5}).map((_,i) => (
         <div key={i} style={{ height:60, borderRadius:10, background:'#F3F4F6' }} />
       ))}
+    </div>
+  )
+
+  // ── Profile incomplete — block access ───────────────────────────────────────
+  if (isProfileIncomplete) return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'64px 24px', textAlign:'center' }}>
+      <div style={{ width:80, height:80, borderRadius:24, background:'linear-gradient(135deg,#FEF3C7,#FFFBEB)', border:'2px solid rgba(245,158,11,0.3)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:24, fontSize:36 }}>🏫</div>
+      <h2 style={{ fontFamily:'serif', fontWeight:700, fontSize:26, color:'#111827', marginBottom:10, letterSpacing:'-0.5px' }}>Complete Your School Profile</h2>
+      <p style={{ fontSize:14, color:'#6B7280', maxWidth:440, lineHeight:1.75, marginBottom:28 }}>
+        Your school profile is not yet complete. Please fill in all required details — school name, board, classes, fees, address and contact info — before you can access parent leads.
+      </p>
+      <Link href="/school/complete-profile" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'13px 32px', borderRadius:12, background:'linear-gradient(135deg,#F59E0B,#D97706)', color:'#fff', textDecoration:'none', fontSize:14, fontWeight:700, boxShadow:'0 4px 16px rgba(245,158,11,0.35)', marginBottom:16 }}>
+        📝 Complete Profile Now
+      </Link>
+      <p style={{ fontSize:12, color:'#9CA3AF' }}>Once your profile is complete, parent leads will appear here automatically.</p>
+      <div style={{ marginTop:40, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, maxWidth:480, width:'100%' }}>
+        {[
+          { icon:'🔒', title:'Leads Locked',   desc:'Profile must be 100% complete' },
+          { icon:'👁️', title:'Not Visible',    desc:'Parents cannot find your school' },
+          { icon:'💳', title:'Credits Paused', desc:'Purchase after completing profile' },
+        ].map(item => (
+          <div key={item.title} style={{ background:'#F9FAFB', borderRadius:12, padding:'16px 14px', border:'1px solid rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize:26, marginBottom:8 }}>{item.icon}</div>
+            <div style={{ fontWeight:700, fontSize:12, color:'#111827', marginBottom:3 }}>{item.title}</div>
+            <div style={{ fontSize:11, color:'#6B7280', lineHeight:1.5 }}>{item.desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  if (isAccountSuspended) return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'64px 24px', textAlign:'center' }}>
+      <div style={{ width:80, height:80, borderRadius:24, background:'#FEE2E2', border:'2px solid rgba(239,68,68,0.25)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:24, fontSize:36 }}>🚫</div>
+      <h2 style={{ fontFamily:'serif', fontWeight:700, fontSize:26, color:'#111827', marginBottom:10 }}>Account Suspended</h2>
+      <p style={{ fontSize:14, color:'#6B7280', maxWidth:380, lineHeight:1.75, marginBottom:24 }}>
+        Your school account has been suspended by the admin. Please contact our support team to resolve this.
+      </p>
+      <a href="mailto:support@thynkschooling.in" style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'12px 28px', borderRadius:12, background:'#EF4444', color:'#fff', textDecoration:'none', fontSize:14, fontWeight:700 }}>
+        ✉️ Contact Support
+      </a>
     </div>
   )
 

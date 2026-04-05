@@ -83,9 +83,13 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, Number(url.searchParams.get('page') || 1))
     const offset = (page - 1) * limit
 
-    const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId])
-    if (!school.rows.length) {
-      return NextResponse.json({ data: [], total: 0, page, limit })
+    const school = await db.query('SELECT id, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
+    if (!school.rows.length) return NextResponse.json({ data: [], total: 0, page, limit })
+    if (!school.rows[0].profile_completed) {
+      return NextResponse.json({ error: 'PROFILE_INCOMPLETE', message: 'Complete your school profile to access leads.' }, { status: 403 })
+    }
+    if (school.rows[0].is_active === false) {
+      return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Your account is suspended. Contact support.' }, { status: 403 })
     }
     const schoolId = school.rows[0].id
 
@@ -144,9 +148,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Lead id required' }, { status: 400 })
     }
 
-    const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId])
-    if (!school.rows.length) {
-      return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    const school = await db.query('SELECT id, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
+    if (!school.rows.length) return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    if (!school.rows[0].profile_completed) {
+      return NextResponse.json({ error: 'PROFILE_INCOMPLETE', message: 'Complete your school profile to purchase leads.' }, { status: 403 })
+    }
+    if (school.rows[0].is_active === false) {
+      return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Account suspended.' }, { status: 403 })
     }
     const schoolId = school.rows[0].id
 

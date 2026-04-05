@@ -27,9 +27,22 @@ async function ensureLeads() {
 async function getLeads(req: NextRequest) {
   await ensureLeads()
   const userId = getUserId(req)
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const limit = Number(new URL(req.url).searchParams.get('limit') || 10)
-  const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId])
+  const school = await db.query('SELECT id, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
   if (!school.rows.length) return NextResponse.json([])
+  if (!school.rows[0].profile_completed) {
+    return NextResponse.json(
+      { error: 'PROFILE_INCOMPLETE', message: 'Complete your school profile to access leads.' },
+      { status: 403 }
+    )
+  }
+  if (school.rows[0].is_active === false) {
+    return NextResponse.json(
+      { error: 'ACCOUNT_SUSPENDED', message: 'Account suspended. Contact support.' },
+      { status: 403 }
+    )
+  }
   const rows = await db.query(
     `SELECT l.*, u.full_name AS parent_name FROM leads l LEFT JOIN users u ON u.id=l.parent_id WHERE l.school_id=$1 ORDER BY l.created_at DESC LIMIT $2`,
     [school.rows[0].id, limit]

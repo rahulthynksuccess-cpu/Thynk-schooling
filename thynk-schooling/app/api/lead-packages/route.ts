@@ -4,17 +4,8 @@ export const dynamic = 'force-dynamic'
  * POST /api/lead-packages?id=X&action=buy          — initiate Razorpay order for a package
  * POST /api/lead-packages?action=verify-payment    — verify Razorpay payment & credit school
  *
- * DB columns:  id, name, description, leads_count, price_paise, validity_days,
- *              is_featured_listing, is_active
- * Frontend expects: id, name, leadCredits, price, validityDays, isActive,
- *                   isFeaturedListing, description
- *
- * Featured listing logic:
- *   - Each package can have is_featured_listing=true
- *   - On successful payment, if the package has is_featured_listing=true:
- *       schools.is_featured  → true
- *       schools.featured_until → NOW() + validity_days
- *   - On every GET, schools whose featured_until < NOW() are auto-expired
+ * DB columns:  id, name, description, leads_count, price_paise, validity_days, is_active
+ * Frontend expects: id, name, leadCredits, price, validityDays, isActive, description
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
@@ -36,22 +27,21 @@ function getUserId(req: NextRequest): string | null {
 // Map DB row → frontend shape
 function toPackage(row: any) {
   return {
-    id:                row.id,
-    name:              row.name,
-    description:       row.description || null,
-    leadCredits:       row.leads_count,
-    price:             row.price_paise,           // kept in paise; UI does /100
-    validityDays:      row.validity_days ?? 365,
-    isActive:          row.is_active,
-    isFeaturedListing: row.is_featured_listing ?? false,
+    id:           row.id,
+    name:         row.name,
+    description:  row.description || null,
+    leadCredits:  row.leads_count,
+    price:        row.price_paise,           // kept in paise; UI does /100
+    validityDays: row.validity_days ?? 365,
+    isActive:     row.is_active,
   }
 }
 
 const DEFAULT_PACKAGES = [
-  { name: 'Starter',      description: 'Perfect for new schools getting started',   leads_count: 10,  price_paise:  99900, validity_days: 365, is_featured_listing: false },
-  { name: 'Growth',       description: 'Best value for growing schools',             leads_count: 25,  price_paise: 199900, validity_days: 365, is_featured_listing: false },
-  { name: 'Professional', description: 'For established schools scaling admissions', leads_count: 60,  price_paise: 399900, validity_days: 365, is_featured_listing: true  },
-  { name: 'Enterprise',   description: 'Maximum leads — featured listing included',  leads_count: 150, price_paise: 799900, validity_days: 365, is_featured_listing: true  },
+  { name: 'Starter',     description: 'Perfect for new schools getting started',  leads_count: 10,  price_paise:  99900, validity_days: 365 },
+  { name: 'Growth',      description: 'Best value for growing schools',            leads_count: 25,  price_paise: 199900, validity_days: 365 },
+  { name: 'Professional',description: 'For established schools scaling admissions',leads_count: 60,  price_paise: 399900, validity_days: 365 },
+  { name: 'Enterprise',  description: 'Maximum leads for large school networks',   leads_count: 150, price_paise: 799900, validity_days: 365 },
 ]
 
 async function ensureTable() {
@@ -67,34 +57,20 @@ async function ensureTable() {
       created_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
-  // Add columns that may be missing on older tables
+  // Add validity_days if missing on older tables
   await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS validity_days INTEGER NOT NULL DEFAULT 365`).catch(() => {})
-  await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS is_featured_listing BOOLEAN NOT NULL DEFAULT false`).catch(() => {})
-  // Add featured_until to schools for auto-expiry
-  await db.query(`ALTER TABLE schools ADD COLUMN IF NOT EXISTS featured_until TIMESTAMPTZ`).catch(() => {})
 
   // Seed default packages if the table is empty
   const count = await db.query('SELECT COUNT(*) FROM lead_packages').catch(() => ({ rows: [{ count: '0' }] }))
   if (parseInt(count.rows[0].count) === 0) {
     for (const pkg of DEFAULT_PACKAGES) {
       await db.query(
-        `INSERT INTO lead_packages (name, description, leads_count, price_paise, validity_days, is_featured_listing)
-         VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`,
-        [pkg.name, pkg.description, pkg.leads_count, pkg.price_paise, pkg.validity_days, pkg.is_featured_listing]
+        `INSERT INTO lead_packages (name, description, leads_count, price_paise, validity_days)
+         VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`,
+        [pkg.name, pkg.description, pkg.leads_count, pkg.price_paise, pkg.validity_days]
       ).catch(() => {})
     }
   }
-}
-
-// Auto-expire featured listing for schools whose featured_until has passed
-async function expireStaleFeatures() {
-  await db.query(`
-    UPDATE schools
-    SET is_featured = false, featured_until = NULL
-    WHERE is_featured = true
-      AND featured_until IS NOT NULL
-      AND featured_until < NOW()
-  `).catch(() => {})
 }
 
 async function ensurePaymentsTable() {
@@ -117,7 +93,6 @@ async function ensurePaymentsTable() {
 export async function GET(req: NextRequest) {
   try {
     await ensureTable()
-    await expireStaleFeatures()
     const { searchParams } = new URL(req.url)
     const all = searchParams.get('all') === 'true'
     const rows = await db.query(
@@ -224,21 +199,18 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Find the pending payment record — join package to get featured flag + validity
+      // Find the pending payment record
       const payment = await db.query(
-        `SELECT lpp.*, lp.is_featured_listing, lp.validity_days
-         FROM lead_package_payments lpp
-         JOIN lead_packages lp ON lp.id = lpp.package_id
-         WHERE lpp.razorpay_order_id=$1 AND lpp.status='pending'`,
+        `SELECT * FROM lead_package_payments WHERE razorpay_order_id=$1 AND status='pending'`,
         [razorpay_order_id]
       )
       if (!payment.rows.length) {
         return NextResponse.json({ error: 'Payment record not found' }, { status: 404 })
       }
 
-      const { school_id, credits_added, is_featured_listing, validity_days } = payment.rows[0]
+      const { school_id, credits_added } = payment.rows[0]
 
-      // 1. Credit the school — upsert lead_credits
+      // Credit the school — upsert lead_credits
       await db.query(`
         INSERT INTO lead_credits (school_id, credits, total_credits, used_credits)
         VALUES ($1, $2, $2, 0)
@@ -248,34 +220,13 @@ export async function POST(req: NextRequest) {
           updated_at    = NOW()
       `, [school_id, credits_added])
 
-      // 2. Auto-feature the school if this package includes featured listing
-      let featuredUntil: string | null = null
-      if (is_featured_listing) {
-        const days = validity_days ?? 365
-        // If school already has a future featured_until, extend it; otherwise start from now
-        const res = await db.query(`
-          UPDATE schools
-          SET
-            is_featured    = true,
-            featured_until = GREATEST(COALESCE(featured_until, NOW()), NOW()) + ($1 || ' days')::INTERVAL
-          WHERE id = $2
-          RETURNING featured_until
-        `, [String(days), school_id])
-        featuredUntil = res.rows[0]?.featured_until ?? null
-      }
-
-      // 3. Mark payment as completed
+      // Mark payment as completed
       await db.query(
         `UPDATE lead_package_payments SET status='completed', razorpay_payment_id=$1 WHERE razorpay_order_id=$2`,
         [razorpay_payment_id || 'dev', razorpay_order_id]
       )
 
-      return NextResponse.json({
-        success: true,
-        creditsAdded: credits_added,
-        featuredListingActivated: !!is_featured_listing,
-        featuredUntil,
-      })
+      return NextResponse.json({ success: true, creditsAdded: credits_added })
     } catch (e: any) {
       console.error('[lead-packages verify-payment]', e)
       return NextResponse.json({ error: e.message }, { status: 500 })
@@ -297,13 +248,12 @@ export async function PUT(req: NextRequest) {
     const sets: string[] = []
     const params: any[] = []
 
-    if (body.name        !== undefined) { params.push(body.name);               sets.push(`name=$${params.length}`) }
-    if (body.description !== undefined) { params.push(body.description);        sets.push(`description=$${params.length}`) }
-    if (body.leadCredits !== undefined) { params.push(body.leadCredits);        sets.push(`leads_count=$${params.length}`) }
-    if (body.price       !== undefined) { params.push(body.price);              sets.push(`price_paise=$${params.length}`) }
-    if (body.validityDays!== undefined) { params.push(body.validityDays);       sets.push(`validity_days=$${params.length}`) }
-    if (body.isActive    !== undefined) { params.push(body.isActive);           sets.push(`is_active=$${params.length}`) }
-    if (body.isFeaturedListing !== undefined) { params.push(body.isFeaturedListing); sets.push(`is_featured_listing=$${params.length}`) }
+    if (body.name        !== undefined) { params.push(body.name);          sets.push(`name=$${params.length}`) }
+    if (body.description !== undefined) { params.push(body.description);   sets.push(`description=$${params.length}`) }
+    if (body.leadCredits !== undefined) { params.push(body.leadCredits);   sets.push(`leads_count=$${params.length}`) }
+    if (body.price       !== undefined) { params.push(body.price);         sets.push(`price_paise=$${params.length}`) }
+    if (body.validityDays!== undefined) { params.push(body.validityDays);  sets.push(`validity_days=$${params.length}`) }
+    if (body.isActive    !== undefined) { params.push(body.isActive);      sets.push(`is_active=$${params.length}`) }
 
     if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 
