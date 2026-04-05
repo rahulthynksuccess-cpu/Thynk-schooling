@@ -137,7 +137,32 @@ async function listSchools(req: NextRequest) {
   const total = parseInt(countRes.rows[0].count)
   params.push(limit, offset)
   const dataRes = await db.query(`SELECT * FROM schools WHERE ${where} ORDER BY is_featured DESC NULLS LAST, created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`, params)
-  return NextResponse.json({ data: dataRes.rows, total, page, limit, totalPages: Math.ceil(total / limit) })
+  const data = dataRes.rows.map((s: any) => ({
+    id: s.id, name: s.name || '—', slug: s.slug || '',
+    city: s.city || '—', state: s.state || null,
+    board: Array.isArray(s.board) ? s.board : [],
+    schoolType: s.school_type || null,
+    genderPolicy: s.gender_policy || null,
+    mediumOfInstruction: s.medium_of_instruction || null,
+    logoUrl: s.logo_url || null,
+    coverImageUrl: s.cover_url || null,
+    isVerified: s.is_verified || false,
+    isFeatured: s.is_featured || false,
+    isActive: s.is_active !== false,
+    avgRating: Number(s.rating) || 0,
+    totalReviews: 0,
+    monthlyFeeMin: s.monthly_fee_min || null,
+    monthlyFeeMax: s.monthly_fee_max || null,
+    annualFee: s.annual_fee || null,
+    classesFrom: s.classes_from || null,
+    classesTo: s.classes_to || null,
+    facilities: Array.isArray(s.facilities) ? s.facilities : [],
+    sports: Array.isArray(s.sports) ? s.sports : [],
+    extraCurricular: Array.isArray(s.extracurriculars) ? s.extracurriculars : [],
+    languagesOffered: Array.isArray(s.languages) ? s.languages : [],
+    tags: [],
+  }))
+  return NextResponse.json({ data, total, page, limit, totalPages: Math.ceil(total / limit) })
 }
 
 async function getProfile(req: NextRequest) {
