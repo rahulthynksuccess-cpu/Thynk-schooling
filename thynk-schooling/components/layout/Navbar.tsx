@@ -7,17 +7,25 @@ import { Menu, X, ChevronDown, GraduationCap, Bell, LogOut, LayoutDashboard, Use
 import { clsx } from 'clsx'
 import { useAuthStore } from '@/store/authStore'
 
-const NAV = [
+const DEFAULT_NAV = [
   { label: 'Find Schools', href: '/schools' },
   { label: 'Compare',      href: '/compare' },
   { label: 'Counselling',  href: '/counselling' },
   { label: 'Blog',         href: '/blog' },
 ]
 
+interface NavItem {
+  id?: string
+  label: string
+  href: string
+  openNewTab?: boolean
+}
+
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
+  const [navItems, setNavItems] = useState<NavItem[]>(DEFAULT_NAV)
   const pathname = usePathname()
   const { user, isAuthenticated, logout } = useAuthStore()
 
@@ -26,7 +34,18 @@ export function Navbar() {
     window.addEventListener('scroll', fn, { passive: true })
     return () => window.removeEventListener('scroll', fn)
   }, [])
+
   useEffect(() => setMobileOpen(false), [pathname])
+
+  // Load nav items from DB — fall back to DEFAULT_NAV silently
+  useEffect(() => {
+    fetch('/api/admin?action=menus', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.navbar?.length) setNavItems(d.navbar)
+      })
+      .catch(() => {})
+  }, [])
 
   const dashHref =
     user?.role === 'school_admin' ? '/dashboard/school' :
@@ -56,8 +75,11 @@ export function Navbar() {
 
             {/* Nav links */}
             <nav className="hidden lg:flex items-center gap-9">
-              {NAV.map(l => (
-                <Link key={l.href} href={l.href} className={clsx('nav-link', pathname.startsWith(l.href) && '!text-ink after:!w-full')}>
+              {navItems.map(l => (
+                <Link key={l.href} href={l.href}
+                  target={l.openNewTab ? '_blank' : undefined}
+                  rel={l.openNewTab ? 'noreferrer' : undefined}
+                  className={clsx('nav-link', pathname.startsWith(l.href) && '!text-ink after:!w-full')}>
                   {l.label}
                 </Link>
               ))}
@@ -127,8 +149,11 @@ export function Navbar() {
             className="fixed top-[72px] left-0 right-0 z-40 overflow-hidden"
             style={{ background: 'var(--nav-bg,rgba(250,247,242,0.97))', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(13,17,23,0.08)' }}>
             <div className="max-w-[1600px] mx-auto px-12 py-6 flex flex-col gap-1">
-              {NAV.map(l => (
-                <Link key={l.href} href={l.href} className="nav-link px-2 py-3 text-sm">{l.label}</Link>
+              {navItems.map(l => (
+                <Link key={l.href} href={l.href}
+                  target={l.openNewTab ? '_blank' : undefined}
+                  rel={l.openNewTab ? 'noreferrer' : undefined}
+                  className="nav-link px-2 py-3 text-sm">{l.label}</Link>
               ))}
               <div className="divider mt-3 mb-3" />
               {isAuthenticated
