@@ -1160,6 +1160,52 @@ async function saveMenus(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+
+// ─── payment gateways (admin) ─────────────────────────────────────────────────
+async function getPaymentGateways() {
+  const { ensureGatewayTable, getGatewayConfigs } = await import('@/lib/payment-gateway')
+  await ensureGatewayTable()
+  const configs = await getGatewayConfigs()
+  // Never expose keySecret in GET response — mask it
+  const safe = configs.map(g => ({
+    id:       g.id,
+    name:     g.name,
+    enabled:  g.enabled,
+    priority: g.priority,
+    keyId:    g.keyId,
+    keySecret: g.keySecret ? '••••••••' + g.keySecret.slice(-4) : '',
+    extra:    g.extra,
+    mode:     g.mode,
+  }))
+  return NextResponse.json({ gateways: safe })
+}
+
+async function savePaymentGateways(req: NextRequest) {
+  const { ensureGatewayTable } = await import('@/lib/payment-gateway')
+  await ensureGatewayTable()
+  const { gateways } = await req.json()
+  if (!Array.isArray(gateways)) return NextResponse.json({ error: 'gateways array required' }, { status: 400 })
+  for (const g of gateways) {
+    // Only update keySecret if it was actually changed (not the masked value)
+    const secretUpdate = g.keySecret && !g.keySecret.startsWith('••')
+      ? `key_secret=$${6}`
+      : ''
+    const params = [g.enabled, g.priority, g.keyId, JSON.stringify(g.extra || {}), g.mode, g.id]
+    if (secretUpdate) {
+      await db.query(
+        `UPDATE payment_gateways SET enabled=$1, priority=$2, key_id=$3, extra=$4, mode=$5, key_secret=$6, updated_at=NOW() WHERE id=$7`,
+        [...params.slice(0,5), g.keySecret, g.id]
+      ).catch(() => {})
+    } else {
+      await db.query(
+        `UPDATE payment_gateways SET enabled=$1, priority=$2, key_id=$3, extra=$4, mode=$5, updated_at=NOW() WHERE id=$6`,
+        params
+      ).catch(() => {})
+    }
+  }
+  return NextResponse.json({ success: true })
+}
+
 // ─── router ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -1196,6 +1242,7 @@ export async function GET(req: NextRequest) {
       case 'marquee-items':         return await getMarqueeItems()
       case 'blog':                  return await getBlogPosts(req)
       case 'menus':                 return await getMenus()
+      case 'payment-gateways':        return await getPaymentGateways()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
@@ -1220,6 +1267,7 @@ export async function POST(req: NextRequest) {
       case 'message-triggers':   return await saveTrigger(req)
       case 'blog':               return await createBlogPost(req)
       case 'menus':            return await saveMenus(req)
+      case 'payment-gateways': return await savePaymentGateways(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
