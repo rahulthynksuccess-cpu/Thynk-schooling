@@ -117,24 +117,49 @@ async function ensureSchoolsTable() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS schools (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      admin_user_id UUID UNIQUE, name VARCHAR(300), slug VARCHAR(300) UNIQUE,
-      tagline VARCHAR(300), affiliation_no VARCHAR(100), description TEXT,
-      founding_year INTEGER, total_students INTEGER, student_teacher_ratio VARCHAR(20),
-      school_type VARCHAR(100), board TEXT[], gender_policy VARCHAR(100),
-      medium_of_instruction VARCHAR(100), recognition VARCHAR(100),
-      classes_from VARCHAR(50), classes_to VARCHAR(50),
-      monthly_fee_min INTEGER, monthly_fee_max INTEGER, annual_fee INTEGER,
-      admission_open BOOLEAN DEFAULT false, admission_academic_year VARCHAR(50),
-      facilities TEXT[], sports TEXT[], languages TEXT[], extracurriculars TEXT[],
-      address_line1 TEXT, state VARCHAR(100), city VARCHAR(100), locality VARCHAR(100),
-      pincode VARCHAR(10), latitude NUMERIC(10,7), longitude NUMERIC(10,7),
-      phone VARCHAR(20), email VARCHAR(200), website_url VARCHAR(300),
-      principal_name VARCHAR(200), logo_url VARCHAR(500), cover_url VARCHAR(500),
-      rating NUMERIC(3,1) DEFAULT 0, is_verified BOOLEAN DEFAULT false,
-      is_featured BOOLEAN DEFAULT false, is_active BOOLEAN DEFAULT true,
-      profile_completed BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW()
+      name VARCHAR(300), city VARCHAR(100), created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+  const cols = [
+    'ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false',
+    'ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false',
+    'ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true',
+    'ADD COLUMN IF NOT EXISTS board TEXT[]',
+    'ADD COLUMN IF NOT EXISTS rating NUMERIC(3,1) DEFAULT 0',
+    'ADD COLUMN IF NOT EXISTS slug VARCHAR(300)',
+    'ADD COLUMN IF NOT EXISTS state VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS admin_user_id UUID',
+    'ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT false',
+    'ADD COLUMN IF NOT EXISTS phone VARCHAR(20)',
+    'ADD COLUMN IF NOT EXISTS email VARCHAR(200)',
+    'ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)',
+    'ADD COLUMN IF NOT EXISTS cover_url VARCHAR(500)',
+    'ADD COLUMN IF NOT EXISTS description TEXT',
+    'ADD COLUMN IF NOT EXISTS address_line1 TEXT',
+    'ADD COLUMN IF NOT EXISTS locality VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)',
+    'ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)',
+    'ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)',
+    'ADD COLUMN IF NOT EXISTS website_url VARCHAR(300)',
+    'ADD COLUMN IF NOT EXISTS principal_name VARCHAR(200)',
+    'ADD COLUMN IF NOT EXISTS tagline VARCHAR(300)',
+    'ADD COLUMN IF NOT EXISTS affiliation_no VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS founding_year INTEGER',
+    'ADD COLUMN IF NOT EXISTS total_students INTEGER',
+    'ADD COLUMN IF NOT EXISTS school_type VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS medium_of_instruction VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS classes_from VARCHAR(50)',
+    'ADD COLUMN IF NOT EXISTS classes_to VARCHAR(50)',
+    'ADD COLUMN IF NOT EXISTS monthly_fee_min INTEGER',
+    'ADD COLUMN IF NOT EXISTS monthly_fee_max INTEGER',
+    'ADD COLUMN IF NOT EXISTS annual_fee INTEGER',
+    'ADD COLUMN IF NOT EXISTS admission_open BOOLEAN DEFAULT false',
+    'ADD COLUMN IF NOT EXISTS facilities TEXT[]',
+    'ADD COLUMN IF NOT EXISTS sports TEXT[]',
+    'ADD COLUMN IF NOT EXISTS languages TEXT[]',
+    'ADD COLUMN IF NOT EXISTS extracurriculars TEXT[]',
+  ]
+  for (const col of cols) await db.query(`ALTER TABLE schools ${col}`).catch(() => {})
 }
 
 async function getAdminSchools(req: NextRequest) {
