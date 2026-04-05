@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import { motion, useInView, useScroll, useTransform } from 'framer-motion'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
+import { Marquee } from '@/components/ui/Marquee'
 import Link from 'next/link'
 import { ArrowRight, Star } from 'lucide-react'
 
@@ -40,6 +41,7 @@ export default function AboutPage() {
     <>
       <Navbar/>
       <main style={{background:'#FAF7F2',paddingTop:72}}>
+        <Marquee variant="light" speed={36} />
 
         {/* ── HERO ── */}
         <section style={{background:'linear-gradient(160deg,#0D1117 0%,#1a2540 60%,#0D1117 100%)',padding:'clamp(80px,12vw,140px) 0',position:'relative',overflow:'hidden',minHeight:'70vh',display:'flex',alignItems:'center'}}>
@@ -155,6 +157,7 @@ export default function AboutPage() {
         </Section>
 
         {/* ── CTA ── */}
+        <Marquee variant="dark" speed={40} />
         <section style={{background:'linear-gradient(135deg,#B8860B 0%,#E8C547 50%,#C9960D 100%)',backgroundSize:'200% 200%',animation:'gradientDrift 5s ease infinite',padding:'clamp(72px,10vw,120px) 0',textAlign:'center',position:'relative',overflow:'hidden'}}>
           <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(rgba(255,255,255,0.12) 1px,transparent 1px)',backgroundSize:'28px 28px',pointerEvents:'none'}}/>
           <div style={{maxWidth:'700px',margin:'0 auto',padding:'0 clamp(24px,5vw,60px)',position:'relative',zIndex:1}}>
