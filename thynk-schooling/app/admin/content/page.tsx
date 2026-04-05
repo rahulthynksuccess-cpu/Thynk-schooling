@@ -16,20 +16,20 @@ const PAGES: PageGroup[] = [
     label: 'Homepage', icon: '🏠', contentKey: 'home', previewUrl: '/',
     sections: [
       {
-        id: 'hero-text', label: 'Hero Section — Text',
+        id: 'hero-text', label: 'Hero Section - Text',
         fields: [
-          { id:'eyebrow',          label:'Eyebrow text',           type:'text',    default:'AI-Powered School Matching — Free for Parents' },
+          { id:'eyebrow',          label:'Eyebrow text',           type:'text',    default:'AI-Powered School Matching - Free for Parents' },
           { id:'h1Line1',          label:'H1 Line 1',              type:'text',    default:'Find the' },
           { id:'h1Italic',         label:'H1 Italic word',         type:'text',    default:'Perfect School' },
           { id:'h1Line3',          label:'H1 Line 3',              type:'text',    default:'for Your Child' },
           { id:'subtext',          label:'Hero subtitle',          type:'textarea',default:'Search, compare & apply to 12,000+ verified schools across 350+ Indian cities.' },
-          { id:'searchPlaceholder',label:'Search box placeholder', type:'text',    default:'School name, board, or keyword…' },
+          { id:'searchPlaceholder',label:'Search box placeholder', type:'text',    default:'School name, board, or keyword...' },
           { id:'ctaPrimary',       label:'Search button text',     type:'text',    default:'Search' },
           { id:'heroImage',        label:'Hero Image URL (right side)', type:'text', default:'https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=900&q=85&auto=format&fit=crop' },
         ],
       },
       {
-        id: 'hero-style', label: 'Hero Section — Colours & Sizes',
+        id: 'hero-style', label: 'Hero Section - Colours & Sizes',
         fields: [
           { id:'heroBg',           label:'Background colour',      type:'color', cssVar:'--hero-bg',             default:'#FAF7F2' },
           { id:'heroH1Color',      label:'H1 colour',              type:'color', cssVar:'--hero-h1-color',       default:'#0D1117' },
@@ -45,16 +45,16 @@ const PAGES: PageGroup[] = [
       {
         id: 'stats', label: 'Stats Bar',
         fields: [
-          { id:'stat1Num',   label:'Stat 1 — Number', type:'text',  default:'12,000+' },
-          { id:'stat1Label', label:'Stat 1 — Label',  type:'text',  default:'Verified Schools' },
-          { id:'stat2Num',   label:'Stat 2 — Number', type:'text',  default:'1 Lakh+' },
-          { id:'stat2Label', label:'Stat 2 — Label',  type:'text',  default:'Happy Parents' },
-          { id:'stat3Num',   label:'Stat 3 — Number', type:'text',  default:'350+' },
-          { id:'stat3Label', label:'Stat 3 — Label',  type:'text',  default:'Indian Cities' },
-          { id:'stat4Num',   label:'Stat 4 — Number', type:'text',  default:'98%' },
-          { id:'stat4Label', label:'Stat 4 — Label',  type:'text',  default:'Satisfaction Rate' },
-          { id:'stat5Num',   label:'Stat 5 — Number', type:'text',  default:'4.8★' },
-          { id:'stat5Label', label:'Stat 5 — Label',  type:'text',  default:'Average Rating' },
+          { id:'stat1Num',   label:'Stat 1 - Number', type:'text',  default:'12,000+' },
+          { id:'stat1Label', label:'Stat 1 - Label',  type:'text',  default:'Verified Schools' },
+          { id:'stat2Num',   label:'Stat 2 - Number', type:'text',  default:'1 Lakh+' },
+          { id:'stat2Label', label:'Stat 2 - Label',  type:'text',  default:'Happy Parents' },
+          { id:'stat3Num',   label:'Stat 3 - Number', type:'text',  default:'350+' },
+          { id:'stat3Label', label:'Stat 3 - Label',  type:'text',  default:'Indian Cities' },
+          { id:'stat4Num',   label:'Stat 4 - Number', type:'text',  default:'98%' },
+          { id:'stat4Label', label:'Stat 4 - Label',  type:'text',  default:'Satisfaction Rate' },
+          { id:'stat5Num',   label:'Stat 5 - Number', type:'text',  default:'4.8★' },
+          { id:'stat5Label', label:'Stat 5 - Label',  type:'text',  default:'Average Rating' },
           { id:'statsBg',    label:'Background',      type:'color', cssVar:'--stats-bg',        default:'#F5F0E8' },
           { id:'statNumColor',label:'Number colour',  type:'color', cssVar:'--stat-num-color',  default:'#0D1117' },
           { id:'statNumSize', label:'Number size',    type:'size',  cssVar:'--stat-num-size',   default:'38', min:20, max:72 },
@@ -64,7 +64,7 @@ const PAGES: PageGroup[] = [
       {
         id: 'why', label: 'Why Choose Us Section',
         fields: [
-          { id:'whyTitle',      label:'Section title',          type:'text',  default:'Everything You Need, Nothing You Don\'t' },
+          { id:'whyTitle',      label:'Section title',          type:'text',  default:"Everything You Need, Nothing You Don't" },
           { id:'whyBg',         label:'Background',             type:'color', cssVar:'--why-bg',          default:'#F5F0E8' },
           { id:'whyTitleColor', label:'Title colour',           type:'color', cssVar:'--why-title-color', default:'#0D1117' },
           { id:'whyTitleSize',  label:'Title size',             type:'size',  cssVar:'--why-title-size',  default:'56', min:24, max:80 },
@@ -185,7 +185,7 @@ const PAGES: PageGroup[] = [
       { id: 'cities', label: 'Top Cities Section',
         fields: [
           { id:'citiesTitle',   label:'Section title',      type:'text',     default:'Schools in Your City' },
-          { id:'citiesSub',     label:'Subtitle',           type:'textarea', default:'Find top schools in 35+ Indian cities — all verified, all real.' },
+          { id:'citiesSub',     label:'Subtitle',           type:'textarea', default:'Find top schools in 35+ Indian cities - all verified, all real.' },
           { id:'citiesCtaText', label:'View all link text', type:'text',     default:'View all 35+ cities' },
           { id:'citiesBg',      label:'Background',         type:'color',    default:'#F5F0E8', cssVar:'--cities-bg' },
         ],
@@ -200,10 +200,10 @@ const PAGES: PageGroup[] = [
           { id:'ctaH2Line1',   label:'Headline line 1',      type:'text',     default:'Talk to an Expert' },
           { id:'ctaH2Line2',   label:'Headline italic',       type:'text',     default:'Education Counsellor' },
           { id:'ctaDesc',      label:'Description',           type:'textarea', default:'Confused about which board to choose? Our experts help 500+ families every month at absolutely zero cost.' },
-          { id:'ctaBenefit1',  label:'Benefit 1',             type:'text',     default:'CBSE vs ICSE vs IB — which board suits your child' },
+          { id:'ctaBenefit1',  label:'Benefit 1',             type:'text',     default:'CBSE vs ICSE vs IB - which board suits your child' },
           { id:'ctaBenefit2',  label:'Benefit 2',             type:'text',     default:'School shortlisting by budget, location & values' },
           { id:'ctaBenefit3',  label:'Benefit 3',             type:'text',     default:'Admission documents checklist & timelines' },
-          { id:'ctaBookBtn',   label:'Book button text',      type:'text',     default:"Book Now — It's Free" },
+          { id:'ctaBookBtn',   label:'Book button text',      type:'text',     default:"Book Now - It's Free" },
           { id:'ctaBg',        label:'Section background',    type:'color',    default:'#FAF7F2', cssVar:'--counsel-bg' },
         ],
       },
@@ -230,15 +230,15 @@ const PAGES: PageGroup[] = [
         fields: [
           { id:'testTitle',    label:'Section title',        type:'text',     default:'Trusted by 1 Lakh+ Parents' },
           { id:'testBg',       label:'Background',           type:'color',    default:'#F5F0E8', cssVar:'--testimonials-bg' },
-          { id:'test1Name',    label:'Testimonial 1 — Name', type:'text',     default:'Priya Sharma' },
-          { id:'test1Role',    label:'Testimonial 1 — Role', type:'text',     default:'Parent, Delhi' },
-          { id:'test1Quote',   label:'Testimonial 1 — Quote',type:'textarea', default:'Found the perfect CBSE school in 3 days. The AI recommendations were spot on!' },
-          { id:'test2Name',    label:'Testimonial 2 — Name', type:'text',     default:'Rahul Mehta' },
-          { id:'test2Role',    label:'Testimonial 2 — Role', type:'text',     default:'Parent, Mumbai' },
-          { id:'test2Quote',   label:'Testimonial 2 — Quote',type:'textarea', default:'The counsellor saved us months of research. Got our daughter into her dream school.' },
-          { id:'test3Name',    label:'Testimonial 3 — Name', type:'text',     default:'Anita Desai' },
-          { id:'test3Role',    label:'Testimonial 3 — Role', type:'text',     default:'Parent, Pune' },
-          { id:'test3Quote',   label:'Testimonial 3 — Quote',type:'textarea', default:'Compared 12 schools side by side. Never thought finding a school could be this simple.' },
+          { id:'test1Name',    label:'Testimonial 1 - Name', type:'text',     default:'Priya Sharma' },
+          { id:'test1Role',    label:'Testimonial 1 - Role', type:'text',     default:'Parent, Delhi' },
+          { id:'test1Quote',   label:'Testimonial 1 - Quote',type:'textarea', default:'Found the perfect CBSE school in 3 days. The AI recommendations were spot on!' },
+          { id:'test2Name',    label:'Testimonial 2 - Name', type:'text',     default:'Rahul Mehta' },
+          { id:'test2Role',    label:'Testimonial 2 - Role', type:'text',     default:'Parent, Mumbai' },
+          { id:'test2Quote',   label:'Testimonial 2 - Quote',type:'textarea', default:'The counsellor saved us months of research. Got our daughter into her dream school.' },
+          { id:'test3Name',    label:'Testimonial 3 - Name', type:'text',     default:'Anita Desai' },
+          { id:'test3Role',    label:'Testimonial 3 - Role', type:'text',     default:'Parent, Pune' },
+          { id:'test3Quote',   label:'Testimonial 3 - Quote',type:'textarea', default:'Compared 12 schools side by side. Never thought finding a school could be this simple.' },
         ],
       },
     ],
@@ -249,7 +249,7 @@ const PAGES: PageGroup[] = [
       { id: 'blog', label: 'Blog Preview Section',
         fields: [
           { id:'blogTitle',   label:'Section title',   type:'text',  default:'Admission Insights' },
-          { id:'blogCtaText', label:'View all button', type:'text',  default:'Read All Articles →' },
+          { id:'blogCtaText', label:'View all button', type:'text',  default:'Read All Articles' },
           { id:'blogBg',      label:'Background',      type:'color', default:'#FAF7F2', cssVar:'--blog-preview-bg' },
           { id:'blog1Title',  label:'Article 1 title', type:'text',  default:'CBSE vs ICSE vs IB: Which Board is Right for Your Child?' },
           { id:'blog2Title',  label:'Article 2 title', type:'text',  default:'How to Choose the Right School: 10 Questions to Ask' },
@@ -311,16 +311,16 @@ const PAGES: PageGroup[] = [
       },
       { id:'pricing-faq', label:'FAQ Section',
         fields: [
-          { id:'faq1q', label:'FAQ 1 — Question', type:'text',     default:'What is a lead credit?' },
-          { id:'faq1a', label:'FAQ 1 — Answer',   type:'textarea', default:'One lead credit = one parent enquiry. When a parent fills an admission form for your school, you use a credit to unlock their full contact details.' },
-          { id:'faq2q', label:'FAQ 2 — Question', type:'text',     default:'Can I try before I pay?' },
-          { id:'faq2a', label:'FAQ 2 — Answer',   type:'textarea', default:'Yes! Our Free subscription plan lets you list your school and receive lead credits every month, forever. No credit card required.' },
-          { id:'faq3q', label:'FAQ 3 — Question', type:'text',     default:'Do credits roll over?' },
-          { id:'faq3a', label:'FAQ 3 — Answer',   type:'textarea', default:'Monthly plan credits do not roll over. Credits refresh each month with your active subscription plan.' },
-          { id:'faq4q', label:'FAQ 4 — Question', type:'text',     default:'Can I change plans anytime?' },
-          { id:'faq4a', label:'FAQ 4 — Answer',   type:'textarea', default:'Yes. Upgrade or downgrade instantly from your school dashboard. Unused credits from the old plan carry over for 30 days.' },
-          { id:'faq5q', label:'FAQ 5 — Question', type:'text',     default:'Is there a setup fee?' },
-          { id:'faq5a', label:'FAQ 5 — Answer',   type:'textarea', default:'Never. Listing is free, plans are monthly with no lock-in, and you can cancel anytime.' },
+          { id:'faq1q', label:'FAQ 1 - Question', type:'text',     default:'What is a lead credit?' },
+          { id:'faq1a', label:'FAQ 1 - Answer',   type:'textarea', default:'One lead credit = one parent enquiry. When a parent fills an admission form for your school, you use a credit to unlock their full contact details.' },
+          { id:'faq2q', label:'FAQ 2 - Question', type:'text',     default:'Can I try before I pay?' },
+          { id:'faq2a', label:'FAQ 2 - Answer',   type:'textarea', default:'Yes! Our Free subscription plan lets you list your school and receive lead credits every month, forever. No credit card required.' },
+          { id:'faq3q', label:'FAQ 3 - Question', type:'text',     default:'Do credits roll over?' },
+          { id:'faq3a', label:'FAQ 3 - Answer',   type:'textarea', default:'Monthly plan credits do not roll over. Credits refresh each month with your active subscription plan.' },
+          { id:'faq4q', label:'FAQ 4 - Question', type:'text',     default:'Can I change plans anytime?' },
+          { id:'faq4a', label:'FAQ 4 - Answer',   type:'textarea', default:'Yes. Upgrade or downgrade instantly from your school dashboard. Unused credits from the old plan carry over for 30 days.' },
+          { id:'faq5q', label:'FAQ 5 - Question', type:'text',     default:'Is there a setup fee?' },
+          { id:'faq5a', label:'FAQ 5 - Answer',   type:'textarea', default:'Never. Listing is free, plans are monthly with no lock-in, and you can cancel anytime.' },
         ],
       },
     ],
@@ -344,7 +344,7 @@ const PAGES: PageGroup[] = [
       { id:'about', label:'About Page',
         fields: [
           { id:'aboutTitle',   label:'Page title',      type:'text',     default:'About Thynk Schooling' },
-          { id:'aboutMission', label:'Mission statement',type:'textarea', default:"India's most trusted school discovery platform — connecting parents with the right schools." },
+          { id:'aboutMission', label:'Mission statement',type:'textarea', default:"India's most trusted school discovery platform - connecting parents with the right schools." },
           { id:'aboutVision',  label:'Vision statement', type:'textarea', default:'A world where every child finds the school that helps them thrive.' },
           { id:'aboutBg',      label:'Background',       type:'color',    default:'#FAF7F2', cssVar:'--about-bg' },
         ],
@@ -539,7 +539,7 @@ function MarqueeAdmin() {
     btn: (bg: string, color: string) => ({ padding:'7px 16px', borderRadius:8, background:bg, border:'none', color, fontSize:12, fontWeight:700, fontFamily:'Inter,sans-serif', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }),
   }
 
-  if (loading) return <div style={S.card}><div style={{ padding:24, textAlign:'center', color:'#A0ADB8', fontFamily:'Inter,sans-serif', fontSize:13 }}>Loading…</div></div>
+  if (loading) return <div style={S.card}><div style={{ padding:24, textAlign:'center', color:'#A0ADB8', fontFamily:'Inter,sans-serif', fontSize:13 }}>Loading...</div></div>
 
   return (
     <div style={S.card}>
@@ -553,7 +553,7 @@ function MarqueeAdmin() {
             <Plus style={{ width:11, height:11 }} />Add Item
           </button>
           <button onClick={save} disabled={saving} style={S.btn('#B8860B','#fff')}>
-            {saving ? <><Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} />Saving…</> : '✓ Save'}
+            {saving ? <><Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} />Saving...</> : '✓ Save'}
           </button>
         </div>
       </div>
@@ -577,7 +577,7 @@ function MarqueeAdmin() {
           <input value={item.emoji} onChange={e => update(item.id, 'emoji', e.target.value)}
             style={S.emojiInp} placeholder="🎓" />
           <input value={item.text} onChange={e => update(item.id, 'text', e.target.value)}
-            style={S.inp} placeholder="Enter marquee text…" />
+            style={S.inp} placeholder="Enter marquee text..." />
           <button onClick={() => remove(item.id)}
             style={{ background:'transparent', border:'none', cursor:'pointer', padding:6, color:'#FCA5A5', borderRadius:6 }}>
             <Trash2 style={{ width:13, height:13 }} />
@@ -720,20 +720,20 @@ export default function AdminContentPage() {
   const readyCount = Object.values(savedGroups).filter(Boolean).length
 
   return (
-    <AdminLayout pageClass="admin-page-settings" title="Content & Style Manager" subtitle="Edit text, colours and sizes — changes apply live">
+    <AdminLayout pageClass="admin-page-settings" title="Content & Style Manager" subtitle="Edit text, colours and sizes - changes apply live">
 
       {/* Top bar */}
       <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', padding:'12px 16px', background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', color:'#0D1117' }}>
         <span style={{ fontSize:'12px', color:'#718096', flex:1, fontFamily:'Inter,sans-serif' }}>
-          {dirtyGroups[activeGroup] ? `Unsaved changes in "${activeGroup}" — click Save to apply` : 'Make changes below then click Save. Use "Save All Pages" to save everything at once.'}
+          {dirtyGroups[activeGroup] ? `Unsaved changes in "${activeGroup}" - click Save to apply` : 'Make changes below then click Save. Use "Save All Pages" to save everything at once.'}
         </span>
         <button onClick={saveGroup} disabled={pushing || !dirtyGroups[activeGroup]}
           style={{ padding:'8px 18px', borderRadius:'8px', background: dirtyGroups[activeGroup] ? '#FEF7E0' : '#f3f4f6', border:`1px solid ${dirtyGroups[activeGroup] ? '#B8860B' : '#e5e7eb'}`, color: dirtyGroups[activeGroup] ? '#B8860B' : '#9ca3af', cursor: (pushing || !dirtyGroups[activeGroup]) ? 'not-allowed' : 'pointer', fontSize:'13px', fontWeight:700, fontFamily:'Inter,sans-serif', display:'flex', alignItems:'center', gap:'6px' }}>
-          {pushing ? <><Loader2 style={{width:12,height:12,animation:'spin 1s linear infinite'}}/>Saving…</> : <>✓ Save {activeGroup}</>}
+          {pushing ? <><Loader2 style={{width:12,height:12,animation:'spin 1s linear infinite'}}/>Saving...</> : <>✓ Save {activeGroup}</>}
         </button>
         <button onClick={pushAll} disabled={pushing}
           style={{ display:'flex', alignItems:'center', gap:'7px', padding:'9px 22px', borderRadius:'9px', background:'#B8860B', border:'none', color:'#fff', cursor:pushing?'not-allowed':'pointer', fontSize:'13px', fontWeight:700, fontFamily:'Inter,sans-serif', opacity:pushing?0.5:1 }}>
-          {pushing ? <><Loader2 style={{width:13,height:13,animation:'spin 1s linear infinite'}}/>Saving…</> : <><Globe style={{width:13,height:13}}/>Save All Pages</>}
+          {pushing ? <><Loader2 style={{width:13,height:13,animation:'spin 1s linear infinite'}}/>Saving...</> : <><Globe style={{width:13,height:13}}/>Save All Pages</>}
         </button>
       </div>
 
@@ -784,7 +784,7 @@ export default function AdminContentPage() {
           <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', color:'#0D1117' }}>
             <div style={{ padding:'10px 14px', borderBottom:'1px solid rgba(13,17,23,0.07)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span style={{ fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase' as const, color:'#A0ADB8', fontFamily:'Inter,sans-serif' }}>Live Preview</span>
-              <a href={activePage?.previewUrl || '/'} target="_blank" rel="noreferrer" style={{ fontSize:'11px', color:'#B8860B', textDecoration:'none', fontFamily:'Inter,sans-serif', fontWeight:600 }}>Open ↗</a>
+              <a href={activePage?.previewUrl || '/'} target="_blank" rel="noreferrer" style={{ fontSize:'11px', color:'#B8860B', textDecoration:'none', fontFamily:'Inter,sans-serif', fontWeight:600 }}>Open</a>
             </div>
             <div style={{ background:'#f0f0f0', padding:'6px 10px', display:'flex', gap:'5px', borderBottom:'1px solid rgba(13,17,23,0.07)', alignItems:'center' }}>
               <div style={{ width:7, height:7, borderRadius:'50%', background:'#FF5F56' }} />
