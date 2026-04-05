@@ -9,7 +9,8 @@ import {
   TrendingUp, DollarSign, Settings, Palette, LayoutGrid,
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
   BarChart3, FileText, ChevronRight, ExternalLink, Mail,
-  AlertTriangle, Image as ImageIcon, MapPin, Zap, BookOpen
+  AlertTriangle, Image as ImageIcon, MapPin, Zap, BookOpen,
+  LayoutList
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -34,15 +35,16 @@ const NAV_GROUPS = [
     { icon:FileText,     label:'Payments',             href:'/admin/payments' },
   ]},
   { label:'Platform', items:[
-    { icon:Settings,   label:'Settings',     href:'/admin/settings' },
-    { icon:Palette,    label:'Theme',        href:'/admin/theme' },
-    { icon:Mail,       label:'Integrations', href:'/admin/integrations' },
-    { icon:FileText,   label:'Page Content', href:'/admin/content' },
-    { icon:Bell,       label:'Notifications',    href:'/admin/notifications' },
-    { icon:Zap,        label:'Message Triggers',   href:'/admin/email-triggers' },
-    { icon:BarChart3,  label:'SEO Manager',  href:'/admin/seo' },
-    { icon:ImageIcon,  label:'Media & Brand',href:'/admin/media' },
-    { icon:MapPin,     label:'SEO Cities',   href:'/admin/cities' },
+    { icon:Settings,     label:'Settings',         href:'/admin/settings' },
+    { icon:Palette,      label:'Theme',            href:'/admin/theme' },
+    { icon:Mail,         label:'Integrations',     href:'/admin/integrations' },
+    { icon:FileText,     label:'Page Content',     href:'/admin/content' },
+    { icon:LayoutList,   label:'Menu Manager',     href:'/admin/menu' },
+    { icon:Bell,         label:'Notifications',    href:'/admin/notifications' },
+    { icon:Zap,          label:'Message Triggers', href:'/admin/email-triggers' },
+    { icon:BarChart3,    label:'SEO Manager',      href:'/admin/seo' },
+    { icon:ImageIcon,    label:'Media & Brand',    href:'/admin/media' },
+    { icon:MapPin,       label:'SEO Cities',       href:'/admin/cities' },
   ]},
 ]
 
