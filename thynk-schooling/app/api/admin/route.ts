@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic'
  *
  * Actions: overview, analytics, schools, users, applications, reviews,
  *          leads, payments, counselling, notifications, content, theme,
- *          seo, settings, media, cities, lead-pricing-defaults, seed-demo, health
+ *          seo, settings, media, cities, lead-pricing-defaults, seed-demo, health,
+ *          blog
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
@@ -35,17 +36,14 @@ async function getOverview() {
     db.query("SELECT to_char(DATE_TRUNC('month',created_at),'Mon') AS month, COUNT(*) AS users, COUNT(*) AS schools, COUNT(*) AS leads FROM users WHERE created_at >= NOW()-INTERVAL '6 months' GROUP BY DATE_TRUNC('month',created_at), to_char(DATE_TRUNC('month',created_at),'Mon') ORDER BY DATE_TRUNC('month',created_at)").catch(() => ({ rows: [] })),
     db.query("SELECT UNNEST(board) AS name, COUNT(*) AS value FROM schools WHERE board IS NOT NULL GROUP BY name ORDER BY value DESC LIMIT 5").catch(() => ({ rows: [] })),
     db.query("SELECT COALESCE(status,'pending') AS name, COUNT(*) AS value FROM applications GROUP BY status").catch(() => ({ rows: [] })),
-    // recent leads for dashboard table
     db.query(`SELECT lp.id, s.name AS school_name, COALESCE(u.full_name,u.name) AS parent_name,
               lp.class_applied, lp.amount AS price, lp.is_purchased, lp.created_at
               FROM lead_purchases lp
               LEFT JOIN schools s ON s.id=lp.school_id
               LEFT JOIN users u ON u.id=lp.user_id
               ORDER BY lp.created_at DESC LIMIT 8`).catch(() => ({ rows: [] })),
-    // recent users for dashboard sidebar
     db.query(`SELECT id, COALESCE(full_name,name) AS full_name, COALESCE(phone,mobile) AS phone, role
               FROM users WHERE role!='super_admin' ORDER BY created_at DESC LIMIT 5`).catch(() => ({ rows: [] })),
-    // pending schools for dashboard sidebar
     db.query(`SELECT id, name, city FROM schools WHERE (is_verified=false OR is_verified IS NULL)
               ORDER BY created_at DESC LIMIT 5`).catch(() => ({ rows: [] })),
   ])
@@ -511,6 +509,7 @@ async function deleteSubPlan(req: NextRequest) {
   await db.query('DELETE FROM subscription_plans WHERE id=$1', [id])
   return NextResponse.json({ success: true })
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const THEME_DEFAULTS = { containerWidth:1600, ivory:'#FAF7F2', ivory2:'#F5F0E8', ivory3:'#EDE5D8', ink:'#0D1117', ink2:'#1C2333', inkMuted:'#4A5568', inkFaint:'#A0ADB8', gold:'#B8860B', gold2:'#C9960D', goldLight:'#E8C547', goldWash:'#FEF7E0' }
@@ -626,7 +625,6 @@ async function getLeadPricingDefaults() {
   let global = DEFAULTS
   if (globalRes.rows.length) {
     const saved = JSON.parse(globalRes.rows[0].value)
-    // Support both old schema (pricePerLead) and new schema (defaultPricePaise)
     if (saved.pricePerLead && !saved.defaultPricePaise) {
       global = { ...DEFAULTS, defaultPricePaise: saved.pricePerLead * 100 }
     } else {
@@ -648,12 +646,10 @@ async function saveLeadPricingDefaults(req: NextRequest) {
   await ensureLeadPricingTables()
   const body = await req.json()
   const { statePricing, ...global } = body
-  // Save global settings
   await db.query(
     `INSERT INTO admin_settings (key,value,updated_at) VALUES ('lead_pricing_defaults',$1,NOW()) ON CONFLICT (key) DO UPDATE SET value=$1,updated_at=NOW()`,
     [JSON.stringify(global)]
   )
-  // Save/update state pricing rows
   if (Array.isArray(statePricing)) {
     for (const sp of statePricing) {
       await db.query(
@@ -800,7 +796,6 @@ async function ensureTriggersTable() {
       updated_at      TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
-  // Seed defaults if empty
   const ct = await db.query('SELECT COUNT(*) FROM message_triggers').catch(() => ({ rows:[{ count:'0' }] }))
   if (parseInt(ct.rows[0].count) === 0) {
     for (const t of DEFAULT_TRIGGERS) {
@@ -909,6 +904,7 @@ async function seedDemo() {
 }
 
 // ─── marquee ──────────────────────────────────────────────────────────────────
+
 async function ensureMarqueeTable() {
   await db.query(`CREATE TABLE IF NOT EXISTS marquee_items (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
@@ -919,6 +915,7 @@ async function ensureMarqueeTable() {
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(() => {})
 }
+
 async function getMarqueeItems() {
   await ensureMarqueeTable()
   const r = await db.query(`SELECT id, text, emoji, sort_order FROM marquee_items WHERE is_active=true ORDER BY sort_order, created_at`).catch(() => ({ rows: [] }))
@@ -941,6 +938,7 @@ async function getMarqueeItems() {
   }
   return NextResponse.json({ items: r.rows })
 }
+
 async function saveMarqueeItems(req: NextRequest) {
   await ensureMarqueeTable()
   const { items } = await req.json()
@@ -950,6 +948,136 @@ async function saveMarqueeItems(req: NextRequest) {
     await db.query(`INSERT INTO marquee_items(id,text,emoji,sort_order,is_active) VALUES(COALESCE($1,gen_random_uuid()::text),$2,$3,$4,true)`,
       [it.id||null, it.text||'', it.emoji||'', i]).catch(()=>{})
   }
+  return NextResponse.json({ success: true })
+}
+
+// ─── blog ─────────────────────────────────────────────────────────────────────
+
+async function ensureBlogTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS blog_posts (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug          VARCHAR(300) NOT NULL UNIQUE,
+      title         TEXT NOT NULL DEFAULT '',
+      excerpt       TEXT DEFAULT '',
+      body          TEXT DEFAULT '',
+      tag           VARCHAR(120) DEFAULT 'Admission Tips',
+      read_time     VARCHAR(50) DEFAULT '5 min',
+      published_at  DATE DEFAULT CURRENT_DATE,
+      status        VARCHAR(20) DEFAULT 'draft',
+      cover_image   VARCHAR(500) DEFAULT '',
+      meta_title    TEXT DEFAULT '',
+      meta_desc     TEXT DEFAULT '',
+      author        VARCHAR(200) DEFAULT 'Thynk Schooling Team',
+      created_at    TIMESTAMPTZ DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+  const cols = [
+    "ADD COLUMN IF NOT EXISTS cover_image VARCHAR(500) DEFAULT ''",
+    "ADD COLUMN IF NOT EXISTS meta_title TEXT DEFAULT ''",
+    "ADD COLUMN IF NOT EXISTS meta_desc TEXT DEFAULT ''",
+    "ADD COLUMN IF NOT EXISTS author VARCHAR(200) DEFAULT 'Thynk Schooling Team'",
+  ]
+  for (const col of cols) await db.query(`ALTER TABLE blog_posts ${col}`).catch(() => {})
+}
+
+function toBlogPost(row: any) {
+  return {
+    id: row.id,
+    slug: row.slug || '',
+    title: row.title || '',
+    excerpt: row.excerpt || '',
+    body: row.body || '',
+    tag: row.tag || 'Admission Tips',
+    readTime: row.read_time || '5 min',
+    publishedAt: row.published_at ? String(row.published_at).slice(0, 10) : '',
+    status: row.status || 'draft',
+    coverImage: row.cover_image || '',
+    metaTitle: row.meta_title || '',
+    metaDesc: row.meta_desc || '',
+    author: row.author || 'Thynk Schooling Team',
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+async function getBlogPosts(req: NextRequest) {
+  await ensureBlogTable()
+  const { searchParams } = new URL(req.url)
+  const slug = searchParams.get('slug')
+  const status = searchParams.get('status')
+  const isAdmin = searchParams.get('admin') === '1'
+
+  if (slug) {
+    const res = await db.query(
+      `SELECT * FROM blog_posts WHERE slug=$1${isAdmin ? '' : " AND status='published'"}`,
+      [slug]
+    )
+    if (!res.rows.length) return NextResponse.json({ post: null }, { status: 404 })
+    return NextResponse.json({ post: toBlogPost(res.rows[0]) })
+  }
+
+  const conds: string[] = ['1=1']
+  const params: any[] = []
+  if (status) { params.push(status); conds.push(`status=$${params.length}`) }
+  if (!isAdmin) conds.push("status='published'")
+
+  const where = conds.join(' AND ')
+  const rows = await db.query(
+    `SELECT * FROM blog_posts WHERE ${where} ORDER BY published_at DESC, created_at DESC`,
+    params
+  )
+  return NextResponse.json({ posts: rows.rows.map(toBlogPost) })
+}
+
+async function createBlogPost(req: NextRequest) {
+  await ensureBlogTable()
+  const body = await req.json()
+  const { slug, title, excerpt, body: content, tag, readTime, publishedAt, status, coverImage, metaTitle, metaDesc, author } = body
+  if (!slug) return NextResponse.json({ error: 'slug is required' }, { status: 400 })
+  const res = await db.query(
+    `INSERT INTO blog_posts (slug,title,excerpt,body,tag,read_time,published_at,status,cover_image,meta_title,meta_desc,author)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+     RETURNING *`,
+    [slug, title||'', excerpt||'', content||'', tag||'Admission Tips', readTime||'5 min',
+     publishedAt||new Date().toISOString().slice(0,10), status||'draft',
+     coverImage||'', metaTitle||'', metaDesc||'', author||'Thynk Schooling Team']
+  )
+  return NextResponse.json({ post: toBlogPost(res.rows[0]) })
+}
+
+async function updateBlogPost(req: NextRequest) {
+  await ensureBlogTable()
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const body = await req.json()
+  const sets: string[] = []
+  const params: any[] = []
+  const map: Record<string, string> = {
+    slug: 'slug', title: 'title', excerpt: 'excerpt', body: 'body',
+    tag: 'tag', readTime: 'read_time', publishedAt: 'published_at',
+    status: 'status', coverImage: 'cover_image', metaTitle: 'meta_title',
+    metaDesc: 'meta_desc', author: 'author',
+  }
+  for (const [k, col] of Object.entries(map)) {
+    if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
+  }
+  if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+  params.push(id)
+  sets.push(`updated_at=NOW()`)
+  const res = await db.query(
+    `UPDATE blog_posts SET ${sets.join(',')} WHERE id=$${params.length} RETURNING *`,
+    params
+  )
+  if (!res.rows.length) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+  return NextResponse.json({ post: toBlogPost(res.rows[0]) })
+}
+
+async function deleteBlogPost(req: NextRequest) {
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  await db.query('DELETE FROM blog_posts WHERE id=$1', [id])
   return NextResponse.json({ success: true })
 }
 
@@ -986,9 +1114,10 @@ export async function GET(req: NextRequest) {
       case 'lead-pricing-defaults': return await getLeadPricingDefaults()
       case 'subscription-plans':    return await getSubPlans()
       case 'message-triggers':      return await getTriggers()
+      case 'marquee-items':         return await getMarqueeItems()
+      case 'blog':                  return await getBlogPosts(req)
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
-      case 'marquee-items':         return await getMarqueeItems()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin GET:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -998,17 +1127,18 @@ export async function POST(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     switch (action) {
-      case 'content':        return await saveContent(req)
-      case 'theme':          return await saveTheme(req)
-      case 'seo':            return await saveSeo(req)
-      case 'settings':       return await saveSettings(req)
-      case 'media':          return await saveMedia(req)
-      case 'cities':         return await saveCities(req)
-      case 'notifications':  return await sendNotification(req)
-      case 'seed-demo':      return await seedDemo()
-      case 'marquee-items':  return await saveMarqueeItems(req)
+      case 'content':            return await saveContent(req)
+      case 'theme':              return await saveTheme(req)
+      case 'seo':                return await saveSeo(req)
+      case 'settings':           return await saveSettings(req)
+      case 'media':              return await saveMedia(req)
+      case 'cities':             return await saveCities(req)
+      case 'notifications':      return await sendNotification(req)
+      case 'seed-demo':          return await seedDemo()
+      case 'marquee-items':      return await saveMarqueeItems(req)
       case 'subscription-plans': return await saveSubPlan(req)
       case 'message-triggers':   return await saveTrigger(req)
+      case 'blog':               return await createBlogPost(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -1025,6 +1155,7 @@ export async function PUT(req: NextRequest) {
       case 'counselling':           return await updateAdminCounselling(req)
       case 'lead-pricing-defaults': return await saveLeadPricingDefaults(req)
       case 'subscription-plans':    return await updateSubPlan(req)
+      case 'blog':                  return await updateBlogPost(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin PUT:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -1035,10 +1166,11 @@ export async function DELETE(req: NextRequest) {
   const action = url.searchParams.get('action')
   try {
     switch (action) {
-      case 'reviews': return await deleteAdminReview(req)
-      case 'cities':  return await deleteCity(req)
+      case 'reviews':            return await deleteAdminReview(req)
+      case 'cities':             return await deleteCity(req)
       case 'subscription-plans': return await deleteSubPlan(req)
       case 'message-triggers':   return await deleteTrigger(req)
+      case 'blog':               return await deleteBlogPost(req)
       case 'theme':
         await db.query("DELETE FROM site_settings WHERE key='theme'").catch(() => {})
         return NextResponse.json({ success: true })
@@ -1052,13 +1184,13 @@ export async function DELETE(req: NextRequest) {
     }
   } catch (e: any) { console.error(`[admin DELETE:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
+
 export async function PATCH(req: NextRequest) {
   const url = new URL(req.url)
   const action = url.searchParams.get('action')
   try {
     if (action === 'users-activity') return await getUserActivity(req)
     if (action === 'users') {
-      // suspend: ?action=users&id=X&op=suspend
       const id = url.searchParams.get('id')
       const op = url.searchParams.get('op')
       if (id && op === 'suspend') {
