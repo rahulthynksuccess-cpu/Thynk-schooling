@@ -761,21 +761,21 @@ export default function AdminContentPage() {
             <MarqueeAdmin />
           ) : (
             activePage?.sections.map(section => (
-            <div key={section.id} style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', color:'#0D1117' }}>
-              <button onClick={() => setOpenSections(p => ({ ...p, [section.id]: !p[section.id] }))}
-                style={{ width:'100%', display:'flex', alignItems:'center', gap:'10px', padding:'12px 16px', border:'none', background: openSections[section.id] ? 'rgba(184,134,11,0.03)' : '#fff', cursor:'pointer', textAlign:'left' as const }}>
-                <span style={{ fontFamily:'Inter,sans-serif', fontSize:'12px', fontWeight:700, color:'#B8860B', flex:1, textTransform:'uppercase' as const, letterSpacing:'1px' }}>{section.label}</span>
-                {openSections[section.id] ? <ChevronDown style={{width:14,height:14,color:'#A0ADB8'}}/> : <ChevronRight style={{width:14,height:14,color:'#A0ADB8'}}/>}
-              </button>
-              {openSections[section.id] && (
-                <div style={{ padding:'0 16px 8px' }}>
-                  {section.fields.map(field => (
-                    <FieldRow key={field.id} field={field} value={values[field.id] ?? field.default} onChange={v => set(field.id, v)} />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+              <div key={section.id} style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', color:'#0D1117' }}>
+                <button onClick={() => setOpenSections(p => ({ ...p, [section.id]: !p[section.id] }))}
+                  style={{ width:'100%', display:'flex', alignItems:'center', gap:'10px', padding:'12px 16px', border:'none', background: openSections[section.id] ? 'rgba(184,134,11,0.03)' : '#fff', cursor:'pointer', textAlign:'left' as const }}>
+                  <span style={{ fontFamily:'Inter,sans-serif', fontSize:'12px', fontWeight:700, color:'#B8860B', flex:1, textTransform:'uppercase' as const, letterSpacing:'1px' }}>{section.label}</span>
+                  {openSections[section.id] ? <ChevronDown style={{width:14,height:14,color:'#A0ADB8'}}/> : <ChevronRight style={{width:14,height:14,color:'#A0ADB8'}}/>}
+                </button>
+                {openSections[section.id] && (
+                  <div style={{ padding:'0 16px 8px' }}>
+                    {section.fields.map(field => (
+                      <FieldRow key={field.id} field={field} value={values[field.id] ?? field.default} onChange={v => set(field.id, v)} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
           )}
         </div>
 
