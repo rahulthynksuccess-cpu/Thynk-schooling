@@ -50,14 +50,19 @@ export function StatsBar() {
       <div style={{position:'absolute',top:'50%',left:0,right:0,height:1,background:'linear-gradient(90deg,transparent,rgba(184,134,11,0.15),rgba(184,134,11,0.08),transparent)',pointerEvents:'none'}}/>
 
       <div style={{maxWidth:'1600px',margin:'0 auto',padding:'0 clamp(24px,5vw,80px)',position:'relative',zIndex:1}}>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'clamp(12px,2vw,32px)'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:'clamp(12px,2vw,20px)'}}>
           {STATS.map((s,i)=>(
             <motion.div key={s.label}
               initial={{opacity:0,y:32,scale:.92}} animate={inView?{opacity:1,y:0,scale:1}:{}}
               transition={{delay:i*.1,duration:.6,ease:[.22,1,.36,1]}}
-              style={{textAlign:'center',padding:'clamp(20px,3vw,40px) 8px',position:'relative',cursor:'default'}}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-4px)'}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform=''}}>
+              style={{textAlign:'center',padding:'clamp(24px,3vw,36px) 16px',position:'relative',cursor:'default',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:16,backdropFilter:'blur(8px)',transition:'all .3s cubic-bezier(.22,1,.36,1)',overflow:'hidden'}}
+              onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background='rgba(184,134,11,0.08)';el.style.borderColor='rgba(184,134,11,0.25)';el.style.transform='translateY(-6px)';el.style.boxShadow='0 20px 60px rgba(184,134,11,0.15)'}}
+              onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background='rgba(255,255,255,0.04)';el.style.borderColor='rgba(255,255,255,0.06)';el.style.transform='';el.style.boxShadow='none'}}>
+              {/* Glow blob */}
+              <div style={{position:'absolute',top:'-20px',left:'50%',transform:'translateX(-50%)',width:80,height:80,background:'radial-gradient(circle,rgba(184,134,11,0.2),transparent 70%)',filter:'blur(16px)',pointerEvents:'none'}}/>
+              {/* Bottom accent line */}
+              <div style={{position:'absolute',bottom:0,left:'20%',right:'20%',height:2,background:'linear-gradient(90deg,transparent,#B8860B,transparent)',borderRadius:99,opacity:.5}}/>
+
               {i<4&&<div style={{position:'absolute',right:0,top:'20%',height:'60%',width:'1px',background:'linear-gradient(to bottom,transparent,rgba(255,255,255,0.06),transparent)'}}/>}
               {/* Icon with glow */}
               <motion.div style={{fontSize:'clamp(26px,3.5vw,40px)',marginBottom:16,display:'inline-block',filter:'drop-shadow(0 0 12px rgba(184,134,11,0.3))',animation:`floatY ${3.5+i*.4}s ease-in-out infinite`,animationDelay:`${i*-.5}s`}}>{s.icon}</motion.div>

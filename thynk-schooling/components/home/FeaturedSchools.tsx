@@ -254,7 +254,7 @@ export function FeaturedSchools() {
   const schools = data?.data ?? []
 
   return (
-    <section ref={ref} style={{ background: 'var(--featured-bg,#FAF7F2)', padding: '100px 0' }}>
+    <section ref={ref} style={{ background: 'linear-gradient(180deg,#FAF7F2 0%,#F0EAD6 100%)', padding: '100px 0', position:'relative', overflow:'hidden' }}>
       <style>{`
         .featured-school-card:hover {
           box-shadow: 0 20px 60px rgba(13,17,23,0.14) !important;

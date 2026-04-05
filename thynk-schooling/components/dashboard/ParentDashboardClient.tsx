@@ -45,29 +45,29 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const router   = useRouter()
 
   return (
-    <aside style={{ width: 248, display: 'flex', flexDirection: 'column', height: '100%', background: C.card, borderRight: `1px solid ${C.bdr}` }}>
+    <aside style={{ width: 248, display: 'flex', flexDirection: 'column', height: '100%', background: 'linear-gradient(180deg,#0D1117 0%,#131B2A 100%)', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
       {/* logo */}
-      <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${C.bdr}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg,#B8860B,#D4A520)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 3px 10px rgba(184,134,11,0.3)' }}>
             <GraduationCap style={{ width: 17, height: 17, color: '#fff' }} />
           </div>
           <div>
-            <div style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 14, color: C.ink, lineHeight: 1 }}>Thynk Schooling</div>
+            <div style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 14, color: '#FAF7F2', lineHeight: 1 }}>Thynk Schooling</div>
             <div style={{ fontFamily: C.sans, fontSize: 9.5, color: C.gold, fontWeight: 600, letterSpacing: '.1em', textTransform: 'uppercase', marginTop: 2 }}>Parent Portal</div>
           </div>
         </Link>
-        {onClose && <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: C.faint }}><X style={{ width: 15, height: 15 }} /></button>}
+        {onClose && <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'rgba(250,247,242,0.4)' }}><X style={{ width: 15, height: 15 }} /></button>}
       </div>
 
       {/* user card */}
-      <div style={{ margin: '12px 12px 4px', background: 'linear-gradient(135deg,#FEF7E0,#FFFBF0)', border: `1px solid rgba(184,134,11,0.18)`, borderRadius: 12, padding: '12px 14px' }}>
+      <div style={{ margin: '12px 12px 4px', background: 'rgba(184,134,11,0.1)', border: '1px solid rgba(184,134,11,0.2)', borderRadius: 12, padding: '12px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 38, height: 38, borderRadius: 10, background: 'linear-gradient(135deg,#B8860B,#D4A520)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: C.serif, fontWeight: 700, fontSize: 17, color: '#fff', flexShrink: 0 }}>
             {(user?.fullName || user?.phone || 'P')[0].toUpperCase()}
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontFamily: C.sans, fontWeight: 600, fontSize: 13, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullName || 'Parent'}</div>
+            <div style={{ fontFamily: C.sans, fontWeight: 600, fontSize: 13, color: '#FAF7F2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.fullName || 'Parent'}</div>
             <div style={{ fontFamily: C.sans, fontSize: 10.5, color: C.gold, fontWeight: 600 }}>Parent Account</div>
           </div>
         </div>
@@ -79,7 +79,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           const active = pathname === href || (href !== '/dashboard/parent' && pathname.startsWith(href))
           return (
             <Link key={href} href={href}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, marginBottom: 2, textDecoration: 'none', fontFamily: C.sans, fontSize: 13, fontWeight: active ? 600 : 400, background: active ? C.goldBg : 'transparent', color: active ? C.gold : C.muted, transition: 'all .15s', borderLeft: active ? `3px solid ${C.gold}` : '3px solid transparent' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, marginBottom: 2, textDecoration: 'none', fontFamily: C.sans, fontSize: 13, fontWeight: active ? 600 : 400, background: active ? 'rgba(184,134,11,0.15)' : 'transparent', color: active ? '#E8C547' : 'rgba(250,247,242,0.5)', transition: 'all .2s', borderLeft: active ? '3px solid #B8860B' : '3px solid transparent' }}>
               <Icon style={{ width: 15, height: 15, flexShrink: 0 }} />
               {label}
             </Link>
@@ -88,12 +88,12 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* sign out */}
-      <div style={{ padding: '8px 8px 10px', borderTop: `1px solid ${C.bdr}` }}>
-        <Link href="/schools" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, marginBottom: 4, textDecoration: 'none', fontFamily: C.sans, fontSize: 13, color: C.muted, background: 'transparent', transition: 'all .15s' }}>
+      <div style={{ padding: '8px 8px 10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <Link href="/schools" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, marginBottom: 4, textDecoration: 'none', fontFamily: C.sans, fontSize: 13, color: 'rgba(250,247,242,0.45)', background: 'transparent', transition: 'all .15s' }}>
           <Search style={{ width: 15, height: 15 }} /> Find Schools
         </Link>
         <button onClick={() => { logout(); router.replace('/login') }}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', fontFamily: C.sans, fontSize: 13, color: '#E53E3E' }}>
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 9, background: 'none', border: 'none', cursor: 'pointer', fontFamily: C.sans, fontSize: 13, color: 'rgba(239,68,68,0.7)' }}>
           <LogOut style={{ width: 15, height: 15 }} /> Sign Out
         </button>
       </div>
@@ -107,7 +107,7 @@ function DashLayout({ title, subtitle, action, children }: { title: string; subt
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: C.bg, overflow: 'hidden', fontFamily: C.sans }}>
+    <div style={{ display: 'flex', height: '100vh', background: 'linear-gradient(135deg,#FAF7F2 0%,#F0EAD6 100%)', overflow: 'hidden', fontFamily: C.sans }}>
       <style>{`
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
@@ -127,14 +127,14 @@ function DashLayout({ title, subtitle, action, children }: { title: string; subt
       )}
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', height: 60, background: C.card, borderBottom: `1px solid ${C.bdr}`, flexShrink: 0 }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', height: 64, background: 'rgba(245,240,232,0.95)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(184,134,11,0.12)', flexShrink: 0, boxShadow: '0 1px 20px rgba(13,17,23,0.06)', position: 'sticky', top: 0, zIndex: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button className="dash-mobile-btn" onClick={() => setSidebarOpen(true)}
               style={{ background: 'none', border: `1px solid ${C.bdr}`, borderRadius: 8, padding: 7, cursor: 'pointer', alignItems: 'center' }}>
               <Menu style={{ width: 16, height: 16, color: C.muted }} />
             </button>
             <div>
-              <h1 style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 20, color: C.ink, margin: 0, lineHeight: 1.2 }}>{title}</h1>
+              <h1 style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 22, color: C.ink, margin: 0, lineHeight: 1.2, letterSpacing: '-0.5px' }}>{title}</h1>
               {subtitle && <p style={{ fontFamily: C.sans, fontSize: 12, color: C.faint, margin: '2px 0 0' }}>{subtitle}</p>}
             </div>
           </div>
@@ -153,18 +153,27 @@ function DashLayout({ title, subtitle, action, children }: { title: string; subt
 function StatCard({ icon: Icon, label, value, color, bg, href, loading }: any) {
   return (
     <Link href={href} style={{ textDecoration: 'none' }}>
-      <motion.div whileHover={{ y: -3, boxShadow: '0 8px 30px rgba(13,17,23,0.1)' }} transition={{ duration: 0.2 }}
-        style={{ background: C.card, border: `1px solid ${C.bdr}`, borderRadius: 16, padding: '20px 22px', position: 'relative', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 1px 4px rgba(13,17,23,0.06)' }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: color, borderRadius: '16px 16px 0 0' }} />
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        whileHover={{ y: -5, boxShadow: `0 20px 60px rgba(13,17,23,0.12), 0 0 0 1px ${color}30` }}
+        style={{ background: 'linear-gradient(135deg,#fff 0%,#FDFAF5 100%)', border: `1px solid ${color}18`, borderRadius: 16, padding: '22px 22px', position: 'relative', overflow: 'hidden', cursor: 'pointer', boxShadow: '0 2px 12px rgba(13,17,23,0.06)', transition: 'border-color .3s' }}>
+        {/* Top accent bar */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,${color},${color}88)`, borderRadius: '16px 16px 0 0' }} />
+        {/* Corner glow */}
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: color, opacity: 0.08, filter: 'blur(20px)', pointerEvents: 'none' }} />
+        {/* Shimmer */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.6) 50%,transparent 70%)', backgroundSize: '200%', animation: 'shimmerBg 5s ease-in-out infinite', pointerEvents: 'none', opacity: 0.5 }} />
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 11, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${color}25`, boxShadow: `0 4px 12px ${color}20` }}>
             <Icon style={{ width: 18, height: 18, color }} />
           </div>
           <ChevronRight style={{ width: 14, height: 14, color: C.faint }} />
         </div>
         {loading
           ? <div className="skel" style={{ height: 36, width: '60%', marginBottom: 6 }} />
-          : <div style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 36, color: C.ink, lineHeight: 1, marginBottom: 4 }}>{value}</div>}
+          : <div style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 38, color: C.ink, lineHeight: 1, marginBottom: 4, letterSpacing: '-1px' }}>{value}</div>}
         <div style={{ fontFamily: C.sans, fontSize: 12, color: C.muted, fontWeight: 500 }}>{label}</div>
       </motion.div>
     </Link>
@@ -297,7 +306,7 @@ export function ParentDashboardClient() {
                 {(child.full_name || child.fullName || '?')[0].toUpperCase()}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: C.sans, fontWeight: 600, fontSize: 13, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontFamily: C.sans, fontWeight: 600, fontSize: 13, color: '#FAF7F2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {child.full_name || child.fullName}
                 </div>
                 <div style={{ fontFamily: C.sans, fontSize: 11, color: C.faint, marginTop: 2 }}>
@@ -348,7 +357,7 @@ export function ParentDashboardClient() {
                   : <GraduationCap style={{ width: 18, height: 18, color: C.faint }} />}
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: C.sans, fontWeight: 600, fontSize: 13, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{ fontFamily: C.sans, fontWeight: 600, fontSize: 13, color: '#FAF7F2', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {app.school_name || app.schoolName}
                 </div>
                 <div style={{ fontFamily: C.sans, fontSize: 11, color: C.faint, marginTop: 2 }}>

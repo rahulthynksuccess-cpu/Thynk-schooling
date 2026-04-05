@@ -19,7 +19,7 @@ export function WhyChooseUs() {
   const [hovered,setHovered]=useState<number|null>(null)
 
   return (
-    <section ref={ref} style={{background:'#F5F0E8',padding:'clamp(80px,10vw,130px) 0',position:'relative',overflow:'hidden'}}>
+    <section ref={ref} style={{background:'linear-gradient(160deg,#F5F0E8 0%,#EDE5D8 50%,#F0EAD6 100%)',padding:'clamp(80px,10vw,130px) 0',position:'relative',overflow:'hidden'}}>
       {/* Giant watermark */}
       <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:'"Cormorant Garamond",serif',fontSize:'clamp(160px,24vw,320px)',fontWeight:700,color:'rgba(13,17,23,0.022)',whiteSpace:'nowrap',pointerEvents:'none',userSelect:'none',letterSpacing:'-10px',lineHeight:1}}>WHY US</div>
       {/* SVG mesh */}
@@ -57,16 +57,18 @@ export function WhyChooseUs() {
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(12px,1.8vw,20px)'}}>
           {CARDS.map((c,i)=>(
             <motion.div key={c.title}
-              initial={{opacity:0,y:36,scale:.95}} animate={inView?{opacity:1,y:0,scale:1}:{}}
-              transition={{delay:i*.08,duration:.6,ease:[.22,1,.36,1]}}
+              initial={{opacity:0,y:40,scale:.93}} animate={inView?{opacity:1,y:0,scale:1}:{}}
+              transition={{delay:i*.1,duration:.65,ease:[.22,1,.36,1]}}
               onMouseEnter={()=>setHovered(i)} onMouseLeave={()=>setHovered(null)}
-              style={{background:hovered===i?'#fff':'rgba(255,255,255,0.7)',borderRadius:'clamp(14px,2vw,22px)',padding:'clamp(24px,3.5vw,44px)',border:`1.5px solid ${hovered===i?c.accent+'30':'rgba(13,17,23,0.06)'}`,boxShadow:hovered===i?`0 24px 64px rgba(13,17,23,0.1),0 0 0 1px ${c.accent}22`:'0 2px 16px rgba(13,17,23,0.03)',transition:'all .32s cubic-bezier(.22,1,.36,1)',position:'relative',overflow:'hidden',cursor:'default',transform:hovered===i?'translateY(-8px)':'translateY(0)'}}>
-              {/* Radial accent */}
-              <div style={{position:'absolute',top:0,right:0,width:120,height:120,background:`radial-gradient(circle at top right,${c.accent}${hovered===i?'14':'08'} 0%,transparent 70%)`,transition:'all .32s',pointerEvents:'none'}}/>
-              {/* Number */}
-              <div style={{position:'absolute',bottom:24,right:28,fontFamily:'"Cormorant Garamond",serif',fontSize:72,fontWeight:700,color:`${hovered===i?c.accent:'rgba(13,17,23,0.04)'}`,lineHeight:1,letterSpacing:'-4px',transition:'color .32s',pointerEvents:'none'}}>{c.num}</div>
-              <div style={{fontSize:'clamp(28px,3.5vw,44px)',marginBottom:20,transition:'transform .3s',transform:hovered===i?'scale(1.1) translateY(-2px)':'scale(1)'}}>{c.icon}</div>
-              <div style={{width:28,height:2.5,background:hovered===i?c.accent:'rgba(13,17,23,0.1)',borderRadius:2,marginBottom:16,transition:'all .3s',transform:hovered===i?'scaleX(1.4)':'scaleX(1)',transformOrigin:'left'}}/>
+              style={{background:hovered===i?'#fff':'rgba(255,255,255,0.75)',borderRadius:'clamp(14px,2vw,22px)',padding:'clamp(24px,3.5vw,44px)',border:`1.5px solid ${hovered===i?c.accent+'40':'rgba(13,17,23,0.06)'}`,boxShadow:hovered===i?`0 28px 72px rgba(13,17,23,0.12),0 0 0 1px ${c.accent}28`:'0 2px 16px rgba(13,17,23,0.04)',transition:'all .32s cubic-bezier(.22,1,.36,1)',position:'relative',overflow:'hidden',cursor:'default',transform:hovered===i?'translateY(-10px)':'translateY(0)'}}>
+              {/* Corner glow */}
+              <div style={{position:'absolute',top:'-20px',right:'-20px',width:150,height:150,background:`radial-gradient(circle,${c.accent}${hovered===i?'18':'0a'} 0%,transparent 70%)`,filter:'blur(20px)',transition:'opacity .32s',pointerEvents:'none'}}/>
+              {/* Shimmer sweep */}
+              <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.7) 50%,transparent 70%)',backgroundSize:'200%',animation:hovered===i?'shimmerBg 1.8s ease-in-out infinite':'none',pointerEvents:'none'}}/>
+              {/* Number watermark */}
+              <div style={{position:'absolute',bottom:20,right:24,fontFamily:'"Cormorant Garamond",serif',fontSize:80,fontWeight:700,color:`${hovered===i?c.accent:'rgba(13,17,23,0.04)'}`,lineHeight:1,letterSpacing:'-4px',transition:'color .32s',pointerEvents:'none'}}>{c.num}</div>
+              <div style={{fontSize:'clamp(28px,3.5vw,44px)',marginBottom:20,transition:'transform .35s cubic-bezier(.22,1,.36,1)',transform:hovered===i?'scale(1.15) translateY(-3px)':'scale(1)'}}>{c.icon}</div>
+              <div style={{width:28,height:2.5,background:hovered===i?c.accent:'rgba(13,17,23,0.1)',borderRadius:2,marginBottom:16,transition:'all .35s cubic-bezier(.22,1,.36,1)',transform:hovered===i?'scaleX(1.6)':'scaleX(1)',transformOrigin:'left'}}/>
               <h3 style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(17px,1.8vw,23px)',color:'#0D1117',marginBottom:10,lineHeight:1.1}}>{c.title}</h3>
               <p style={{fontFamily:'Inter,sans-serif',fontSize:'clamp(13px,1.2vw,15px)',color:'#4A5568',lineHeight:1.7,margin:0,fontWeight:300}}>{c.desc}</p>
             </motion.div>

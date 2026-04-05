@@ -253,16 +253,21 @@ const COVERS = [
 function SchoolCardGrid({ school, i, selected, onToggle }: { school:School; i:number; selected:boolean; onToggle:(s:School)=>void }) {
   const rating = Number(school.avgRating)||0
   return (
-    <motion.div initial={{ opacity:0,y:24 }} animate={{ opacity:1,y:0 }} transition={{ delay:i*0.05, duration:0.45, ease:[0.22,1,0.36,1] }} style={{ position:'relative' }}>
+    <motion.div
+      initial={{ opacity:0, y:32, scale:0.96 }}
+      animate={{ opacity:1, y:0, scale:1 }}
+      transition={{ delay:i*0.06, duration:0.5, ease:[0.22,1,0.36,1] }}
+      whileHover={{ y:-6, transition:{ duration:0.28, ease:[0.22,1,0.36,1] } }}
+      style={{ position:'relative' }}>
       {selected && (
         <div style={{ position:'absolute', inset:-3, borderRadius:24, border:`2.5px solid ${C.gold}`, boxShadow:'0 0 0 6px rgba(184,134,11,0.12)', pointerEvents:'none', zIndex:2 }} />
       )}
-      <div className="school-card-grid" style={{ borderRadius:22, overflow:'hidden', background:'#fff', border:`1px solid ${selected?C.gold:C.border}`, boxShadow:selected?'0 12px 40px rgba(184,134,11,0.18)':'0 2px 12px rgba(13,17,23,0.07)', display:'flex', flexDirection:'column', transition:'all 0.35s ease' }}>
+      <div className="school-card-grid" style={{ borderRadius:22, overflow:'hidden', background:'linear-gradient(135deg,#fff 0%,#FDFAF8 100%)', border:`1px solid ${selected?C.gold:'rgba(184,134,11,0.12)'}`, boxShadow:selected?'0 12px 40px rgba(184,134,11,0.18)':'0 4px 24px rgba(13,17,23,0.08)', display:'flex', flexDirection:'column', transition:'all 0.3s cubic-bezier(.22,1,.36,1)' }}>
 
         {/* Cover */}
         <div style={{ height:200, position:'relative', overflow:'hidden', flexShrink:0, background:school.coverImageUrl?undefined:COVERS[i%COVERS.length], display:'flex', alignItems:'center', justifyContent:'center' }}>
           {school.coverImageUrl
-            ? <img src={school.coverImageUrl} alt={school.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.6s ease' }} className="school-card-img" loading="lazy" />
+            ? <img src={school.coverImageUrl} alt={school.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.7s ease' }} className="school-card-img" loading="lazy" />
             : (
               <>
                 {[...Array(4)].map((_,ci)=>(
@@ -272,7 +277,10 @@ function SchoolCardGrid({ school, i, selected, onToggle }: { school:School; i:nu
               </>
             )
           }
-          <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(13,17,23,0.65) 0%,rgba(13,17,23,0.1) 60%,transparent 100%)', pointerEvents:'none' }} />
+          {/* Gradient overlay */}
+          <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top,rgba(13,17,23,0.7) 0%,rgba(13,17,23,0.08) 55%,transparent 100%)', pointerEvents:'none' }} />
+          {/* Shimmer sweep on hover */}
+          <div style={{ position:'absolute', inset:0, background:'linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.08) 50%,transparent 65%)', backgroundSize:'200%', animation:'shimmerBg 5s linear infinite', pointerEvents:'none' }} />
 
           {/* Badges top-left */}
           <div style={{ position:'absolute', top:12, left:12, display:'flex', gap:5 }}>
@@ -679,12 +687,15 @@ export function SchoolListingClient() {
   const isFeaturedMode = urlFeatured && !userHasSearched
 
   return (
-    <div className="min-h-screen" style={{ background:'var(--schools-page-bg,#FAF7F2)' }}>
+    <div className="min-h-screen" style={{ background:'linear-gradient(180deg,#FDFAF5 0%,#F5F0E8 100%)' }}>
       <style>{`
-        .school-card-grid:hover { box-shadow:0 20px 52px rgba(13,17,23,0.14)!important; transform:translateY(-4px); }
-        .school-card-list:hover { box-shadow:0 8px 32px rgba(13,17,23,0.12)!important; }
+        .school-card-grid:hover { box-shadow:0 24px 64px rgba(13,17,23,0.14),0 0 0 1px rgba(184,134,11,0.2)!important; }
+        .school-card-list:hover { box-shadow:0 8px 32px rgba(13,17,23,0.1),0 0 0 1px rgba(184,134,11,0.15)!important; }
         .school-card-grid:hover .school-card-img,
-        .school-card-list:hover .school-card-img { transform:scale(1.06); }
+        .school-card-list:hover .school-card-img { transform:scale(1.07); }
+        @keyframes shimmerBg{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+        @keyframes floatYSlow{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
       `}</style>
 
       <AnimatePresence>{showGuest && <GuestModal onClose={()=>setShowGuest(false)} />}</AnimatePresence>
@@ -693,9 +704,13 @@ export function SchoolListingClient() {
       </AnimatePresence>
 
       {/* HERO / SEARCH */}
-      <div className="border-b border-[rgba(13,17,23,0.07)]" style={{ background:'var(--hero-bg,#FAF7F2)' }}>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <motion.div initial={{ opacity:0,y:12 }} animate={{ opacity:1,y:0 }} transition={{ duration:0.45 }}>
+      <div className="border-b border-[rgba(13,17,23,0.07)]" style={{ background:'linear-gradient(160deg,#FDFAF5 0%,#F5EDD8 70%,#EEE0C0 100%)', position:'relative', overflow:'hidden' }}>
+        {/* Animated bg blobs */}
+        <div style={{position:'absolute',top:'-60px',right:'5%',width:320,height:320,background:'radial-gradient(circle,rgba(184,134,11,0.12),transparent 70%)',filter:'blur(48px)',pointerEvents:'none',animation:'floatY 8s ease-in-out infinite'}}/>
+        <div style={{position:'absolute',bottom:'-40px',left:'8%',width:240,height:240,background:'radial-gradient(circle,rgba(10,95,85,0.07),transparent 70%)',filter:'blur(40px)',pointerEvents:'none',animation:'floatYSlow 11s ease-in-out infinite',animationDelay:'-4s'}}/>
+        <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(rgba(184,134,11,0.07) 1px,transparent 1px)',backgroundSize:'32px 32px',pointerEvents:'none'}}/>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12" style={{position:'relative',zIndex:1}}>
+          <motion.div initial={{ opacity:0,y:16 }} animate={{ opacity:1,y:0 }} transition={{ duration:0.55,ease:[0.22,1,0.36,1] }}>
             {isFeaturedMode && (
               <div style={{ display:'inline-flex', alignItems:'center', gap:6, background:'rgba(184,134,11,0.1)', border:'1px solid rgba(184,134,11,0.25)', borderRadius:100, padding:'5px 14px', marginBottom:10 }}>
                 <Star style={{ width:12,height:12, fill:C.gold, color:C.gold }} />

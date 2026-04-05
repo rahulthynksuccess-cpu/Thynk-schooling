@@ -210,6 +210,25 @@ export function HeroSection() {
         </div>
       </div>
 
+      <style>{`
+        @keyframes scrollDot{0%{transform:translateY(-100%)}100%{transform:translateY(400%)}}
+        @keyframes blobMorph{0%,100%{border-radius:60% 40% 30% 70%/60% 30% 70% 40%}25%{border-radius:30% 60% 70% 40%/50% 60% 30% 60%}50%{border-radius:50% 60% 30% 60%/30% 40% 70% 50%}75%{border-radius:40% 60% 50% 40%/60% 30% 50% 40%}}
+        @keyframes heroFloat{0%,100%{transform:translateY(0) rotate(0deg)}33%{transform:translateY(-10px) rotate(1.5deg)}66%{transform:translateY(-5px) rotate(-1deg)}}
+        @keyframes spin-slow{to{transform:rotate(360deg)}}
+        @keyframes spin-rev{to{transform:rotate(-360deg)}}
+        @keyframes float-fast{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+        @keyframes pulseRing{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.8);opacity:0}}
+        .spin-slow{animation:spin-slow 30s linear infinite}
+        .spin-rev{animation:spin-rev 22s linear infinite}
+        .float-fast{animation:float-fast 3s ease-in-out infinite}
+        .blob-shape{animation:blobMorph 12s ease-in-out infinite}
+      `}</style>
+
+      {/* Morphing blobs */}
+      <div style={{position:'absolute',top:'8%',right:'5%',width:320,height:320,background:'radial-gradient(circle,rgba(184,134,11,0.12),transparent 70%)',filter:'blur(40px)',pointerEvents:'none',zIndex:0,animation:'heroFloat 9s ease-in-out infinite'}}/>
+      <div style={{position:'absolute',bottom:'15%',left:'2%',width:260,height:260,background:'radial-gradient(circle,rgba(10,95,85,0.08),transparent 70%)',filter:'blur(50px)',pointerEvents:'none',zIndex:0,animation:'heroFloat 12s ease-in-out infinite',animationDelay:'-4s'}}/>
+      <div className="blob-shape" style={{position:'absolute',top:'40%',right:'2%',width:180,height:180,background:'rgba(232,197,71,0.07)',filter:'blur(30px)',pointerEvents:'none',zIndex:0}}/>
+
       {/* Scroll indicator */}
       <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1.2,duration:.8}} style={{position:'absolute',bottom:32,left:'50%',transform:'translateX(-50%)',display:'flex',flexDirection:'column',alignItems:'center',gap:8,zIndex:2}}>
         <span style={{fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:500,letterSpacing:'.15em',textTransform:'uppercase',color:'rgba(13,17,23,0.3)'}}>Scroll</span>
@@ -218,7 +237,20 @@ export function HeroSection() {
         </div>
       </motion.div>
 
-      <style>{`@keyframes scrollDot{0%{transform:translateY(-100%)}100%{transform:translateY(400%)}}`}</style>
+      {/* Floating side achievements */}
+      <motion.div initial={{opacity:0,x:40}} animate={{opacity:1,x:0}} transition={{delay:1,duration:.7,ease:[.22,1,.36,1]}}
+        style={{position:'absolute',left:'clamp(8px,2vw,24px)',top:'38%',transform:'translateY(-50%)',display:'flex',flexDirection:'column',gap:10,zIndex:3,pointerEvents:'none'}}>
+        {[{emoji:'🏫',n:'350+',t:'Cities'},{emoji:'📋',n:'98%',t:'Success'},{emoji:'⭐',n:'4.8',t:'Rating'}].map((it,i)=>(
+          <motion.div key={it.t} initial={{opacity:0,x:-20}} animate={{opacity:1,x:0}} transition={{delay:1.1+i*.12}}
+            style={{background:'rgba(255,255,255,0.92)',backdropFilter:'blur(16px)',borderRadius:12,padding:'10px 14px',boxShadow:'0 8px 32px rgba(13,17,23,0.12)',border:'1px solid rgba(255,255,255,0.8)',display:'flex',alignItems:'center',gap:8,animation:`heroFloat ${4+i}s ease-in-out infinite`,animationDelay:`${-i*1.5}s`}}>
+            <span style={{fontSize:18}}>{it.emoji}</span>
+            <div>
+              <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:15,color:'#0D1117',lineHeight:1}}>{it.n}</div>
+              <div style={{fontFamily:'Inter,sans-serif',fontSize:10,color:'#718096',fontWeight:500}}>{it.t}</div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
     </section>
   )
 }
