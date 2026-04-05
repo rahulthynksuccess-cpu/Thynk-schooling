@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import {
   School, Users, TrendingUp, DollarSign, FileCheck,
-  Star, ArrowUpRight, CheckCircle2, PhoneCall, Package, Eye
+  Star, ArrowUpRight, CheckCircle2, PhoneCall, Package, Eye, LayoutGrid
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -311,7 +311,7 @@ export default function AdminDashboardPage(){
             {icon:School,    label:'Verify Schools',   sub:'Review pending',  color:T.gold,   href:'/admin/schools?isVerified=false'},
             {icon:Eye,       label:'Moderate Reviews', sub:'Approve & flag',  color:T.purple, href:'/admin/reviews'},
             {icon:PhoneCall, label:'Counselling Queue',sub:'Call pending',    color:T.green,  href:'/admin/counselling'},
-            {icon:Package,   label:'Manage Packages',  sub:'Edit lead packs', color:T.blue,   href:'/admin/packages'},
+            {icon:LayoutGrid, label:'Subscription Plans', sub:'Manage plan tiers',  color:T.blue,   href:'/admin/subscription-plans'},
           ].map(a=>(
             <Link key={a.label} href={a.href} style={{...card,padding:'16px 18px',textDecoration:'none',display:'flex',alignItems:'center',gap:12,transition:'all 0.2s'}}
               onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.borderColor=`${a.color}30`;(e.currentTarget as HTMLElement).style.transform='translateY(-2px)'}}

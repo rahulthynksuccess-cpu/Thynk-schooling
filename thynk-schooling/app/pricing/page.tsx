@@ -5,19 +5,15 @@ import { motion, useInView } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
-import { Check, ArrowRight, Zap, Star } from 'lucide-react'
+import { Check, ArrowRight, Star } from 'lucide-react'
 import Link from 'next/link'
-import { LeadPackage } from '@/types'
 import { useContent } from '@/hooks/useContent'
-
-// ── Plan colours by index / key (fallback palette) ──────────────────────────
-const PLAN_COLORS = ['#4A5568','#718096','#B8860B','#553C9A','#0D6EFD','#198754','#DC3545','#FD7E14']
 
 // ── Default FAQ items (overridden by content controller) ─────────────────────
 const DEFAULT_FAQ=[
   {q:'What is a lead credit?',a:'One lead credit = one parent enquiry. When a parent fills an admission form for your school, you use a credit to unlock their full contact details.'},
-  {q:'Can I try before I pay?',a:'Yes! Our Free plan lets you list your school and receive 5 lead credits every month, forever. No credit card required.'},
-  {q:'Do credits roll over?',a:'Monthly plan credits do not roll over. However, bulk credit packs you purchase separately never expire.'},
+  {q:'Can I try before I pay?',a:'Yes! Our Free subscription plan lets you list your school and receive lead credits every month, forever. No credit card required.'},
+  {q:'Do credits roll over?',a:'Monthly plan credits do not roll over. Credits refresh each month with your active subscription plan.'},
   {q:'Can I change plans anytime?',a:'Yes. Upgrade or downgrade instantly from your school dashboard. Unused credits from the old plan carry over for 30 days.'},
   {q:'Is there a setup fee?',a:'Never. Listing is free, plans are monthly with no lock-in, and you can cancel anytime.'},
 ]
@@ -36,7 +32,6 @@ export default function PricingPage() {
     queryFn:()=>fetch('/api/admin?action=subscription-plans').then(r=>r.json()),
     staleTime:5*60*1000,
   })
-  const {data:packages}=useQuery<{data:LeadPackage[]}>({queryKey:['packages'],queryFn:()=>fetch('/api/admin/lead-pricing').then(r=>r.json()),staleTime:5*60*1000})
   const faqRef=useRef(null)
   const faqInView=useInView(faqRef,{once:true})
 
@@ -81,7 +76,7 @@ export default function PricingPage() {
             </motion.h1>
             <motion.p initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:.65,delay:.2,ease:[.22,1,.36,1]}}
               style={{fontFamily:'Inter,sans-serif',fontSize:'clamp(15px,1.7vw,18px)',color:'rgba(250,247,242,0.55)',lineHeight:1.8,fontWeight:300,maxWidth:560,margin:'0 auto 12px'}}>
-              List free. Buy leads you actually want. No wastage, no lock-in.
+              List free. Subscribe to a plan and get leads included every month. No wastage, no lock-in.
             </motion.p>
             {/* Trust stars */}
             <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.4,duration:.6}} style={{display:'flex',alignItems:'center',justifyContent:'center',gap:8,marginTop:28}}>
@@ -91,7 +86,7 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* ── PLANS ── */}
+        {/* ── SUBSCRIPTION PLANS ── */}
         <section style={{background:'#F5F0E8',padding:'clamp(72px,10vw,120px) 0',position:'relative',overflow:'hidden'}}>
           <div style={{position:'absolute',top:'50%',left:'50%',transform:'translate(-50%,-50%)',fontFamily:'"Cormorant Garamond",serif',fontSize:'clamp(150px,22vw,300px)',fontWeight:700,color:'rgba(13,17,23,0.022)',whiteSpace:'nowrap',pointerEvents:'none',userSelect:'none',letterSpacing:'-8px'}}>PLANS</div>
           <div style={{maxWidth:'1600px',margin:'0 auto',padding:'0 clamp(24px,5vw,80px)',position:'relative'}}>
@@ -107,33 +102,65 @@ export default function PricingPage() {
                   const {label,period}=formatPrice(plan.price)
                   return (
                     <motion.div key={plan.id} initial={{opacity:0,y:40,scale:.94}} whileInView={{opacity:1,y:0,scale:1}} viewport={{once:true,amount:.1}} transition={{delay:i*.1,duration:.65,ease:[.22,1,.36,1]}}>
-                      <div className={`pricing-card${plan.isHot?' hot':''}`} style={{height:'100%',display:'flex',flexDirection:'column',position:'relative'}}>
+                      {/* Card wrapper — relative so the vertical "Most Popular" strip can be positioned */}
+                      <div className={`pricing-card${plan.isHot?' hot':''}`} style={{height:'100%',display:'flex',flexDirection:'column',position:'relative',overflow:'hidden'}}>
+
+                        {/* ── Most Popular vertical badge strip ── */}
                         {plan.isHot&&(
-                          <div style={{position:'absolute',top:-14,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#B8860B,#E8C547)',color:'#0D1117',fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',padding:'4px 16px',borderRadius:100,whiteSpace:'nowrap',boxShadow:'0 4px 20px rgba(184,134,11,0.4)'}}>
-                            ⚡ Most Popular
+                          <div style={{
+                            position:'absolute',
+                            top:0,
+                            right:0,
+                            width:26,
+                            height:'100%',
+                            background:'linear-gradient(180deg,#B8860B,#E8C547)',
+                            display:'flex',
+                            alignItems:'center',
+                            justifyContent:'center',
+                            zIndex:2,
+                          }}>
+                            <span style={{
+                              writingMode:'vertical-rl',
+                              textOrientation:'mixed',
+                              transform:'rotate(180deg)',
+                              fontFamily:'Inter,sans-serif',
+                              fontSize:9,
+                              fontWeight:800,
+                              letterSpacing:'.14em',
+                              textTransform:'uppercase',
+                              color:'#0D1117',
+                              whiteSpace:'nowrap',
+                              userSelect:'none',
+                            }}>
+                              ⚡ Most Popular
+                            </span>
                           </div>
                         )}
-                        <div style={{marginBottom:24}}>
-                          <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#0D1117',marginBottom:4}}>{plan.name}</div>
-                          <div style={{fontFamily:'Inter,sans-serif',fontSize:12,color:'#718096',fontWeight:300}}>{plan.description}</div>
-                        </div>
-                        <div style={{marginBottom:28}}>
-                          <span style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.2rem,4vw,3.2rem)',color:plan.isHot?'#B8860B':'#0D1117',letterSpacing:'-2px'}}>{label}</span>
-                          <span style={{fontFamily:'Inter,sans-serif',fontSize:13,color:'#A0ADB8',fontWeight:300,marginLeft:4}}>{period}</span>
-                        </div>
-                        <div style={{display:'flex',flexDirection:'column',gap:10,flex:1,marginBottom:28}}>
-                          {plan.features.map(f=>(
-                            <div key={f} style={{display:'flex',alignItems:'flex-start',gap:10,fontFamily:'Inter,sans-serif',fontSize:13,color:'#4A5568',fontWeight:300}}>
-                              <div style={{width:18,height:18,borderRadius:'50%',background:plan.isHot?'rgba(184,134,11,0.12)':'rgba(13,17,23,0.06)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.25)':'rgba(13,17,23,0.1)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
-                                <Check style={{width:10,height:10,color:plan.isHot?'#B8860B':'#4A5568'}}/>
+
+                        {/* Card body — pad right so content never hides under the strip */}
+                        <div style={{flex:1,display:'flex',flexDirection:'column',paddingRight: plan.isHot ? 34 : 0}}>
+                          <div style={{marginBottom:24}}>
+                            <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#0D1117',marginBottom:4}}>{plan.name}</div>
+                            <div style={{fontFamily:'Inter,sans-serif',fontSize:12,color:'#718096',fontWeight:300}}>{plan.description}</div>
+                          </div>
+                          <div style={{marginBottom:28}}>
+                            <span style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.2rem,4vw,3.2rem)',color:plan.isHot?'#B8860B':'#0D1117',letterSpacing:'-2px'}}>{label}</span>
+                            <span style={{fontFamily:'Inter,sans-serif',fontSize:13,color:'#A0ADB8',fontWeight:300,marginLeft:4}}>{period}</span>
+                          </div>
+                          <div style={{display:'flex',flexDirection:'column',gap:10,flex:1,marginBottom:28}}>
+                            {plan.features.map(f=>(
+                              <div key={f} style={{display:'flex',alignItems:'flex-start',gap:10,fontFamily:'Inter,sans-serif',fontSize:13,color:'#4A5568',fontWeight:300}}>
+                                <div style={{width:18,height:18,borderRadius:'50%',background:plan.isHot?'rgba(184,134,11,0.12)':'rgba(13,17,23,0.06)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.25)':'rgba(13,17,23,0.1)'}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:1}}>
+                                  <Check style={{width:10,height:10,color:plan.isHot?'#B8860B':'#4A5568'}}/>
+                                </div>
+                                {f}
                               </div>
-                              {f}
-                            </div>
-                          ))}
+                            ))}
+                          </div>
+                          <Link href={`/register?role=school&plan=${plan.planKey}`} className={plan.isHot?'btn btn-gold':'btn btn-dark'} style={{textAlign:'center',justifyContent:'center',display:'flex'}}>
+                            {plan.cta} <ArrowRight style={{width:14,height:14}}/>
+                          </Link>
                         </div>
-                        <Link href={`/register?role=school&plan=${plan.planKey}`} className={plan.isHot?'btn btn-gold':'btn btn-dark'} style={{textAlign:'center',justifyContent:'center',display:'flex'}}>
-                          {plan.cta} <ArrowRight style={{width:14,height:14}}/>
-                        </Link>
                       </div>
                     </motion.div>
                   )
@@ -142,30 +169,6 @@ export default function PricingPage() {
             )}
           </div>
         </section>
-
-                {/* ── CREDIT PACKS ── */}
-        {(packages?.data?.length??0)>0&&(
-          <section style={{background:'#FDFAF5',padding:'clamp(72px,10vw,120px) 0'}}>
-            <div style={{maxWidth:'1600px',margin:'0 auto',padding:'0 clamp(24px,5vw,80px)'}}>
-              <div style={{textAlign:'center',marginBottom:'clamp(40px,5vw,60px)'}}>
-                <div className="eyebrow" style={{justifyContent:'center'}}><span style={{width:22,height:1.5,background:'#B8860B',display:'block'}}/>Bulk Packs<span style={{width:22,height:1.5,background:'#B8860B',display:'block'}}/></div>
-                <h2 className="section-title">Buy <em className="shimmer-text" style={{fontStyle:'italic'}}>Lead Credits</em> in Bulk</h2>
-                <p className="section-sub" style={{maxWidth:480,margin:'16px auto 0'}}>Credits never expire. Combine with any plan.</p>
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:'clamp(10px,1.5vw,16px)'}} className="grid-3">
-                {packages!.data.map((p,i)=>(
-                  <motion.div key={p.id} initial={{opacity:0,y:24}} whileInView={{opacity:1,y:0}} viewport={{once:true}} transition={{delay:i*.08,duration:.55,ease:[.22,1,.36,1]}}
-                    className="card hover-lift" style={{padding:'clamp(20px,3vw,32px)',textAlign:'center'}}>
-                    <div style={{fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'#B8860B',marginBottom:12}}>{p.credits} Credits</div>
-                    <div style={{fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:36,color:'#0D1117',letterSpacing:'-1.5px',marginBottom:4}}>₹{p.price.toLocaleString('en-IN')}</div>
-                    <div style={{fontFamily:'Inter,sans-serif',fontSize:12,color:'#A0ADB8',marginBottom:20}}>₹{Math.round(p.price/p.credits)} per credit</div>
-                    <Link href="/register?role=school" className="btn btn-outline-gold" style={{display:'flex',justifyContent:'center',fontSize:13}}>Buy Pack</Link>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         {/* ── FAQ ── */}
         <section ref={faqRef} style={{background:'#0D1117',padding:'clamp(72px,10vw,120px) 0'}} className="section-dark">

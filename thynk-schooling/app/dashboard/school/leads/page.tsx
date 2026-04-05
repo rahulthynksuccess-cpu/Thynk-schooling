@@ -1,9 +1,9 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Phone, MapPin, CheckCircle2, ShoppingCart, Package, Zap, ChevronRight, Loader2 } from 'lucide-react'
+import { Phone, MapPin, CheckCircle2, ShoppingCart, LayoutGrid, Zap, ChevronRight, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -14,7 +14,6 @@ const NAV = [
   {href:'/dashboard/school/applications',label:'Applications',icon:'📝'},
   {href:'/dashboard/school/reviews',label:'Reviews',icon:'⭐'},
   {href:'/dashboard/school/analytics',label:'Analytics',icon:'📈'},
-  {href:'/dashboard/school/packages',label:'Packages',icon:'📦'},
 ]
 
 const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }> = {
@@ -74,8 +73,8 @@ function SchoolLayout({ children, title, credits }: { children: React.ReactNode;
       <main style={{ flex:1, overflowY:'auto', padding:'clamp(20px,3vw,40px)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, gap:16, flexWrap:'wrap' }}>
           <h1 style={{ fontFamily:'serif', fontWeight:700, fontSize:'clamp(1.6rem,3vw,2.4rem)', color:'#111827', letterSpacing:'-1px', margin:0 }}>{title}</h1>
-          <Link href="/dashboard/school/packages" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, boxShadow:'0 4px 12px rgba(245,158,11,0.3)' }}>
-            <Package size={14} /> Buy Credits
+          <Link href="/pricing" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, boxShadow:'0 4px 12px rgba(245,158,11,0.3)' }}>
+            <LayoutGrid size={14} /> Upgrade Plan
           </Link>
         </div>
         {children}
@@ -84,11 +83,17 @@ function SchoolLayout({ children, title, credits }: { children: React.ReactNode;
   )
 }
 
-// ── Package Cards shown when no credits ──────────────────────────────────────
-function PackageCards() {
-  const { data: packages, isLoading } = useQuery<any[]>({
-    queryKey: ['lead-packages'],
-    queryFn: () => fetch('/api/lead-packages', { cache:'no-store' }).then(r => r.json()),
+// ── Subscription Plan Cards shown when no credits ────────────────────────────
+function SubscriptionPlanCards() {
+  interface SubPlan {
+    id: string; planKey: string; name: string; description: string
+    price: number; leadsPerMonth: number; features: string[]
+    isHot: boolean; cta: string; sortOrder: number; isActive: boolean
+  }
+
+  const { data: plans, isLoading } = useQuery<SubPlan[]>({
+    queryKey: ['subscription-plans-leads'],
+    queryFn: () => fetch('/api/admin?action=subscription-plans', { cache:'no-store' }).then(r => r.json()),
     staleTime: 10 * 60 * 1000,
   })
 
@@ -100,35 +105,53 @@ function PackageCards() {
     </div>
   )
 
-  if (!packages?.length) return null
+  const activePlans = (plans ?? []).filter(p => p.isActive)
+  if (!activePlans.length) return null
 
   return (
     <div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16 }}>
-        {packages.map((pkg, i) => (
-          <Link key={pkg.id} href="/dashboard/school/packages" style={{ textDecoration:'none' }}>
+        {activePlans.map((plan, i) => (
+          <Link key={plan.id} href={`/pricing`} style={{ textDecoration:'none' }}>
             <div style={{
-              background:'#fff', border: i===1 ? '2px solid #F59E0B' : '1px solid rgba(0,0,0,0.08)',
+              background:'#fff',
+              border: plan.isHot ? '2px solid #F59E0B' : '1px solid rgba(0,0,0,0.08)',
               borderRadius:14, padding:'20px 18px', position:'relative', cursor:'pointer',
               transition:'transform 0.15s,box-shadow 0.15s',
-              boxShadow: i===1 ? '0 4px 24px rgba(245,158,11,0.18)' : '0 1px 4px rgba(0,0,0,0.06)',
+              boxShadow: plan.isHot ? '0 4px 24px rgba(245,158,11,0.18)' : '0 1px 4px rgba(0,0,0,0.06)',
+              overflow: 'hidden',
             }}>
-              {i===1 && (
-                <div style={{ position:'absolute', top:-11, left:'50%', transform:'translateX(-50%)', background:'#F59E0B', color:'#fff', fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:99, whiteSpace:'nowrap' }}>
-                  ⭐ Most Popular
+              {/* Vertical Most Popular strip */}
+              {plan.isHot && (
+                <div style={{
+                  position:'absolute', top:0, right:0, width:22, height:'100%',
+                  background:'linear-gradient(180deg,#B8860B,#F59E0B)',
+                  display:'flex', alignItems:'center', justifyContent:'center', zIndex:2,
+                }}>
+                  <span style={{
+                    writingMode:'vertical-rl', textOrientation:'mixed', transform:'rotate(180deg)',
+                    fontSize:8, fontWeight:800, letterSpacing:'.12em', textTransform:'uppercase',
+                    color:'#fff', whiteSpace:'nowrap', userSelect:'none',
+                  }}>
+                    ⭐ Most Popular
+                  </span>
                 </div>
               )}
-              <div style={{ width:36, height:36, borderRadius:9, background:'rgba(245,158,11,0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12 }}>
-                <Package size={18} color="#F59E0B" />
-              </div>
-              <div style={{ fontWeight:700, fontSize:15, color:'#111827', marginBottom:3 }}>{pkg.name}</div>
-              {pkg.description && <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>{pkg.description}</div>}
-              <div style={{ fontWeight:800, fontSize:22, color:'#111827' }}>
-                ₹{(pkg.price / 100).toLocaleString('en-IN')}
-              </div>
-              <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>for {pkg.leadCredits} credits</div>
-              <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'#F59E0B', fontWeight:600 }}>
-                Buy Now <ChevronRight size={12} />
+              <div style={{ paddingRight: plan.isHot ? 28 : 0 }}>
+                <div style={{ width:36, height:36, borderRadius:9, background:'rgba(245,158,11,0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12 }}>
+                  <LayoutGrid size={18} color="#F59E0B" />
+                </div>
+                <div style={{ fontWeight:700, fontSize:15, color:'#111827', marginBottom:3 }}>{plan.name}</div>
+                {plan.description && <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>{plan.description}</div>}
+                <div style={{ fontWeight:800, fontSize:22, color:'#111827' }}>
+                  {plan.price === 0 ? 'Free' : `₹${Math.round(plan.price / 100).toLocaleString('en-IN')}`}
+                </div>
+                <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>
+                  {plan.price === 0 ? 'forever' : '/month'} · {plan.leadsPerMonth === -1 ? 'Unlimited' : plan.leadsPerMonth} leads/mo
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'#F59E0B', fontWeight:600 }}>
+                  {plan.cta} <ChevronRight size={12} />
+                </div>
               </div>
             </div>
           </Link>
@@ -184,7 +207,7 @@ function LeadsContent() {
 
   return (
     <div>
-      {/* No-credits banner + package cards */}
+      {/* No-credits banner + subscription plan cards */}
       {credits === 0 && (
         <div style={{ marginBottom:28 }}>
           <div style={{ background:'linear-gradient(135deg,#FFFBEB,#FEF3C7)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:14, padding:'18px 22px', marginBottom:20, display:'flex', alignItems:'center', gap:14, flexWrap:'wrap' }}>
@@ -193,14 +216,14 @@ function LeadsContent() {
             </div>
             <div style={{ flex:1, minWidth:200 }}>
               <div style={{ fontWeight:700, fontSize:14, color:'#111827', marginBottom:3 }}>You have 0 lead credits</div>
-              <div style={{ fontSize:13, color:'#6B7280' }}>Purchase a package below to unlock parent contact details and start admissions.</div>
+              <div style={{ fontSize:13, color:'#6B7280' }}>Upgrade your subscription plan to get lead credits included every month and start unlocking parent contacts.</div>
             </div>
-            <Link href="/dashboard/school/packages" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, flexShrink:0 }}>
-              View All Packages <ChevronRight size={13} />
+            <Link href="/pricing" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, flexShrink:0 }}>
+              View Plans <ChevronRight size={13} />
             </Link>
           </div>
-          <div style={{ fontWeight:600, fontSize:14, color:'#374151', marginBottom:12 }}>Choose a Lead Package</div>
-          <PackageCards />
+          <div style={{ fontWeight:600, fontSize:14, color:'#374151', marginBottom:12 }}>Choose a Subscription Plan</div>
+          <SubscriptionPlanCards />
           <div style={{ height:1, background:'rgba(0,0,0,0.07)', margin:'28px 0' }} />
         </div>
       )}
@@ -286,7 +309,7 @@ function LeadsContent() {
                           <button
                             onClick={() => buyMutation.mutate(lead.id)}
                             disabled={buyingId === lead.id || credits === 0}
-                            title={credits === 0 ? 'Buy credits to unlock leads' : 'Use 1 credit to unlock'}
+                            title={credits === 0 ? 'Upgrade your plan to get credits' : 'Use 1 credit to unlock'}
                             style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:8, background: credits===0 ? '#F3F4F6' : '#111827', border:'none', color: credits===0 ? '#9CA3AF' : '#fff', cursor: credits===0 ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:500 }}
                           >
                             {buyingId === lead.id ? <Loader2 size={12} style={{ animation:'spin 1s linear infinite' }} /> : <ShoppingCart size={12} />}

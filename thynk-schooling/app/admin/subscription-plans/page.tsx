@@ -213,12 +213,15 @@ export default function SubscriptionPlansPage() {
           ))
           : (plans ?? []).map((plan, i) => (
             <motion.div key={plan.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .06 }}
-              style={{ ...card, opacity: plan.isActive ? 1 : .5, position: 'relative' }}>
+              style={{ ...card, opacity: plan.isActive ? 1 : .5, position: 'relative', overflow: 'hidden' }}>
               {plan.isHot && (
-                <div style={{ position: 'absolute', top: '-10px', right: '16px', background: 'linear-gradient(135deg,#B8860B,#E8C547)', color: '#0D1117', fontSize: '9px', fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', padding: '3px 10px', borderRadius: '100px', fontFamily: 'DM Sans,sans-serif' }}>
-                  ⚡ Most Popular
+                <div style={{ position: 'absolute', top: 0, right: 0, width: 22, height: '100%', background: 'linear-gradient(180deg,#B8860B,#E8C547)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
+                  <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', fontFamily: 'DM Sans,sans-serif', fontSize: '8px', fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: '#0D1117', whiteSpace: 'nowrap', userSelect: 'none' }}>
+                    ⚡ Most Popular
+                  </span>
                 </div>
               )}
+              <div style={{ paddingRight: plan.isHot ? 28 : 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(255,92,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <LayoutGrid style={{ width: '16px', height: '16px', color: '#FF5C00' }} />
@@ -251,6 +254,7 @@ export default function SubscriptionPlansPage() {
                   <Trash2 style={{ width: '12px', height: '12px' }} /> Delete
                 </button>
               </div>
+              </div>{/* end paddingRight wrapper */}
             </motion.div>
           ))}
       </div>

@@ -38,7 +38,7 @@ export default function AdminPaymentsPage() {
   const todayAmount  = data?.todayAmount  || 0
 
   return (
-    <AdminLayout pageClass="admin-page-payments" title="Payments" subtitle="All transactions — lead purchases, package payments">
+    <AdminLayout pageClass="admin-page-payments" title="Payments" subtitle="All transactions — lead purchases, subscription plan payments">
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>
         {[

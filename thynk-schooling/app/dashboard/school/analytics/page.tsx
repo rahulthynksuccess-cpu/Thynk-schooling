@@ -12,7 +12,7 @@ const NAV = [
   {href:'/dashboard/school/applications',label:'Applications',icon:'📝'},
   {href:'/dashboard/school/reviews',label:'Reviews',icon:'⭐'},
   {href:'/dashboard/school/analytics',label:'Analytics',icon:'📈'},
-  {href:'/dashboard/school/packages',label:'Packages',icon:'📦'}
+  
 ]
 
 function SchoolLayout({ children, title }: { children: React.ReactNode; title: string }) {

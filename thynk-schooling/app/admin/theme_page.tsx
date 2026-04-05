@@ -251,8 +251,8 @@ const PAGES = [
   { label:'⭐ Admin — Reviews',      url: '/admin/reviews',       sections:[
     { key:'admin-reviews',   label:'Reviews'            },
   ]},
-  { label:'📦 Admin — Packages',     url: '/admin/packages',      sections:[
-    { key:'admin-packages',  label:'Lead Packages'      },
+  { label:'📦 Admin — Subscription Plans', url: '/admin/subscription-plans',      sections:[
+    { key:'admin-subscription-plans', label:'Subscription Plans' },
   ]},
   { label:'🔔 Admin — Notifications', url: '/admin/notifications', sections:[
     { key:'admin-notifications', label:'Notifications'         },
@@ -961,7 +961,7 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
 
     case 'admin-packages': return (
       <div>
-        <Heading text="Admin — Lead Packages" />
+        <Heading text="Admin — Subscription Plans" />
         <G2>
           <div>
             <label style={lbl}>Cards & Backgrounds</label>
