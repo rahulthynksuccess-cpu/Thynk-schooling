@@ -15,6 +15,7 @@ import bcrypt from 'bcryptjs'
 // ─── overview ─────────────────────────────────────────────────────────────────
 
 async function getOverview() {
+  await ensureSchoolsTable()
   const [users, schools, apps, leads, pendingSchoolsCt, newUsersToday, leadsToday,
          revenue, pendingApps, pendingReviews, reviews,
          weeklyLeads, monthlyGrowth, boardDist, appStatus,
@@ -112,35 +113,64 @@ async function getAnalytics() {
 
 // ─── schools ──────────────────────────────────────────────────────────────────
 
+async function ensureSchoolsTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS schools (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      admin_user_id UUID UNIQUE, name VARCHAR(300), slug VARCHAR(300) UNIQUE,
+      tagline VARCHAR(300), affiliation_no VARCHAR(100), description TEXT,
+      founding_year INTEGER, total_students INTEGER, student_teacher_ratio VARCHAR(20),
+      school_type VARCHAR(100), board TEXT[], gender_policy VARCHAR(100),
+      medium_of_instruction VARCHAR(100), recognition VARCHAR(100),
+      classes_from VARCHAR(50), classes_to VARCHAR(50),
+      monthly_fee_min INTEGER, monthly_fee_max INTEGER, annual_fee INTEGER,
+      admission_open BOOLEAN DEFAULT false, admission_academic_year VARCHAR(50),
+      facilities TEXT[], sports TEXT[], languages TEXT[], extracurriculars TEXT[],
+      address_line1 TEXT, state VARCHAR(100), city VARCHAR(100), locality VARCHAR(100),
+      pincode VARCHAR(10), latitude NUMERIC(10,7), longitude NUMERIC(10,7),
+      phone VARCHAR(20), email VARCHAR(200), website_url VARCHAR(300),
+      principal_name VARCHAR(200), logo_url VARCHAR(500), cover_url VARCHAR(500),
+      rating NUMERIC(3,1) DEFAULT 0, is_verified BOOLEAN DEFAULT false,
+      is_featured BOOLEAN DEFAULT false, is_active BOOLEAN DEFAULT true,
+      profile_completed BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+}
+
 async function getAdminSchools(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const page = Math.max(1, Number(searchParams.get('page') || 1))
-  const limit = Math.min(50, Number(searchParams.get('limit') || 20))
-  const offset = (page - 1) * limit
-  const search = searchParams.get('search') || ''
-  // Support both ?status=verified and ?isVerified=true (what the frontend sends)
-  const isVerified = searchParams.get('isVerified'), isFeatured = searchParams.get('isFeatured'), isActive = searchParams.get('isActive')
-  const status = searchParams.get('status')
-  const conds: string[] = ['1=1']; const params: any[] = []
-  if (search) { params.push(`%${search}%`); conds.push(`(s.name ILIKE $${params.length} OR s.city ILIKE $${params.length} OR u.phone ILIKE $${params.length})`) }
-  if (isVerified === 'true'  || status === 'verified')   conds.push('s.is_verified=true')
-  if (isVerified === 'false' || status === 'unverified') conds.push('(s.is_verified=false OR s.is_verified IS NULL)')
-  if (isFeatured === 'true'  || status === 'featured')   conds.push('s.is_featured=true')
-  if (isActive === 'false')                              conds.push('(s.is_active=false OR s.is_active IS NULL)')
-  const where = conds.join(' AND ')
-  params.push(limit, offset)
-  const [rows, ct] = await Promise.all([
-    db.query(`SELECT s.id, s.name, s.slug, s.city, s.board, s.is_verified, s.is_featured, s.is_active, s.rating, s.created_at, COALESCE(u.phone,u.mobile) AS owner_phone FROM schools s LEFT JOIN users u ON u.id=s.admin_user_id WHERE ${where} ORDER BY s.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params),
-    db.query(`SELECT COUNT(*) FROM schools s LEFT JOIN users u ON u.id=s.admin_user_id WHERE ${where}`, params.slice(0,-2)),
-  ])
-  const data = rows.rows.map((s:any) => ({
-    id: s.id, name: s.name || '—', slug: s.slug || '',
-    city: s.city || '—', board: Array.isArray(s.board) ? s.board : [],
-    isVerified: s.is_verified || false, isFeatured: s.is_featured || false, isActive: s.is_active !== false,
-    avgRating: Number(s.rating) || 0, totalLeads: 0,
-    ownerPhone: s.owner_phone || '—', createdAt: s.created_at,
-  }))
-  return NextResponse.json({ data, total: Number(ct.rows[0].count), page, limit })
+  try {
+    await ensureSchoolsTable()
+    const { searchParams } = new URL(req.url)
+    const page = Math.max(1, Number(searchParams.get('page') || 1))
+    const limit = Math.min(50, Number(searchParams.get('limit') || 20))
+    const offset = (page - 1) * limit
+    const search = searchParams.get('search') || ''
+    const isVerified = searchParams.get('isVerified'), isFeatured = searchParams.get('isFeatured'), isActive = searchParams.get('isActive')
+    const status = searchParams.get('status')
+    const conds: string[] = ['1=1']; const params: any[] = []
+    if (search) { params.push(`%${search}%`); conds.push(`(s.name ILIKE $${params.length} OR s.city ILIKE $${params.length} OR COALESCE(u.phone,u.mobile) ILIKE $${params.length})`) }
+    if (isVerified === 'true'  || status === 'verified')   conds.push('s.is_verified=true')
+    if (isVerified === 'false' || status === 'unverified') conds.push('(s.is_verified=false OR s.is_verified IS NULL)')
+    if (isFeatured === 'true'  || status === 'featured')   conds.push('s.is_featured=true')
+    if (isActive === 'false')                              conds.push('(s.is_active=false OR s.is_active IS NULL)')
+    const where = conds.join(' AND ')
+    params.push(limit, offset)
+    const [rows, ct] = await Promise.all([
+      db.query(`SELECT s.id, s.name, s.slug, s.city, s.board, s.is_verified, s.is_featured, s.is_active, s.rating, s.created_at, COALESCE(u.phone,u.mobile) AS owner_phone FROM schools s LEFT JOIN users u ON u.id=s.admin_user_id WHERE ${where} ORDER BY s.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params),
+      db.query(`SELECT COUNT(*) FROM schools s LEFT JOIN users u ON u.id=s.admin_user_id WHERE ${where}`, params.slice(0,-2)),
+    ])
+    const data = rows.rows.map((s:any) => ({
+      id: s.id, name: s.name || '—', slug: s.slug || '',
+      city: s.city || '—', board: Array.isArray(s.board) ? s.board : [],
+      isVerified: s.is_verified || false, isFeatured: s.is_featured || false, isActive: s.is_active !== false,
+      avgRating: Number(s.rating) || 0, totalLeads: 0,
+      ownerPhone: s.owner_phone || '—', createdAt: s.created_at,
+    }))
+    return NextResponse.json({ data, total: Number(ct.rows[0].count), page, limit })
+  } catch (e: any) {
+    console.error('[getAdminSchools]', e.message)
+    return NextResponse.json({ data: [], total: 0, page: 1, limit: 20, error: e.message })
+  }
 }
 
 async function updateAdminSchool(req: NextRequest) {
@@ -196,6 +226,7 @@ async function getAdminUsers(req: NextRequest) {
   const users = rows.rows.map((r: any) => ({
     id: r.id, fullName: r.full_name || '—', phone: r.phone || '—', email: r.email || null,
     role: r.role, profileDone: r.profile_completed || false,
+    school: r.school_name || null,
     lastLogin: r.last_login_at || null, joinedAt: r.created_at, schoolName: r.school_name || null,
     status: r.is_active === false ? 'suspended' : 'active',
   }))

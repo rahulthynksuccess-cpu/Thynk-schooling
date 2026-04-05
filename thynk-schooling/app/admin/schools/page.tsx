@@ -27,10 +27,11 @@ export default function AdminSchoolsPage() {
   if (tab === 'Featured')  params.set('isFeatured', 'true')
   if (tab === 'Inactive')  params.set('isActive', 'false')
 
-  const { data, isLoading } = useQuery<{ data: AdminSchool[]; total: number }>({
+  const { data, isLoading, error } = useQuery<{ data: AdminSchool[]; total: number; error?: string }>({
     queryKey: ['admin-schools', tab, search, page],
     queryFn: () => fetch(`/api/admin?action=schools&${params}`, { cache: 'no-store' }).then(r => r.json()),
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
+    retry: 2,
   })
 
   const inv = () => queryClient.invalidateQueries({ queryKey: ['admin-schools'] })
@@ -103,7 +104,9 @@ export default function AdminSchoolsPage() {
             <tbody>
               {isLoading
                 ? [1,2,3,4,5,6,7,8].map(i => <tr key={i}><td colSpan={7} style={{ padding: '10px 16px' }}><div style={{ height: 36, background: 'rgba(255,255,255,0.04)', borderRadius: 8, animation: 'pulse 1.5s ease-in-out infinite' }} /></td></tr>)
-                : schools.length === 0
+                : (data?.error)
+                  ? <tr><td colSpan={7} style={{ padding: 48, textAlign: 'center', color: '#F87171', fontFamily: 'DM Sans,sans-serif', fontSize: 13 }}>API Error: {data.error}</td></tr>
+                  : schools.length === 0
                   ? <tr><td colSpan={7} style={{ padding: 48, textAlign: 'center', color: 'var(--admin-text-faint,rgba(255,255,255,0.3))', fontFamily: 'DM Sans,sans-serif', fontSize: 13 }}>No schools found.</td></tr>
                   : schools.map(s => (
                       <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)', transition: 'background .15s' }}
