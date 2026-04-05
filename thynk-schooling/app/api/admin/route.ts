@@ -620,7 +620,220 @@ async function sendNotification(req: NextRequest) {
   return NextResponse.json({ success: true, message: 'Notification logged' })
 }
 
-// ─── health ───────────────────────────────────────────────────────────────────
+// ─── message triggers (email + whatsapp) ─────────────────────────────────────
+
+const DEFAULT_TRIGGERS = [
+  { trigger_key:'welcome_school',              category:'Onboarding',   event:'School Registration',        description:'Sent when a school admin creates an account',               recipients:['school'], variables:['{{school_name}}','{{admin_name}}','{{login_url}}','{{profile_url}}'],
+    email_school_subject:'Welcome to Thynk Schooling — {{school_name}} is now live!',
+    email_school_body:`Hi {{admin_name}},\n\nCongratulations! {{school_name}} is now listed on Thynk Schooling.\n\nNext steps:\n• Complete your school profile\n• Your Free plan includes 5 lead credits/month\n• Parents in your city can now find and apply\n\nLogin: {{login_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`Hi {{admin_name}} 👋\n\n*{{school_name}}* is now live on Thynk Schooling!\n\nComplete your profile to start receiving leads 👉 {{profile_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:0 },
+  { trigger_key:'welcome_parent',              category:'Onboarding',   event:'Parent Registration',        description:'Sent when a parent creates an account',                     recipients:['parent'], variables:['{{parent_name}}','{{login_url}}','{{search_url}}'],
+    email_school_subject:'', email_school_body:'', email_school_enabled:false,
+    email_parent_subject:'Welcome to Thynk Schooling, {{parent_name}}!',
+    email_parent_body:`Hi {{parent_name}},\n\nWelcome! You now have access to 12,000+ verified schools across 350+ Indian cities.\n\nStart searching: {{search_url}}\n\nThe Thynk Schooling Team`,
+    email_parent_enabled:true,
+    wa_school_body:'', wa_school_enabled:false,
+    wa_parent_body:`Hi {{parent_name}} 👋\n\nWelcome to *Thynk Schooling*! 🎓\n\nSearch 12,000+ verified schools across India 👉 {{search_url}}`,
+    wa_parent_enabled:true, sort_order:1 },
+  { trigger_key:'profile_complete_school',     category:'Onboarding',   event:'School Profile Completed',   description:'Sent when a school fills all profile fields',               recipients:['school'], variables:['{{school_name}}','{{admin_name}}','{{profile_url}}','{{dashboard_url}}'],
+    email_school_subject:`{{school_name}} — Profile complete! You're ready to get leads`,
+    email_school_body:`Hi {{admin_name}},\n\nGreat news — {{school_name}}'s profile is 100% complete!\n\nComplete profiles get 3x more parent views.\n\nView profile: {{profile_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`✅ *Profile complete!*\n\n{{school_name}}'s listing is fully set up. Complete profiles get 3x more views.\n\nDashboard: {{dashboard_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:2 },
+  { trigger_key:'new_lead_school',             category:'Leads',        event:'New Lead Received',          description:'School notified when a parent submits an enquiry',          recipients:['school'], variables:['{{school_name}}','{{admin_name}}','{{child_name}}','{{class_applying}}','{{city}}','{{lead_count}}','{{dashboard_url}}'],
+    email_school_subject:'New admission enquiry for {{school_name}} — {{child_name}}',
+    email_school_body:`Hi {{admin_name}},\n\nNew admission enquiry!\nChild: {{child_name}} | Class: {{class_applying}} | City: {{city}}\n\nYou have {{lead_count}} unread leads. Unlock to see full contact details.\n\nDashboard: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`🔔 *New lead for {{school_name}}!*\n\nChild: {{child_name}}\nClass: {{class_applying}} | City: {{city}}\n\nUnlock contact details 👉 {{dashboard_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:3 },
+  { trigger_key:'application_confirmation',    category:'Leads',        event:'Application Submitted',      description:'Parent receives confirmation after submitting an enquiry',  recipients:['parent'], variables:['{{parent_name}}','{{child_name}}','{{school_name}}','{{class_applying}}','{{applications_url}}'],
+    email_school_subject:'', email_school_body:'', email_school_enabled:false,
+    email_parent_subject:'Application submitted — {{school_name}}',
+    email_parent_body:`Hi {{parent_name}},\n\nYour admission enquiry has been submitted!\n\nSchool: {{school_name}}\nChild: {{child_name}} | Class: {{class_applying}}\n\nTrack applications: {{applications_url}}\n\nThe Thynk Schooling Team`,
+    email_parent_enabled:true,
+    wa_school_body:'', wa_school_enabled:false,
+    wa_parent_body:`✅ *Application submitted!*\n\nHi {{parent_name}}, your enquiry for *{{school_name}}* ({{child_name}}, Class {{class_applying}}) is received.\n\nTrack it here 👉 {{applications_url}}`,
+    wa_parent_enabled:true, sort_order:4 },
+  { trigger_key:'lead_credit_used',            category:'Leads',        event:'Lead Credit Used',           description:'School unlocked a lead — credit deducted',                 recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{credits_remaining}}','{{parent_name}}','{{parent_phone}}','{{child_name}}','{{upgrade_url}}'],
+    email_school_subject:'Lead unlocked — {{credits_remaining}} credits remaining',
+    email_school_body:`Hi {{admin_name}},\n\nYou've unlocked a lead for {{school_name}}.\n\nParent: {{parent_name}} | Phone: {{parent_phone}}\nChild: {{child_name}}\nCredits remaining: {{credits_remaining}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`🔓 *Lead unlocked!*\n\nParent: {{parent_name}}\nPhone: {{parent_phone}} | Child: {{child_name}}\n\nCredits remaining: *{{credits_remaining}}*`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:5 },
+  { trigger_key:'lead_expiry_warning',         category:'Leads',        event:'Lead Expiry Warning',        description:'School warned 7 days before leads expire',                  recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{expiring_count}}','{{expiry_date}}','{{dashboard_url}}'],
+    email_school_subject:'⚠️ {{expiring_count}} leads expiring in 7 days — {{school_name}}',
+    email_school_body:`Hi {{admin_name}},\n\nYou have {{expiring_count}} unread leads expiring on {{expiry_date}}.\n\nUnlock them now: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`⚠️ *{{expiring_count}} leads expire on {{expiry_date}}!*\n\nDon't lose these parent enquiries for {{school_name}}.\n\nUnlock now 👉 {{dashboard_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:6 },
+  { trigger_key:'subscription_activated',      category:'Subscription', event:'Plan Activated',             description:'School upgrades to a paid plan',                            recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{plan_name}}','{{credits_added}}','{{amount_paid}}','{{next_billing}}','{{dashboard_url}}'],
+    email_school_subject:'{{plan_name}} plan activated for {{school_name}} 🎉',
+    email_school_body:`Hi {{admin_name}},\n\nYour {{plan_name}} plan is now active for {{school_name}}!\n\nCredits added: {{credits_added}}\nAmount: ₹{{amount_paid}} | Next billing: {{next_billing}}\n\nDashboard: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`🎉 *{{plan_name}} plan activated!*\n\n{{school_name}} is now on {{plan_name}}.\nCredits added: *{{credits_added}}* | Next billing: {{next_billing}}\n\nDashboard: {{dashboard_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:7 },
+  { trigger_key:'subscription_expiry_warning', category:'Subscription', event:'Plan Expiry Warning',        description:'School notified 5 days before subscription renews/expires',  recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{plan_name}}','{{expiry_date}}','{{renewal_url}}'],
+    email_school_subject:'Your {{plan_name}} plan renews in 5 days — {{school_name}}',
+    email_school_body:`Hi {{admin_name}},\n\nYour {{plan_name}} plan for {{school_name}} renews on {{expiry_date}}.\n\nUpdate billing if needed: {{renewal_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`⏰ *Plan renews in 5 days*\n\n{{school_name}}'s {{plan_name}} plan renews on {{expiry_date}}.\n\nManage subscription: {{renewal_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:8 },
+  { trigger_key:'subscription_cancelled',      category:'Subscription', event:'Plan Cancelled / Expired',   description:'School plan lapses or is cancelled',                        recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{plan_name}}','{{upgrade_url}}'],
+    email_school_subject:'Your {{plan_name}} plan has ended — {{school_name}}',
+    email_school_body:`Hi {{admin_name}},\n\nYour {{plan_name}} subscription for {{school_name}} has ended.\n\nYou're now on the Free plan (5 credits/month).\n\nReactivate: {{upgrade_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`📋 *{{plan_name}} plan ended*\n\n{{school_name}} is now on the Free plan (5 credits/month).\n\nReactivate: {{upgrade_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:9 },
+  { trigger_key:'application_status_update',   category:'Applications', event:'Application Status Changed', description:'Parent notified when school updates application status',     recipients:['parent'], variables:['{{parent_name}}','{{child_name}}','{{school_name}}','{{new_status}}','{{message}}','{{applications_url}}'],
+    email_school_subject:'', email_school_body:'', email_school_enabled:false,
+    email_parent_subject:`Update on {{child_name}}'s application — {{school_name}}`,
+    email_parent_body:`Hi {{parent_name}},\n\nThere's an update on {{child_name}}'s application at {{school_name}}.\n\nStatus: {{new_status}}\n\nView details: {{applications_url}}\n\nThe Thynk Schooling Team`,
+    email_parent_enabled:true,
+    wa_school_body:'', wa_school_enabled:false,
+    wa_parent_body:`📬 *Application update*\n\n{{child_name}}'s application at *{{school_name}}* is now: *{{new_status}}*\n\nView details 👉 {{applications_url}}`,
+    wa_parent_enabled:true, sort_order:10 },
+  { trigger_key:'review_approved',             category:'Reviews',      event:'Review Published',           description:'Parent notified when their review goes live',               recipients:['parent'], variables:['{{parent_name}}','{{school_name}}','{{review_url}}'],
+    email_school_subject:'', email_school_body:'', email_school_enabled:false,
+    email_parent_subject:'Your review for {{school_name}} is now live',
+    email_parent_body:`Hi {{parent_name}},\n\nYour review for {{school_name}} has been approved and is now visible to other parents.\n\nView it: {{review_url}}\n\nThe Thynk Schooling Team`,
+    email_parent_enabled:false,
+    wa_school_body:'', wa_school_enabled:false,
+    wa_parent_body:`⭐ *Your review is live!*\n\nYour review for *{{school_name}}* is now helping other parents.\n\nView it 👉 {{review_url}}`,
+    wa_parent_enabled:false, sort_order:11 },
+  { trigger_key:'new_review_school',           category:'Reviews',      event:'New Review Received',        description:'School notified when a new review is submitted',            recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{rating}}','{{review_snippet}}','{{dashboard_url}}'],
+    email_school_subject:'New {{rating}}★ review for {{school_name}}',
+    email_school_body:`Hi {{admin_name}},\n\n{{school_name}} has received a new review.\n\nRating: {{rating}}/5\n"{{review_snippet}}"\n\nView and respond: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
+    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
+    wa_school_body:`⭐ *New {{rating}}★ review!*\n\n"{{review_snippet}}"\n\nRespond on your dashboard 👉 {{dashboard_url}}`,
+    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:12 },
+  { trigger_key:'counselling_booked',          category:'Counselling',  event:'Counselling Session Booked', description:'Confirmation sent to parent after booking counselling',      recipients:['parent'], variables:['{{parent_name}}','{{counsellor_name}}','{{session_date}}','{{session_time}}','{{meeting_url}}'],
+    email_school_subject:'', email_school_body:'', email_school_enabled:false,
+    email_parent_subject:'Counselling session confirmed — {{session_date}}',
+    email_parent_body:`Hi {{parent_name}},\n\nYour counselling session is confirmed!\n\nCounsellor: {{counsellor_name}}\nDate: {{session_date}} | Time: {{session_time}}\nJoin: {{meeting_url}}\n\nThe Thynk Schooling Team`,
+    email_parent_enabled:true,
+    wa_school_body:'', wa_school_enabled:false,
+    wa_parent_body:`📅 *Counselling confirmed!*\n\nHi {{parent_name}},\nYour session with *{{counsellor_name}}* is on {{session_date}} at {{session_time}}.\n\nJoin here 👉 {{meeting_url}}`,
+    wa_parent_enabled:true, sort_order:13 },
+]
+
+async function ensureTriggersTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS message_triggers (
+      id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      trigger_key     VARCHAR(100) NOT NULL UNIQUE,
+      category        VARCHAR(100) NOT NULL DEFAULT 'General',
+      event           VARCHAR(200) NOT NULL,
+      description     TEXT,
+      recipients      TEXT NOT NULL DEFAULT '[]',
+      variables       TEXT NOT NULL DEFAULT '[]',
+      email_school_subject  TEXT DEFAULT '',
+      email_school_body     TEXT DEFAULT '',
+      email_school_enabled  BOOLEAN DEFAULT false,
+      email_parent_subject  TEXT DEFAULT '',
+      email_parent_body     TEXT DEFAULT '',
+      email_parent_enabled  BOOLEAN DEFAULT false,
+      wa_school_body        TEXT DEFAULT '',
+      wa_school_enabled     BOOLEAN DEFAULT false,
+      wa_parent_body        TEXT DEFAULT '',
+      wa_parent_enabled     BOOLEAN DEFAULT false,
+      sort_order      INTEGER DEFAULT 0,
+      created_at      TIMESTAMPTZ DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+  // Seed defaults if empty
+  const ct = await db.query('SELECT COUNT(*) FROM message_triggers').catch(() => ({ rows:[{ count:'0' }] }))
+  if (parseInt(ct.rows[0].count) === 0) {
+    for (const t of DEFAULT_TRIGGERS) {
+      await db.query(
+        `INSERT INTO message_triggers
+          (trigger_key,category,event,description,recipients,variables,
+           email_school_subject,email_school_body,email_school_enabled,
+           email_parent_subject,email_parent_body,email_parent_enabled,
+           wa_school_body,wa_school_enabled,wa_parent_body,wa_parent_enabled,sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+         ON CONFLICT (trigger_key) DO NOTHING`,
+        [
+          t.trigger_key, t.category, t.event, t.description,
+          JSON.stringify(t.recipients), JSON.stringify(t.variables),
+          t.email_school_subject, t.email_school_body, t.email_school_enabled,
+          t.email_parent_subject, t.email_parent_body, t.email_parent_enabled,
+          t.wa_school_body, t.wa_school_enabled, t.wa_parent_body, t.wa_parent_enabled,
+          t.sort_order,
+        ]
+      ).catch(() => {})
+    }
+  }
+}
+
+function toTrigger(row: any) {
+  return {
+    id: row.id, triggerKey: row.trigger_key, category: row.category,
+    event: row.event, description: row.description || '',
+    recipients: (() => { try { return JSON.parse(row.recipients) } catch { return [] } })(),
+    variables:  (() => { try { return JSON.parse(row.variables)  } catch { return [] } })(),
+    email: {
+      school: { subject: row.email_school_subject || '', body: row.email_school_body || '', enabled: !!row.email_school_enabled },
+      parent: { subject: row.email_parent_subject || '', body: row.email_parent_body || '', enabled: !!row.email_parent_enabled },
+    },
+    whatsapp: {
+      school: { body: row.wa_school_body || '', enabled: !!row.wa_school_enabled },
+      parent: { body: row.wa_parent_body || '', enabled: !!row.wa_parent_enabled },
+    },
+    sortOrder: row.sort_order,
+  }
+}
+
+async function getTriggers() {
+  await ensureTriggersTable()
+  const rows = await db.query('SELECT * FROM message_triggers ORDER BY sort_order ASC, created_at ASC')
+  return NextResponse.json(rows.rows.map(toTrigger))
+}
+
+async function saveTrigger(req: NextRequest) {
+  await ensureTriggersTable()
+  const body = await req.json()
+  const {
+    triggerKey, category, event, description, recipients, variables,
+    email, whatsapp, sortOrder,
+  } = body
+  if (!triggerKey || !event) return NextResponse.json({ error: 'triggerKey and event required' }, { status: 400 })
+  const res = await db.query(
+    `INSERT INTO message_triggers
+      (trigger_key,category,event,description,recipients,variables,
+       email_school_subject,email_school_body,email_school_enabled,
+       email_parent_subject,email_parent_body,email_parent_enabled,
+       wa_school_body,wa_school_enabled,wa_parent_body,wa_parent_enabled,sort_order)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+     ON CONFLICT (trigger_key) DO UPDATE SET
+       category=$2, event=$3, description=$4, recipients=$5, variables=$6,
+       email_school_subject=$7,  email_school_body=$8,  email_school_enabled=$9,
+       email_parent_subject=$10, email_parent_body=$11, email_parent_enabled=$12,
+       wa_school_body=$13, wa_school_enabled=$14, wa_parent_body=$15, wa_parent_enabled=$16,
+       sort_order=$17, updated_at=NOW()
+     RETURNING *`,
+    [
+      triggerKey, category || 'General', event, description || '',
+      JSON.stringify(recipients ?? []), JSON.stringify(variables ?? []),
+      email?.school?.subject || '', email?.school?.body || '', email?.school?.enabled ?? false,
+      email?.parent?.subject || '', email?.parent?.body || '', email?.parent?.enabled ?? false,
+      whatsapp?.school?.body || '', whatsapp?.school?.enabled ?? false,
+      whatsapp?.parent?.body || '', whatsapp?.parent?.enabled ?? false,
+      sortOrder ?? 0,
+    ]
+  )
+  return NextResponse.json(toTrigger(res.rows[0]))
+}
+
+async function deleteTrigger(req: NextRequest) {
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  await db.query('DELETE FROM message_triggers WHERE id=$1', [id])
+  return NextResponse.json({ success: true })
+}
 
 async function health() {
   try { await db.query('SELECT 1'); return Response.json({ db: 'connected' }) }
@@ -662,6 +875,7 @@ export async function GET(req: NextRequest) {
       case 'cities':                return await getCities()
       case 'lead-pricing-defaults': return await getLeadPricingDefaults()
       case 'subscription-plans':    return await getSubPlans()
+      case 'message-triggers':      return await getTriggers()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
@@ -682,6 +896,7 @@ export async function POST(req: NextRequest) {
       case 'notifications':  return await sendNotification(req)
       case 'seed-demo':      return await seedDemo()
       case 'subscription-plans': return await saveSubPlan(req)
+      case 'message-triggers':   return await saveTrigger(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -711,6 +926,7 @@ export async function DELETE(req: NextRequest) {
       case 'reviews': return await deleteAdminReview(req)
       case 'cities':  return await deleteCity(req)
       case 'subscription-plans': return await deleteSubPlan(req)
+      case 'message-triggers':   return await deleteTrigger(req)
       case 'theme':
         await db.query("DELETE FROM site_settings WHERE key='theme'").catch(() => {})
         return NextResponse.json({ success: true })
