@@ -448,7 +448,7 @@ function buildCSSVars(values: Record<string, string>): string {
 }
 
 // ── UI Components ──────────────────────────────────────────────
-const inp: React.CSSProperties = { width:'100%', padding:'9px 12px', background:'#fff', border:'1.5px solid #EDE5D8', borderRadius:'8px', fontSize:'13px', fontFamily:'Inter,sans-serif', color:'#0D1117', outline:'none', boxSizing:'border-box' as const }
+const inp: React.CSSProperties = { width:'100%', padding:'9px 12px', background:'#fff', border:'1.5px solid #EDE5D8', borderRadius:'8px', fontSize:'13px', fontFamily:'Inter,sans-serif', color:'#0D1117', outline:'none', boxSizing:'border-box' as const, colorScheme:'light' as any }
 const lbl: React.CSSProperties = { display:'block', fontSize:'10px', fontWeight:600, letterSpacing:'1.2px', textTransform:'uppercase' as const, color:'#718096', fontFamily:'Inter,sans-serif', marginBottom:'5px' }
 
 function FieldRow({ field, value, onChange }: { field: Field; value: string; onChange: (v: string) => void }) {
@@ -624,7 +624,7 @@ export default function AdminContentPage() {
     <AdminLayout pageClass="admin-page-settings" title="Content & Style Manager" subtitle="Edit text, colours and sizes — changes apply live">
 
       {/* Top bar */}
-      <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', padding:'12px 16px', background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px', padding:'12px 16px', background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', color:'#0D1117' }}>
         <span style={{ fontSize:'12px', color:'#718096', flex:1, fontFamily:'Inter,sans-serif' }}>
           {dirtyGroups[activeGroup] ? `Unsaved changes in "${activeGroup}" — click Save to apply` : 'Make changes below then click Save. Use "Save All Pages" to save everything at once.'}
         </span>
@@ -642,7 +642,7 @@ export default function AdminContentPage() {
       <div style={{ display:'grid', gridTemplateColumns:'200px 1fr 280px', gap:'14px', alignItems:'start' }}>
 
         {/* Left sidebar */}
-        <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', position:'sticky', top:'80px' }}>
+        <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', position:'sticky', top:'80px', color:'#0D1117' }}>
           {PAGES.map(page => (
             <button key={page.label} onClick={() => setActiveGroup(page.label)}
               style={{ width:'100%', display:'flex', alignItems:'center', gap:'10px', padding:'11px 14px', border:'none', borderBottom:'1px solid rgba(13,17,23,0.05)', cursor:'pointer', textAlign:'left' as const,
@@ -659,7 +659,7 @@ export default function AdminContentPage() {
         {/* Controls */}
         <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
           {activePage?.sections.map(section => (
-            <div key={section.id} style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden' }}>
+            <div key={section.id} style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', color:'#0D1117' }}>
               <button onClick={() => setOpenSections(p => ({ ...p, [section.id]: !p[section.id] }))}
                 style={{ width:'100%', display:'flex', alignItems:'center', gap:'10px', padding:'12px 16px', border:'none', background: openSections[section.id] ? 'rgba(184,134,11,0.03)' : '#fff', cursor:'pointer', textAlign:'left' as const }}>
                 <span style={{ fontFamily:'Inter,sans-serif', fontSize:'12px', fontWeight:700, color:'#B8860B', flex:1, textTransform:'uppercase' as const, letterSpacing:'1px' }}>{section.label}</span>
@@ -678,7 +678,7 @@ export default function AdminContentPage() {
 
         {/* Live Preview */}
         <div style={{ position:'sticky', top:'80px' }}>
-          <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden' }}>
+          <div style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', color:'#0D1117' }}>
             <div style={{ padding:'10px 14px', borderBottom:'1px solid rgba(13,17,23,0.07)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <span style={{ fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase' as const, color:'#A0ADB8', fontFamily:'Inter,sans-serif' }}>Live Preview</span>
               <a href={activePage?.previewUrl || '/'} target="_blank" rel="noreferrer" style={{ fontSize:'11px', color:'#B8860B', textDecoration:'none', fontFamily:'Inter,sans-serif', fontWeight:600 }}>Open ↗</a>

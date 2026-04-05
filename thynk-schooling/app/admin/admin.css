@@ -382,6 +382,27 @@ body:has(.admin-root) {
 .admin-main input:not([type=range]):not([type=color]):not([type=checkbox]),
 .admin-main textarea { color-scheme: dark; }
 
+/* Content & Style Manager — inputs are on white cards, must stay light-scheme */
+.admin-page-settings .admin-main input:not([type=range]):not([type=color]):not([type=checkbox]),
+.admin-page-settings .admin-main textarea {
+  color-scheme: light !important;
+  background: #ffffff !important;
+  color: #0D1117 !important;
+  border-color: #EDE5D8 !important;
+}
+.admin-page-settings .admin-main input::placeholder,
+.admin-page-settings .admin-main textarea::placeholder {
+  color: #A0ADB8 !important;
+}
+
+/* Force all text inside the white content-manager cards to be dark */
+.admin-page-settings .admin-content label,
+.admin-page-settings .admin-content span:not(.sidebar-item-label),
+.admin-page-settings .admin-content p,
+.admin-page-settings .admin-content button:not(.sidebar-item):not(.header-icon-btn) {
+  color: inherit;
+}
+
 /* ── BADGES ── */
 .badge { padding: 3px 8px; border-radius: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .badge-parent    { background: rgba(96,165,250,0.1);  color: #93C5FD; border: 1px solid rgba(96,165,250,0.2); }
