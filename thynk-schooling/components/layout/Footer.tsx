@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { GraduationCap, Mail, Phone, MapPin, Instagram, Twitter, Linkedin, Youtube, Facebook } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
-const LINKS = {
+const DEFAULT_LINKS: Record<string, [string, string][]> = {
   'For Parents': [['Find Schools','/schools'],['Compare Schools','/compare'],['Free Counselling','/counselling'],['AI Recommendations','/recommendations'],['Admission Guide','/blog/admission-guide']],
   'For Schools': [['List Your School','/register?role=school'],['School Dashboard','/dashboard/school'],['Lead Marketplace','/dashboard/school/leads'],['Pricing Plans','/pricing'],['Success Stories','/blog/success-stories']],
   'Company':     [['About Us','/about'],['Blog','/blog'],['Careers','/careers'],['Press','/press'],['Contact Us','/contact']],
@@ -26,17 +26,46 @@ const FALLBACK_CITIES = [
   'Rishikesh','Mathura','Vrindavan','Ayodhya','Dharamshala','Nainital',
 ]
 
-type Media = Record<string,string>
+interface FooterColumn { id?: string; heading: string; links: { id?: string; label: string; href: string; openNewTab?: boolean }[] }
+type Media = Record<string, string>
 
 export function Footer() {
   const [media, setMedia] = useState<Media>({})
-  const [dbCities, setDbCities] = useState<{name:string;slug:string}[]>([])
+  const [dbCities, setDbCities] = useState<{ name: string; slug: string }[]>([])
+  const [footerCols, setFooterCols] = useState<FooterColumn[] | null>(null)
+
   useEffect(() => {
     fetch('/api/admin/media', { cache: 'no-store' }).then(r => r.json()).then(d => setMedia(d.data || {})).catch(() => {})
     fetch('/api/admin/cities', { cache: 'no-store' }).then(r => r.json()).then(d => {
       if (d.cities?.length) setDbCities(d.cities)
     }).catch(() => {})
+    // Load menu from DB
+    fetch('/api/admin?action=menus', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d?.footer) return
+        // Normalize: could be array [{heading, links}] or object {heading: [[label,href]]}
+        if (Array.isArray(d.footer) && d.footer.length) {
+          setFooterCols(d.footer.map((col: any) => ({
+            id: col.id,
+            heading: col.heading,
+            links: (col.links || []).map((l: any) => ({ label: l.label || l[0], href: l.href || l[1], openNewTab: l.openNewTab })),
+          })))
+        } else if (d.footer && typeof d.footer === 'object' && !Array.isArray(d.footer)) {
+          setFooterCols(Object.entries(d.footer).map(([heading, links]) => ({
+            heading,
+            links: (links as any[]).map(l => ({ label: l[0] || l.label, href: l[1] || l.href, openNewTab: l.openNewTab })),
+          })))
+        }
+      })
+      .catch(() => {})
   }, [])
+
+  // Resolve which columns to render
+  const columns: FooterColumn[] = footerCols ?? Object.entries(DEFAULT_LINKS).map(([heading, links]) => ({
+    heading,
+    links: links.map(([label, href]) => ({ label, href })),
+  }))
 
   const socialLinks = [
     { icon: Instagram, href: media.socialInstagram || '#', label: 'Instagram' },
@@ -60,7 +89,7 @@ export function Footer() {
         <div style={{ maxWidth:'1600px', margin:'0 auto', padding:'0 clamp(16px,4vw,60px)' }}>
 
           {/* Main grid */}
-          <div style={{ display:'grid', gridTemplateColumns:'minmax(240px,1.4fr) repeat(4,1fr)', gap:'40px', padding:'64px 0 48px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:`minmax(240px,1.4fr) repeat(${columns.length},1fr)`, gap:'40px', padding:'64px 0 48px', borderBottom:'1px solid rgba(255,255,255,0.05)' }}>
 
             {/* Brand column */}
             <div>
@@ -101,15 +130,21 @@ export function Footer() {
               </div>
             </div>
 
-            {/* Link columns */}
-            {Object.entries(LINKS).map(([heading, links]) => (
-              <div key={heading}>
+            {/* Dynamic link columns from DB or fallback */}
+            {columns.map(col => (
+              <div key={col.heading}>
                 <h4 style={{ fontFamily:'Inter,sans-serif', fontSize:'var(--footer-heading-size,11px)', fontWeight:700, letterSpacing:'.16em', textTransform:'uppercase', color:'var(--footer-link-hover,#B8860B)', marginBottom:'18px' }}>
-                  {heading}
+                  {col.heading}
                 </h4>
                 <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:'10px' }}>
-                  {links.map(([label, href]) => (
-                    <li key={href}><Link href={href} className="ft-link">{label}</Link></li>
+                  {col.links.map(link => (
+                    <li key={link.href + link.label}>
+                      <Link href={link.href} className="ft-link"
+                        target={link.openNewTab ? '_blank' : undefined}
+                        rel={link.openNewTab ? 'noreferrer' : undefined}>
+                        {link.label}
+                      </Link>
+                    </li>
                   ))}
                 </ul>
               </div>
