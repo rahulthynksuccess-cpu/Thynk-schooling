@@ -26,6 +26,25 @@ const card: React.CSSProperties = {
   borderRadius: 20, boxShadow: '0 2px 20px rgba(13,17,23,0.05)',
 }
 
+
+/* ── format raw DB values to readable labels ── */
+function formatLabel(raw?: string | null): string {
+  if (!raw) return ''
+  return raw
+    .replace(/_/g, ' ')
+    .replace(/\w/g, c => c.toUpperCase())
+    .replace('Co Educational Boys Girls', 'Co-Educational')
+    .replace('Co Educational', 'Co-Educational')
+    .replace('Cbse', 'CBSE')
+    .replace('Icse', 'ICSE')
+    .replace('Ib ', 'IB ')
+    .replace('K12', 'K–12')
+    .replace('Day School', 'Day School')
+    .replace('Boarding School', 'Boarding School')
+    .replace('Pre Primary', 'Pre-Primary')
+    .replace('Senior Secondary', 'Senior Secondary')
+}
+
 const TABS = ['Overview', 'Facilities', 'Fees', 'Admission', 'Reviews', 'Gallery']
 
 /* ── floating particle ── */
@@ -635,8 +654,8 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                     )}
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(165px,1fr))', gap: 10 }}>
-                      <StatCard icon={Building2}    label="School Type"   value={school.schoolType} />
-                      <StatCard icon={Users}        label="Gender Policy" value={school.genderPolicy} />
+                      <StatCard icon={Building2}    label="School Type"   value={formatLabel(school.schoolType)} />
+                      <StatCard icon={Users}        label="Gender Policy" value={formatLabel(school.genderPolicy)} />
                       <StatCard icon={Mic}          label="Medium"        value={school.mediumOfInstruction} />
                       <StatCard icon={GraduationCap} label="Classes"     value={school.classesFrom && school.classesTo ? `${school.classesFrom} – ${school.classesTo}` : null} />
                       <StatCard icon={Award}        label="Recognition"   value={school.recognition} />
@@ -919,7 +938,7 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                   {school.schoolType && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted }}><Building2 style={{ width: 13, height: 13, color: C.gold }} /> Type</span>
-                      <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 15, color: C.ink }}>{school.schoolType}</span>
+                      <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 15, color: C.ink }}>{formatLabel(school.schoolType)}</span>
                     </div>
                   )}
                 </div>
