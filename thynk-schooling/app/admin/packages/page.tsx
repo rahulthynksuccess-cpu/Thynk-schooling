@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { Plus, Pencil, Trash2, Save, X, Loader2, Package, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Save, X, Loader2, Package, ToggleLeft, ToggleRight, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LeadPackage } from '@/types'
@@ -19,19 +19,20 @@ interface PackageForm {
   validityDays: number
   description: string
   isActive: boolean
+  isFeaturedListing: boolean
 }
 
-const EMPTY: PackageForm = { name:'', leadCredits:10, price:199900, validityDays:90, description:'', isActive:true }
+const EMPTY: PackageForm = { name:'', leadCredits:10, price:199900, validityDays:90, description:'', isActive:true, isFeaturedListing:false }
 
 function PackageModal({ pkg, onClose, onSave }: {
-  pkg?: LeadPackage
+  pkg?: LeadPackage & { isFeaturedListing?: boolean }
   onClose: () => void
   onSave: (data: PackageForm) => void
 }) {
   const [form, setForm] = useState<PackageForm>(pkg ? {
     name: pkg.name, leadCredits: pkg.leadCredits, price: pkg.price,
     validityDays: pkg.validityDays, description: pkg.description || '',
-    isActive: pkg.isActive,
+    isActive: pkg.isActive, isFeaturedListing: (pkg as any).isFeaturedListing ?? false,
   } : EMPTY)
 
   const set = (k: keyof PackageForm, v: PackageForm[keyof PackageForm]) => setForm(p => ({ ...p, [k]: v }))
@@ -86,6 +87,27 @@ function PackageModal({ pkg, onClose, onSave }: {
               style={inp} />
           </div>
 
+          {/* Featured listing toggle */}
+          <div
+            onClick={() => set('isFeaturedListing', !form.isFeaturedListing)}
+            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'13px 16px', borderRadius:'10px', border:`1px solid ${form.isFeaturedListing ? 'rgba(184,134,11,0.45)' : 'rgba(255,255,255,0.07)'}`, background: form.isFeaturedListing ? 'rgba(184,134,11,0.1)' : 'transparent', cursor:'pointer', transition:'all 0.2s' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+              <Sparkles style={{ width:'15px', height:'15px', color: form.isFeaturedListing ? '#E8C547' : 'rgba(255,255,255,0.3)' }} />
+              <div>
+                <div style={{ fontFamily:'DM Sans,sans-serif', fontSize:'13px', fontWeight:600, color: form.isFeaturedListing ? '#E8C547' : 'rgba(255,255,255,0.65)' }}>
+                  Includes Featured Listing
+                </div>
+                <div style={{ fontFamily:'DM Sans,sans-serif', fontSize:'11px', color:'rgba(255,255,255,0.35)', marginTop:'2px' }}>
+                  School auto-featured on homepage for the validity period
+                </div>
+              </div>
+            </div>
+            {form.isFeaturedListing
+              ? <ToggleRight style={{ width:'22px', height:'22px', color:'#B8860B', flexShrink:0 }} />
+              : <ToggleLeft  style={{ width:'22px', height:'22px', color:'rgba(255,255,255,0.25)', flexShrink:0 }} />
+            }
+          </div>
+
           {/* Price per lead preview */}
           <div style={{ padding:'12px', borderRadius:'8px', background:'rgba(255,92,0,0.06)', border:'1px solid rgba(255,92,0,0.2)' }}>
             <div style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif' }}>Price per lead</div>
@@ -109,10 +131,10 @@ function PackageModal({ pkg, onClose, onSave }: {
 
 export default function LeadPackagesPage() {
   const queryClient = useQueryClient()
-  const [modalPkg, setModalPkg]     = useState<LeadPackage | null | undefined>(undefined)
+  const [modalPkg, setModalPkg]     = useState<(LeadPackage & { isFeaturedListing?: boolean }) | null | undefined>(undefined)
   const [modalOpen, setModalOpen]   = useState(false)
 
-  const { data: packages, isLoading } = useQuery<LeadPackage[]>({
+  const { data: packages, isLoading } = useQuery<(LeadPackage & { isFeaturedListing?: boolean })[]>({
     queryKey: ['admin-lead-packages'],
     queryFn: () => fetch('/api/lead-packages?all=true',{cache:'no-store'}).then(r=>r.json()),
     staleTime: 5 * 60 * 1000,
@@ -170,6 +192,12 @@ export default function LeadPackagesPage() {
           : (packages ?? []).map((pkg, i) => (
               <motion.div key={pkg.id} initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
                 style={{ ...card, opacity: pkg.isActive ? 1 : .5, position:'relative' }}>
+                {/* Featured listing badge */}
+                {(pkg as any).isFeaturedListing && (
+                  <div style={{ position:'absolute', top:'-10px', right:'14px', display:'inline-flex', alignItems:'center', gap:'4px', background:'linear-gradient(135deg,#B8860B,#E8C547)', color:'#0D1117', fontSize:'9px', fontWeight:700, padding:'3px 9px', borderRadius:'100px', fontFamily:'DM Sans,sans-serif', boxShadow:'0 2px 8px rgba(184,134,11,0.35)' }}>
+                    <Sparkles style={{ width:'8px', height:'8px' }} /> Featured Listing
+                  </div>
+                )}
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'14px' }}>
                   <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(255,92,0,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                     <Package style={{ width:'18px', height:'18px', color:'#FF5C00' }} />
