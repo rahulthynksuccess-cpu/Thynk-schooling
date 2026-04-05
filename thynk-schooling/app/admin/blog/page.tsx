@@ -339,7 +339,7 @@ export default function AdminBlogPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/admin?action=blog')
+      const res = await fetch('/api/admin?action=blog&admin=1')
       const data = await res.json()
       setPosts(data.posts ?? [])
     } catch { toast.error('Failed to load posts') }
