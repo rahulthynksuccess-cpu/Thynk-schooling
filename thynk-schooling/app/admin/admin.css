@@ -917,3 +917,96 @@ body:has(.admin-root) {
 .admin-page-settings .admin-main textarea::placeholder {
   color: #A0ADB8 !important;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   BLOG MANAGER — Light-scheme overrides (same as page-settings)
+   The editor, cover image, excerpt, and title fields must all
+   render as light (dark text on white) since they are on white
+   cards inside the dark admin shell.
+══════════════════════════════════════════════════════════════ */
+
+/* All inputs / textareas in the blog editor must be light */
+.admin-page-blog .admin-main input:not([type=range]):not([type=color]):not([type=checkbox]),
+.admin-page-blog .admin-main textarea {
+  color-scheme: light !important;
+  background: #FAF7F2 !important;
+  color: #0D1117 !important;
+  border-color: #EDE5D8 !important;
+}
+.admin-page-blog .admin-main input::placeholder,
+.admin-page-blog .admin-main textarea::placeholder {
+  color: #A0ADB8 !important;
+}
+
+/* Title input specifically (no background, no border) */
+.admin-page-blog .admin-main input[data-blog-title] {
+  background: transparent !important;
+  border: none !important;
+  color: #0D1117 !important;
+  color-scheme: light !important;
+}
+
+/* Slug input */
+.admin-page-blog .admin-main input[data-blog-slug] {
+  background: transparent !important;
+  border: none !important;
+  color: #B8860B !important;
+  color-scheme: light !important;
+}
+
+/* Rich text editor contenteditable area */
+.admin-page-blog [contenteditable] {
+  color: #0D1117 !important;
+  background: #ffffff !important;
+  color-scheme: light !important;
+}
+
+/* Headings inside contenteditable */
+.admin-page-blog [contenteditable] h1,
+.admin-page-blog [contenteditable] h2,
+.admin-page-blog [contenteditable] h3,
+.admin-page-blog [contenteditable] h4 {
+  color: #0D1117 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+}
+.admin-page-blog [contenteditable] h1 { font-size: 2.4rem !important; font-weight: 700 !important; letter-spacing: -1.5px !important; line-height: 1.1 !important; margin: 28px 0 14px !important; }
+.admin-page-blog [contenteditable] h2 { font-size: 1.8rem !important; font-weight: 700 !important; letter-spacing: -1px !important; line-height: 1.15 !important; margin: 24px 0 12px !important; }
+.admin-page-blog [contenteditable] h3 { font-size: 1.3rem !important; font-weight: 700 !important; margin: 20px 0 10px !important; }
+.admin-page-blog [contenteditable] p,
+.admin-page-blog [contenteditable] li,
+.admin-page-blog [contenteditable] span { color: #0D1117 !important; }
+.admin-page-blog [contenteditable] a { color: #B8860B !important; }
+
+/* Toolbar selects */
+.admin-page-blog .admin-main select {
+  color-scheme: light !important;
+  background: #ffffff !important;
+  color: #0D1117 !important;
+  border-color: #EDE5D8 !important;
+}
+
+/* White cards inside blog editor */
+.admin-page-blog .admin-content > div > div,
+.admin-page-blog .admin-content [style*="background: #fff"],
+.admin-page-blog .admin-content [style*="background:#fff"] {
+  color: #0D1117;
+}
+
+/* Labels, spans, paragraphs inside blog editor cards */
+.admin-page-blog .admin-content label { color: #718096 !important; }
+
+/* Menu manager same light treatment */
+.admin-page-settings .admin-main input:not([type=range]):not([type=color]):not([type=checkbox]),
+.admin-page-menu .admin-main input:not([type=range]):not([type=color]):not([type=checkbox]),
+.admin-page-menu .admin-main textarea {
+  color-scheme: light !important;
+  color: #0D1117 !important;
+}
+.admin-page-menu .admin-main input::placeholder,
+.admin-page-menu .admin-main textarea::placeholder {
+  color: #A0ADB8 !important;
+}
+.admin-page-menu [style*="background: #fff"],
+.admin-page-menu [style*="background:#fff"] {
+  color: #0D1117;
+}
