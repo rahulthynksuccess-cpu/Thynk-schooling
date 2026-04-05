@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import { SchoolListingClient } from '@/components/school/SchoolListingClient'
+import { Marquee } from '@/components/ui/Marquee'
 
 export const metadata = {
   title: 'Find Schools in India',
@@ -14,9 +15,11 @@ export default function SchoolsPage() {
     <>
       <Navbar />
       <main className="pt-16 min-h-screen">
+        <Marquee variant="light" speed={36} />
         <Suspense fallback={<div className="h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" /></div>}>
           <SchoolListingClient />
         </Suspense>
+        <Marquee variant="dark" speed={42} />
       </main>
       <Footer />
     </>
