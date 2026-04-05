@@ -41,25 +41,23 @@ function Particle({ x, y, size, delay, duration }: { x: number; y: number; size:
 /* ── animated ring for no-cover hero ── */
 function HeroRings() {
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
-        {[280, 420, 560, 700, 840].map((size, i) => (
-          <motion.div
-            key={i}
-            style={{
-              position: 'absolute', borderRadius: '50%',
-              width: size, height: size,
-              top: -size / 2, left: -size / 2,
-              border: `1px solid rgba(184,134,11,${0.22 - i * 0.04})`,
-            }}
-            animate={{ scale: [1, 1.05, 1], opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 3 + i * 0.7, delay: i * 0.35, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        ))}
-        {/* golden cross lines */}
-        <div style={{ position: 'absolute', width: 1, height: 220, top: -110, left: -0.5, background: 'linear-gradient(to bottom,transparent,rgba(184,134,11,0.35),transparent)' }} />
-        <div style={{ position: 'absolute', height: 1, width: 220, top: -0.5, left: -110, background: 'linear-gradient(to right,transparent,rgba(184,134,11,0.35),transparent)' }} />
-      </div>
+    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+      {[340, 520, 700, 880, 1060].map((size, i) => (
+        <motion.div
+          key={i}
+          style={{
+            position: 'absolute', borderRadius: '50%',
+            width: size, height: size,
+            top: -size / 2, left: -size / 2,
+            border: `1px solid rgba(184,134,11,${0.18 - i * 0.03})`,
+          }}
+          animate={{ scale: [1, 1.04, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 3 + i * 0.8, delay: i * 0.4, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      ))}
+      {/* golden cross lines */}
+      <div style={{ position: 'absolute', width: 1, height: 200, top: -100, left: -0.5, background: 'linear-gradient(to bottom,transparent,rgba(184,134,11,0.3),transparent)' }} />
+      <div style={{ position: 'absolute', height: 1, width: 200, top: -0.5, left: -100, background: 'linear-gradient(to right,transparent,rgba(184,134,11,0.3),transparent)' }} />
     </div>
   )
 }
@@ -247,19 +245,19 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
         style={{ position: 'relative', height: 'clamp(380px,50vw,560px)', overflow: 'hidden', background: 'linear-gradient(135deg,#060a14 0%,#0d1829 40%,#0f2642 100%)' }}
       >
         {/* Parallax image or animated background */}
-        <motion.div style={{ y: coverY, position: 'absolute', top: '-20%', left: 0, right: 0, bottom: '-20%' }}>
+        <motion.div style={{ y: coverY, position: 'absolute', inset: '-20%', insetInline: 0 }}>
           {school.coverImageUrl ? (
             <>
               <img
                 src={school.coverImageUrl} alt={school.name}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 30%' }}
+                style={{ width: '100%', height: '140%', objectFit: 'cover', objectPosition: 'center 30%' }}
               />
               {/* colour grade overlay on real photos */}
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,rgba(6,10,20,0.45) 0%,rgba(184,134,11,0.08) 100%)', mixBlendMode: 'multiply' }} />
             </>
           ) : (
             /* ── no cover: rich animated dark-gold scene ── */
-            <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg,#060a14 0%,#0d1829 40%,#0f2642 100%)' }}>
+            <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
               {/* radial ambient glow */}
               <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 80% 60% at 50% 50%,rgba(184,134,11,0.18) 0%,transparent 70%)' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 40% 40% at 20% 80%,rgba(59,130,246,0.08) 0%,transparent 60%)' }} />
@@ -340,38 +338,19 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(to right,transparent,rgba(184,134,11,0.4),transparent)' }} />
       </div>
 
-      {/* ── Marquee strip between hero and profile ── */}
-      <div className="ts-marquee-outer ts-marquee-dark" style={{ '--marquee-dur': '38s' } as React.CSSProperties}>
-        <div className="ts-marquee-track">
-          {[...Array(2)].map((_, outer) =>
-            ['🏫 Verified School', '⭐ Trusted Reviews', '📋 Easy Admission', '🤖 AI Matched', '🏙️ Pan-India Network', '✅ Free for Parents', '💬 Expert Counselling', '🎓 All Boards'].map((text, i) => (
-              <span key={`${outer}-${i}`} className="ts-marquee-item">
-                {text}
-                <span className="ts-marquee-dot" />
-              </span>
-            ))
-          )}
-        </div>
-      </div>
-
       {/* ════════════════════ PROFILE HEADER ════════════════════ */}
-      <div style={{ background: 'linear-gradient(to bottom, #F5F0E8, #FAF7F2)', borderBottom: '1px solid rgba(13,17,23,0.07)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 clamp(20px,4vw,56px)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 26, paddingTop: 36, paddingBottom: 36, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 26, marginTop: -64, marginBottom: 44, flexWrap: 'wrap' }}>
 
-          {/* Logo */}
+          {/* Logo lifted from hero */}
           <motion.div
             initial={{ opacity: 0, scale: 0.65, y: 32 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            style={{ width: 128, height: 128, borderRadius: 28, background: '#fff', border: `3px solid rgba(184,134,11,0.35)`, boxShadow: '0 12px 40px rgba(13,17,23,0.18), 0 0 0 6px rgba(184,134,11,0.08)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10 }}
+            style={{ width: 128, height: 128, borderRadius: 28, background: '#fff', border: `4px solid ${C.bg}`, boxShadow: '0 12px 40px rgba(13,17,23,0.22)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10 }}
           >
             {school.logoUrl
               ? <img src={school.logoUrl} alt={school.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 14 }} />
-              : (
-                <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,rgba(184,134,11,0.12),rgba(184,134,11,0.04))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <GraduationCap style={{ width: 54, height: 54, color: C.gold }} />
-                </div>
-              )
+              : <GraduationCap style={{ width: 54, height: 54, color: C.gold }} />
             }
           </motion.div>
 
@@ -413,29 +392,25 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
             </div>
           </motion.div>
         </div>
-      </div>
-      </div>
 
-      {/* ════ TWO-COLUMN LAYOUT ════ */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '36px clamp(20px,4vw,56px) 0' }}>
+        {/* ════ TWO-COLUMN LAYOUT ════ */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr clamp(300px,28vw,370px)', gap: 44, alignItems: 'start' }}>
 
           {/* ── LEFT ── */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
 
             {/* Tab bar */}
-            <div style={{ display: 'flex', gap: 2, background: 'rgba(13,17,23,0.04)', borderRadius: 18, padding: 5, border: `1px solid ${C.border}`, marginBottom: 36, overflowX: 'auto' }}>
+            <div style={{ display: 'flex', gap: 3, background: 'rgba(13,17,23,0.04)', borderRadius: 18, padding: 5, border: `1px solid ${C.border}`, marginBottom: 36, overflowX: 'auto' }}>
               {TABS.map(tab => (
                 <button
                   key={tab} onClick={() => setActiveTab(tab)}
                   style={{
                     padding: '11px 22px', borderRadius: 14, border: 'none', cursor: 'pointer',
                     fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 600,
-                    whiteSpace: 'nowrap', transition: 'all 0.22s cubic-bezier(.22,1,.36,1)', flexShrink: 0,
-                    background: activeTab === tab ? 'linear-gradient(135deg,#B8860B,#C9960D)' : 'transparent',
+                    whiteSpace: 'nowrap', transition: 'all 0.22s', flexShrink: 0,
+                    background: activeTab === tab ? C.ink : 'transparent',
                     color: activeTab === tab ? '#fff' : C.inkMuted,
-                    boxShadow: activeTab === tab ? '0 4px 16px rgba(184,134,11,0.35)' : 'none',
-                    transform: activeTab === tab ? 'translateY(-1px)' : 'none',
+                    boxShadow: activeTab === tab ? '0 4px 14px rgba(13,17,23,0.2)' : 'none',
                   }}
                 >
                   {tab}

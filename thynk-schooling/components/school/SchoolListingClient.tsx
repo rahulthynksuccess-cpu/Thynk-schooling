@@ -8,7 +8,7 @@ import {
   Search, MapPin, Star, BadgeCheck, GraduationCap,
   X, LayoutGrid, List, ChevronDown, ArrowRight,
   SlidersHorizontal, Plus, Check, Sparkles, BookOpen,
-  Users, GitCompare, Trophy,
+  Users, GitCompare, Trophy, Navigation2, Loader2, Hash,
 } from 'lucide-react'
 import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
@@ -18,6 +18,7 @@ import { clsx } from 'clsx'
 type Filters = SchoolSearchFilters & {
   state?: string; extraCurricular?: string[]
   language?: string[]; facilities?: string[]; sports?: string[]
+  pincode?: string; lat?: number; lng?: number; radius?: number; nearMe?: boolean
 }
 const INIT: Filters = { page: 1, limit: 15, sortBy: 'rating' }
 const C = {
@@ -46,6 +47,10 @@ async function fetchSchools(f: Filters): Promise<PaginatedResponse<School>> {
   if (f.page)                    p.set('page',             String(f.page))
   if (f.limit)                   p.set('limit',            String(f.limit))
   if (f.sortBy)                  p.set('sortBy',           f.sortBy)
+  if (f.pincode)                 p.set('pincode',          f.pincode)
+  if (f.lat !== undefined)       p.set('lat',              String(f.lat))
+  if (f.lng !== undefined)       p.set('lng',              String(f.lng))
+  if (f.radius !== undefined)    p.set('radius',           String(f.radius))
   const res = await fetch(`/api/schools?${p}`, { cache: 'no-store' })
   if (!res.ok) return { data: [], total: 0, page: 1, limit: 20, totalPages: 0 }
   return res.json()
@@ -607,6 +612,7 @@ export function SchoolListingClient() {
   const [showGuest, setShowGuest] = useState(false)
   const [userHasSearched, setUserHasSearched] = useState(false)
   const [compareList, setCompareList] = useState<School[]>([])
+  const [locStatus, setLocStatus] = useState<'idle'|'requesting'|'granted'|'denied'>('idle')
 
   const { options: states  } = useDropdown('state')
   const { options: cities  } = useDropdown('city', { parentValue: filters.state || undefined, enabled: true })
@@ -637,6 +643,34 @@ export function SchoolListingClient() {
     setApplied({ ...INIT, isFeatured: urlFeatured||undefined })
     setUserHasSearched(false)
   }, [urlFeatured])
+
+  const requestLocation = useCallback(() => {
+    if (!isAuthenticated) { setShowGuest(true); return }
+    if (!navigator.geolocation) { alert('Geolocation is not supported by your browser. Please enter a pincode instead.'); return }
+    setLocStatus('requesting')
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocStatus('granted')
+        const next: Filters = { ...INIT, lat: pos.coords.latitude, lng: pos.coords.longitude, radius: 10, nearMe: true, page: 1 }
+        setFilters(next)
+        setApplied(next)
+        setUserHasSearched(true)
+      },
+      (err) => {
+        setLocStatus('denied')
+        if (err.code === 1) alert('Location access was denied. Please allow location in browser settings, or enter a pincode below.')
+        else alert('Could not get your location. Please enter a pincode instead.')
+      },
+      { timeout: 10000, maximumAge: 60000 }
+    )
+  }, [isAuthenticated])
+
+  const clearLocation = useCallback(() => {
+    setLocStatus('idle')
+    setFilters(f => { const n = { ...f }; delete n.lat; delete n.lng; delete n.radius; delete n.nearMe; delete n.pincode; return { ...n, page: 1 } })
+    setApplied(f => { const n = { ...f }; delete n.lat; delete n.lng; delete n.radius; delete n.nearMe; delete n.pincode; return { ...n, page: 1 } })
+    setUserHasSearched(false)
+  }, [])
 
   // Toggle school in compare list
   const toggleCompare = useCallback((school: School) => {
@@ -670,6 +704,8 @@ export function SchoolListingClient() {
 
   type ChipData = { label:string; clear:()=>void }
   const chips: ChipData[] = []
+  if (applied.nearMe)       chips.push({ label:`📍 Near Me (${applied.radius ?? 10} km)`, clear: clearLocation })
+  if (applied.pincode && !applied.nearMe) chips.push({ label:`📮 Pincode: ${applied.pincode}`, clear:()=>{ set('pincode',undefined); setApplied(f=>({...f,pincode:undefined})) } })
   if (applied.state)        chips.push({ label:`🗺 ${applied.state}`, clear:()=>{ set('state',undefined); set('city',undefined); setApplied(f=>({...f,state:undefined,city:undefined})) }})
   if (applied.city)         chips.push({ label:`📍 ${applied.city}`,  clear:()=>{ set('city',undefined); setApplied(f=>({...f,city:undefined})) }})
   if (applied.schoolType)   chips.push({ label:applied.schoolType,    clear:()=>set('schoolType',undefined) })
@@ -745,7 +781,8 @@ export function SchoolListingClient() {
             {isFeaturedMode ? 'Top verified featured schools — search to explore all schools' : 'Search, compare and shortlist from 12,000+ verified schools'}
           </p>
 
-          <div className="flex gap-3 max-w-2xl mb-6">
+          {/* ── Search bar row ── */}
+          <div className="flex gap-3 max-w-2xl mb-3">
             <div className="flex items-center gap-3 flex-1 bg-white border border-[rgba(13,17,23,0.14)] rounded-2xl px-4 py-3 focus-within:border-gold focus-within:shadow-[0_0_0_3px_rgba(184,134,11,0.1)] transition-all" style={{ boxShadow:'0 2px 8px rgba(13,17,23,0.06)' }}>
               <Search className="w-4 h-4 text-ink-faint flex-shrink-0" />
               <input type="text" placeholder="School name, board, area, city…" value={filters.query||''}
@@ -757,12 +794,86 @@ export function SchoolListingClient() {
               )}
             </div>
             <button onClick={search}
-              className="flex items-center gap-2.5 px-6 rounded-2xl font-semibold text-sm transition-all hover:-translate-y-0.5"
+              className="flex items-center gap-2.5 px-6 rounded-2xl font-semibold text-sm transition-all hover:-translate-y-0.5 flex-shrink-0"
               style={{ background:'var(--ink)', color:'var(--ivory)', boxShadow:'0 2px 8px rgba(13,17,23,0.2)' }}
               onMouseEnter={e=>(e.currentTarget as HTMLButtonElement).style.background='var(--gold)'}
               onMouseLeave={e=>(e.currentTarget as HTMLButtonElement).style.background='var(--ink)'}>
               <Search className="w-4 h-4" /> Search
             </button>
+          </div>
+
+          {/* ── Location row: GPS button + pincode input ── */}
+          <div className="flex items-center gap-3 max-w-2xl mb-6 flex-wrap">
+            {!filters.nearMe ? (
+              <button
+                onClick={requestLocation}
+                disabled={locStatus === 'requesting'}
+                className="group flex items-center gap-2 h-9 px-4 rounded-full border text-sm font-semibold transition-all select-none"
+                style={{
+                  background: locStatus === 'denied' ? 'rgba(239,68,68,0.06)' : 'white',
+                  border: locStatus === 'denied' ? '1.5px solid rgba(239,68,68,0.35)' : '1.5px solid rgba(13,17,23,0.15)',
+                  color: locStatus === 'denied' ? '#EF4444' : 'var(--ink-light)',
+                  cursor: locStatus === 'requesting' ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {locStatus === 'requesting'
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color:'var(--gold)' }} />
+                  : <Navigation2 className="w-3.5 h-3.5" style={{ color: locStatus === 'denied' ? '#EF4444' : 'var(--gold)' }} />}
+                <span>
+                  {locStatus === 'requesting' ? 'Getting location…'
+                    : locStatus === 'denied'  ? 'Location denied'
+                    : 'Use My Location'}
+                </span>
+                {locStatus === 'idle' && <span className="text-xs font-normal" style={{ color:'var(--ink-faint)' }}>· schools within 10 km</span>}
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 h-9 px-4 rounded-full border text-sm font-semibold"
+                style={{ background:'rgba(184,134,11,0.08)', border:'1.5px solid rgba(184,134,11,0.28)', color:'var(--gold)' }}>
+                <Navigation2 className="w-3.5 h-3.5" />
+                <span>Showing schools within 10 km</span>
+                <button onClick={clearLocation} className="ml-1 w-4 h-4 rounded-full flex items-center justify-center hover:bg-gold/20 transition-colors">
+                  <X className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            )}
+
+            <span className="text-xs font-medium" style={{ color:'var(--ink-faint)' }}>or</span>
+
+            {/* Pincode input */}
+            <div className="flex items-center gap-2 h-9 px-3 rounded-full bg-white transition-all focus-within:shadow-[0_0_0_3px_rgba(184,134,11,0.08)]"
+              style={{ border:'1.5px solid rgba(13,17,23,0.15)' }}>
+              <Hash className="w-3.5 h-3.5 flex-shrink-0" style={{ color:'var(--ink-faint)' }} />
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="Enter pincode"
+                value={filters.pincode || ''}
+                onChange={e => {
+                  const v = e.target.value.replace(/\D/g,'').slice(0,6)
+                  if (filters.nearMe) clearLocation()
+                  set('pincode', v || undefined)
+                  if (v.length === 6) {
+                    const next = { ...filters, pincode: v, lat: undefined, lng: undefined, nearMe: undefined, page: 1 }
+                    setFilters(next); setApplied(next); setUserHasSearched(true)
+                  }
+                }}
+                className="w-28 bg-transparent outline-none text-sm"
+                style={{ color:'var(--ink)' }}
+              />
+              {filters.pincode && (
+                <button onClick={()=>{ set('pincode',undefined); setApplied(f=>({...f,pincode:undefined})) }}
+                  className="w-4 h-4 rounded-full bg-ivory-2 flex items-center justify-center flex-shrink-0 hover:bg-ivory-3 transition-colors">
+                  <X className="w-2.5 h-2.5 text-ink-light" />
+                </button>
+              )}
+            </div>
+
+            {locStatus === 'denied' && (
+              <p className="w-full text-xs" style={{ color:'#EF4444' }}>
+                ⚠️ Location permission denied. Enable it in browser settings, or search by pincode above.
+              </p>
+            )}
           </div>
 
           {/* Filter pills */}
