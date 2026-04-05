@@ -140,17 +140,6 @@ export interface Lead {
   expiresAt?: string
 }
 
-// ── Lead Package ──────────────────────────────────────────────
-export interface LeadPackage {
-  id: string
-  name: string
-  leadCredits: number
-  price: number
-  validityDays: number
-  isActive: boolean
-  description?: string
-}
-
 // ── Lead Credits ──────────────────────────────────────────────
 export interface LeadCredits {
   schoolId: string

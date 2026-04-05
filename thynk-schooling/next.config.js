@@ -52,7 +52,6 @@ const nextConfig = {
 
       // ── School portal ────────────────────────────────────────────────────────
       { source: '/api/leads',         destination: '/api/school-portal?action=leads' },
-      { source: '/api/lead-packages', destination: '/api/school-portal?action=lead-packages' },
 
       // ── Settings / dropdowns ─────────────────────────────────────────────────
       { source: '/api/settings/dropdown/seed', destination: '/api/settings?action=seed' },
@@ -80,6 +79,7 @@ const nextConfig = {
       { source: '/api/admin/notifications',         destination: '/api/admin?action=notifications' },
       { source: '/api/admin/seed-demo',             destination: '/api/admin?action=seed-demo' },
       { source: '/api/admin/health',                destination: '/api/admin?action=health' },
+      { source: '/api/admin/subscription-plans',    destination: '/api/admin?action=subscription-plans' },
     ]
   },
 

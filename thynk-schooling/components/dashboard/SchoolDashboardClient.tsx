@@ -10,7 +10,7 @@ import {
   BarChart3, GraduationCap, LogOut, Menu, X,
   ArrowUpRight, CheckCircle2, Clock,
   Loader2, MapPin, Sparkles, Phone, Flame,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, LayoutGrid
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
@@ -30,7 +30,7 @@ const NAV = [
   { icon: Users,           label: 'Leads',          href: '/dashboard/school/leads',        badge: 'new' },
   { icon: FileText,        label: 'Applications',   href: '/dashboard/school/applications', badge: null },
   { icon: Star,            label: 'Reviews',        href: '/dashboard/school/reviews',      badge: null },
-  { icon: Package,         label: 'Lead Packages',  href: '/dashboard/school/packages',     badge: null },
+  { icon: LayoutGrid,      label: 'Subscription Plan', href: '/pricing',                       badge: null },
   { icon: BarChart3,       label: 'Analytics',      href: '/dashboard/school/analytics',    badge: null },
   { icon: Settings,        label: 'School Profile', href: '/school/complete-profile',       badge: null },
 ]
@@ -222,7 +222,7 @@ function LeadRow({ lead, onBuy, buying, index }: { lead: Lead; onBuy: (id: strin
           <motion.button onClick={() => onBuy(lead.id)} disabled={buying} className="buy-btn"
             whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
             {buying ? <Loader2 size={12} className="spin" /> : <ShoppingCart size={12} />}
-            Buy Lead
+            Unlock Lead
           </motion.button>
         )}
       </td>
@@ -325,7 +325,7 @@ export function SchoolDashboardClient() {
     { icon: Users,    label: 'Total Leads',    value: stats?.totalLeads ?? 0,        color: '#F59E0B', href: '/dashboard/school/leads',        trend: 'up', trendVal: `+${stats?.newLeadsToday ?? 0} today`, sub: 'Parent enquiries' },
     { icon: FileText, label: 'Applications',   value: stats?.totalApplications ?? 0, color: '#6366F1', href: '/dashboard/school/applications', trend: null, trendVal: null, sub: 'Admission requests' },
     { icon: Star,     label: 'Avg Rating',     value: stats?.avgRating ? parseFloat(stats.avgRating.toFixed(1)) : 0, color: '#10B981', href: '/dashboard/school/reviews', trend: null, trendVal: null, sub: 'Parent reviews' },
-    { icon: Zap,      label: 'Lead Credits',   value: credits?.availableCredits ?? 0, color: '#EC4899', href: '/dashboard/school/packages', trend: null, trendVal: null, sub: 'Available to unlock' },
+    { icon: Zap,      label: 'Lead Credits',   value: credits?.availableCredits ?? 0, color: '#EC4899', href: '/pricing', trend: null, trendVal: null, sub: 'Available to unlock' },
   ]
 
   return (
@@ -373,8 +373,8 @@ export function SchoolDashboardClient() {
                   <span className="hc-label">credits</span>
                 </div>
               )}
-              <Link href="/dashboard/school/packages" className="header-buy-btn">
-                <Sparkles size={13} /> Buy Credits
+              <Link href="/pricing" className="header-buy-btn">
+                <Sparkles size={13} /> Upgrade Plan
               </Link>
             </div>
           </header>
@@ -505,7 +505,7 @@ export function SchoolDashboardClient() {
                         Expires {new Date(credits.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                       </div>
                     )}
-                    <Link href="/dashboard/school/packages" className="credits-buy-btn">
+                    <Link href="/pricing" className="credits-buy-btn">
                       <Package size={14} /> Buy More Credits
                     </Link>
                   </>
@@ -513,7 +513,7 @@ export function SchoolDashboardClient() {
                   <div className="credits-empty">
                     <Package size={40} color="#E5E7EB" />
                     <p>No credits yet</p>
-                    <Link href="/dashboard/school/packages" className="credits-buy-btn">Buy Lead Package</Link>
+                    <Link href="/pricing" className="credits-buy-btn">Upgrade Plan</Link>
                   </div>
                 )}
               </motion.div>

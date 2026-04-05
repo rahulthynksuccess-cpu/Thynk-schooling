@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   LayoutDashboard, School, Users, FileCheck, Star,
-  TrendingUp, DollarSign, Package, Settings, Palette, LayoutGrid,
+  TrendingUp, DollarSign, Settings, Palette, LayoutGrid,
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
   BarChart3, FileText, ChevronRight, ExternalLink, Mail,
   AlertTriangle, Image as ImageIcon, MapPin
@@ -27,8 +27,7 @@ const NAV_GROUPS = [
     { icon:PhoneCall,  label:'Counselling',  href:'/admin/counselling' },
   ]},
   { label:'Monetisation', items:[
-    { icon:DollarSign,   label:'Lead Pricing',        href:'/admin/lead-pricing' },
-    { icon:Package,      label:'Lead Packages',        href:'/admin/packages' },
+    { icon:DollarSign,   label:'Lead Pricing',         href:'/admin/lead-pricing' },
     { icon:LayoutGrid,   label:'Subscription Plans',   href:'/admin/subscription-plans' },
     { icon:FileText,     label:'Payments',             href:'/admin/payments' },
   ]},
