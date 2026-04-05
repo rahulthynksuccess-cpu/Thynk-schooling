@@ -908,6 +908,51 @@ async function seedDemo() {
   return NextResponse.json({ success: true, credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123', dashboard:'/dashboard/school' },{ role:'Parent', phone:'9000000002', password:'Parent@123', dashboard:'/dashboard/parent' }] })
 }
 
+// ─── marquee ──────────────────────────────────────────────────────────────────
+async function ensureMarqueeTable() {
+  await db.query(`CREATE TABLE IF NOT EXISTS marquee_items (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    text TEXT NOT NULL,
+    emoji TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(() => {})
+}
+async function getMarqueeItems() {
+  await ensureMarqueeTable()
+  const r = await db.query(`SELECT id, text, emoji, sort_order FROM marquee_items WHERE is_active=true ORDER BY sort_order, created_at`).catch(() => ({ rows: [] }))
+  if (!r.rows.length) {
+    const defaults = [
+      {emoji:'🏫',text:'12,000+ Verified Schools Across India'},
+      {emoji:'⭐',text:'Trusted by 1 Lakh+ Parents'},
+      {emoji:'🎓',text:'CBSE · ICSE · IB · State Board Schools'},
+      {emoji:'🏙️',text:'Schools in 350+ Indian Cities'},
+      {emoji:'🤖',text:'AI-Powered School Recommendations'},
+      {emoji:'✅',text:'Free to Use for Parents — Always'},
+      {emoji:'📋',text:'One-Click Admission Applications'},
+      {emoji:'💬',text:'1-on-1 Expert Counselling Available'},
+    ]
+    for (let i=0;i<defaults.length;i++) {
+      await db.query(`INSERT INTO marquee_items(text,emoji,sort_order) VALUES($1,$2,$3) ON CONFLICT DO NOTHING`,[defaults[i].text,defaults[i].emoji,i]).catch(()=>{})
+    }
+    const r2 = await db.query(`SELECT id,text,emoji,sort_order FROM marquee_items WHERE is_active=true ORDER BY sort_order`).catch(()=>({rows:[]}))
+    return NextResponse.json({ items: r2.rows })
+  }
+  return NextResponse.json({ items: r.rows })
+}
+async function saveMarqueeItems(req: NextRequest) {
+  await ensureMarqueeTable()
+  const { items } = await req.json()
+  await db.query(`DELETE FROM marquee_items`).catch(() => {})
+  for (let i=0;i<(items||[]).length;i++) {
+    const it = items[i]
+    await db.query(`INSERT INTO marquee_items(id,text,emoji,sort_order,is_active) VALUES(COALESCE($1,gen_random_uuid()::text),$2,$3,$4,true)`,
+      [it.id||null, it.text||'', it.emoji||'', i]).catch(()=>{})
+  }
+  return NextResponse.json({ success: true })
+}
+
 // ─── router ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -943,6 +988,7 @@ export async function GET(req: NextRequest) {
       case 'message-triggers':      return await getTriggers()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
+      case 'marquee-items':         return await getMarqueeItems()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin GET:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -960,6 +1006,7 @@ export async function POST(req: NextRequest) {
       case 'cities':         return await saveCities(req)
       case 'notifications':  return await sendNotification(req)
       case 'seed-demo':      return await seedDemo()
+      case 'marquee-items':  return await saveMarqueeItems(req)
       case 'subscription-plans': return await saveSubPlan(req)
       case 'message-triggers':   return await saveTrigger(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })

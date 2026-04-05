@@ -7,6 +7,7 @@ import { StatsBar }        from '@/components/home/StatsBar'
 import { HowItWorks }      from '@/components/home/HowItWorks'
 import { FeaturedSchools } from '@/components/home/FeaturedSchools'
 import { WhyChooseUs }     from '@/components/home/WhyChooseUs'
+import { Marquee } from '@/components/ui/Marquee'
 import {
   TopCitiesGrid,
   BoardComparison,
@@ -28,11 +29,13 @@ export default function HomePage() {
       <main>
         <HeroSection />
         <StatsBar />
+        <Marquee variant="light" speed={36} />
         <HowItWorks />
         <Suspense fallback={<div style={{ height: '400px' }} />}>
           <FeaturedSchools />
         </Suspense>
         <WhyChooseUs />
+        <Marquee variant="dark" speed={42} />
         <TopCitiesGrid />
         <BoardComparison />
         <TestimonialsSection />

@@ -149,6 +149,33 @@
 @keyframes slideInLeft{from{opacity:0;transform:translateX(-32px)}to{opacity:1;transform:translateX(0)}}
 @keyframes slideInRight{from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
 @keyframes magneticHover{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-4px) rotate(.5deg)}75%{transform:translateY(-2px) rotate(-.3deg)}}
+@keyframes marqueeScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes countUp{from{opacity:0;transform:translateY(20px) scale(.8)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glowPulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* ── Two-colour headings — wrap italic part in <em> ── */
+h1 em,h2 em,h3 em{font-style:italic;color:var(--gold);-webkit-text-fill-color:var(--gold)}
+.heading-gold em{color:var(--gold);font-style:italic}
+
+/* ── Marquee strip ── */
+.ts-marquee-outer{width:100%;overflow:hidden;position:relative}
+.ts-marquee-track{display:flex;width:max-content;animation:marqueeScroll var(--marquee-dur,40s) linear infinite}
+.ts-marquee-track:hover{animation-play-state:paused}
+.ts-marquee-item{display:inline-flex;align-items:center;gap:12px;padding:0 32px;white-space:nowrap;font-family:var(--font-sans);font-size:13px;font-weight:500;letter-spacing:.06em;color:var(--marquee-color,var(--ink-muted))}
+.ts-marquee-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);opacity:.6;flex-shrink:0}
+/* light variant */
+.ts-marquee-light{background:var(--ivory-2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 0}
+/* dark variant */
+.ts-marquee-dark{background:var(--ink-2);padding:14px 0;--marquee-color:rgba(250,247,242,0.55)}
+/* gold variant */
+.ts-marquee-gold{background:linear-gradient(135deg,#B8860B,#C9960D);padding:14px 0;--marquee-color:#fff}
+
+/* ── Visual upgrade helpers ── */
+.stat-card-glow:hover{box-shadow:0 0 0 1px rgba(184,134,11,0.3),0 8px 40px rgba(184,134,11,0.12)!important}
+.gradient-border{position:relative}.gradient-border::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:linear-gradient(135deg,rgba(184,134,11,0.4),rgba(232,197,71,0.15),rgba(184,134,11,0.4));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.section-enter{opacity:0;transform:translateY(32px);transition:opacity .75s cubic-bezier(.22,1,.36,1),transform .75s cubic-bezier(.22,1,.36,1)}
+.section-enter.visible{opacity:1;transform:translateY(0)}
 
 /* ══════════════════════════════════════════════
    UTILITY ANIMATION CLASSES

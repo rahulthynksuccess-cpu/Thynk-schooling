@@ -2,7 +2,7 @@
 export const dynamic = 'force-dynamic'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { Globe, Loader2, ChevronDown, ChevronRight } from 'lucide-react'
+import { Globe, Loader2, ChevronDown, ChevronRight, Plus, Trash2, GripVertical } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { refreshContent } from '@/hooks/useContent'
 
@@ -401,6 +401,10 @@ const PAGES: PageGroup[] = [
       },
     ],
   },
+  {
+    label: 'Marquee Items', icon: '📢', contentKey: '__marquee__', previewUrl: '/',
+    sections: [],
+  },
 ]
 
 // Build ALL_FIELDS flat map
@@ -491,6 +495,101 @@ function FieldRow({ field, value, onChange }: { field: Field; value: string; onC
         style={{ padding:'4px 8px', borderRadius:'6px', border:'1px solid #EDE5D8', background:'transparent', color:'#A0ADB8', cursor:'pointer', fontSize:'11px', flexShrink:0 }}>
         Reset
       </button>
+    </div>
+  )
+}
+
+// ── Marquee Admin Component ──────────────────────────────────────────────────
+interface MItem { id: string; text: string; emoji: string }
+function MarqueeAdmin() {
+  const [items, setItems] = useState<MItem[]>([])
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/admin?action=marquee-items')
+      .then(r => r.json())
+      .then(d => { setItems(d.items || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await fetch('/api/admin?action=marquee-items', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items }),
+      })
+      toast.success('Marquee items saved!')
+    } catch { toast.error('Save failed') }
+    setSaving(false)
+  }
+
+  const add = () => setItems(p => [...p, { id: Date.now().toString(), emoji: '✨', text: 'New item' }])
+  const remove = (id: string) => setItems(p => p.filter(x => x.id !== id))
+  const update = (id: string, key: keyof MItem, val: string) =>
+    setItems(p => p.map(x => x.id === id ? { ...x, [key]: val } : x))
+
+  const S = {
+    card: { background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:12, overflow:'hidden' as const, color:'#0D1117' },
+    head: { padding:'12px 16px', borderBottom:'1px solid rgba(13,17,23,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', gap:10 },
+    row: { display:'flex', alignItems:'center', gap:10, padding:'10px 16px', borderBottom:'1px solid rgba(13,17,23,0.05)' },
+    inp: { flex:1, padding:'8px 12px', background:'#FAF7F2', border:'1.5px solid #EDE5D8', borderRadius:8, fontSize:13, fontFamily:'Inter,sans-serif', color:'#0D1117', outline:'none' },
+    emojiInp: { width:52, padding:'8px', background:'#FAF7F2', border:'1.5px solid #EDE5D8', borderRadius:8, fontSize:14, textAlign:'center' as const, outline:'none' },
+    btn: (bg: string, color: string) => ({ padding:'7px 16px', borderRadius:8, background:bg, border:'none', color, fontSize:12, fontWeight:700, fontFamily:'Inter,sans-serif', cursor:'pointer', display:'flex', alignItems:'center', gap:6 }),
+  }
+
+  if (loading) return <div style={S.card}><div style={{ padding:24, textAlign:'center', color:'#A0ADB8', fontFamily:'Inter,sans-serif', fontSize:13 }}>Loading…</div></div>
+
+  return (
+    <div style={S.card}>
+      <div style={S.head}>
+        <div>
+          <span style={{ fontFamily:'Inter,sans-serif', fontSize:12, fontWeight:700, color:'#B8860B', textTransform:'uppercase', letterSpacing:'1px' }}>📢 Marquee Items</span>
+          <p style={{ fontFamily:'Inter,sans-serif', fontSize:11, color:'#A0ADB8', margin:'2px 0 0' }}>Text scrolling left-to-right on homepage</p>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={add} style={S.btn('#FEF7E0','#B8860B')}>
+            <Plus style={{ width:11, height:11 }} />Add Item
+          </button>
+          <button onClick={save} disabled={saving} style={S.btn('#B8860B','#fff')}>
+            {saving ? <><Loader2 style={{ width:11, height:11, animation:'spin 1s linear infinite' }} />Saving…</> : '✓ Save'}
+          </button>
+        </div>
+      </div>
+
+      {/* Preview strip */}
+      <div style={{ background:'#0D1117', padding:'10px 0', overflow:'hidden', position:'relative' }}>
+        <div style={{ display:'flex', gap:32, padding:'0 20px', whiteSpace:'nowrap', overflow:'hidden' }}>
+          {items.slice(0, 5).map(it => (
+            <span key={it.id} style={{ fontFamily:'Inter,sans-serif', fontSize:12, color:'rgba(250,247,242,0.6)', display:'inline-flex', alignItems:'center', gap:6 }}>
+              {it.emoji} {it.text} <span style={{ width:4, height:4, borderRadius:'50%', background:'#B8860B', opacity:.6, display:'inline-block' }} />
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Items list */}
+      {items.map((item, i) => (
+        <div key={item.id} style={S.row}>
+          <GripVertical style={{ width:14, height:14, color:'#D4D4D4', flexShrink:0 }} />
+          <span style={{ fontFamily:'Inter,sans-serif', fontSize:11, color:'#A0ADB8', minWidth:20, textAlign:'center' }}>{i + 1}</span>
+          <input value={item.emoji} onChange={e => update(item.id, 'emoji', e.target.value)}
+            style={S.emojiInp} placeholder="🎓" />
+          <input value={item.text} onChange={e => update(item.id, 'text', e.target.value)}
+            style={S.inp} placeholder="Enter marquee text…" />
+          <button onClick={() => remove(item.id)}
+            style={{ background:'transparent', border:'none', cursor:'pointer', padding:6, color:'#FCA5A5', borderRadius:6 }}>
+            <Trash2 style={{ width:13, height:13 }} />
+          </button>
+        </div>
+      ))}
+
+      {items.length === 0 && (
+        <div style={{ padding:24, textAlign:'center', color:'#A0ADB8', fontFamily:'Inter,sans-serif', fontSize:13 }}>
+          No items yet. <button onClick={add} style={{ background:'none', border:'none', color:'#B8860B', cursor:'pointer', fontWeight:700 }}>Add one</button>
+        </div>
+      )}
     </div>
   )
 }
@@ -658,7 +757,10 @@ export default function AdminContentPage() {
 
         {/* Controls */}
         <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-          {activePage?.sections.map(section => (
+          {activePage?.contentKey === '__marquee__' ? (
+            <MarqueeAdmin />
+          ) : (
+            activePage?.sections.map(section => (
             <div key={section.id} style={{ background:'#fff', border:'1px solid rgba(13,17,23,0.09)', borderRadius:'12px', overflow:'hidden', color:'#0D1117' }}>
               <button onClick={() => setOpenSections(p => ({ ...p, [section.id]: !p[section.id] }))}
                 style={{ width:'100%', display:'flex', alignItems:'center', gap:'10px', padding:'12px 16px', border:'none', background: openSections[section.id] ? 'rgba(184,134,11,0.03)' : '#fff', cursor:'pointer', textAlign:'left' as const }}>
@@ -674,6 +776,7 @@ export default function AdminContentPage() {
               )}
             </div>
           ))}
+          )}
         </div>
 
         {/* Live Preview */}

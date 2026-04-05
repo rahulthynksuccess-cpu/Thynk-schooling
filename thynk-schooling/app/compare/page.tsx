@@ -247,7 +247,7 @@ export default function ComparePage() {
           </div>
           <h1 style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:'clamp(28px,4vw,48px)', color:'#fff', lineHeight:1.08, marginBottom:10 }}>
             Compare Schools<br />
-            <span style={{ color:C.gold }}>Side by Side</span>
+            <em style={{ color:C.gold, fontStyle:'italic' }}>Side by Side</em>
           </h1>
           <p style={{ fontFamily:'Inter,sans-serif', fontSize:14, color:'rgba(255,255,255,0.55)', lineHeight:1.65 }}>
             Select up to 4 schools and compare them across academics, fees, facilities, sports, and more.
