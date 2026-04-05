@@ -953,6 +953,21 @@ async function saveMarqueeItems(req: NextRequest) {
 
 // ─── blog ─────────────────────────────────────────────────────────────────────
 
+const SEED_BLOG_POSTS = [
+  { slug:'cbse-vs-icse-vs-ib', title:'CBSE vs ICSE vs IB: Which Board is Right for Your Child?', excerpt:"A comprehensive breakdown of India's three major education boards — curriculum, assessment style, career impact and which suits different types of learners.", tag:'Board Guide', read_time:'8 min', published_at:'2026-01-15', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
+    body:`<h2>Choosing the Right Board for Your Child</h2><p>Choosing the right education board is one of the most important decisions a parent makes. Each board has a distinct philosophy, curriculum depth, and career alignment.</p><h2>CBSE — Central Board of Secondary Education</h2><p>India's most popular board with over 25,000 schools. CBSE is strong in science and mathematics and its syllabus aligns perfectly with competitive exams like JEE and NEET. The structured approach suits students with clear engineering or medical aspirations.</p><h2>ICSE — Indian Certificate of Secondary Education</h2><p>ICSE has a broader curriculum with strong emphasis on English, arts and social sciences. More application-based than CBSE. Ideal for students considering humanities or studying abroad.</p><h2>IB — International Baccalaureate</h2><p>The IB Diploma Programme is accepted by universities worldwide and develops critical thinking, research and communication skills. Best suited for families considering global higher education.</p><h2>Our Recommendation</h2><ul><li><strong>Engineering/Medicine ambitions</strong> → CBSE</li><li><strong>Holistic development, humanities</strong> → ICSE</li><li><strong>Studying abroad, international mindset</strong> → IB</li></ul>` },
+  { slug:'how-to-choose-school', title:'How to Choose the Right School: 10 Questions to Ask', excerpt:'Visiting a school? Here are the 10 most important questions to ask the principal or admission coordinator before you commit.', tag:'Admission Tips', read_time:'6 min', published_at:'2026-02-10', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
+    body:`<h2>10 Questions Every Parent Must Ask</h2><p>Visiting a school can be overwhelming. Here are 10 questions that cut through the noise and reveal what a school is truly like.</p><h3>1. What is the student-teacher ratio?</h3><p>Anything above 30:1 means your child gets less individual attention. The ideal is 20:1 or below.</p><h3>2. What percentage of students pass board exams?</h3><p>Ask for the last 3 years' data. Consistent results above 95% indicate academic strength.</p><h3>3. How are discipline issues handled?</h3><p>The answer reveals the school's culture more than any brochure. Look for structured, fair processes — not punitive ones.</p><h3>4. What extra-curriculars are genuinely funded?</h3><p>Many schools list activities that have no proper budget or qualified coaches.</p><h3>5. What is the homework policy?</h3><p>Hours of homework daily can be a red flag for child wellbeing, especially in primary years.</p><h3>6. How do you communicate with parents?</h3><p>Modern schools use apps and portals. Schools relying only on physical diaries may be behind the curve.</p><h3>7. What is the fee escalation policy?</h3><p>Ask specifically: by what percentage have fees increased each year over the last 5 years?</p><h3>8. How is the transport system managed?</h3><p>Safety, GPS tracking, and timely arrival are non-negotiables.</p><h3>9. What is the school's vision for the next 5 years?</h3><p>Growing institutions invest in infrastructure and teachers. Stagnant ones coast on reputation.</p><h3>10. Can I speak to current parents?</h3><p>Any school confident in its quality will connect you with existing parent communities.</p>` },
+  { slug:'top-boarding-schools-india', title:'Top 10 Boarding Schools in India 2026', excerpt:"From The Doon School to Scindia School — a ranked guide to India's finest residential schools, admission criteria and fees.", tag:'Rankings', read_time:'10 min', published_at:'2026-01-28', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
+    body:`<h2>India's Finest Residential Schools</h2><p>India has some of the finest residential schools in Asia, with traditions going back over a century. Here are the top 10.</p><h3>1. The Doon School, Dehradun</h3><p>Founded in 1935, consistently ranked India's #1 boys' boarding school. Alumni include Rajiv Gandhi and Vikram Seth. Annual fees: ₹8–10 lakh.</p><h3>2. Welham Girls' School, Dehradun</h3><p>India's most prestigious girls' boarding school. Known for producing exceptional leaders and academics.</p><h3>3. The Scindia School, Gwalior</h3><p>Located in the historic Gwalior Fort, known for strong values, academics and leadership development.</p><h3>4. Mayo College, Ajmer</h3><p>One of India's oldest schools for boys, founded in 1875. The 'Eton of the East' with immaculate heritage architecture.</p><h3>5. Woodstock School, Mussoorie</h3><p>A co-educational international school with an IB programme, situated in the Himalayan foothills.</p><h3>6. Bishop Cotton School, Shimla</h3><p>Founded in 1859, one of Asia's oldest boarding schools. Strong sports and academic tradition.</p><h3>7. Lawrence School, Sanawar</h3><p>Co-educational, founded 1847. Beautiful campus with exceptional outdoor and adventure programmes.</p><h3>8. Rishi Valley School, Andhra Pradesh</h3><p>Founded on J. Krishnamurti's philosophy, emphasising holistic development over rote learning.</p><h3>9. Rajkumar College, Rajkot</h3><p>Gujarat's most prestigious boys' boarding school with over 140 years of history.</p><h3>10. Kodaikanal International School</h3><p>IB school in Tamil Nadu's hill station, known for its progressive values and global community.</p>` },
+  { slug:'admission-timeline-guide', title:'School Admission Timeline: When to Start and What to Do', excerpt:'Most parents start too late. Here is your month-by-month guide to school admissions — from nursery to senior secondary.', tag:'Admission Tips', read_time:'5 min', published_at:'2026-02-20', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
+    body:`<h2>The Admission Calendar Parents Must Follow</h2><p>Most parents start their school search too late. Here is your month-by-month guide for admissions in India.</p><h2>12–18 Months Before</h2><p>Start your school research. Visit shortlisted schools, attend open days, speak to current parents. Begin compiling documents.</p><h2>October–December</h2><p>Registrations open for most schools. Submit forms early — popular schools fill fast. Many charge a non-refundable registration fee of ₹500–₹2,000.</p><h2>January–February</h2><p>Schools conduct informal assessments, interaction sessions, and parent interviews. Keep your child relaxed — these are observations, not exams.</p><h2>March–April</h2><p>Results and offer letters are announced. You typically have 7–14 days to confirm your seat.</p><h2>May–June</h2><p>Fee payment and enrolment confirmation deadlines. School uniform and stationery procurement.</p><blockquote>The Golden Rule: Start your school search at least 12–18 months before the desired admission year, especially for nursery and class 1 where demand far exceeds supply.</blockquote>` },
+  { slug:'ib-schools-india', title:'Best IB Schools in India: City-Wise Complete List 2026', excerpt:"A city-wise guide to all IB World Schools in India, covering fees, authorisation status and admission contacts.", tag:'School Lists', read_time:'12 min', published_at:'2026-01-05', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
+    body:`<h2>IB Schools Across India — City by City</h2><p>There are over 200 IB World Schools in India. Here is a city-wise guide to the best ones.</p><h2>Mumbai</h2><ul><li><strong>Dhirubhai Ambani International School</strong> — Mumbai's most prestigious IB school. Annual fees: ₹5–7 lakh.</li><li><strong>BD Somani International School</strong> — Marine Lines, strong academics and arts.</li><li><strong>Ecole Mondiale World School</strong> — Juhu, known for its global community.</li></ul><h2>Delhi NCR</h2><ul><li><strong>The Shri Ram School, Vasant Vihar</strong> — One of Delhi's top IB schools.</li><li><strong>Pathways School Noida</strong> — Excellent IB results and campus facilities.</li><li><strong>Amity Global School, Noida</strong> — Affordable IB option in NCR.</li></ul><h2>Bangalore</h2><ul><li><strong>Inventure Academy</strong> — Progressive IB school in Whitefield.</li><li><strong>Canadian International School</strong> — Strong expat community, excellent results.</li><li><strong>Stonehill International School</strong> — Near the airport, stunning campus.</li></ul><h2>Pune</h2><ul><li><strong>Mahindra United World College</strong> — One of India's most prestigious IB schools.</li><li><strong>The Orchid School</strong> — Baner, strong IBDP results.</li></ul><p><em>Note: Always verify IB authorisation status directly with the IBO website before admission.</em></p>` },
+  { slug:'school-fees-guide', title:'Understanding School Fees: What Parents Must Know', excerpt:'Admission fees, development charges, annual charges — decode the real cost of schooling and how to plan your budget.', tag:'Finance', read_time:'7 min', published_at:'2026-03-01', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
+    body:`<h2>The Real Cost of School Admissions in India</h2><p>School fees in India go far beyond monthly tuition. Here is a complete breakdown of every charge you may encounter.</p><h2>One-Time Fees at Admission</h2><ul><li><strong>Registration fee:</strong> ₹1,000–₹25,000 (usually non-refundable)</li><li><strong>Admission/enrolment fee:</strong> ₹10,000–₹2,00,000</li><li><strong>Security deposit (refundable):</strong> ₹10,000–₹50,000</li><li><strong>Development fee:</strong> ₹20,000–₹5,00,000 (one-time infrastructure contribution)</li></ul><h2>Annual Recurring Charges</h2><ul><li><strong>Annual charges:</strong> ₹20,000–₹2,00,000</li><li><strong>School diary, uniform, stationery:</strong> ₹5,000–₹20,000</li><li><strong>Technology/device fee:</strong> ₹5,000–₹25,000</li></ul><h2>Monthly Fees</h2><ul><li><strong>Tuition:</strong> ₹2,000–₹30,000+ per month</li><li><strong>Transport:</strong> ₹1,500–₹5,000</li><li><strong>Meals:</strong> ₹1,000–₹3,000</li></ul><h2>Key Questions to Ask Before Admission</h2><ul><li>What is the annual fee escalation percentage?</li><li>Are there compulsory purchases (devices, uniforms from school shop)?</li><li>Is the security deposit truly refundable, and under what conditions?</li><li>Are there any hidden charges not listed in the fee structure?</li></ul><blockquote>Pro tip: Always get the complete fee structure in writing before paying the registration fee. Schools cannot change the fee structure mid-year for existing students per the RTE Act.</blockquote>` },
+]
+
 async function ensureBlogTable() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS blog_posts (
@@ -980,6 +995,17 @@ async function ensureBlogTable() {
     "ADD COLUMN IF NOT EXISTS author VARCHAR(200) DEFAULT 'Thynk Schooling Team'",
   ]
   for (const col of cols) await db.query(`ALTER TABLE blog_posts ${col}`).catch(() => {})
+  // Seed hardcoded posts if table is empty
+  const ct = await db.query('SELECT COUNT(*) FROM blog_posts').catch(() => ({ rows:[{ count:'0' }] }))
+  if (parseInt(ct.rows[0].count) === 0) {
+    for (const p of SEED_BLOG_POSTS) {
+      await db.query(
+        `INSERT INTO blog_posts (slug,title,excerpt,body,tag,read_time,published_at,status,cover_image,meta_title,meta_desc,author)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT (slug) DO NOTHING`,
+        [p.slug,p.title,p.excerpt,p.body,p.tag,p.read_time,p.published_at,p.status,p.cover_image,p.meta_title,p.meta_desc,p.author]
+      ).catch(() => {})
+    }
+  }
 }
 
 function toBlogPost(row: any) {
@@ -1081,6 +1107,59 @@ async function deleteBlogPost(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+
+// ─── menu management ──────────────────────────────────────────────────────────
+
+async function ensureMenuTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS site_menus (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      menu_key   VARCHAR(50) NOT NULL UNIQUE,
+      items      TEXT NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+}
+
+const DEFAULT_NAVBAR = [
+  { label:'Find Schools', href:'/schools', location:'navbar' },
+  { label:'Compare',      href:'/compare', location:'navbar' },
+  { label:'Counselling',  href:'/counselling', location:'navbar' },
+  { label:'Blog',         href:'/blog', location:'navbar' },
+]
+
+const DEFAULT_FOOTER: Record<string, Array<{label:string;href:string}>> = {
+  'For Parents': [{label:'Find Schools',href:'/schools'},{label:'Compare Schools',href:'/compare'},{label:'Free Counselling',href:'/counselling'},{label:'AI Recommendations',href:'/recommendations'},{label:'Admission Guide',href:'/blog/admission-guide'}],
+  'For Schools':  [{label:'List Your School',href:'/register?role=school'},{label:'School Dashboard',href:'/dashboard/school'},{label:'Lead Marketplace',href:'/dashboard/school/leads'},{label:'Pricing Plans',href:'/pricing'},{label:'Success Stories',href:'/blog/success-stories'}],
+  'Company':      [{label:'About Us',href:'/about'},{label:'Blog',href:'/blog'},{label:'Careers',href:'/careers'},{label:'Press',href:'/press'},{label:'Contact Us',href:'/contact'}],
+  'Legal':        [{label:'Privacy Policy',href:'/privacy'},{label:'Terms of Service',href:'/terms'},{label:'Refund Policy',href:'/refund'},{label:'Grievance Officer',href:'/grievance'}],
+}
+
+async function getMenus() {
+  await ensureMenuTable()
+  const [navRes, footerRes] = await Promise.all([
+    db.query("SELECT items FROM site_menus WHERE menu_key='navbar'"),
+    db.query("SELECT items FROM site_menus WHERE menu_key='footer'"),
+  ])
+  const navbar = navRes.rows.length ? JSON.parse(navRes.rows[0].items) : DEFAULT_NAVBAR
+  const footer = footerRes.rows.length ? JSON.parse(footerRes.rows[0].items) : DEFAULT_FOOTER
+  return NextResponse.json({ navbar, footer }, { headers: { 'Cache-Control': 'no-store' } })
+}
+
+async function saveMenus(req: NextRequest) {
+  await ensureMenuTable()
+  const { navbar, footer } = await req.json()
+  if (navbar) await db.query(
+    `INSERT INTO site_menus(menu_key,items,updated_at) VALUES('navbar',$1,NOW()) ON CONFLICT(menu_key) DO UPDATE SET items=$1,updated_at=NOW()`,
+    [JSON.stringify(navbar)]
+  )
+  if (footer) await db.query(
+    `INSERT INTO site_menus(menu_key,items,updated_at) VALUES('footer',$1,NOW()) ON CONFLICT(menu_key) DO UPDATE SET items=$1,updated_at=NOW()`,
+    [JSON.stringify(footer)]
+  )
+  return NextResponse.json({ success: true })
+}
+
 // ─── router ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -1116,6 +1195,7 @@ export async function GET(req: NextRequest) {
       case 'message-triggers':      return await getTriggers()
       case 'marquee-items':         return await getMarqueeItems()
       case 'blog':                  return await getBlogPosts(req)
+      case 'menus':                 return await getMenus()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
@@ -1139,6 +1219,7 @@ export async function POST(req: NextRequest) {
       case 'subscription-plans': return await saveSubPlan(req)
       case 'message-triggers':   return await saveTrigger(req)
       case 'blog':               return await createBlogPost(req)
+      case 'menus':            return await saveMenus(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
