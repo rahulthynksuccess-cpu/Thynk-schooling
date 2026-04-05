@@ -2,8 +2,8 @@
 const nextConfig = {
   experimental: {
     missingSuspenseWithCSRBailout: false,
-    serverComponentsExternalPackages: ['pg', 'jsonwebtoken', 'bcryptjs'],
   },
+  serverExternalPackages: ['pg', 'jsonwebtoken', 'bcryptjs'],
 
   // ── iOS Safari cookie fix ────────────────────────────────────────────────
   // Proxy all /api/* requests through Next.js so the frontend and API share
