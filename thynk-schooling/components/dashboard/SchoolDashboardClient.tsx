@@ -10,7 +10,7 @@ import {
   BarChart3, GraduationCap, LogOut, Menu, X,
   ArrowUpRight, CheckCircle2, Clock,
   Loader2, MapPin, Sparkles, Phone, Flame,
-  ArrowUp, ArrowDown, LayoutGrid
+  ArrowUp, ArrowDown, LayoutGrid, TrendingUp
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
@@ -21,21 +21,18 @@ import { useAuthStore } from '@/store/authStore'
 import { Lead, LeadCredits, SchoolDashboardStats } from '@/types'
 import toast from 'react-hot-toast'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 interface AnalyticsPoint { date: string; leads: number; applications: number }
 
-// ─── Nav ──────────────────────────────────────────────────────────────────────
 const NAV = [
-  { icon: LayoutDashboard, label: 'Dashboard',     href: '/dashboard/school',              badge: null },
-  { icon: Users,           label: 'Leads',          href: '/dashboard/school/leads',        badge: 'new' },
-  { icon: FileText,        label: 'Applications',   href: '/dashboard/school/applications', badge: null },
-  { icon: Star,            label: 'Reviews',        href: '/dashboard/school/reviews',      badge: null },
+  { icon: LayoutDashboard, label: 'Dashboard',        href: '/dashboard/school',              badge: null },
+  { icon: Users,           label: 'Leads',             href: '/dashboard/school/leads',        badge: 'new' },
+  { icon: FileText,        label: 'Applications',      href: '/dashboard/school/applications', badge: null },
+  { icon: Star,            label: 'Reviews',           href: '/dashboard/school/reviews',      badge: null },
   { icon: LayoutGrid,      label: 'Subscription Plan', href: '/pricing',                       badge: null },
-  { icon: BarChart3,       label: 'Analytics',      href: '/dashboard/school/analytics',    badge: null },
-  { icon: Settings,        label: 'School Profile', href: '/school/complete-profile',       badge: null },
+  { icon: BarChart3,       label: 'Analytics',         href: '/dashboard/school/analytics',    badge: null },
+  { icon: Settings,        label: 'School Profile',    href: '/school/complete-profile',       badge: null },
 ]
 
-// ─── Animated Counter ─────────────────────────────────────────────────────────
 function AnimatedNumber({ value }: { value: number }) {
   const [displayed, setDisplayed] = useState(0)
   useEffect(() => {
@@ -53,7 +50,6 @@ function AnimatedNumber({ value }: { value: number }) {
   return <>{displayed.toLocaleString('en-IN')}</>
 }
 
-// ─── Custom Tooltip ───────────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
@@ -70,7 +66,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   )
 }
 
-// ─── Sidebar ──────────────────────────────────────────────────────────────────
 function Sidebar({ active, onClose, credits }: { active: string; onClose?: () => void; credits?: LeadCredits }) {
   const { user, logout } = useAuthStore()
   const router = useRouter()
@@ -80,26 +75,34 @@ function Sidebar({ active, onClose, credits }: { active: string; onClose?: () =>
         <Link href="/" className="sidebar-brand">
           <div className="brand-icon"><GraduationCap size={18} color="#fff" /></div>
           <div>
-            <div className="brand-name">Thynk Schooling</div>
+            <div className="brand-name">Thynk<span>Schooling</span></div>
             <div className="brand-tag">School Portal</div>
           </div>
         </Link>
         {onClose && <button onClick={onClose} className="sidebar-close"><X size={15} /></button>}
       </div>
+
       <div className="sidebar-user">
-        <div className="user-avatar">{(user?.fullName || user?.phone || 'S')[0].toUpperCase()}</div>
+        <div className="user-avatar-wrap">
+          <div className="user-avatar">{(user?.fullName || user?.phone || 'S')[0].toUpperCase()}</div>
+          <div className="user-avatar-ring" />
+        </div>
         <div className="user-info">
           <div className="user-name">{user?.fullName || 'School Admin'}</div>
           <div className="user-role"><span className="role-dot" />Administrator</div>
         </div>
       </div>
+
       {credits && (
         <div className="sidebar-credits">
-          <Zap size={13} color="#F59E0B" />
-          <span className="credits-label">Lead Credits</span>
-          <span className="credits-value">{Number(credits?.availableCredits) || 0}</span>
+          <div className="credits-left">
+            <Zap size={13} color="#F59E0B" />
+            <span className="credits-label">Lead Credits</span>
+          </div>
+          <span className="credits-badge">{Number(credits?.availableCredits) || 0}</span>
         </div>
       )}
+
       <nav className="sidebar-nav">
         {NAV.map(({ icon: Icon, label, href, badge }) => {
           const isActive = active === href
@@ -113,6 +116,7 @@ function Sidebar({ active, onClose, credits }: { active: string; onClose?: () =>
           )
         })}
       </nav>
+
       <div className="sidebar-footer">
         <button onClick={() => { logout(); router.replace('/login') }} className="logout-btn">
           <LogOut size={14} /><span>Sign Out</span>
@@ -122,19 +126,20 @@ function Sidebar({ active, onClose, credits }: { active: string; onClose?: () =>
   )
 }
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
 function StatCard({ icon: Icon, label, value, sub, color, href, trend, trendVal, delay = 0 }: any) {
   const isUp = trend === 'up'
   const inner = (
     <motion.div className="stat-card" style={{ '--card-color': color } as any}
-      initial={{ opacity: 0, y: 24, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: 28, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -6, transition: { duration: 0.2 } }}
     >
+      <div className="stat-noise" />
       <div className="stat-glow" />
-      {/* Shimmer sweep */}
-      <div style={{position:'absolute',inset:0,background:'linear-gradient(105deg,transparent 30%,rgba(255,255,255,0.5) 50%,transparent 70%)',backgroundSize:'200%',animation:'shimmerBg 4s ease-in-out infinite',pointerEvents:'none',opacity:.6}}/>
       <div className="stat-top">
-        <div className="stat-icon-wrap" style={{background:`${color}14`,border:`1px solid ${color}25`}}><Icon size={17} color={color} /></div>
+        <div className="stat-icon-wrap" style={{ background: `${color}16`, border: `1px solid ${color}28` }}>
+          <Icon size={17} color={color} />
+        </div>
         {trend && (
           <div className={`stat-trend trend-${isUp ? 'up' : 'down'}`}>
             {isUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
@@ -147,53 +152,52 @@ function StatCard({ icon: Icon, label, value, sub, color, href, trend, trendVal,
       </div>
       <div className="stat-label">{label}</div>
       {sub && <div className="stat-sub">{sub}</div>}
-      <div className="stat-bar" />
+      <div className="stat-bar" style={{ background: color }} />
     </motion.div>
   )
   if (href) return <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link>
   return inner
 }
 
-// ─── Credit Ring ──────────────────────────────────────────────────────────────
 function CreditRing({ credits }: { credits: LeadCredits }) {
+  const avail = Math.max(Number(credits?.availableCredits) || 0, 0)
+  const used = Number(credits?.usedCredits) || 0
   const data = [
-    { name: 'Used',      value: Number(credits?.usedCredits) || 0,      fill: '#E5E7EB' },
-    { name: 'Available', value: Math.max(Number(credits?.availableCredits) || 0, 0), fill: '#F59E0B' },
+    { name: 'Used',      value: used || (avail === 0 ? 1 : 0), fill: '#E5E7EB' },
+    { name: 'Available', value: avail,                          fill: '#F59E0B' },
   ]
-  if (data[0].value === 0 && data[1].value === 0) data[1].value = 1
   return (
     <div className="credit-ring-wrap">
-      <ResponsiveContainer width={140} height={140}>
+      <ResponsiveContainer width={150} height={150}>
         <PieChart>
-          <Pie data={data} cx={65} cy={65} innerRadius={48} outerRadius={62}
+          <Pie data={data} cx={70} cy={70} innerRadius={50} outerRadius={65}
             dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
             {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
           </Pie>
         </PieChart>
       </ResponsiveContainer>
       <div className="credit-ring-center">
-        <div className="credit-ring-val"><AnimatedNumber value={Number(credits?.availableCredits) || 0} /></div>
-        <div className="credit-ring-sub">credits</div>
+        <div className="credit-ring-val"><AnimatedNumber value={avail} /></div>
+        <div className="credit-ring-sub">credits left</div>
       </div>
     </div>
   )
 }
 
-// ─── Lead Row ─────────────────────────────────────────────────────────────────
 function LeadRow({ lead, onBuy, buying, index }: { lead: Lead; onBuy: (id: string) => void; buying: boolean; index: number }) {
   const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
-    new:             { color: '#10B981', bg: '#D1FAE5', label: 'New' },
-    contacted:       { color: '#3B82F6', bg: '#DBEAFE', label: 'Contacted' },
-    interested:      { color: '#F59E0B', bg: '#FEF3C7', label: 'Interested' },
-    not_interested:  { color: '#6B7280', bg: '#F3F4F6', label: 'Not Interested' },
-    admitted:        { color: '#8B5CF6', bg: '#EDE9FE', label: 'Admitted' },
-    lost:            { color: '#EF4444', bg: '#FEE2E2', label: 'Lost' },
+    new:            { color: '#10B981', bg: 'rgba(16,185,129,0.1)',  label: 'New' },
+    contacted:      { color: '#3B82F6', bg: 'rgba(59,130,246,0.1)', label: 'Contacted' },
+    interested:     { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', label: 'Interested' },
+    not_interested: { color: '#6B7280', bg: 'rgba(107,114,128,0.1)',label: 'Not Interested' },
+    admitted:       { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)', label: 'Admitted' },
+    lost:           { color: '#EF4444', bg: 'rgba(239,68,68,0.1)',  label: 'Lost' },
   }
   const st = statusConfig[lead.status] || statusConfig.new
   return (
     <motion.tr className="lead-row"
-      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.05 }}
+      initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.04 }}
     >
       <td className="lead-td lead-td-first">
         <div className="lead-avatar">{(lead.isPurchased ? lead.fullName : lead.maskedName || '?')[0]}</div>
@@ -203,7 +207,7 @@ function LeadRow({ lead, onBuy, buying, index }: { lead: Lead; onBuy: (id: strin
         </div>
       </td>
       <td className="lead-td">
-        <div className="lead-phone" style={{ opacity: lead.isPurchased ? 1 : 0.45 }}>
+        <div className="lead-phone" style={{ opacity: lead.isPurchased ? 1 : 0.4 }}>
           <Phone size={11} color="#9CA3AF" />
           {lead.isPurchased ? lead.fullPhone : lead.maskedPhone}
         </div>
@@ -231,7 +235,6 @@ function LeadRow({ lead, onBuy, buying, index }: { lead: Lead; onBuy: (id: strin
   )
 }
 
-// ─── Main Export ──────────────────────────────────────────────────────────────
 export function SchoolDashboardClient() {
   const router = useRouter()
   const { user, accessToken } = useAuthStore()
@@ -273,7 +276,6 @@ export function SchoolDashboardClient() {
     enabled, staleTime: 5 * 60 * 1000,
   })
 
-  // Merge leads + apps into one series
   const analyticsData: AnalyticsPoint[] = (() => {
     if (!analyticsRaw) return []
     const map: Record<string, AnalyticsPoint> = {}
@@ -313,280 +315,253 @@ export function SchoolDashboardClient() {
       <div className="dash-loading">
         <motion.div className="loading-spinner"
           animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
-          <GraduationCap size={22} color="#F59E0B" />
+          <GraduationCap size={22} color="#fff" />
         </motion.div>
         <div className="loading-text">Loading dashboard…</div>
       </div>
     )
   }
 
-  const leads = leadsData?.data ?? []
-
-  const STAT_CARDS = [
-    { icon: Users,    label: 'Total Leads',    value: stats?.totalLeads ?? 0,        color: '#F59E0B', href: '/dashboard/school/leads',        trend: 'up', trendVal: `+${stats?.newLeadsToday ?? 0} today`, sub: 'Parent enquiries' },
-    { icon: FileText, label: 'Applications',   value: stats?.totalApplications ?? 0, color: '#6366F1', href: '/dashboard/school/applications', trend: null, trendVal: null, sub: 'Admission requests' },
-    { icon: Star,     label: 'Avg Rating',     value: stats?.avgRating ? parseFloat(stats.avgRating.toFixed(1)) : 0, color: '#10B981', href: '/dashboard/school/reviews', trend: null, trendVal: null, sub: 'Parent reviews' },
-    { icon: Zap,      label: 'Lead Credits',   value: credits ? (Number(credits.availableCredits) || 0) : (stats?.credits ?? 0), color: '#EC4899', href: '/pricing', trend: null, trendVal: null, sub: 'Available to unlock' },
-  ]
+  const profilePct = stats?.profileCompletion ?? 0
+  const leads = leadsData?.data || []
 
   return (
     <>
-      <style>{STYLES}</style>
+      <style>{CSS}</style>
       <div className="dash-root">
 
-        {/* Desktop Sidebar */}
-        <div className="dash-sidebar-desktop">
-          <Sidebar active="/dashboard/school" credits={credits} />
-        </div>
-
-        {/* Mobile Sidebar */}
+        {/* Mobile overlay */}
         <AnimatePresence>
           {sidebarOpen && (
             <motion.div className="mobile-overlay"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <motion.div className="mobile-sidebar-wrap"
-                initial={{ x: -260 }} animate={{ x: 0 }} exit={{ x: -260 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
+              <div className="mobile-sidebar-wrap">
                 <Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} />
-              </motion.div>
+              </div>
               <div className="overlay-backdrop" onClick={() => setSidebarOpen(false)} />
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Desktop sidebar */}
+        <div className="dash-sidebar-wrap">
+          <Sidebar active="/dashboard/school" credits={credits} />
+        </div>
+
         {/* Main */}
-        <div className="dash-main">
+        <main className="dash-main">
+          {/* Mobile topbar */}
+          <div className="mobile-topbar">
+            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}><Menu size={19} /></button>
+            <div className="mobile-brand">ThynkSchooling</div>
+          </div>
 
-          {/* Header */}
-          <header className="dash-header">
-            <div className="header-left">
-              <button className="menu-btn" onClick={() => setSidebarOpen(true)}><Menu size={16} /></button>
+          <div className="dash-content">
+
+            {/* ── Page Header ── */}
+            <motion.div className="page-header"
+              initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}>
               <div>
-                <h1 className="header-title">School <em style={{fontStyle:"italic",color:"var(--gold,#B8860B)"}}>Dashboard</em></h1>
-                <p className="header-sub">Welcome back, {user.fullName?.split(' ')[0] || 'Admin'} 👋</p>
+                <h1 className="page-title">
+                  Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},
+                  <span className="page-title-name"> {user?.fullName?.split(' ')[0] || 'Admin'}</span> 👋
+                </h1>
+                <p className="page-sub">Here's what's happening with your school today</p>
               </div>
-            </div>
-            <div className="header-right">
-              {credits && (
-                <div className="header-credits">
-                  <Zap size={13} color="#F59E0B" />
-                  <span className="hc-val">{Number(credits?.availableCredits) || 0}</span>
-                  <span className="hc-label">credits</span>
+              <div className="header-meta">
+                <div className="header-date">
+                  <Clock size={13} />
+                  {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
                 </div>
-              )}
-              <Link href="/pricing" className="header-buy-btn">
-                <Sparkles size={13} /> Upgrade Plan
-              </Link>
-            </div>
-          </header>
+              </div>
+            </motion.div>
 
-          {/* Scrollable content */}
-          <main className="dash-content">
-
-            {/* Profile Banner */}
-            {stats && (stats as any).profileCompleteness < 100 && (
+            {/* ── Profile Completion Banner ── */}
+            {profilePct < 100 && (
               <motion.div className="profile-banner"
-                initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}>
+                <div className="banner-shimmer" />
                 <div className="banner-left">
-                  <div className="banner-icon"><Flame size={16} color="#F59E0B" /></div>
+                  <div className="banner-icon"><Sparkles size={18} color="#F59E0B" /></div>
                   <div>
-                    <div className="banner-title">
-                      Profile {(stats as any).profileCompleteness}% complete — finish to get 3× more leads
-                    </div>
+                    <div className="banner-title">Complete your school profile to attract more parents</div>
                     <div className="banner-progress-wrap">
                       <div className="banner-progress-bar">
                         <motion.div className="banner-progress-fill"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${(stats as any).profileCompleteness}%` }}
-                          transition={{ duration: 1, ease: 'easeOut' }} />
+                          initial={{ width: 0 }} animate={{ width: `${profilePct}%` }}
+                          transition={{ delay: 0.4, duration: 0.8, ease: 'easeOut' }} />
                       </div>
-                      <span className="banner-pct">{(stats as any).profileCompleteness}%</span>
+                      <span className="banner-pct">{profilePct}% complete</span>
                     </div>
                   </div>
                 </div>
                 <Link href="/school/complete-profile" className="banner-cta">
-                  Complete Now <ChevronRight size={14} />
+                  Complete Profile <ArrowUpRight size={13} />
                 </Link>
               </motion.div>
             )}
 
-
-            {/* School Name Banner */}
-            {stats && (stats as any).schoolName && (
-              <div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 18px', marginBottom:16, background:'#fff', border:'1px solid rgba(13,17,23,0.08)', borderRadius:14, boxShadow:'0 2px 12px rgba(13,17,23,0.05)' }}>
-                <div style={{ width:48, height:48, borderRadius:13, background:'rgba(184,134,11,0.08)', border:'1.5px solid rgba(184,134,11,0.2)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
-                  {(stats as any).schoolLogo
-                    ? <img src={(stats as any).schoolLogo} alt="" style={{ width:'100%', height:'100%', objectFit:'contain', padding:6 }} />
-                    : <GraduationCap size={20} color="#B8860B" />}
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ fontFamily:'serif', fontWeight:700, fontSize:18, color:'#0D1117', lineHeight:1.1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                    {(stats as any).schoolName}
-                  </div>
-                  <div style={{ fontSize:12, color:'#718096', marginTop:3 }}>
-                    {(stats as any).schoolCity}{(stats as any).schoolState ? `, ${(stats as any).schoolState}` : ''}
-                    {Array.isArray((stats as any).schoolBoard) && (stats as any).schoolBoard[0] ? ` · ${(stats as any).schoolBoard[0]}` : ''}
-                  </div>
-                </div>
-                <Link href="/school/complete-profile" style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:9, background:'#B8860B', color:'#fff', textDecoration:'none', fontSize:12, fontWeight:700, fontFamily:'Inter,sans-serif', flexShrink:0 }}>
-                  Edit Profile
-                </Link>
-              </div>
-            )}
-
-            {/* Stats */}
+            {/* ── Stats Grid ── */}
             <div className="stats-grid">
-              {statsLoading
-                ? Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="stat-skeleton" style={{ animationDelay: `${i * 0.1}s` }} />
-                  ))
-                : STAT_CARDS.map((card, i) => <StatCard key={card.label} {...card} delay={i * 0.08} />)
-              }
+              {statsLoading ? (
+                Array.from({ length: 4 }).map((_, i) => <div key={i} className="stat-skeleton" />)
+              ) : (
+                <>
+                  <StatCard icon={Users}      label="Total Leads"       value={stats?.totalLeads ?? 0}       color="#F59E0B" sub="All time"         trend="up"   trendVal="+12%" delay={0.05} href="/dashboard/school/leads" />
+                  <StatCard icon={Flame}      label="New This Month"    value={stats?.newLeadsThisMonth ?? 0} color="#EF4444" sub="Last 30 days"     trend="up"   trendVal="+8%"  delay={0.10} />
+                  <StatCard icon={FileText}   label="Applications"      value={stats?.totalApplications ?? 0} color="#8B5CF6" sub="Received"         trend="down" trendVal="-3%"  delay={0.15} href="/dashboard/school/applications" />
+                  <StatCard icon={Star}       label="Avg Rating"        value={stats?.avgRating ? `${Number(stats.avgRating).toFixed(1)}★` : '—'} color="#10B981" sub="From reviews" delay={0.20} href="/dashboard/school/reviews" />
+                </>
+              )}
             </div>
 
-            {/* Charts Row */}
+            {/* ── Charts Row ── */}
             <div className="charts-row">
 
-              {/* Activity Chart */}
-              <motion.div className="chart-card"
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+              {/* Area / Bar chart */}
+              <div className="chart-card">
                 <div className="chart-header">
                   <div>
-                    <h3 className="chart-title">Activity Overview</h3>
-                    <p className="chart-sub">Leads & applications · last 30 days</p>
+                    <div className="chart-title">Performance Overview</div>
+                    <div className="chart-sub">Leads & applications over 30 days</div>
                   </div>
                   <div className="chart-controls">
-                    <button className={`chart-toggle${activeChart === 'area' ? ' toggle-active' : ''}`} onClick={() => setActiveChart('area')}>Area</button>
-                    <button className={`chart-toggle${activeChart === 'bar' ? ' toggle-active' : ''}`} onClick={() => setActiveChart('bar')}>Bar</button>
+                    {(['area', 'bar'] as const).map(t => (
+                      <button key={t} className={`chart-toggle${activeChart === t ? ' toggle-active' : ''}`}
+                        onClick={() => setActiveChart(t)}>
+                        {t === 'area' ? 'Area' : 'Bar'}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div className="chart-legend">
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#F59E0B' }} />Leads</span>
-                  <span className="legend-item"><span className="legend-dot" style={{ background: '#6366F1' }} />Applications</span>
+                  <div className="legend-item"><div className="legend-dot" style={{ background: '#F59E0B' }} /> Leads</div>
+                  <div className="legend-item"><div className="legend-dot" style={{ background: '#8B5CF6' }} /> Applications</div>
                 </div>
-                {analyticsData.length > 0 ? (
+                {analyticsData.length === 0 ? (
+                  <div className="chart-empty">
+                    <TrendingUp size={32} color="#E5E7EB" />
+                    <p>No data yet — once parents start enquiring, your chart will appear here.</p>
+                  </div>
+                ) : (
                   <ResponsiveContainer width="100%" height={220}>
                     {activeChart === 'area' ? (
-                      <AreaChart data={analyticsData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                      <AreaChart data={analyticsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                         <defs>
                           <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.25} />
+                            <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.25} />
                             <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
                           </linearGradient>
                           <linearGradient id="gApps" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366F1" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                            <stop offset="5%"  stopColor="#8B5CF6" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                        <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
                         <Tooltip content={<CustomTooltip />} />
-                        <Area type="monotone" dataKey="leads" name="Leads" stroke="#F59E0B" strokeWidth={2} fill="url(#gLeads)" dot={false} activeDot={{ r: 5, fill: '#F59E0B' }} />
-                        <Area type="monotone" dataKey="applications" name="Applications" stroke="#6366F1" strokeWidth={2} fill="url(#gApps)" dot={false} activeDot={{ r: 5, fill: '#6366F1' }} />
+                        <Area type="monotone" dataKey="leads" name="Leads" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gLeads)" dot={false} />
+                        <Area type="monotone" dataKey="applications" name="Applications" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#gApps)" dot={false} />
                       </AreaChart>
                     ) : (
-                      <BarChart data={analyticsData} barSize={8} barGap={3} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
-                        <XAxis dataKey="date" tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Outfit' }} axisLine={false} tickLine={false} />
+                      <BarChart data={analyticsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
                         <Tooltip content={<CustomTooltip />} />
                         <Bar dataKey="leads" name="Leads" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="applications" name="Applications" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="applications" name="Applications" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
                       </BarChart>
                     )}
                   </ResponsiveContainer>
-                ) : (
-                  <div className="chart-empty">
-                    <BarChart3 size={40} color="#E5E7EB" />
-                    <p>No activity yet — complete your profile to start receiving leads</p>
-                  </div>
                 )}
-              </motion.div>
+              </div>
 
-              {/* Credits Card */}
-              <motion.div className="credits-card"
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
-                <h3 className="chart-title" style={{ marginBottom: 4 }}>Lead Credits</h3>
-                <p className="chart-sub" style={{ marginBottom: 16 }}>Unlock parent contact details</p>
+              {/* Credits donut */}
+              <div className="credits-card">
+                <div className="credits-card-top">
+                  <div className="chart-title">Lead Credits</div>
+                  <div className="chart-sub">Your current balance</div>
+                </div>
                 {credits ? (
                   <>
                     <CreditRing credits={credits} />
                     <div className="credit-stats">
-                      {[
-                        { label: 'Total Purchased', val: Number(credits?.totalCredits) || 0,     color: '#374151' },
-                        { label: 'Used',            val: Number(credits?.usedCredits) || 0,      color: '#EF4444' },
-                        { label: 'Available',       val: Number(credits?.availableCredits) || 0, color: '#10B981' },
-                      ].map(({ label, val, color }) => (
-                        <div key={label} className="credit-stat-row">
-                          <span className="cs-label">{label}</span>
-                          <span className="cs-val" style={{ color }}>{val}</span>
-                        </div>
-                      ))}
-                    </div>
-                    {credits.expiresAt && (
-                      <div className="credit-expiry">
-                        <Clock size={11} color="#9CA3AF" />
-                        Expires {new Date(credits.expiresAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <div className="credit-stat-row">
+                        <span className="cs-label">Available</span>
+                        <span className="cs-val" style={{ color: '#F59E0B' }}>{Number(credits.availableCredits) || 0}</span>
                       </div>
+                      <div className="credit-stat-row">
+                        <span className="cs-label">Used</span>
+                        <span className="cs-val">{Number(credits.usedCredits) || 0}</span>
+                      </div>
+                      <div className="credit-stat-row">
+                        <span className="cs-label">Total</span>
+                        <span className="cs-val">{(Number(credits.availableCredits) || 0) + (Number(credits.usedCredits) || 0)}</span>
+                      </div>
+                    </div>
+                    {credits.expiryDate && (
+                      <div className="credit-expiry"><Clock size={11} /> Expires {new Date(credits.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                     )}
                     <Link href="/pricing" className="credits-buy-btn">
-                      <Package size={14} /> Buy More Credits
+                      <Zap size={14} /> Buy More Credits
                     </Link>
                   </>
                 ) : (
                   <div className="credits-empty">
-                    <Package size={40} color="#E5E7EB" />
+                    <Zap size={28} color="#E5E7EB" />
                     <p>No credits yet</p>
-                    <Link href="/pricing" className="credits-buy-btn">Upgrade Plan</Link>
+                    <Link href="/pricing" className="credits-buy-btn"><Zap size={13} /> Get Credits</Link>
                   </div>
                 )}
-              </motion.div>
+              </div>
             </div>
 
-            {/* Leads Table */}
+            {/* ── Leads Table ── */}
             <motion.div className="leads-card"
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}>
               <div className="leads-header">
                 <div>
-                  <h3 className="chart-title">Recent Leads</h3>
-                  <p className="chart-sub">{leadsData?.total ? `${leadsData.total} total leads` : 'Parents looking for schools like yours'}</p>
+                  <div className="chart-title">Recent Leads</div>
+                  <div className="chart-sub">Latest parent enquiries for your school</div>
                 </div>
                 <Link href="/dashboard/school/leads" className="view-all-btn">
-                  View All <ChevronRight size={13} />
+                  View all <ArrowUpRight size={13} />
                 </Link>
               </div>
 
               {leadsLoading ? (
                 <div className="leads-skeleton">
-                  {Array.from({ length: 4 }).map((_, i) => (
-                    <div key={i} className="lead-skel-row" style={{ animationDelay: `${i * 0.08}s` }} />
-                  ))}
+                  {Array.from({ length: 4 }).map((_, i) => <div key={i} className="lead-skel-row" />)}
                 </div>
               ) : leads.length === 0 ? (
                 <div className="leads-empty">
-                  <Users size={44} color="#E5E7EB" />
+                  <div className="leads-empty-icon"><Users size={28} color="#D1D5DB" /></div>
                   <div className="leads-empty-title">No leads yet</div>
-                  <div className="leads-empty-sub">Complete your school profile to start receiving leads.</div>
-                  <Link href="/school/complete-profile" className="leads-empty-cta">
-                    Complete Profile <ChevronRight size={13} />
-                  </Link>
+                  <div className="leads-empty-sub">Once parents start discovering your school, their enquiries will appear here.</div>
+                  <Link href="/school/complete-profile" className="leads-empty-cta">Complete your profile <ArrowUpRight size={13} /></Link>
                 </div>
               ) : (
                 <div className="leads-table-wrap">
                   <table className="leads-table">
                     <thead>
                       <tr>
-                        {['Parent / Child', 'Phone', 'City', 'Status', 'Action'].map(h => (
-                          <th key={h} className="leads-th" style={{ textAlign: h === 'Action' ? 'right' : 'left' }}>{h}</th>
-                        ))}
+                        <th className="leads-th">Parent</th>
+                        <th className="leads-th">Phone</th>
+                        <th className="leads-th">City</th>
+                        <th className="leads-th">Status</th>
+                        <th className="leads-th" style={{ textAlign: 'right' }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {leads.map((lead, i) => (
                         <LeadRow key={lead.id} lead={lead} index={i}
-                          onBuy={id => buyLeadMutation.mutate(id)}
-                          buying={buyingId === lead.id} />
+                          onBuy={(id) => buyLeadMutation.mutate(id)}
+                          buying={buyingId === lead.id && buyLeadMutation.isPending} />
                       ))}
                     </tbody>
                   </table>
@@ -594,191 +569,224 @@ export function SchoolDashboardClient() {
               )}
             </motion.div>
 
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
     </>
   )
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const STYLES = `
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap');
+/* ═══════════════════════════════════════════════════════════════════════════════
+   STYLES
+═══════════════════════════════════════════════════════════════════════════════ */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 :root {
-  --gold: #B8860B; --gold-light: #FEF7E0; --indigo: #6366F1;
-  --green: #10B981; --pink: #EC4899; --red: #EF4444;
-  --bg: #F5F0E8; --surface: #fff; --border: rgba(13,17,23,0.08);
-  --text: #0D1117; --muted: #718096;
-  --sidebar-w: 256px; --radius: 16px;
-  --font: 'Outfit', sans-serif; --serif: 'Playfair Display', Georgia, serif;
+  --bg: #F6F3EE;
+  --card: #FFFFFF;
+  --sidebar-bg: #0E0C09;
+  --sidebar-w: 248px;
+  --gold: #D97706;
+  --gold-2: #F59E0B;
+  --border: rgba(13,17,23,0.07);
+  --text: #0D1117;
+  --muted: #6B7280;
+  --font: 'DM Sans', sans-serif;
+  --serif: 'Syne', sans-serif;
+  --radius: 18px;
 }
 
-.dash-root { display:flex; height:100vh; background:var(--bg); font-family:var(--font); overflow:hidden; position:relative; }
-.dash-root::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 60% 40% at 80% 20%,rgba(184,134,11,0.07),transparent),radial-gradient(ellipse 40% 60% at 10% 80%,rgba(10,95,85,0.04),transparent); pointer-events:none; z-index:0; }
-.dash-sidebar-desktop { display:none; width:var(--sidebar-w); flex-shrink:0; height:100%; position:relative; z-index:10; }
-@media(min-width:1024px){ .dash-sidebar-desktop { display:flex; flex-direction:column; } }
-.dash-main { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; position:relative; z-index:1; }
+/* ── Root layout ── */
+.dash-root { display:flex; min-height:100vh; background:var(--bg); font-family:var(--font); }
+.dash-sidebar-wrap { width:var(--sidebar-w); flex-shrink:0; }
+@media(max-width:860px) { .dash-sidebar-wrap { display:none; } }
+.dash-main { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+.dash-content { padding:32px 36px 48px; max-width:1140px; margin:0 auto; width:100%; }
+@media(max-width:680px) { .dash-content { padding:20px 16px 40px; } }
 
-/* Sidebar */
-.dash-sidebar { width:var(--sidebar-w); height:100%; display:flex; flex-direction:column; background:linear-gradient(180deg,#0D1117 0%,#131B2A 100%); border-right:1px solid rgba(255,255,255,0.06); }
-.sidebar-header { padding:20px 18px 16px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:space-between; }
-.sidebar-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
-.brand-icon { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,#F59E0B,#FBBF24); display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(245,158,11,.35); flex-shrink:0; }
-.brand-name { font-family:var(--serif); font-weight:700; font-size:14px; color:#FAF7F2; line-height:1; }
-.brand-tag { font-size:9px; font-weight:600; color:var(--gold); letter-spacing:.1em; text-transform:uppercase; margin-top:2px; }
-.sidebar-close { background:none; border:none; cursor:pointer; padding:4px; color:var(--muted); }
-.sidebar-user { display:flex; align-items:center; gap:10px; margin:12px 12px 8px; padding:12px 14px; background:rgba(184,134,11,0.1); border:1px solid rgba(184,134,11,0.2); border-radius:12px; }
-.user-avatar { width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#B8860B,#D4A520); display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-weight:700; font-size:16px; color:#fff; flex-shrink:0; box-shadow:0 4px 12px rgba(184,134,11,0.4); }
-.user-info { min-width:0; }
-.user-name { font-weight:600; font-size:13px; color:#FAF7F2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.user-role { display:flex; align-items:center; gap:5px; font-size:11px; color:var(--gold); font-weight:500; margin-top:2px; }
-.role-dot { width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 0 2px rgba(16,185,129,.2); animation:pdot 2s ease-in-out infinite; }
-@keyframes pdot { 0%,100%{box-shadow:0 0 0 2px rgba(16,185,129,.2)} 50%{box-shadow:0 0 0 4px rgba(16,185,129,.08)} }
-.sidebar-credits { display:flex; align-items:center; gap:6px; margin:0 12px 8px; padding:8px 14px; background:rgba(184,134,11,0.1); border:1px solid rgba(184,134,11,0.2); border-radius:8px; font-size:12px; color:rgba(250,247,242,0.7); }
-.credits-label { flex:1; color:rgba(250,247,242,0.55); }
-.credits-value { font-weight:700; font-size:14px; color:#E8C547; }
-.sidebar-nav { flex:1; overflow-y:auto; padding:6px 10px; }
-.nav-item { display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:10px; margin-bottom:2px; text-decoration:none; font-size:13px; font-weight:400; color:rgba(250,247,242,0.55); transition:all .2s ease; border-left:3px solid transparent; }
-.nav-item:hover { background:rgba(255,255,255,0.06); color:rgba(250,247,242,0.85); }
-.nav-active { background:rgba(184,134,11,0.15)!important; color:#E8C547!important; font-weight:600!important; border-left-color:#B8860B!important; }
-.nav-icon-wrap { width:28px; height:28px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+/* ── Sidebar ── */
+.dash-sidebar {
+  width:var(--sidebar-w); height:100vh; background:var(--sidebar-bg);
+  display:flex; flex-direction:column; position:sticky; top:0;
+  overflow:hidden;
+}
+.dash-sidebar::before {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+}
+.sidebar-header { position:relative; z-index:1; padding:22px 20px 18px; border-bottom:1px solid rgba(255,255,255,0.06); }
+.sidebar-brand { display:flex; align-items:center; gap:11px; text-decoration:none; }
+.brand-icon { width:36px; height:36px; border-radius:11px; background:linear-gradient(135deg,#D97706,#F59E0B); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 14px rgba(217,119,6,.4); }
+.brand-name { font-family:var(--serif); font-size:17px; font-weight:800; color:#fff; letter-spacing:-.01em; }
+.brand-name span { color:var(--gold-2); }
+.brand-tag { font-size:10px; color:rgba(255,255,255,.28); font-weight:500; letter-spacing:.05em; margin-top:2px; }
+
+.sidebar-close { background:none; border:none; color:rgba(255,255,255,.4); cursor:pointer; padding:4px; display:flex; position:absolute; right:16px; top:24px; z-index:2; }
+
+.sidebar-user { position:relative; z-index:1; display:flex; align-items:center; gap:11px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.06); }
+.user-avatar-wrap { position:relative; flex-shrink:0; }
+.user-avatar { width:36px; height:36px; border-radius:11px; background:linear-gradient(135deg,rgba(217,119,6,.3),rgba(245,158,11,.5)); display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-weight:800; font-size:16px; color:#fff; }
+.user-avatar-ring { position:absolute; inset:-2px; border-radius:13px; border:1.5px solid rgba(245,158,11,.4); pointer-events:none; }
+.user-name { font-size:13px; font-weight:700; color:#fff; }
+.user-role { display:flex; align-items:center; gap:5px; font-size:11px; color:rgba(255,255,255,.3); margin-top:2px; }
+.role-dot { width:5px; height:5px; border-radius:50%; background:#10B981; flex-shrink:0; box-shadow:0 0 5px #10B981; }
+
+.sidebar-credits { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; margin:12px 16px; padding:10px 14px; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.2); border-radius:12px; }
+.credits-left { display:flex; align-items:center; gap:6px; }
+.credits-label { font-size:12px; font-weight:600; color:rgba(255,255,255,.6); }
+.credits-badge { background:var(--gold-2); color:#fff; font-size:12px; font-weight:800; padding:2px 10px; border-radius:99px; font-family:var(--serif); }
+
+.sidebar-nav { flex:1; overflow-y:auto; padding:10px 12px; position:relative; z-index:1; scrollbar-width:none; }
+.sidebar-nav::-webkit-scrollbar { display:none; }
+.nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px; text-decoration:none; color:rgba(255,255,255,.38); font-size:13px; font-weight:600; margin-bottom:2px; transition:all .18s; position:relative; }
+.nav-item:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.7); }
+.nav-active { background:rgba(217,119,6,.18) !important; color:#fff !important; }
+.nav-active::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; background:var(--gold-2); border-radius:0 3px 3px 0; }
+.nav-icon-wrap { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.05); flex-shrink:0; }
+.nav-active .nav-icon-wrap { background:rgba(217,119,6,.22); }
 .nav-label { flex:1; }
-.nav-badge { font-size:9px; font-weight:700; padding:2px 6px; border-radius:99px; background:var(--green); color:#fff; text-transform:uppercase; letter-spacing:.05em; }
-.nav-chevron { opacity:.5; }
-.sidebar-footer { padding:10px; border-top:1px solid rgba(255,255,255,0.06); }
-.logout-btn { width:100%; display:flex; align-items:center; gap:8px; padding:9px 12px; border-radius:9px; background:none; border:none; cursor:pointer; font-family:var(--font); font-size:13px; color:rgba(239,68,68,0.7); transition:background .15s; }
-.logout-btn:hover { background:rgba(239,68,68,.1); }
+.nav-badge { font-size:10px; font-weight:700; background:linear-gradient(135deg,#EF4444,#F97316); color:#fff; padding:2px 7px; border-radius:99px; }
+.nav-chevron { color:rgba(255,255,255,.4); }
 
-/* Header */
-.dash-header { display:flex; align-items:center; justify-content:space-between; padding:0 24px; height:66px; background:rgba(245,240,232,0.95); backdrop-filter:blur(20px); border-bottom:1px solid rgba(184,134,11,0.12); flex-shrink:0; gap:12px; position:sticky; top:0; z-index:10; box-shadow:0 1px 20px rgba(13,17,23,0.06); }
-.header-left { display:flex; align-items:center; gap:14px; }
-.menu-btn { display:flex; align-items:center; justify-content:center; width:36px; height:36px; background:none; border:1px solid var(--border); border-radius:9px; cursor:pointer; color:var(--muted); flex-shrink:0; }
-@media(min-width:1024px){ .menu-btn { display:none; } }
-.header-title { font-family:var(--serif); font-weight:700; font-size:20px; color:var(--text); line-height:1; }
-.header-sub { font-size:12px; color:var(--muted); margin-top:2px; }
-.header-right { display:flex; align-items:center; gap:10px; }
-.header-credits { display:flex; align-items:center; gap:6px; padding:7px 12px; background:#FFFBEB; border:1px solid rgba(245,158,11,.25); border-radius:9px; }
-.hc-val { font-weight:700; font-size:14px; color:var(--text); }
-.hc-label { font-size:11px; color:var(--gold); }
-.header-buy-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:9px; background:linear-gradient(135deg,#F59E0B,#FBBF24); color:#fff; font-weight:600; font-size:13px; text-decoration:none; box-shadow:0 4px 12px rgba(245,158,11,.35); transition:all .2s; }
-.header-buy-btn:hover { transform:translateY(-1px); box-shadow:0 6px 16px rgba(245,158,11,.4); }
+.sidebar-footer { position:relative; z-index:1; padding:14px 16px 20px; border-top:1px solid rgba(255,255,255,.06); }
+.logout-btn { display:flex; align-items:center; gap:8px; width:100%; padding:10px 14px; border-radius:10px; border:none; background:rgba(255,255,255,.04); color:rgba(255,255,255,.35); cursor:pointer; font-family:var(--font); font-size:13px; font-weight:600; transition:all .18s; }
+.logout-btn:hover { background:rgba(239,68,68,.1); color:#EF4444; }
 
-/* Content */
-.dash-content { flex:1; overflow-y:auto; padding:clamp(16px,2.5vw,28px); }
+/* ── Mobile topbar ── */
+.mobile-topbar { display:none; align-items:center; gap:12px; padding:14px 16px; background:var(--sidebar-bg); border-bottom:1px solid rgba(255,255,255,.08); }
+@media(max-width:860px) { .mobile-topbar { display:flex; } }
+.mobile-menu-btn { background:none; border:none; color:rgba(255,255,255,.7); cursor:pointer; display:flex; padding:4px; }
+.mobile-brand { font-family:var(--serif); font-size:16px; font-weight:800; color:#fff; }
 
-/* Profile Banner */
-.profile-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 22px; background:linear-gradient(135deg,#FEF7E0,#FFFBF0,#FEF7E0); border:1px solid rgba(184,134,11,0.25); border-radius:var(--radius); margin-bottom:22px; box-shadow:0 4px 24px rgba(184,134,11,0.1); position:relative; overflow:hidden; }
+/* ── Page header ── */
+.page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:28px; padding-top:4px; }
+.page-title { font-family:var(--serif); font-size:26px; font-weight:800; color:var(--text); letter-spacing:-.03em; line-height:1.2; }
+.page-title-name { color:var(--gold); }
+.page-sub { font-size:13px; color:var(--muted); margin-top:5px; }
+.header-meta { flex-shrink:0; }
+.header-date { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); font-weight:500; background:var(--card); border:1px solid var(--border); padding:7px 12px; border-radius:99px; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
+
+/* ── Profile Banner ── */
+.profile-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 24px; background:linear-gradient(135deg,#FFFBF0,#FEF7E0); border:1px solid rgba(217,119,6,.22); border-radius:var(--radius); margin-bottom:24px; box-shadow:0 4px 24px rgba(217,119,6,.08); position:relative; overflow:hidden; }
+.banner-shimmer { position:absolute; inset:0; background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.4) 50%,transparent 60%); background-size:200%; animation:bannerShimmer 3s ease-in-out infinite; pointer-events:none; }
+@keyframes bannerShimmer { 0%,100%{background-position:200%} 50%{background-position:-200%} }
 .banner-left { display:flex; align-items:center; gap:14px; }
-.banner-icon { width:38px; height:38px; border-radius:10px; background:rgba(245,158,11,.12); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.banner-title { font-weight:600; font-size:13px; color:var(--text); margin-bottom:8px; }
+.banner-icon { width:42px; height:42px; border-radius:12px; background:rgba(245,158,11,.14); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.banner-title { font-weight:700; font-size:13.5px; color:var(--text); margin-bottom:9px; }
 .banner-progress-wrap { display:flex; align-items:center; gap:10px; }
-.banner-progress-bar { width:180px; height:5px; background:rgba(245,158,11,.15); border-radius:99px; overflow:hidden; }
-.banner-progress-fill { height:100%; background:linear-gradient(90deg,#F59E0B,#FBBF24); border-radius:99px; }
-.banner-pct { font-size:12px; font-weight:600; color:var(--gold); }
-.banner-cta { display:inline-flex; align-items:center; gap:5px; padding:8px 16px; border-radius:9px; background:var(--gold); color:#fff; text-decoration:none; font-weight:600; font-size:12px; white-space:nowrap; flex-shrink:0; transition:all .2s; }
-.banner-cta:hover { background:#D97706; }
+.banner-progress-bar { width:200px; height:6px; background:rgba(245,158,11,.15); border-radius:99px; overflow:hidden; }
+.banner-progress-fill { height:100%; background:linear-gradient(90deg,#D97706,#F59E0B); border-radius:99px; }
+.banner-pct { font-size:12px; font-weight:700; color:var(--gold); }
+.banner-cta { display:inline-flex; align-items:center; gap:5px; padding:10px 18px; border-radius:11px; background:var(--gold); color:#fff; text-decoration:none; font-weight:700; font-size:13px; white-space:nowrap; flex-shrink:0; transition:all .2s; box-shadow:0 4px 14px rgba(217,119,6,.35); }
+.banner-cta:hover { background:#B45309; transform:translateY(-1px); }
 
-/* Stats */
-.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-bottom:20px; }
-.stat-card { background:linear-gradient(135deg,#fff 0%,#FDFAF5 100%); border:1px solid rgba(184,134,11,0.1); border-radius:var(--radius); padding:22px 20px; position:relative; overflow:hidden; cursor:default; transition:all .28s cubic-bezier(.22,1,.36,1); box-shadow:0 2px 12px rgba(13,17,23,0.04); }
-.stat-glow { position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:var(--card-color,#B8860B); opacity:.12; filter:blur(24px); pointer-events:none; transition:opacity .3s; }
-.stat-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:16px; }
-.stat-icon-wrap { width:40px; height:40px; border-radius:11px; background:rgba(0,0,0,.04); display:flex; align-items:center; justify-content:center; }
-.stat-trend { display:flex; align-items:center; gap:3px; font-size:11px; font-weight:600; padding:3px 7px; border-radius:99px; }
-.trend-up { color:#10B981; background:#D1FAE5; }
-.trend-down { color:#EF4444; background:#FEE2E2; }
-.stat-value { font-family:var(--serif); font-weight:700; font-size:38px; color:var(--text); line-height:1; letter-spacing:-1.5px; margin-bottom:5px; }
-.stat-label { font-size:12px; color:var(--muted); font-weight:500; }
-.stat-sub { font-size:11px; color:var(--muted); margin-top:5px; }
-.stat-card:hover { transform:translateY(-5px); box-shadow:0 16px 48px rgba(13,17,23,0.1),0 0 0 1px rgba(184,134,11,0.15)!important; }
+/* ── Stats Grid ── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:22px; }
+.stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 22px 20px; position:relative; overflow:hidden; cursor:default; transition:box-shadow .28s, transform .28s; box-shadow:0 2px 12px rgba(13,17,23,0.04); }
+.stat-noise { position:absolute; inset:0; pointer-events:none; opacity:.025; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
+.stat-glow { position:absolute; top:-40px; right:-40px; width:130px; height:130px; border-radius:50%; background:var(--card-color,#B8860B); opacity:.1; filter:blur(28px); pointer-events:none; }
+.stat-card:hover { box-shadow:0 16px 48px rgba(13,17,23,0.1), 0 0 0 1px rgba(217,119,6,.12) !important; }
 .stat-card:hover .stat-glow { opacity:.2; }
-.stat-bar { position:absolute; bottom:0; left:0; right:0; height:3px; background:var(--card-color,#B8860B); opacity:.5; border-radius:0 0 16px 16px; }
-.stat-skeleton { height:148px; border-radius:var(--radius); background:linear-gradient(90deg,#f0f0f0 25%,#f7f7f7 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
+.stat-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; }
+.stat-icon-wrap { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
+.stat-trend { display:flex; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:4px 9px; border-radius:99px; }
+.trend-up { color:#10B981; background:rgba(16,185,129,.1); }
+.trend-down { color:#EF4444; background:rgba(239,68,68,.1); }
+.stat-value { font-family:var(--serif); font-weight:800; font-size:38px; color:var(--text); line-height:1; letter-spacing:-2px; margin-bottom:6px; }
+.stat-label { font-size:12px; color:var(--muted); font-weight:600; }
+.stat-sub { font-size:11px; color:var(--muted); margin-top:4px; opacity:.7; }
+.stat-bar { position:absolute; bottom:0; left:0; right:0; height:3px; opacity:.5; border-radius:0 0 18px 18px; }
+.stat-skeleton { height:154px; border-radius:var(--radius); background:linear-gradient(90deg,#f0f0f0 25%,#f7f7f7 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
 @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+@keyframes shimmerBg { 0%,100%{background-position:200% 0} 50%{background-position:-200% 0} }
 
-/* Charts */
-.charts-row { display:grid; grid-template-columns:1fr 260px; gap:16px; margin-bottom:20px; }
-@media(max-width:900px){ .charts-row { grid-template-columns:1fr; } }
-.chart-card, .credits-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:22px 22px 18px; }
+/* ── Charts Row ── */
+.charts-row { display:grid; grid-template-columns:1fr 270px; gap:16px; margin-bottom:22px; }
+@media(max-width:920px) { .charts-row { grid-template-columns:1fr; } }
+.chart-card, .credits-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 24px 20px; box-shadow:0 2px 12px rgba(13,17,23,0.04); }
 .credits-card { display:flex; flex-direction:column; align-items:center; text-align:center; }
-.chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:6px; }
-.chart-title { font-family:var(--serif); font-weight:700; font-size:18px; color:var(--text); }
-.chart-sub { font-size:12px; color:var(--muted); margin-top:2px; }
-.chart-controls { display:flex; gap:4px; background:#F3F4F6; border-radius:8px; padding:3px; }
-.chart-toggle { padding:4px 10px; border-radius:6px; border:none; font-family:var(--font); font-size:11px; font-weight:500; cursor:pointer; background:transparent; color:var(--muted); transition:all .15s; }
-.toggle-active { background:#fff!important; color:var(--text)!important; font-weight:600!important; box-shadow:0 1px 3px rgba(0,0,0,.1)!important; }
-.chart-legend { display:flex; gap:16px; margin-bottom:16px; }
-.legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); }
+.credits-card-top { width:100%; margin-bottom:8px; }
+.chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px; }
+.chart-title { font-family:var(--serif); font-weight:800; font-size:17px; color:var(--text); letter-spacing:-.02em; }
+.chart-sub { font-size:12px; color:var(--muted); margin-top:3px; }
+.chart-controls { display:flex; gap:4px; background:#F3F4F6; border-radius:9px; padding:3px; }
+.chart-toggle { padding:5px 12px; border-radius:7px; border:none; font-family:var(--font); font-size:12px; font-weight:600; cursor:pointer; background:transparent; color:var(--muted); transition:all .15s; }
+.toggle-active { background:#fff !important; color:var(--text) !important; box-shadow:0 1px 4px rgba(0,0,0,.1) !important; }
+.chart-legend { display:flex; gap:18px; margin-bottom:16px; }
+.legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); font-weight:500; }
 .legend-dot { width:10px; height:10px; border-radius:3px; }
-.chart-empty { height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
-.chart-empty p { font-size:13px; color:var(--muted); text-align:center; max-width:200px; }
-.chart-tooltip { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px 14px; box-shadow:0 8px 24px rgba(0,0,0,.1); font-family:var(--font); }
-.tooltip-label { font-size:11px; color:var(--muted); margin-bottom:6px; font-weight:500; }
-.tooltip-row { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:2px; }
-.tooltip-dot { width:8px; height:8px; border-radius:2px; }
+.chart-empty { height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
+.chart-empty p { font-size:13px; color:var(--muted); text-align:center; max-width:220px; line-height:1.6; }
+.chart-tooltip { background:#fff; border:1px solid var(--border); border-radius:12px; padding:11px 15px; box-shadow:0 8px 24px rgba(0,0,0,.09); font-family:var(--font); }
+.tooltip-label { font-size:11px; color:var(--muted); margin-bottom:7px; font-weight:600; }
+.tooltip-row { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:3px; }
+.tooltip-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
 .tooltip-name { color:var(--muted); flex:1; }
 .tooltip-value { font-weight:700; color:var(--text); }
 
-/* Credits card */
-.credit-ring-wrap { position:relative; margin-bottom:12px; }
-.credit-ring-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; }
-.credit-ring-val { font-family:var(--serif); font-weight:700; font-size:30px; color:var(--gold); line-height:1; }
-.credit-ring-sub { font-size:11px; color:var(--muted); margin-top:2px; }
-.credit-stats { width:100%; margin-bottom:10px; }
-.credit-stat-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.04); font-size:12px; }
+/* ── Credits card ── */
+.credit-ring-wrap { position:relative; margin:8px 0 14px; }
+.credit-ring-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; text-align:center; }
+.credit-ring-val { font-family:var(--serif); font-weight:800; font-size:32px; color:var(--gold); line-height:1; }
+.credit-ring-sub { font-size:11px; color:var(--muted); margin-top:3px; }
+.credit-stats { width:100%; margin-bottom:12px; }
+.credit-stat-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(0,0,0,.04); font-size:12px; }
+.credit-stat-row:last-child { border-bottom:none; }
 .cs-label { color:var(--muted); }
 .cs-val { font-weight:700; }
-.credit-expiry { display:flex; align-items:center; gap:5px; font-size:11px; color:#9CA3AF; margin-bottom:12px; }
-.credits-buy-btn { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; padding:11px 16px; background:var(--text); border-radius:10px; color:#fff; text-decoration:none; font-weight:600; font-size:13px; transition:all .2s; margin-top:auto; }
-.credits-buy-btn:hover { background:#1F2937; transform:translateY(-1px); }
-.credits-empty { display:flex; flex-direction:column; align-items:center; gap:10px; flex:1; justify-content:center; }
+.credit-expiry { display:flex; align-items:center; gap:5px; font-size:11px; color:#9CA3AF; margin-bottom:14px; }
+.credits-buy-btn { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; padding:12px 16px; background:var(--text); border-radius:12px; color:#fff; text-decoration:none; font-weight:700; font-size:13px; transition:all .2s; margin-top:auto; box-shadow:0 4px 16px rgba(13,17,23,.15); }
+.credits-buy-btn:hover { background:#1c2a3a; transform:translateY(-1px); }
+.credits-empty { display:flex; flex-direction:column; align-items:center; gap:12px; flex:1; justify-content:center; }
 .credits-empty p { font-size:13px; color:var(--muted); }
 
-/* Leads Table */
-.leads-card { background:#fff; border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; }
-.leads-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--border); }
-.view-all-btn { display:inline-flex; align-items:center; gap:4px; font-size:13px; color:var(--gold); text-decoration:none; font-weight:600; transition:color .15s; }
-.view-all-btn:hover { color:#D97706; }
+/* ── Leads Table ── */
+.leads-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:0 2px 12px rgba(13,17,23,0.04); }
+.leads-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border); }
+.view-all-btn { display:inline-flex; align-items:center; gap:4px; font-size:13px; color:var(--gold); text-decoration:none; font-weight:700; transition:color .15s; }
+.view-all-btn:hover { color:#B45309; }
 .leads-table-wrap { overflow-x:auto; }
 .leads-table { width:100%; border-collapse:collapse; }
-.leads-th { padding:10px 18px; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#9CA3AF; background:#FAFAFA; border-bottom:1px solid var(--border); }
+.leads-th { padding:10px 20px; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#9CA3AF; background:#FAFAFA; border-bottom:1px solid var(--border); text-align:left; }
 .lead-row { border-bottom:1px solid rgba(0,0,0,.04); transition:background .15s; }
-.lead-row:hover { background:rgba(245,158,11,.02); }
+.lead-row:hover { background:rgba(245,158,11,.025); }
 .lead-row:last-child { border-bottom:none; }
-.lead-td { padding:13px 18px; vertical-align:middle; }
-.lead-td-first { display:flex; align-items:center; gap:10px; }
+.lead-td { padding:14px 20px; vertical-align:middle; }
+.lead-td-first { display:flex; align-items:center; gap:11px; }
 .lead-td-action { text-align:right; }
-.lead-avatar { width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.3)); border:1px solid rgba(245,158,11,.2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; color:var(--gold); flex-shrink:0; font-family:var(--serif); }
-.lead-name { font-weight:600; font-size:13px; color:var(--text); }
+.lead-avatar { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.3)); border:1px solid rgba(245,158,11,.2); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; color:var(--gold); flex-shrink:0; font-family:var(--serif); }
+.lead-name { font-weight:700; font-size:13px; color:var(--text); }
 .lead-meta { font-size:11px; color:var(--muted); margin-top:2px; }
-.lead-phone { display:flex; align-items:center; gap:5px; font-size:12px; color:#4B5563; font-family:'Courier New',monospace; }
+.lead-phone { display:flex; align-items:center; gap:5px; font-size:12px; color:#4B5563; }
 .lead-city { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); }
-.status-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border-radius:99px; font-size:11px; font-weight:600; }
-.status-dot { width:5px; height:5px; border-radius:50%; }
-.unlocked-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:99px; background:#D1FAE5; color:#10B981; font-size:11px; font-weight:600; }
-.buy-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; background:var(--text); border:none; color:#fff; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:500; transition:background .2s; }
+.status-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:99px; font-size:11px; font-weight:700; }
+.status-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.unlocked-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:99px; background:rgba(16,185,129,.1); color:#10B981; font-size:11px; font-weight:700; }
+.buy-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:10px; background:var(--text); border:none; color:#fff; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; transition:all .2s; }
 .buy-btn:disabled { opacity:.5; cursor:not-allowed; }
-.buy-btn:not(:disabled):hover { background:#1F2937; }
-.leads-skeleton { padding:16px 22px; }
-.lead-skel-row { height:52px; border-radius:9px; background:linear-gradient(90deg,#f5f5f5 25%,#fafafa 50%,#f5f5f5 75%); background-size:200% 100%; margin-bottom:8px; animation:shimmer 1.5s infinite; }
-.leads-empty { padding:52px 20px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; }
-.leads-empty-title { font-weight:600; font-size:15px; color:var(--text); }
-.leads-empty-sub { font-size:13px; color:var(--muted); max-width:300px; }
-.leads-empty-cta { display:inline-flex; align-items:center; gap:5px; padding:9px 18px; border-radius:9px; background:var(--gold); color:#fff; text-decoration:none; font-weight:600; font-size:13px; margin-top:4px; }
+.buy-btn:not(:disabled):hover { background:#1c2a3a; }
+.leads-skeleton { padding:18px 24px; }
+.lead-skel-row { height:56px; border-radius:10px; background:linear-gradient(90deg,#f5f5f5 25%,#fafafa 50%,#f5f5f5 75%); background-size:200% 100%; margin-bottom:10px; animation:shimmer 1.5s infinite; }
+.leads-empty { padding:56px 20px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.leads-empty-icon { width:64px; height:64px; border-radius:18px; background:#F3F4F6; display:flex; align-items:center; justify-content:center; }
+.leads-empty-title { font-weight:800; font-size:15px; color:var(--text); font-family:var(--serif); }
+.leads-empty-sub { font-size:13px; color:var(--muted); max-width:300px; line-height:1.6; }
+.leads-empty-cta { display:inline-flex; align-items:center; gap:5px; padding:10px 20px; border-radius:11px; background:var(--gold); color:#fff; text-decoration:none; font-weight:700; font-size:13px; margin-top:4px; }
 
-/* Mobile overlay */
+/* ── Mobile overlay ── */
 .mobile-overlay { position:fixed; inset:0; z-index:50; display:flex; }
 .mobile-sidebar-wrap { width:var(--sidebar-w); height:100%; flex-shrink:0; }
-.overlay-backdrop { flex:1; background:rgba(0,0,0,.4); }
+.overlay-backdrop { flex:1; background:rgba(0,0,0,.45); }
 
-/* Loading */
-.dash-loading { min-height:100vh; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-family:var(--font); }
-.loading-spinner { width:50px; height:50px; border-radius:14px; background:linear-gradient(135deg,#F59E0B,#FBBF24); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 20px rgba(245,158,11,.35); }
-.loading-text { font-size:14px; color:var(--muted); }
+/* ── Loading ── */
+.dash-loading { min-height:100vh; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; font-family:var(--font); }
+.loading-spinner { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,#D97706,#F59E0B); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 24px rgba(217,119,6,.4); }
+.loading-text { font-size:14px; color:var(--muted); font-weight:500; }
 
-/* Utils */
+/* ── Utils ── */
 .spin { animation:spin-kf 1s linear infinite; }
 @keyframes spin-kf { to { transform:rotate(360deg); } }
 `
