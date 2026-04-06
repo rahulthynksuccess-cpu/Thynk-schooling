@@ -371,7 +371,10 @@ export default function SchoolCompleteProfilePage() {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 4000)
 
-    fetch('/api/schools/profile', {
+    // NOTE: Vercel rewrites strip Authorization headers.
+    // Pass token as ?__token= query param — same pattern used by saveProfile.
+    const tokenParam = token ? `?__token=${encodeURIComponent(token)}` : ''
+    fetch(`/api/schools/profile${tokenParam}`, {
       cache: 'no-store',
       credentials: 'include',
       headers: { Authorization: `Bearer ${token}` },
