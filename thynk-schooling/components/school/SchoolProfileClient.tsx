@@ -1,63 +1,43 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
-  MapPin, Phone, Globe, Star, BadgeCheck, Heart, Share2,
-  GitCompare, ArrowRight, GraduationCap, ExternalLink,
-  BookOpen, Users, Calendar, Award, Building2,
-  BookOpenCheck, Mic, X, CheckCircle2, Zap, Trophy,
-  ChevronRight, Sparkles, PhoneCall, Bell, ShieldCheck,
-  TrendingUp, Clock, Eye, Bookmark,
+  MapPin, Globe, Star, BadgeCheck, Heart, Share2, GitCompare,
+  ArrowRight, GraduationCap, ExternalLink, BookOpen, Users,
+  Calendar, Award, Building2, BookOpenCheck, Mic, X,
+  CheckCircle2, Sparkles, PhoneCall,
 } from 'lucide-react'
 import { School, Review } from '@/types'
 
-/* ─────────────────────────────────────────
-   DESIGN SYSTEM — Ink + Champagne + Cream
-───────────────────────────────────────── */
-const T = {
-  /* backgrounds */
-  bg:        '#F6F3EE',
-  surface:   '#FFFFFF',
-  surfaceAlt:'#FDFBF8',
-  dark:      '#0C0E13',
-  darkMid:   '#161B27',
-
-  /* text */
-  ink:       '#0C0E13',
-  inkSoft:   '#4A505C',
-  inkFaint:  '#9098A6',
-
-  /* champagne accent */
-  champ:     '#C9A84C',
-  champDark: '#8C6A1F',
-  champGlow: 'rgba(201,168,76,0.22)',
-  champBg:   'rgba(201,168,76,0.08)',
-  champLine: 'rgba(201,168,76,0.28)',
-
-  /* semantic */
-  green:     '#1A9E5C',
-  greenBg:   'rgba(26,158,92,0.08)',
-  blue:      '#2563EB',
-  blueBg:    'rgba(37,99,235,0.08)',
-  purple:    '#7C3AED',
-  purpleBg:  'rgba(124,58,237,0.08)',
-  red:       '#DC2626',
-
-  /* borders */
-  bdr:       'rgba(12,14,19,0.08)',
-  bdrSoft:   'rgba(12,14,19,0.05)',
+/* ══════════════════════════════════════════════════
+   TOKENS
+══════════════════════════════════════════════════ */
+const C = {
+  bg:       '#F4F1EC',
+  white:    '#FFFFFF',
+  ink:      '#111318',
+  soft:     '#525866',
+  faint:    '#98A0AE',
+  border:   'rgba(17,19,24,0.09)',
+  borderS:  'rgba(17,19,24,0.05)',
+  gold:     '#B8920A',
+  goldBg:   'rgba(184,146,10,0.07)',
+  goldBdr:  'rgba(184,146,10,0.22)',
+  goldLt:   '#F0C94A',
+  /* colour spectrum for info cards */
+  palette: [
+    { bg:'rgba(37,99,235,0.07)',   bdr:'rgba(37,99,235,0.2)',   txt:'#1D4ED8', ico:'#2563EB'  },
+    { bg:'rgba(16,185,129,0.07)',  bdr:'rgba(16,185,129,0.2)',  txt:'#065F46', ico:'#10B981'  },
+    { bg:'rgba(139,92,246,0.07)',  bdr:'rgba(139,92,246,0.2)',  txt:'#5B21B6', ico:'#7C3AED'  },
+    { bg:'rgba(245,158,11,0.07)',  bdr:'rgba(245,158,11,0.2)',  txt:'#92400E', ico:'#D97706'  },
+    { bg:'rgba(236,72,153,0.07)',  bdr:'rgba(236,72,153,0.2)',  txt:'#9D174D', ico:'#EC4899'  },
+    { bg:'rgba(14,165,233,0.07)',  bdr:'rgba(14,165,233,0.2)',  txt:'#0C4A6E', ico:'#0EA5E9'  },
+    { bg:'rgba(34,197,94,0.07)',   bdr:'rgba(34,197,94,0.2)',   txt:'#14532D', ico:'#22C55E'  },
+    { bg:'rgba(249,115,22,0.07)',  bdr:'rgba(249,115,22,0.2)',  txt:'#7C2D12', ico:'#F97316'  },
+  ],
 }
-
-/* helpers */
-const card = (extra?: React.CSSProperties): React.CSSProperties => ({
-  background: T.surface,
-  border: `1px solid ${T.bdr}`,
-  borderRadius: 24,
-  boxShadow: '0 2px 24px rgba(12,14,19,0.055)',
-  ...extra,
-})
 
 function fmt(raw?: string | null): string {
   if (!raw) return ''
@@ -70,310 +50,131 @@ function fmt(raw?: string | null): string {
 
 const TABS = ['Overview','Facilities','Fees','Admission','Reviews','Gallery']
 
-/* ─── GLOBAL STYLES ─────────────────────────────────────── */
-const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@300;400;500;600;700&display=swap');
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  @keyframes shimmer {
-    0%   { background-position: -400% 0 }
-    100% { background-position: 400% 0 }
-  }
-  @keyframes pulse-ring {
-    0%,100% { opacity: 0.35; transform: scale(1) }
-    50%      { opacity: 0.65; transform: scale(1.06) }
-  }
-  @keyframes float-up {
-    0%,100% { transform: translateY(0) }
-    50%      { transform: translateY(-8px) }
-  }
-  @keyframes grain {
-    0%,100% { transform: translate(0,0) }
-    20%      { transform: translate(-2%,-3%) }
-    40%      { transform: translate(-4%,1%) }
-    60%      { transform: translate(2%,-1%) }
-    80%      { transform: translate(-1%,3%) }
-  }
-  @keyframes champ-glow {
-    0%,100% { box-shadow: 0 0 0 rgba(201,168,76,0) }
-    50%      { box-shadow: 0 0 28px rgba(201,168,76,0.45) }
-  }
-
-  .skel {
-    background: linear-gradient(90deg,#EDE9E2 25%,#F6F3EE 50%,#EDE9E2 75%);
-    background-size: 400% 100%;
-    animation: shimmer 1.6s ease-in-out infinite;
-    border-radius: 12px;
-  }
-  .tab-btn {
-    transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
-  }
-  .tab-btn:hover { color: ${T.ink} !important; }
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+@keyframes shimmer{0%{background-position:-400% 0}100%{background-position:400% 0}}
+@keyframes pulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:.85;transform:scale(1.05)}}
+.sk{background:linear-gradient(90deg,#EDE9E2 25%,#F4F1EC 50%,#EDE9E2 75%);background-size:400%;animation:shimmer 1.5s infinite;border-radius:12px}
 `
 
-/* ─── GRAIN OVERLAY ─────────────────────────────────────── */
-function Grain() {
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 999,
-      backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.038'/%3E%3C/svg%3E")`,
-      backgroundRepeat: 'repeat', backgroundSize: '180px',
-      animation: 'grain 8s steps(1) infinite',
-      mixBlendMode: 'multiply',
-      opacity: 0.6,
-    }} />
-  )
-}
-
-/* ─── CHAMP LINE ─────────────────────────────────────────── */
-function ChampLine({ width = '100%' }: { width?: string }) {
-  return (
-    <div style={{
-      width, height: 1,
-      background: `linear-gradient(90deg, transparent, ${T.champ}, transparent)`,
-    }} />
-  )
-}
-
-/* ─── SECTION HEADING ────────────────────────────────────── */
-function SectionHead({ title, sub }: { title: string; sub?: string }) {
-  return (
-    <div style={{ marginBottom: 28 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: sub ? 6 : 0 }}>
-        <div style={{ width: 3, height: 22, borderRadius: 2, background: `linear-gradient(to bottom, ${T.champ}, ${T.champDark})`, flexShrink: 0 }} />
-        <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 26, color: T.ink, letterSpacing: '-0.02em' }}>{title}</h2>
-      </div>
-      {sub && <p style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.inkFaint, paddingLeft: 15 }}>{sub}</p>}
-    </div>
-  )
-}
-
-/* ─── BADGE CHIP ─────────────────────────────────────────── */
-function Chip({
-  label, color = 'champ', size = 'md'
-}: {
-  label: string
-  color?: 'champ'|'green'|'blue'|'purple'|'neutral'
-  size?: 'sm'|'md'
+/* ══ INFO CARD — individual colourful card per data point ══ */
+function InfoCard({ icon:Icon, label, value, idx }: {
+  icon:React.ElementType; label:string; value?:string|number|null; idx:number
 }) {
-  const map = {
-    champ:   { bg: T.champBg,   b: T.champLine, t: T.champDark },
-    green:   { bg: T.greenBg,   b: 'rgba(26,158,92,0.2)',  t: '#15783E' },
-    blue:    { bg: T.blueBg,    b: 'rgba(37,99,235,0.2)',  t: '#1D4ED8' },
-    purple:  { bg: T.purpleBg,  b: 'rgba(124,58,237,0.2)', t: '#6D28D9' },
-    neutral: { bg: 'rgba(12,14,19,0.05)', b: T.bdr, t: T.inkSoft },
-  }
-  const s = map[color]
-  const pad = size === 'sm' ? '4px 10px' : '6px 14px'
-  const fs = size === 'sm' ? 11 : 12
-  return (
-    <motion.span
-      whileHover={{ scale: 1.04 }}
-      style={{
-        display: 'inline-flex', alignItems: 'center',
-        background: s.bg, border: `1px solid ${s.b}`, color: s.t,
-        fontFamily: 'Outfit, sans-serif', fontSize: fs, fontWeight: 600,
-        padding: pad, borderRadius: 100, cursor: 'default',
-        transition: 'all 0.18s',
-      }}
-    >
-      {label}
-    </motion.span>
-  )
-}
-
-/* ─── ICON STAT ROW ──────────────────────────────────────── */
-function FactRow({ icon: Icon, label, value, accent }: { icon: React.ElementType; label: string; value?: string | number | null; accent?: boolean }) {
   if (!value && value !== 0) return null
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '12px 0',
-      borderBottom: `1px solid ${T.bdrSoft}`,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
-          width: 30, height: 30, borderRadius: 9,
-          background: accent ? T.champBg : 'rgba(12,14,19,0.05)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <Icon style={{ width: 13, height: 13, color: accent ? T.champ : T.inkFaint }} />
-        </div>
-        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.inkSoft }}>{label}</span>
-      </div>
-      <span style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 17, color: accent ? T.champ : T.ink }}>{value}</span>
-    </div>
-  )
-}
-
-/* ─── METRIC CARD ─────────────────────────────────────────── */
-function MetricCard({ icon, value, label, sub, dark }: { icon: string; value: string; label: string; sub?: string; dark?: boolean }) {
+  const p = C.palette[idx % C.palette.length]
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      style={{
-        background: dark
-          ? 'linear-gradient(145deg, #0C0E13 0%, #161B27 100%)'
-          : T.surface,
-        border: `1px solid ${dark ? 'rgba(201,168,76,0.18)' : T.bdr}`,
-        borderRadius: 20,
-        padding: '22px 20px',
-        position: 'relative',
-        overflow: 'hidden',
-        cursor: 'default',
-      }}
+      initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }}
+      transition={{ delay:idx*0.05, duration:0.32, ease:[0.22,1,0.36,1] }}
+      whileHover={{ y:-5, transition:{ duration:0.16 } }}
+      style={{ background:p.bg, border:`1.5px solid ${p.bdr}`, borderRadius:18,
+        padding:'18px 20px', position:'relative', overflow:'hidden', cursor:'default' }}
     >
-      {dark && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-          background: `linear-gradient(90deg, transparent, ${T.champ}, transparent)`,
-        }} />
-      )}
-      <div style={{ fontSize: 26, marginBottom: 12 }}>{icon}</div>
-      <div style={{
-        fontFamily: 'Cormorant Garamond, serif',
-        fontWeight: 700, fontSize: 30,
-        color: dark ? '#F0D98A' : T.champ,
-        lineHeight: 1, letterSpacing: '-0.02em',
-        marginBottom: 6,
-      }}>
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:3,
+        background:`linear-gradient(90deg,${p.ico},transparent)`, borderRadius:'18px 18px 0 0' }} />
+      <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:13 }}>
+        <div style={{ width:34, height:34, borderRadius:10, background:'rgba(255,255,255,0.65)',
+          display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <Icon style={{ width:15, height:15, color:p.ico }} />
+        </div>
+        <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:10, fontWeight:700,
+          textTransform:'uppercase', letterSpacing:'0.1em', color:p.txt, opacity:0.72 }}>{label}</span>
+      </div>
+      <div style={{ fontFamily:'DM Serif Display,serif', fontSize:19, color:p.txt, lineHeight:1.25 }}>
         {value}
       </div>
-      <div style={{
-        fontFamily: 'Outfit, sans-serif', fontSize: 10, fontWeight: 700,
-        textTransform: 'uppercase', letterSpacing: '0.1em',
-        color: dark ? 'rgba(255,255,255,0.35)' : T.inkFaint,
-      }}>
-        {label}
-      </div>
-      {sub && (
-        <div style={{
-          fontFamily: 'Outfit, sans-serif', fontSize: 10,
-          color: dark ? 'rgba(255,255,255,0.18)' : T.inkFaint,
-          marginTop: 3,
-        }}>
-          {sub}
-        </div>
-      )}
     </motion.div>
   )
 }
 
-/* ─── FACILITY CARD ──────────────────────────────────────── */
-function FacilityCard({ label, emoji, accent }: { label: string; emoji: string; accent: string }) {
+/* ══ CHIP ══ */
+type CC = 'gold'|'green'|'blue'|'purple'|'neutral'
+function Chip({ label, color='neutral' }: { label:string; color?:CC }) {
+  const m: Record<CC,{bg:string;b:string;t:string}> = {
+    gold:   { bg:C.goldBg,                     b:C.goldBdr,                    t:C.gold   },
+    green:  { bg:'rgba(16,185,129,0.07)',       b:'rgba(16,185,129,0.22)',      t:'#065F46'},
+    blue:   { bg:'rgba(37,99,235,0.07)',        b:'rgba(37,99,235,0.22)',       t:'#1D4ED8'},
+    purple: { bg:'rgba(139,92,246,0.07)',       b:'rgba(139,92,246,0.22)',      t:'#5B21B6'},
+    neutral:{ bg:'rgba(17,19,24,0.05)',         b:C.border,                     t:C.soft   },
+  }
+  const s = m[color]
   return (
-    <motion.div
-      whileHover={{ y: -5, boxShadow: `0 14px 36px ${accent}` }}
-      initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: 1, scale: 1 }}
-      style={{
-        background: T.surface,
-        border: `1px solid ${T.bdr}`,
-        borderRadius: 16,
-        padding: '18px 14px',
-        textAlign: 'center',
-        cursor: 'default',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'box-shadow 0.25s',
-      }}
-    >
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: `radial-gradient(ellipse at top, ${accent} 0%, transparent 65%)`,
-        opacity: 0.45, pointerEvents: 'none',
-      }} />
-      <div style={{ fontSize: 28, marginBottom: 8 }}>{emoji}</div>
-      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, fontWeight: 600, color: T.ink, lineHeight: 1.4 }}>{label}</div>
+    <span style={{ display:'inline-flex', alignItems:'center', background:s.bg,
+      border:`1px solid ${s.b}`, color:s.t, fontFamily:'Plus Jakarta Sans,sans-serif',
+      fontSize:12, fontWeight:600, padding:'5px 13px', borderRadius:100 }}>{label}</span>
+  )
+}
+
+/* ══ FACILITY TILE ══ */
+const ICONS = {
+  fac: ['🏊','🏋️','🔬','📖','🎨','🖥️','🍽️','🚌','⚽','🎭','📚','🏥','🎯','🎪','🤖','🔭'],
+  spt: ['⚽','🏏','🏸','🏊','🎾','🏐','🏀','🤸','🥊','🏑','🎱','🏓'],
+  act: ['🎭','🎵','🎨','📸','💃','🎬','🗣️','✍️','🤖','🔭','🎯','🎪'],
+  lng: ['🇮🇳','🇬🇧','🇫🇷','🇩🇪','🇯🇵','🇷🇺','🇨🇳','🇸🇦','🌍','📖','✏️','🔤'],
+}
+function FacTile({ label, emoji, color }:{ label:string; emoji:string; color:string }) {
+  return (
+    <motion.div whileHover={{ y:-4 }}
+      style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:14,
+        padding:'14px 10px', textAlign:'center', position:'relative', overflow:'hidden' }}>
+      <div style={{ position:'absolute', inset:0,
+        background:`radial-gradient(ellipse at top,${color},transparent 65%)`,
+        opacity:0.28, pointerEvents:'none' }} />
+      <div style={{ fontSize:24, marginBottom:6 }}>{emoji}</div>
+      <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11, fontWeight:600,
+        color:C.ink, lineHeight:1.35 }}>{fmt(label)}</div>
     </motion.div>
   )
 }
 
-/* ─── REVIEW CARD ────────────────────────────────────────── */
-function ReviewCard({ review, i }: { review: Review; i: number }) {
-  const initials = review.parentName?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || '?'
-  const rating = Number(review.rating) || 0
-  const palettes = [
-    ['#C9A84C','#8C6A1F'], ['#1A9E5C','#0D6B3D'], ['#2563EB','#1D4ED8'],
-    ['#7C3AED','#5B21B6'], ['#DC2626','#991B1B'],
-  ]
-  const [c1, c2] = palettes[i % palettes.length]
-
+/* ══ REVIEW CARD ══ */
+function ReviewCard({ review, i }:{ review:Review; i:number }) {
+  const initials = review.parentName?.split(' ').map((w:string)=>w[0]).join('').slice(0,2).toUpperCase()||'??'
+  const rat = Number(review.rating)||0
+  const col = [C.palette[0].ico,C.palette[1].ico,C.palette[2].ico,C.palette[3].ico,C.palette[4].ico][i%5]
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: i * 0.07, duration: 0.4, ease: [0.22,1,0.36,1] }}
-      whileHover={{ y: -3 }}
-      style={{
-        ...card(),
-        padding: '28px 30px',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'transform 0.22s, box-shadow 0.22s',
-      }}
-    >
-      {/* accent bar */}
-      <div style={{
-        position: 'absolute', left: 0, top: 0, bottom: 0, width: 4,
-        background: `linear-gradient(to bottom, ${c1}, ${c2})`,
-        borderRadius: '24px 0 0 24px',
-      }} />
-
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, marginBottom: 16, paddingLeft: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div style={{
-            width: 46, height: 46, borderRadius: 14,
-            background: `linear-gradient(135deg, ${c1}, ${c2})`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: 'Cormorant Garamond, serif', fontWeight: 700,
-            fontSize: 18, color: '#fff', flexShrink: 0,
-            boxShadow: `0 6px 18px ${c1}55`,
-          }}>
-            {initials}
-          </div>
+    <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
+      transition={{ delay:i*0.07, duration:0.38, ease:[0.22,1,0.36,1] }}
+      whileHover={{ y:-3 }}
+      style={{ background:C.white, border:`1px solid ${C.border}`, borderRadius:20,
+        padding:'24px 26px', position:'relative', overflow:'hidden' }}>
+      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:4,
+        background:col, borderRadius:'20px 0 0 20px' }} />
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between',
+        gap:12, marginBottom:14, paddingLeft:8 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          <div style={{ width:42, height:42, borderRadius:12, background:col,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontFamily:'DM Serif Display,serif', fontSize:16, color:'#fff', flexShrink:0 }}>{initials}</div>
           <div>
-            <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 15, color: T.ink }}>{review.parentName}</div>
-            <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint, marginTop: 2 }}>
-              {new Date(review.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-            </div>
+            <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontWeight:600, fontSize:14, color:C.ink }}>
+              {review.parentName}</div>
+            <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11, color:C.faint, marginTop:2 }}>
+              {new Date(review.createdAt).toLocaleDateString('en-IN',{month:'short',year:'numeric'})}</div>
           </div>
         </div>
-
-        {/* rating pill */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          background: T.champBg, border: `1px solid ${T.champLine}`,
-          padding: '6px 12px', borderRadius: 99, flexShrink: 0,
-        }}>
-          {[1,2,3,4,5].map(s => (
-            <Star key={s} style={{ width: 10, height: 10, fill: s <= rating ? T.champ : 'transparent', color: s <= rating ? T.champ : '#CCC' }} />
-          ))}
-          <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 700, color: T.champ, marginLeft: 4 }}>{rating}.0</span>
+        <div style={{ display:'flex', alignItems:'center', gap:4, background:C.goldBg,
+          border:`1px solid ${C.goldBdr}`, padding:'5px 11px', borderRadius:99, flexShrink:0 }}>
+          {[1,2,3,4,5].map(s=><Star key={s} style={{ width:10, height:10,
+            fill:s<=rat?C.gold:'transparent', color:s<=rat?C.gold:'#CCC' }} />)}
+          <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12,
+            fontWeight:700, color:C.gold, marginLeft:4 }}>{rat}.0</span>
         </div>
       </div>
-
-      <div style={{ paddingLeft: 8 }}>
-        {review.title && (
-          <h4 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 20, color: T.ink, marginBottom: 8, lineHeight: 1.25 }}>{review.title}</h4>
-        )}
-        <p style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, color: T.inkSoft, lineHeight: 1.85 }}>{review.body}</p>
-
+      <div style={{ paddingLeft:8 }}>
+        {review.title && <h4 style={{ fontFamily:'DM Serif Display,serif', fontSize:18,
+          color:C.ink, marginBottom:7, lineHeight:1.25 }}>{review.title}</h4>}
+        <p style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:14,
+          color:C.soft, lineHeight:1.85 }}>{review.body}</p>
         {review.schoolReply && (
-          <div style={{
-            marginTop: 16, padding: '14px 18px', borderRadius: 14,
-            background: T.champBg,
-            border: `1px solid ${T.champLine}`,
-            borderLeft: `3px solid ${T.champ}`,
-          }}>
-            <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 10, fontWeight: 700, color: T.champ, marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              School Response
-            </div>
-            <p style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.inkSoft, lineHeight: 1.7 }}>{review.schoolReply}</p>
+          <div style={{ marginTop:14, padding:'12px 16px', borderRadius:12, background:C.goldBg,
+            border:`1px solid ${C.goldBdr}`, borderLeft:`3px solid ${C.gold}` }}>
+            <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:10, fontWeight:700,
+              color:C.gold, marginBottom:4, textTransform:'uppercase', letterSpacing:'0.1em' }}>School Response</div>
+            <p style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:13, color:C.soft, lineHeight:1.7 }}>
+              {review.schoolReply}</p>
           </div>
         )}
       </div>
@@ -381,460 +182,386 @@ function ReviewCard({ review, i }: { review: Review; i: number }) {
   )
 }
 
-/* ─── TOAST ──────────────────────────────────────────────── */
-function Toast({ message, variant = 'dark', onClose }: { message: string; variant?: 'dark'|'success'; onClose: () => void }) {
-  useEffect(() => { const t = setTimeout(onClose, 2800); return () => clearTimeout(t) }, [onClose])
-  const bg = variant === 'success' ? '#15532A' : '#0C0E13'
+/* ══ TOAST ══ */
+function Toast({ msg, ok, onClose }:{ msg:string; ok?:boolean; onClose:()=>void }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 32, scale: 0.92 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 14, scale: 0.96 }}
-      style={{
-        position: 'fixed', bottom: 30, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 500, background: bg, color: '#fff',
-        borderRadius: 16, padding: '14px 22px',
-        display: 'flex', alignItems: 'center', gap: 10,
-        boxShadow: '0 20px 50px rgba(12,14,19,0.4)',
-        fontFamily: 'Outfit, sans-serif', fontSize: 14, fontWeight: 600,
-        whiteSpace: 'nowrap', border: `1px solid rgba(255,255,255,0.08)`,
-      }}
-    >
-      <CheckCircle2 style={{ width: 16, height: 16, color: '#4ADE80', flexShrink: 0 }} />
-      {message}
-      <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', borderRadius: 6, padding: '3px 7px', color: '#fff', display: 'flex', alignItems: 'center', marginLeft: 4 }}>
-        <X style={{ width: 11, height: 11 }} />
+    <motion.div initial={{ opacity:0, y:28, scale:0.93 }} animate={{ opacity:1, y:0, scale:1 }}
+      exit={{ opacity:0, y:12 }}
+      style={{ position:'fixed', bottom:28, left:'50%', transform:'translateX(-50%)', zIndex:600,
+        background:ok?'#0F4C29':C.ink, color:'#fff', borderRadius:14, padding:'12px 20px',
+        display:'flex', alignItems:'center', gap:10,
+        boxShadow:'0 16px 48px rgba(0,0,0,0.35)',
+        fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:13, fontWeight:600,
+        whiteSpace:'nowrap', border:'1px solid rgba(255,255,255,0.08)' }}>
+      <CheckCircle2 style={{ width:15, height:15, color:'#4ADE80', flexShrink:0 }} />
+      {msg}
+      <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none',
+        cursor:'pointer', borderRadius:6, padding:'2px 6px', color:'#fff',
+        display:'flex', alignItems:'center', marginLeft:4 }}>
+        <X style={{ width:10, height:10 }} />
       </button>
     </motion.div>
   )
 }
 
-/* ─── REQUEST CALL MODAL ─────────────────────────────────── */
-function RequestCallModal({ school, onClose, onSuccess }: { school: School; onClose: () => void; onSuccess: () => void }) {
-  const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
-  const [childName, setChildName] = useState('')
-  const [classFor, setClassFor] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim()) { setError('Name and phone are required'); return }
-    if (!/^\d{10}$/.test(phone.replace(/\s/g, ''))) { setError('Enter a valid 10-digit number'); return }
-    setLoading(true); setError('')
+/* ══ CALL MODAL ══ */
+function CallModal({ school, onClose, onSuccess }:{ school:School; onClose:()=>void; onSuccess:()=>void }) {
+  const [name,setName]=useState(''); const [phone,setPhone]=useState('')
+  const [child,setChild]=useState(''); const [cls,setCls]=useState('')
+  const [loading,setLoading]=useState(false); const [err,setErr]=useState('')
+  const submit = async () => {
+    if(!name.trim()||!phone.trim()){setErr('Name and phone are required');return}
+    if(!/^\d{10}$/.test(phone.replace(/\s/g,''))){setErr('Enter a valid 10-digit number');return}
+    setLoading(true);setErr('')
     try {
-      const res = await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId: school.id, action: 'request_call', parentName: name, phone, childName, classApplyingFor: classFor, source: 'request_call' }) })
-      if (!res.ok) throw new Error('Failed')
-      onSuccess(); onClose()
-    } catch { setError('Something went wrong. Please try again.') }
-    finally { setLoading(false) }
+      const r=await fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({schoolId:school.id,action:'request_call',parentName:name,phone,
+          childName:child,classApplyingFor:cls,source:'request_call'})})
+      if(!r.ok) throw new Error()
+      onSuccess();onClose()
+    } catch{setErr('Something went wrong. Please try again.')}
+    finally{setLoading(false)}
   }
-
-  const fields = [
-    { label: 'Your Name *', value: name, onChange: setName, placeholder: 'Full name', type: 'text' },
-    { label: 'Mobile Number *', value: phone, onChange: setPhone, placeholder: '10-digit mobile', type: 'tel' },
-    { label: "Child's Name", value: childName, onChange: setChildName, placeholder: 'Optional', type: 'text' },
-    { label: 'Applying for Class', value: classFor, onChange: setClassFor, placeholder: 'e.g. Grade 5, Nursery', type: 'text' },
-  ]
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(12,14,19,0.7)', backdropFilter: 'blur(12px)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <motion.div
-        initial={{ scale: 0.86, opacity: 0, y: 40 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.92, opacity: 0 }}
-        transition={{ duration: 0.32, ease: [0.22,1,0.36,1] }}
-        style={{ background: '#fff', borderRadius: 32, padding: '44px', width: '100%', maxWidth: 460, boxShadow: '0 40px 120px rgba(12,14,19,0.28)', position: 'relative', overflow: 'hidden' }}
-      >
-        <ChampLine />
-        <div style={{ paddingTop: 28 }}>
-          <button onClick={onClose} style={{ position: 'absolute', top: 20, right: 20, background: 'rgba(12,14,19,0.05)', border: 'none', cursor: 'pointer', borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <X style={{ width: 14, height: 14, color: T.inkSoft }} />
-          </button>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 30 }}>
-            <div style={{ width: 50, height: 50, borderRadius: 16, background: `linear-gradient(135deg, ${T.champ}, ${T.champDark})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 8px 24px ${T.champGlow}` }}>
-              <PhoneCall style={{ width: 20, height: 20, color: '#fff' }} />
-            </div>
-            <div>
-              <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 26, color: T.ink, lineHeight: 1.1 }}>Request a Call Back</h2>
-              <p style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, color: T.inkFaint, marginTop: 3 }}>{school.name} will call within 24 hours</p>
-            </div>
+    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+      style={{ position:'fixed', inset:0, background:'rgba(17,19,24,0.65)', backdropFilter:'blur(12px)',
+        zIndex:500, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+      onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <motion.div initial={{ scale:0.88, y:32, opacity:0 }} animate={{ scale:1, y:0, opacity:1 }}
+        exit={{ scale:0.93, opacity:0 }} transition={{ duration:0.3, ease:[0.22,1,0.36,1] }}
+        style={{ background:C.white, borderRadius:28, padding:'40px', width:'100%', maxWidth:460,
+          boxShadow:'0 40px 120px rgba(17,19,24,0.28)', position:'relative', overflow:'hidden' }}>
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:3,
+          background:`linear-gradient(90deg,transparent,${C.gold},${C.goldLt},${C.gold},transparent)` }} />
+        <button onClick={onClose} style={{ position:'absolute', top:18, right:18,
+          background:'rgba(17,19,24,0.05)', border:'none', cursor:'pointer', borderRadius:9,
+          width:32, height:32, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <X style={{ width:13, height:13, color:C.soft }} />
+        </button>
+        <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:28 }}>
+          <div style={{ width:48, height:48, borderRadius:15,
+            background:`linear-gradient(135deg,${C.gold},#7A5C00)`,
+            display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <PhoneCall style={{ width:20, height:20, color:'#fff' }} />
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {fields.map(f => (
-              <div key={f.label}>
-                <label style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, fontWeight: 600, color: T.inkFaint, display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{f.label}</label>
-                <input
-                  type={f.type} value={f.value}
-                  onChange={e => f.onChange(e.target.value)}
-                  placeholder={f.placeholder}
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: `1.5px solid ${T.bdr}`, fontFamily: 'Outfit, sans-serif', fontSize: 14, color: T.ink, outline: 'none', background: T.surfaceAlt, transition: 'border-color 0.18s' }}
-                  onFocus={e => (e.currentTarget.style.borderColor = T.champ)}
-                  onBlur={e => (e.currentTarget.style.borderColor = T.bdr)}
-                />
-              </div>
-            ))}
+          <div>
+            <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:24, color:C.ink, lineHeight:1.1 }}>
+              Request a Call Back</h2>
+            <p style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12,
+              color:C.faint, marginTop:3 }}>{school.name} will call within 24 hours</p>
           </div>
-
-          {error && (
-            <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.18)', fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.red }}>
-              {error}
-            </div>
-          )}
-
-          <motion.button
-            whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.97 }}
-            onClick={handleSubmit} disabled={loading}
-            style={{ marginTop: 24, width: '100%', padding: '16px', borderRadius: 16, border: 'none', background: loading ? '#ccc' : `linear-gradient(135deg, ${T.champ}, ${T.champDark})`, color: '#fff', fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : `0 8px 28px ${T.champGlow}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-          >
-            {loading ? 'Submitting…' : <><PhoneCall style={{ width: 15, height: 15 }} /> Request Call Back</>}
-          </motion.button>
-
-          <p style={{ marginTop: 14, fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint, textAlign: 'center', lineHeight: 1.6 }}>
-            🔒 Info shared only with this school · Protected by our privacy policy
-          </p>
         </div>
+        <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {[
+            {label:'Your Name *',       val:name,  set:setName,  ph:'Full name',            t:'text'},
+            {label:'Mobile Number *',   val:phone, set:setPhone, ph:'10-digit mobile',       t:'tel' },
+            {label:"Child's Name",      val:child, set:setChild, ph:'Optional',              t:'text'},
+            {label:'Applying for Class',val:cls,   set:setCls,   ph:'e.g. Grade 5, Nursery', t:'text'},
+          ].map(f=>(
+            <div key={f.label}>
+              <label style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:10, fontWeight:700,
+                color:C.faint, display:'block', marginBottom:5, textTransform:'uppercase',
+                letterSpacing:'0.07em' }}>{f.label}</label>
+              <input type={f.t} value={f.val} onChange={e=>f.set(e.target.value)} placeholder={f.ph}
+                style={{ width:'100%', padding:'11px 14px', borderRadius:11,
+                  border:`1.5px solid ${C.border}`, fontFamily:'Plus Jakarta Sans,sans-serif',
+                  fontSize:14, color:C.ink, outline:'none', background:'#FAFAF8',
+                  transition:'border-color 0.16s' }}
+                onFocus={e=>(e.currentTarget.style.borderColor=C.gold)}
+                onBlur={e=>(e.currentTarget.style.borderColor=C.border)} />
+            </div>
+          ))}
+        </div>
+        {err&&<div style={{ marginTop:10, padding:'9px 13px', borderRadius:9,
+          background:'rgba(220,38,38,0.06)', border:'1px solid rgba(220,38,38,0.18)',
+          fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12, color:'#B91C1C' }}>{err}</div>}
+        <motion.button whileHover={{ scale:1.02, y:-1 }} whileTap={{ scale:0.97 }}
+          onClick={submit} disabled={loading}
+          style={{ marginTop:22, width:'100%', padding:'15px', borderRadius:15, border:'none',
+            background:loading?'#ccc':`linear-gradient(135deg,${C.gold},#7A5C00)`,
+            color:'#fff', fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:15, fontWeight:700,
+            cursor:loading?'not-allowed':'pointer', display:'flex', alignItems:'center',
+            justifyContent:'center', gap:8 }}>
+          {loading?'Submitting…':<><PhoneCall style={{ width:15, height:15 }} /> Request Call Back</>}
+        </motion.button>
+        <p style={{ marginTop:12, fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11,
+          color:C.faint, textAlign:'center', lineHeight:1.6 }}>
+          🔒 Info shared only with this school · Protected by our privacy policy</p>
       </motion.div>
     </motion.div>
   )
 }
 
-/* ─── SKELETON ───────────────────────────────────────────── */
-function ProfileSkeleton() {
+/* ══ SKELETON ══ */
+function Skel() {
   return (
-    <div style={{ background: T.bg, minHeight: '100vh' }}>
-      <div className="skel" style={{ height: 380, borderRadius: 0 }} />
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 32px' }}>
-        <div style={{ display: 'flex', gap: 24, marginTop: -60, marginBottom: 48 }}>
-          <div className="skel" style={{ width: 110, height: 110, borderRadius: 26, flexShrink: 0 }} />
-          <div style={{ flex: 1, paddingTop: 68 }}>
-            <div className="skel" style={{ height: 32, width: '38%', marginBottom: 12 }} />
-            <div className="skel" style={{ height: 14, width: '22%' }} />
-          </div>
-        </div>
-        <div className="skel" style={{ height: 80, borderRadius: 20, marginBottom: 40 }} />
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 36 }}>
+    <div style={{ background:C.bg, minHeight:'100vh' }}>
+      <div className="sk" style={{ height:260, borderRadius:0 }} />
+      <div style={{ maxWidth:1240, margin:'0 auto', padding:'0 40px', marginTop:32 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:36 }}>
           <div>
-            <div className="skel" style={{ height: 54, borderRadius: 16, marginBottom: 32 }} />
-            <div className="skel" style={{ height: 200, borderRadius: 24 }} />
+            <div className="sk" style={{ height:50, borderRadius:14, marginBottom:28 }} />
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12, marginBottom:28 }}>
+              {[1,2,3,4].map(i=><div key={i} className="sk" style={{ height:90 }} />)}
+            </div>
+            <div className="sk" style={{ height:200, borderRadius:20 }} />
           </div>
-          <div className="skel" style={{ height: 460, borderRadius: 28 }} />
+          <div className="sk" style={{ height:440, borderRadius:24 }} />
         </div>
       </div>
     </div>
   )
 }
 
-/* ══════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════
    MAIN COMPONENT
-══════════════════════════════════════════════════════════ */
-export function SchoolProfileClient({ slug }: { slug: string }) {
-  const [activeTab, setActiveTab] = useState('Overview')
+══════════════════════════════════════════════════ */
+export function SchoolProfileClient({ slug }:{ slug:string }) {
+  const [tab,   setTab]   = useState('Overview')
   const [saved, setSaved] = useState(false)
-  const [showShare, setShowShare] = useState(false)
-  const [showCallModal, setShowCallModal] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
+  const [toast, setToast] = useState<{msg:string;ok?:boolean}|null>(null)
+  const [modal, setModal] = useState(false)
 
-  const { scrollY } = useScroll()
-  const coverYRaw = useTransform(scrollY, [0, 500], [0, 90])
-  const coverY = useSpring(coverYRaw, { stiffness: 80, damping: 22 })
-
-  const { data: school, isLoading } = useQuery<School>({
-    queryKey: ['school', slug],
-    queryFn: () => fetch(`/api/schools/${slug}`, { cache: 'no-store' }).then(r => r.json()).then(d => d.school ?? d),
-    staleTime: 5 * 60 * 1000,
+  const { data:school, isLoading } = useQuery<School>({
+    queryKey:['school',slug],
+    queryFn:()=>fetch(`/api/schools/${slug}`,{cache:'no-store'}).then(r=>r.json()).then(d=>d.school??d),
+    staleTime:5*60*1000,
+  })
+  const { data:reviews } = useQuery<{data:Review[];total:number}>({
+    queryKey:['reviews',school?.slug??slug],
+    queryFn:()=>fetch(`/api/schools/${school?.slug??slug}/reviews?limit=6`,{cache:'no-store'})
+      .then(r=>r.ok?r.json():{data:[],total:0}).catch(()=>({data:[],total:0})),
+    enabled:!!school,
+    staleTime:5*60*1000,
   })
 
-  const { data: reviews } = useQuery<{ data: Review[]; total: number }>({
-    queryKey: ['school-reviews', school?.slug ?? slug],
-    queryFn: () => fetch(`/api/schools/${school?.slug ?? slug}/reviews?limit=6`, { cache: 'no-store' }).then(r => r.ok ? r.json() : ({ data: [], total: 0 })).catch(() => ({ data: [], total: 0 })),
-    enabled: !!school,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href)
-    setShowShare(true)
-  }
-
-  const createLead = useCallback(async (source: string, schoolId: string) => {
-    try { await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId, action: 'create_lead', source }) }) } catch {}
-  }, [])
+  const lead = useCallback(async(src:string,id:string)=>{
+    try{await fetch('/api/leads',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({schoolId:id,action:'create_lead',source:src})})}catch{}
+  },[])
 
   const handleSave = () => {
-    if (!saved && school) createLead('save', school.id)
+    if(!saved&&school) lead('save',school.id)
     setSaved(!saved)
-    if (!saved) setToast('Saved to your wishlist ✦')
+    if(!saved) setToast({msg:'Saved to your wishlist ✦',ok:true})
+  }
+  const handleShare = () => {
+    navigator.clipboard?.writeText(window.location.href)
+    setToast({msg:'Link copied to clipboard'})
   }
 
-  if (isLoading) return <ProfileSkeleton />
-  if (!school) return (
-    <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: T.bg }}>
-      <style>{GLOBAL_CSS}</style>
-      <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ fontSize: 72 }}>🏫</motion.div>
-      <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 34, color: T.ink }}>School Not Found</h2>
-      <Link href="/schools" style={{ padding: '13px 32px', borderRadius: 14, background: T.ink, color: '#fff', fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Browse Schools</Link>
+  if(isLoading) return <Skel />
+  if(!school) return (
+    <div style={{ minHeight:'80vh', display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center', gap:16, background:C.bg }}>
+      <style>{CSS}</style>
+      <div style={{ fontSize:72 }}>🏫</div>
+      <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:34, color:C.ink }}>School Not Found</h2>
+      <Link href="/schools" style={{ padding:'12px 28px', borderRadius:13, background:C.ink,
+        color:'#fff', fontFamily:'Plus Jakarta Sans,sans-serif', fontWeight:600,
+        fontSize:14, textDecoration:'none' }}>Browse Schools</Link>
     </div>
   )
 
-  const reviewList = reviews?.data ?? []
+  const list   = reviews?.data ?? []
   const rating = Number(school.avgRating) || 0
   const boards = school.board || []
-  const yearsOld = school.foundingYear ? new Date().getFullYear() - school.foundingYear : 0
-
-  const heroStats = [
-    school.foundingYear ? { icon: '🏛', value: school.foundingYear.toString(), label: 'Established', sub: yearsOld > 0 ? `${yearsOld} yrs` : '' } : null,
-    school.totalStudents ? { icon: '👨‍🎓', value: school.totalStudents.toLocaleString('en-IN'), label: 'Students', sub: 'Enrolled' } : null,
-    school.classesFrom && school.classesTo ? { icon: '📚', value: `${fmt(String(school.classesFrom))}–${fmt(String(school.classesTo))}`, label: 'Classes', sub: 'Grade range' } : null,
-    rating > 0 ? { icon: '⭐', value: rating.toFixed(1), label: 'Rating', sub: `${school.totalReviews ?? 0} reviews` } : null,
-    school.studentTeacherRatio ? { icon: '👩‍🏫', value: school.studentTeacherRatio, label: 'Student : Teacher', sub: '' } : null,
-  ].filter(Boolean) as { icon: string; value: string; label: string; sub: string }[]
+  const yrsOld = school.foundingYear ? new Date().getFullYear()-school.foundingYear : 0
+  const loc    = [school.addressLine1,school.city,school.state].filter(Boolean).join(', ')
 
   return (
-    <div style={{ background: T.bg, paddingBottom: 120, position: 'relative' }}>
-      <style>{GLOBAL_CSS}</style>
-      <Grain />
+    <div style={{ background:C.bg, paddingBottom:100 }}>
+      <style>{CSS}</style>
 
       <AnimatePresence>
-        {showShare && <Toast message="Link copied to clipboard" onClose={() => setShowShare(false)} />}
-        {toast && <Toast message={toast} variant="success" onClose={() => setToast(null)} />}
-        {showCallModal && (
-          <RequestCallModal
-            school={school}
-            onClose={() => setShowCallModal(false)}
-            onSuccess={() => setToast('Request submitted! School will call you soon.')}
-          />
-        )}
+        {toast && <Toast msg={toast.msg} ok={toast.ok} onClose={()=>setToast(null)} />}
+        {modal && <CallModal school={school} onClose={()=>setModal(false)}
+          onSuccess={()=>setToast({msg:'Request submitted! School will call you soon.',ok:true})} />}
       </AnimatePresence>
 
-      {/* ══════ HERO ══════ */}
-      <div style={{ position: 'relative', height: 'clamp(320px,42vw,440px)', overflow: 'hidden', background: 'linear-gradient(145deg, #07090F 0%, #0F1520 50%, #0C1628 100%)' }}>
-        {/* Parallax image */}
-        <motion.div style={{ y: coverY, position: 'absolute', inset: '-18%', insetInline: 0 }}>
-          {school.coverImageUrl ? (
-            <img src={school.coverImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.38) saturate(0.75)' }} />
-          ) : (
-            /* Geometric hero background */
-            <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-              {/* concentric rings */}
-              {[320, 500, 680, 860].map((size, i) => (
-                <div key={i} style={{
-                  position: 'absolute', top: '50%', left: '50%',
-                  transform: `translate(-50%,-50%)`,
-                  width: size, height: size, borderRadius: '50%',
-                  border: `1px solid rgba(201,168,76,${0.16 - i * 0.03})`,
-                  animation: `pulse-ring ${5 + i}s ease-in-out ${i * 0.5}s infinite`,
-                  pointerEvents: 'none',
-                }} />
-              ))}
-              {/* floating dots */}
-              {Array.from({ length: 16 }).map((_, i) => (
-                <div key={i} style={{
-                  position: 'absolute',
-                  left: `${6 + (i * 41 + 11) % 88}%`,
-                  top: `${8 + (i * 57 + 5) % 84}%`,
-                  width: 2 + (i % 3), height: 2 + (i % 3),
-                  borderRadius: '50%',
-                  background: `rgba(201,168,76,${0.25 + (i % 4) * 0.1})`,
-                  animation: `float-up ${3 + i % 4}s ease-in-out ${i * 0.28}s infinite`,
-                }} />
-              ))}
+      {/* ════════════════════════════════
+          HERO — compact, one band only
+          Everything shown here is UNIQUE
+          and appears NOWHERE else
+      ════════════════════════════════ */}
+      <div style={{ position:'relative', overflow:'hidden',
+        background:'linear-gradient(160deg,#0A0C12 0%,#141928 60%,#0E1620 100%)' }}>
+
+        {/* background */}
+        {school.coverImageUrl
+          ? <div style={{ position:'absolute', inset:0 }}>
+              <img src={school.coverImageUrl} alt=""
+                style={{ width:'100%', height:'100%', objectFit:'cover',
+                  filter:'brightness(0.26) saturate(0.6)' }} />
             </div>
-          )}
-        </motion.div>
+          : [260,440,600].map((s,i)=>(
+              <div key={i} style={{ position:'absolute', top:'50%', left:'50%',
+                transform:'translate(-50%,-50%)', width:s, height:s, borderRadius:'50%',
+                border:`1px solid rgba(184,146,10,${0.14-i*0.04})`,
+                animation:`pulse ${5+i*2}s ease-in-out ${i*0.6}s infinite`,
+                pointerEvents:'none' }} />
+            ))
+        }
+        <div style={{ position:'absolute', inset:0,
+          background:'linear-gradient(to top,rgba(10,12,18,1) 0%,rgba(10,12,18,0.4) 55%,transparent 100%)',
+          pointerEvents:'none' }} />
 
-        {/* Gradient overlays */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(7,9,15,0.98) 0%, rgba(7,9,15,0.55) 45%, rgba(7,9,15,0.1) 80%, transparent 100%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(7,9,15,0.65) 0%, transparent 60%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: `linear-gradient(to right, transparent, ${T.champ}66, transparent)` }} />
-
-        {/* Action buttons */}
-        <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 8, zIndex: 10 }}>
-          {[
-            { label: saved ? 'Saved' : 'Save', icon: Heart, onClick: handleSave, active: saved },
-            { label: 'Share', icon: Share2, onClick: handleShare, active: false },
-          ].map((a, i) => (
-            <motion.button
-              key={i} whileHover={{ scale: 1.06, y: -2 }} whileTap={{ scale: 0.92 }}
-              onClick={a.onClick}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px',
-                borderRadius: 99, cursor: 'pointer',
-                border: `1px solid ${a.active ? T.champLine : 'rgba(255,255,255,0.16)'}`,
-                background: a.active ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.08)',
-                backdropFilter: 'blur(20px)',
-                fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: '#fff',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.22)',
-              }}
-            >
-              <a.icon style={{ width: 13, height: 13, fill: (i === 0 && saved) ? '#fff' : 'transparent', color: '#fff' }} />
+        {/* action pills — top right */}
+        <div style={{ position:'absolute', top:18, right:18, display:'flex', gap:7, zIndex:10 }}>
+          {([
+            {label:saved?'Saved':'Save', icon:Heart,   fn:handleSave, on:saved, isHeart:true},
+            {label:'Share',             icon:Share2,   fn:handleShare,on:false, isHeart:false},
+          ] as const).map((a,i)=>(
+            <motion.button key={i} whileHover={{ scale:1.07, y:-2 }} whileTap={{ scale:0.92 }}
+              onClick={a.fn}
+              style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px',
+                borderRadius:99, cursor:'pointer',
+                border:`1px solid ${a.on?C.goldBdr:'rgba(255,255,255,0.15)'}`,
+                background:a.on?'rgba(184,146,10,0.28)':'rgba(255,255,255,0.07)',
+                backdropFilter:'blur(20px)', fontFamily:'Plus Jakarta Sans,sans-serif',
+                fontSize:12, fontWeight:600, color:'#fff' }}>
+              <a.icon style={{ width:12, height:12,
+                fill:a.isHeart&&saved?'#fff':'transparent', color:'#fff' }} />
               {a.label}
             </motion.button>
           ))}
-          <motion.div whileHover={{ scale: 1.06, y: -2 }}>
-            <Link href={`/compare?add=${school.id}`}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, border: `1px solid ${T.champLine}`, background: 'rgba(201,168,76,0.18)', backdropFilter: 'blur(20px)', fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, color: '#fff', textDecoration: 'none' }}>
-              <GitCompare style={{ width: 13, height: 13 }} /> Compare
-            </Link>
-          </motion.div>
+          <Link href={`/compare?add=${school.id}`} onClick={()=>lead('compare',school.id)}
+            style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:99,
+              border:`1px solid ${C.goldBdr}`, background:'rgba(184,146,10,0.18)',
+              backdropFilter:'blur(20px)', fontFamily:'Plus Jakarta Sans,sans-serif',
+              fontSize:12, fontWeight:600, color:'#fff', textDecoration:'none' }}>
+            <GitCompare style={{ width:12, height:12 }} /> Compare
+          </Link>
         </div>
 
-        {/* Hero text */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 clamp(20px,5vw,60px) 36px', zIndex: 5 }}>
-          {/* badges row */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
-            {school.isVerified && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(26,158,92,0.85)', backdropFilter: 'blur(12px)', color: '#fff', fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 100, fontFamily: 'Outfit, sans-serif' }}>
-                <BadgeCheck style={{ width: 11, height: 11 }} /> Verified
+        {/* Hero body */}
+        <div style={{ position:'relative', zIndex:5,
+          padding:'clamp(56px,9vw,84px) clamp(24px,5vw,64px) 38px' }}>
+
+          {/* Logo + name */}
+          <div style={{ display:'flex', alignItems:'center', gap:18, marginBottom:18 }}>
+            <div style={{ width:68, height:68, borderRadius:17, background:C.white,
+              boxShadow:'0 8px 30px rgba(0,0,0,0.3)', overflow:'hidden', flexShrink:0,
+              display:'flex', alignItems:'center', justifyContent:'center' }}>
+              {school.logoUrl
+                ? <img src={school.logoUrl} alt={school.name}
+                    style={{ width:'100%', height:'100%', objectFit:'contain', padding:8 }} />
+                : <GraduationCap style={{ width:32, height:32, color:C.gold }} />}
+            </div>
+            <div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:6, marginBottom:9 }}>
+                {school.isVerified && (
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:4,
+                    background:'rgba(16,185,129,0.85)', backdropFilter:'blur(12px)', color:'#fff',
+                    fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:100,
+                    fontFamily:'Plus Jakarta Sans,sans-serif' }}>
+                    <BadgeCheck style={{ width:10, height:10 }} /> Verified
+                  </span>
+                )}
+                {school.isFeatured && (
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:4,
+                    background:'rgba(184,146,10,0.88)', backdropFilter:'blur(12px)', color:'#fff',
+                    fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:100,
+                    fontFamily:'Plus Jakarta Sans,sans-serif' }}>
+                    <Sparkles style={{ width:10, height:10 }} /> Featured
+                  </span>
+                )}
+                {boards.map(b=>(
+                  <span key={b} style={{ background:'rgba(255,255,255,0.12)', backdropFilter:'blur(12px)',
+                    color:'#fff', border:'1px solid rgba(255,255,255,0.22)', fontSize:11,
+                    fontWeight:600, padding:'3px 10px', borderRadius:100,
+                    fontFamily:'Plus Jakarta Sans,sans-serif' }}>{b}</span>
+                ))}
+              </div>
+              <h1 style={{ fontFamily:'DM Serif Display,serif',
+                fontSize:'clamp(26px,4.5vw,50px)', color:'#fff',
+                lineHeight:1.0, letterSpacing:'-0.025em',
+                textShadow:'0 2px 24px rgba(0,0,0,0.5)' }}>
+                {school.name}
+              </h1>
+            </div>
+          </div>
+
+          {/* Meta pills — single source of truth */}
+          <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+            {loc && (
+              <span style={{ display:'flex', alignItems:'center', gap:5,
+                background:'rgba(255,255,255,0.08)', backdropFilter:'blur(10px)',
+                border:'1px solid rgba(255,255,255,0.13)', color:'rgba(255,255,255,0.82)',
+                fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12,
+                padding:'5px 12px', borderRadius:99 }}>
+                <MapPin style={{ width:11, height:11 }} />{loc}
               </span>
             )}
-            {school.isFeatured && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `rgba(201,168,76,0.88)`, backdropFilter: 'blur(12px)', color: '#fff', fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 100, fontFamily: 'Outfit, sans-serif', animation: 'champ-glow 2.4s ease-in-out infinite' }}>
-                <Sparkles style={{ width: 10, height: 10 }} /> Featured
-              </span>
-            )}
-            {boards.slice(0, 2).map(b => (
-              <span key={b} style={{ background: 'rgba(255,255,255,0.11)', backdropFilter: 'blur(12px)', color: '#fff', border: '1px solid rgba(255,255,255,0.22)', fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 100, fontFamily: 'Outfit, sans-serif' }}>{b}</span>
-            ))}
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16, duration: 0.6 }}
-            style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 'clamp(28px,5vw,56px)', color: '#fff', lineHeight: 1.0, letterSpacing: '-0.025em', marginBottom: 16, textShadow: '0 2px 30px rgba(0,0,0,0.5)' }}
-          >
-            {school.name}
-          </motion.h1>
-
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.28 }}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {school.city && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.85)', fontFamily: 'Outfit, sans-serif', fontSize: 12, padding: '5px 13px', borderRadius: 99 }}>
-                <MapPin style={{ width: 11, height: 11 }} />
-                {school.addressLine1 ? `${school.addressLine1}, ` : ''}{school.city}{school.state ? `, ${school.state}` : ''}
+            {school.foundingYear && (
+              <span style={{ display:'flex', alignItems:'center', gap:5,
+                background:'rgba(255,255,255,0.08)', backdropFilter:'blur(10px)',
+                border:'1px solid rgba(255,255,255,0.13)', color:'rgba(255,255,255,0.82)',
+                fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12,
+                padding:'5px 12px', borderRadius:99 }}>
+                <Calendar style={{ width:11, height:11 }} />
+                Est. {school.foundingYear}{yrsOld>0?` · ${yrsOld} yrs`:''}
               </span>
             )}
             {school.classesFrom && school.classesTo && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.85)', fontFamily: 'Outfit, sans-serif', fontSize: 12, padding: '5px 13px', borderRadius: 99 }}>
-                <GraduationCap style={{ width: 11, height: 11 }} /> {fmt(String(school.classesFrom))}–{fmt(String(school.classesTo))}
+              <span style={{ display:'flex', alignItems:'center', gap:5,
+                background:'rgba(255,255,255,0.08)', backdropFilter:'blur(10px)',
+                border:'1px solid rgba(255,255,255,0.13)', color:'rgba(255,255,255,0.82)',
+                fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12,
+                padding:'5px 12px', borderRadius:99 }}>
+                <GraduationCap style={{ width:11, height:11 }} />
+                {fmt(String(school.classesFrom))} – {fmt(String(school.classesTo))}
               </span>
             )}
-            {rating > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(201,168,76,0.22)', backdropFilter: 'blur(10px)', border: `1px solid ${T.champLine}`, color: '#F0D98A', fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, padding: '5px 13px', borderRadius: 99 }}>
-                <Star style={{ width: 11, height: 11, fill: '#F0D98A', color: '#F0D98A' }} /> {rating.toFixed(1)} · {school.totalReviews ?? 0} reviews
+            {rating>0 && (
+              <span style={{ display:'flex', alignItems:'center', gap:5,
+                background:'rgba(184,146,10,0.22)', backdropFilter:'blur(10px)',
+                border:`1px solid ${C.goldBdr}`, color:C.goldLt,
+                fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12, fontWeight:600,
+                padding:'5px 12px', borderRadius:99 }}>
+                <Star style={{ width:11, height:11, fill:C.goldLt, color:C.goldLt }} />
+                {rating.toFixed(1)} · {school.totalReviews??0} reviews
               </span>
             )}
-          </motion.div>
-        </div>
-      </div>
-
-      {/* ══════ LAYOUT ══════ */}
-      <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 clamp(20px,4vw,56px)' }}>
-
-        {/* Profile avatar strip — logo only, name already in hero */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: -40, marginBottom: 32, flexWrap: 'wrap' }}>
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22,1,0.36,1] }}
-            style={{ width: 88, height: 88, borderRadius: 22, background: '#fff', border: `3px solid ${T.bg}`, boxShadow: '0 10px 36px rgba(12,14,19,0.18)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, position: 'relative' }}
-          >
-            {school.logoUrl
-              ? <img src={school.logoUrl} alt={school.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 10 }} />
-              : <GraduationCap style={{ width: 38, height: 38, color: T.champ }} />}
-          </motion.div>
-
-          {/* Only show website — everything else is already in the hero */}
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.4 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 44 }}>
             {school.websiteUrl && (
               <a href={school.websiteUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.champ, textDecoration: 'none', fontWeight: 600, padding: '7px 14px', borderRadius: 99, background: T.champBg, border: `1px solid ${T.champLine}` }}>
-                <Globe style={{ width: 12, height: 12 }} /> Visit Website <ExternalLink style={{ width: 11, height: 11 }} />
+                style={{ display:'flex', alignItems:'center', gap:5,
+                  background:'rgba(184,146,10,0.22)', backdropFilter:'blur(10px)',
+                  border:`1px solid ${C.goldBdr}`, color:C.goldLt,
+                  fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12, fontWeight:600,
+                  padding:'5px 12px', borderRadius:99, textDecoration:'none' }}>
+                <Globe style={{ width:11, height:11 }} /> Website
+                <ExternalLink style={{ width:10, height:10 }} />
               </a>
             )}
-          </motion.div>
+          </div>
         </div>
+        <div style={{ height:1, background:`linear-gradient(to right,transparent,${C.gold}55,transparent)` }} />
+      </div>
 
-        {/* ── STATS STRIP ── */}
-        {heroStats.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.5 }}
-            style={{ marginBottom: 44 }}
-          >
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${heroStats.length}, 1fr)`,
-              background: 'linear-gradient(145deg, #0C0E13 0%, #161B27 100%)',
-              borderRadius: 24,
-              overflow: 'hidden',
-              position: 'relative',
-              boxShadow: '0 20px 60px rgba(12,14,19,0.2)',
-              border: '1px solid rgba(255,255,255,0.05)',
-            }}>
-              {/* shimmer */}
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, transparent 35%, rgba(201,168,76,0.055) 50%, transparent 65%)', backgroundSize: '300% 100%', animation: 'shimmer 4s ease-in-out infinite', pointerEvents: 'none' }} />
-              {/* top accent line */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, transparent, ${T.champ}, rgba(240,217,138,0.9), ${T.champ}, transparent)` }} />
+      {/* ════════════════════════════════
+          PAGE BODY
+      ════════════════════════════════ */}
+      <div style={{ maxWidth:1240, margin:'0 auto', padding:'0 clamp(20px,4vw,56px)' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr clamp(300px,27vw,355px)',
+          gap:40, alignItems:'start', marginTop:36 }}>
 
-              {heroStats.map((s, i) => (
-                <motion.div
-                  key={s.label}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.32 + i * 0.07 }}
-                  style={{
-                    textAlign: 'center', padding: '28px 16px',
-                    borderRight: i < heroStats.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                    position: 'relative',
-                  }}
-                >
-                  <div style={{ fontSize: 22, marginBottom: 10 }}>{s.icon}</div>
-                  <div style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 30, color: '#F0D98A', lineHeight: 1, letterSpacing: '-0.025em' }}>{s.value}</div>
-                  <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.32)', marginTop: 8 }}>{s.label}</div>
-                  {s.sub && <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.16)', marginTop: 3 }}>{s.sub}</div>}
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* ══════ TWO-COLUMN LAYOUT ══════ */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr clamp(300px,28vw,360px)', gap: 40, alignItems: 'start' }}>
-
-          {/* ── LEFT ── */}
-          <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-
+          {/* ── LEFT CONTENT ── */}
+          <div>
             {/* Tab bar */}
-            <div style={{
-              display: 'flex', gap: 2,
-              background: 'rgba(12,14,19,0.04)',
-              borderRadius: 18, padding: 5,
-              border: `1px solid ${T.bdr}`,
-              marginBottom: 36, overflowX: 'auto',
-            }}>
-              {TABS.map(tab => (
-                <motion.button
-                  key={tab} onClick={() => setActiveTab(tab)}
-                  whileTap={{ scale: 0.95 }}
-                  className="tab-btn"
-                  style={{
-                    padding: '10px 20px', borderRadius: 13, border: 'none',
-                    cursor: 'pointer', fontFamily: 'Outfit, sans-serif',
-                    fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
-                    flexShrink: 0,
-                    background: activeTab === tab ? T.ink : 'transparent',
-                    color: activeTab === tab ? '#fff' : T.inkFaint,
-                    boxShadow: activeTab === tab ? '0 4px 14px rgba(12,14,19,0.2)' : 'none',
-                  }}
-                >
-                  {tab}
+            <div style={{ display:'flex', gap:2, background:'rgba(17,19,24,0.04)',
+              borderRadius:16, padding:4, border:`1px solid ${C.border}`,
+              marginBottom:32, overflowX:'auto' }}>
+              {TABS.map(t=>(
+                <motion.button key={t} onClick={()=>setTab(t)} whileTap={{ scale:0.95 }}
+                  style={{ padding:'9px 18px', borderRadius:12, border:'none', cursor:'pointer',
+                    fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:13, fontWeight:600,
+                    whiteSpace:'nowrap', flexShrink:0,
+                    background:tab===t?C.ink:'transparent',
+                    color:tab===t?'#fff':C.faint,
+                    boxShadow:tab===t?'0 4px 14px rgba(17,19,24,0.18)':'none',
+                    transition:'all 0.2s' }}>
+                  {t}
                 </motion.button>
               ))}
             </div>
@@ -842,57 +569,84 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
             <AnimatePresence mode="wait">
 
               {/* ── OVERVIEW ── */}
-              {activeTab === 'Overview' && (
-                <motion.div key="ov" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+              {tab==='Overview' && (
+                <motion.div key="ov" initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                  exit={{ opacity:0, y:-8 }} transition={{ duration:0.2 }}>
+
                   {school.description && (
-                    <div style={{
-                      marginBottom: 36, padding: '30px 32px',
-                      background: T.surfaceAlt,
-                      border: `1px solid ${T.champLine}`,
-                      borderRadius: 24, position: 'relative', overflow: 'hidden',
-                    }}>
-                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, ${T.champ}, transparent)` }} />
-                      <div style={{ position: 'absolute', top: -40, right: -40, width: 140, height: 140, borderRadius: '50%', background: `radial-gradient(circle, ${T.champGlow}, transparent 70%)`, pointerEvents: 'none' }} />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 10, background: T.champBg, border: `1px solid ${T.champLine}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <BookOpen style={{ width: 14, height: 14, color: T.champ }} />
+                    <div style={{ marginBottom:32, padding:'24px 26px', background:C.white,
+                      border:`1px solid ${C.goldBdr}`, borderRadius:20,
+                      position:'relative', overflow:'hidden' }}>
+                      <div style={{ position:'absolute', top:0, left:0, right:0, height:3,
+                        background:`linear-gradient(to right,${C.gold},transparent)` }} />
+                      <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:11 }}>
+                        <div style={{ width:30, height:30, borderRadius:9, background:C.goldBg,
+                          border:`1px solid ${C.goldBdr}`, display:'flex', alignItems:'center',
+                          justifyContent:'center' }}>
+                          <BookOpen style={{ width:13, height:13, color:C.gold }} />
                         </div>
-                        <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 24, color: T.ink }}>About the School</h2>
+                        <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:22, color:C.ink }}>
+                          About the School</h2>
                       </div>
-                      <p style={{ fontFamily: 'Outfit, sans-serif', fontSize: 15, color: T.inkSoft, lineHeight: 1.9 }}>{school.description}</p>
+                      <p style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:14,
+                        color:C.soft, lineHeight:1.9 }}>{school.description}</p>
                     </div>
                   )}
 
-                  {/* School Details */}
-                  <div style={{ marginBottom: 36 }}>
-                    <SectionHead title="School Details" />
-                    <div style={{ ...card(), padding: '8px 20px' }}>
-                      <FactRow icon={BookOpenCheck} label="Curriculum Board" value={boards.join(', ')} accent />
-                      <FactRow icon={Calendar} label="Founded" value={school.foundingYear ? `${school.foundingYear}${yearsOld > 0 ? ` · ${yearsOld} years` : ''}` : null} />
-                      <FactRow icon={Building2} label="School Type" value={fmt(school.schoolType)} />
-                      <FactRow icon={Users} label="Gender Policy" value={fmt(school.genderPolicy)} />
-                      <FactRow icon={Mic} label="Medium of Instruction" value={school.mediumOfInstruction} />
-                      <FactRow icon={GraduationCap} label="Classes" value={school.classesFrom && school.classesTo ? `${fmt(String(school.classesFrom))} – ${fmt(String(school.classesTo))}` : null} />
-                      <FactRow icon={Users} label="Total Students" value={school.totalStudents?.toLocaleString('en-IN')} />
-                      <FactRow icon={BookOpen} label="Student : Teacher Ratio" value={school.studentTeacherRatio} />
-                      <FactRow icon={Award} label="Recognition" value={school.recognition} />
+                  {/* ══ COLOURFUL CARD GRID — one card per data point ══ */}
+                  <div style={{ marginBottom:36 }}>
+                    <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:24, color:C.ink,
+                      marginBottom:18 }}>School Details</h2>
+                    <div style={{ display:'grid',
+                      gridTemplateColumns:'repeat(auto-fill,minmax(155px,1fr))', gap:12 }}>
+                      {boards.length>0 &&
+                        <InfoCard icon={BookOpenCheck} label="Board"
+                          value={boards.join(', ')} idx={0} />}
+                      {school.foundingYear &&
+                        <InfoCard icon={Calendar} label="Founded"
+                          value={`${school.foundingYear}${yrsOld>0?` · ${yrsOld} yrs`:''}`} idx={1} />}
+                      {school.schoolType &&
+                        <InfoCard icon={Building2} label="School Type"
+                          value={fmt(school.schoolType)} idx={2} />}
+                      {school.genderPolicy &&
+                        <InfoCard icon={Users} label="Gender Policy"
+                          value={fmt(school.genderPolicy)} idx={3} />}
+                      {school.mediumOfInstruction &&
+                        <InfoCard icon={Mic} label="Medium"
+                          value={fmt(school.mediumOfInstruction)} idx={4} />}
+                      {school.classesFrom && school.classesTo &&
+                        <InfoCard icon={GraduationCap} label="Classes"
+                          value={`${fmt(String(school.classesFrom))} – ${fmt(String(school.classesTo))}`}
+                          idx={5} />}
+                      {school.totalStudents &&
+                        <InfoCard icon={Users} label="Students"
+                          value={school.totalStudents.toLocaleString('en-IN')} idx={6} />}
+                      {school.studentTeacherRatio &&
+                        <InfoCard icon={BookOpen} label="Student : Teacher"
+                          value={school.studentTeacherRatio} idx={7} />}
+                      {school.recognition &&
+                        <InfoCard icon={Award} label="Recognition"
+                          value={school.recognition} idx={0} />}
                     </div>
                   </div>
 
                   {/* Tag groups */}
-                  {[
-                    { label: 'Facilities', emoji: '🏗️', items: school.facilities as string[], color: 'champ' as const },
-                    { label: 'Sports', emoji: '⚽', items: school.sports as string[], color: 'green' as const },
-                    { label: 'Extra Curricular', emoji: '🎭', items: school.extraCurricular as string[], color: 'purple' as const },
-                    { label: 'Languages', emoji: '🗣️', items: school.languagesOffered as string[], color: 'blue' as const },
-                  ].filter(g => g.items?.length > 0).map(g => (
-                    <div key={g.label} style={{ marginBottom: 26 }}>
-                      <h3 style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 14, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span>{g.emoji}</span> {g.label}
+                  {([
+                    {label:'Facilities',       emoji:'🏗️', items:school.facilities      as string[], col:'gold'   as CC},
+                    {label:'Sports',           emoji:'⚽', items:school.sports           as string[], col:'green'  as CC},
+                    {label:'Extra Curricular', emoji:'🎭', items:school.extraCurricular  as string[], col:'purple' as CC},
+                    {label:'Languages',        emoji:'🗣️', items:school.languagesOffered as string[], col:'blue'   as CC},
+                  ] as const).filter(g=>g.items?.length>0).map(g=>(
+                    <div key={g.label} style={{ marginBottom:24 }}>
+                      <h3 style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontWeight:700,
+                        fontSize:13, color:C.faint, textTransform:'uppercase',
+                        letterSpacing:'0.1em', marginBottom:11,
+                        display:'flex', alignItems:'center', gap:7 }}>
+                        <span style={{ fontSize:15 }}>{g.emoji}</span>{g.label}
                       </h3>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                        {g.items.slice(0, 12).map(item => <Chip key={item} label={item} color={g.color} />)}
-                        {g.items.length > 12 && <Chip label={`+${g.items.length - 12} more`} color="neutral" />}
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
+                        {g.items.slice(0,14).map(item=><Chip key={item} label={fmt(item)} color={g.col} />)}
+                        {g.items.length>14 && <Chip label={`+${g.items.length-14} more`} />}
                       </div>
                     </div>
                   ))}
@@ -900,173 +654,200 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
               )}
 
               {/* ── FACILITIES ── */}
-              {activeTab === 'Facilities' && (
-                <motion.div key="fa" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
+              {tab==='Facilities' && (
+                <motion.div key="fa" initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                  exit={{ opacity:0, y:-8 }} transition={{ duration:0.2 }}>
                   {[
-                    { title: 'Infrastructure & Facilities', items: school.facilities as string[], accent: 'rgba(201,168,76,0.12)', icons: ['🏊','🏋️','🔬','📖','🎨','🖥️','🍽️','🚌','⚽','🎭','📚','🏥'] },
-                    { title: 'Sports', items: school.sports as string[], accent: 'rgba(26,158,92,0.12)', icons: ['⚽','🏏','🏸','🏊','🎾','🏐','🏀','🤸','🥊','🏑','🎱','🏓'] },
-                    { title: 'Extra Curricular Activities', items: school.extraCurricular as string[], accent: 'rgba(124,58,237,0.12)', icons: ['🎭','🎵','🎨','📸','💃','🎬','🗣️','✍️','🤖','🔭','🎯','🎪'] },
-                    { title: 'Languages Offered', items: school.languagesOffered as string[], accent: 'rgba(37,99,235,0.12)', icons: ['🇮🇳','🇬🇧','🇫🇷','🇩🇪','🇯🇵','🇷🇺','🇨🇳','🇸🇦','🌍','📖','✏️','🔤'] },
-                  ].filter(g => g.items?.length > 0).map((g, gi) => (
-                    <motion.div key={g.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: gi * 0.08 }} style={{ marginBottom: 24 }}>
-                      <h2 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 22, color: T.ink, marginBottom: 16 }}>{g.title}</h2>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 10 }}>
-                        {g.items.map((item, ii) => (
-                          <FacilityCard key={item} label={item} emoji={g.icons[ii % g.icons.length]} accent={g.accent} />
+                    {title:'Infrastructure & Facilities', items:school.facilities      as string[], color:'rgba(184,146,10,0.12)',  icons:ICONS.fac},
+                    {title:'Sports',                      items:school.sports           as string[], color:'rgba(16,185,129,0.12)', icons:ICONS.spt},
+                    {title:'Extra Curricular',            items:school.extraCurricular  as string[], color:'rgba(139,92,246,0.12)', icons:ICONS.act},
+                    {title:'Languages Offered',           items:school.languagesOffered as string[], color:'rgba(37,99,235,0.12)',  icons:ICONS.lng},
+                  ].filter(g=>g.items?.length>0).map((g,gi)=>(
+                    <motion.div key={g.title} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}
+                      transition={{ delay:gi*0.08 }} style={{ marginBottom:28 }}>
+                      <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:22, color:C.ink,
+                        marginBottom:14 }}>{g.title}</h2>
+                      <div style={{ display:'grid',
+                        gridTemplateColumns:'repeat(auto-fill,minmax(96px,1fr))', gap:10 }}>
+                        {g.items.map((item,ii)=>(
+                          <FacTile key={item} label={item}
+                            emoji={g.icons[ii%g.icons.length]} color={g.color} />
                         ))}
                       </div>
                     </motion.div>
                   ))}
-                  {!school.facilities?.length && !school.sports?.length && !school.extraCurricular?.length && !school.languagesOffered?.length && (
-                    <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: 'Outfit, sans-serif', color: T.inkFaint }}>
-                      <div style={{ fontSize: 52, marginBottom: 12 }}>🏗️</div>No facility info available yet.
+                  {!school.facilities?.length&&!school.sports?.length&&
+                   !school.extraCurricular?.length&&!school.languagesOffered?.length && (
+                    <div style={{ textAlign:'center', padding:'80px 0',
+                      fontFamily:'Plus Jakarta Sans,sans-serif', color:C.faint }}>
+                      <div style={{ fontSize:52, marginBottom:12 }}>🏗️</div>No facility info yet.
                     </div>
                   )}
                 </motion.div>
               )}
 
               {/* ── FEES ── */}
-              {activeTab === 'Fees' && (
-                <motion.div key="fe" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                  <SectionHead title="Fee Structure" sub="Approximate fees — contact school for exact details" />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+              {tab==='Fees' && (
+                <motion.div key="fe" initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                  exit={{ opacity:0, y:-8 }} transition={{ duration:0.2 }}>
+                  <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:26, color:C.ink, marginBottom:6 }}>
+                    Fee Structure</h2>
+                  <p style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:13, color:C.faint, marginBottom:24 }}>
+                    Approximate fees — contact school for the official schedule</p>
+                  <div style={{ display:'grid',
+                    gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16, marginBottom:20 }}>
                     {[
-                      { label: 'Monthly Fee (From)', value: school.monthlyFeeMin, icon: '📅', dark: true },
-                      { label: 'Monthly Fee (To)',   value: school.monthlyFeeMax, icon: '📈', dark: false },
-                      { label: 'Annual / Admission', value: school.annualFee,    icon: '📋', dark: false },
-                    ].filter(f => f.value).map((f, i) => (
-                      <motion.div
-                        key={f.label}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        whileHover={{ y: -6, transition: { duration: 0.2 } }}
-                        style={{
-                          background: f.dark
-                            ? 'linear-gradient(145deg, #0C0E13 0%, #161B27 100%)'
-                            : T.surface,
-                          border: `1.5px solid ${f.dark ? T.champLine : T.bdr}`,
-                          borderRadius: 24, padding: '30px 24px',
-                          textAlign: 'center', position: 'relative', overflow: 'hidden', cursor: 'default',
-                        }}
-                      >
-                        {f.dark && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${T.champ}, transparent)` }} />}
-                        <div style={{ fontSize: 34, marginBottom: 10 }}>{f.icon}</div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: f.dark ? 'rgba(255,255,255,0.35)' : T.inkFaint, marginBottom: 8 }}>
-                          {f.label}
+                      {label:'Monthly Fee (From)',val:school.monthlyFeeMin,dark:true, icon:'📅'},
+                      {label:'Monthly Fee (To)',  val:school.monthlyFeeMax,dark:false,icon:'📈'},
+                      {label:'Annual / Admission',val:school.annualFee,    dark:false,icon:'📋'},
+                    ].filter(f=>f.val).map((f,i)=>(
+                      <motion.div key={f.label}
+                        initial={{ opacity:0, y:18 }} animate={{ opacity:1, y:0 }}
+                        transition={{ delay:i*0.09 }}
+                        whileHover={{ y:-5, transition:{ duration:0.18 } }}
+                        style={{ background:f.dark?'linear-gradient(145deg,#0A0C12,#141928)':C.white,
+                          border:`1.5px solid ${f.dark?C.goldBdr:C.border}`,
+                          borderRadius:22, padding:'28px 22px', textAlign:'center',
+                          position:'relative', overflow:'hidden', cursor:'default' }}>
+                        {f.dark && <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
+                          background:`linear-gradient(90deg,transparent,${C.gold},transparent)` }} />}
+                        <div style={{ fontSize:32, marginBottom:10 }}>{f.icon}</div>
+                        <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:10,
+                          fontWeight:700, textTransform:'uppercase', letterSpacing:'0.12em',
+                          color:f.dark?'rgba(255,255,255,0.35)':C.faint, marginBottom:8 }}>{f.label}</div>
+                        <div style={{ fontFamily:'DM Serif Display,serif', fontSize:38,
+                          color:f.dark?C.goldLt:C.gold, lineHeight:1, letterSpacing:'-2px' }}>
+                          ₹{(f.val as number).toLocaleString('en-IN')}
                         </div>
-                        <div style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 40, color: f.dark ? '#F0D98A' : T.champ, lineHeight: 1, letterSpacing: '-2px' }}>
-                          ₹{(f.value as number).toLocaleString('en-IN')}
-                        </div>
-                        {f.dark && <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.22)', marginTop: 8 }}>per month</div>}
+                        {f.dark && <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11,
+                          color:'rgba(255,255,255,0.22)', marginTop:6 }}>per month</div>}
                       </motion.div>
                     ))}
                   </div>
-                  <div style={{ background: T.champBg, border: `1px solid ${T.champLine}`, borderRadius: 14, padding: '14px 18px', fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.inkSoft, lineHeight: 1.65 }}>
-                    ℹ️ Fees listed are indicative. Contact the school for the official fee schedule.
+                  <div style={{ background:C.goldBg, border:`1px solid ${C.goldBdr}`,
+                    borderRadius:13, padding:'13px 17px', fontFamily:'Plus Jakarta Sans,sans-serif',
+                    fontSize:13, color:C.soft }}>
+                    ℹ️ Fee details are indicative. Contact the school for the official schedule.
                   </div>
                 </motion.div>
               )}
 
               {/* ── ADMISSION ── */}
-              {activeTab === 'Admission' && (
-                <motion.div key="ad" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                  <SectionHead title="Admission Information" />
+              {tab==='Admission' && (
+                <motion.div key="ad" initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                  exit={{ opacity:0, y:-8 }} transition={{ duration:0.2 }}>
+                  <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:26, color:C.ink, marginBottom:24 }}>
+                    Admission Information</h2>
                   {school.admissionInfo ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                       {[
-                        { label: 'Academic Year', value: school.admissionInfo.academicYear, icon: '📅' },
-                        { label: 'Status', value: school.admissionInfo.admissionOpen ? '🟢 Open' : '🔴 Closed', icon: '🚪' },
-                        school.admissionInfo.lastDate ? { label: 'Last Date', value: school.admissionInfo.lastDate, icon: '⏰' } : null,
-                      ].filter(Boolean).map((row: any) => (
-                        <motion.div key={row.label} whileHover={{ x: 4 }}
-                          style={{ ...card(), padding: '18px 24px', display: 'flex', alignItems: 'center', gap: 14, justifyContent: 'space-between' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ fontSize: 18 }}>{row.icon}</span>
-                            <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 14, color: T.inkSoft }}>{row.label}</span>
+                        {label:'Academic Year',val:school.admissionInfo.academicYear,         icon:'📅'},
+                        {label:'Status',       val:school.admissionInfo.admissionOpen?'🟢 Open':'🔴 Closed',icon:'🚪'},
+                        school.admissionInfo.lastDate
+                          ?{label:'Last Date',val:school.admissionInfo.lastDate,icon:'⏰'}:null,
+                      ].filter(Boolean).map((row:any)=>(
+                        <motion.div key={row.label} whileHover={{ x:4 }}
+                          style={{ background:C.white, border:`1px solid ${C.border}`,
+                            borderRadius:16, padding:'15px 22px', display:'flex',
+                            alignItems:'center', gap:12, justifyContent:'space-between' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <span style={{ fontSize:17 }}>{row.icon}</span>
+                            <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif',
+                              fontWeight:600, fontSize:14, color:C.soft }}>{row.label}</span>
                           </div>
-                          <span style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 18, color: T.ink }}>{row.value}</span>
+                          <span style={{ fontFamily:'DM Serif Display,serif',
+                            fontSize:18, color:C.ink }}>{row.val}</span>
                         </motion.div>
                       ))}
-                      {school.admissionInfo.documentsRequired?.length > 0 && (
-                        <div style={{ ...card(), padding: '26px 28px', marginTop: 8 }}>
-                          <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 20, color: T.ink, marginBottom: 18 }}>Documents Required</h3>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {school.admissionInfo.documentsRequired.map((doc: string, i: number) => (
-                              <motion.div key={doc} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.055 }}
-                                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: 'rgba(12,14,19,0.025)', border: `1px solid ${T.bdrSoft}` }}>
-                                <div style={{ width: 22, height: 22, borderRadius: 7, background: T.champBg, border: `1px solid ${T.champLine}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                  <CheckCircle2 style={{ width: 12, height: 12, color: T.champ }} />
+                      {school.admissionInfo.documentsRequired?.length>0 && (
+                        <div style={{ background:C.white, border:`1px solid ${C.border}`,
+                          borderRadius:18, padding:'22px 24px', marginTop:6 }}>
+                          <h3 style={{ fontFamily:'DM Serif Display,serif', fontSize:20, color:C.ink,
+                            marginBottom:14 }}>Documents Required</h3>
+                          <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                            {school.admissionInfo.documentsRequired.map((doc:string,i:number)=>(
+                              <motion.div key={doc} initial={{ opacity:0, x:-10 }}
+                                animate={{ opacity:1, x:0 }} transition={{ delay:i*0.05 }}
+                                style={{ display:'flex', alignItems:'center', gap:11,
+                                  padding:'9px 13px', borderRadius:11,
+                                  background:'rgba(17,19,24,0.025)', border:`1px solid ${C.borderS}` }}>
+                                <div style={{ width:20, height:20, borderRadius:6, background:C.goldBg,
+                                  border:`1px solid ${C.goldBdr}`, display:'flex',
+                                  alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                                  <CheckCircle2 style={{ width:11, height:11, color:C.gold }} />
                                 </div>
-                                <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 14, color: T.inkSoft }}>{doc}</span>
+                                <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif',
+                                  fontSize:14, color:C.soft }}>{doc}</span>
                               </motion.div>
                             ))}
                           </div>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <p style={{ fontFamily: 'Outfit, sans-serif', color: T.inkFaint, textAlign: 'center', padding: 72 }}>Admission details not available.</p>
-                  )}
+                  ) : <p style={{ fontFamily:'Plus Jakarta Sans,sans-serif', color:C.faint,
+                        textAlign:'center', padding:72 }}>Admission details not available.</p>}
                 </motion.div>
               )}
 
               {/* ── REVIEWS ── */}
-              {activeTab === 'Reviews' && (
-                <motion.div key="re" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                  {/* Summary bar */}
-                  <div style={{
-                    background: 'linear-gradient(145deg, #0C0E13 0%, #161B27 100%)',
-                    borderRadius: 24, padding: '32px 36px', marginBottom: 28,
-                    display: 'flex', alignItems: 'center', gap: 36, flexWrap: 'wrap',
-                    position: 'relative', overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                  }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${T.champ}, transparent)` }} />
-                    {/* Big number */}
-                    <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                      <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.5, ease: [0.22,1,0.36,1] }}
-                        style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 88, color: '#F0D98A', lineHeight: 1, letterSpacing: '-4px' }}>
+              {tab==='Reviews' && (
+                <motion.div key="re" initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                  exit={{ opacity:0, y:-8 }} transition={{ duration:0.2 }}>
+                  <div style={{ background:'linear-gradient(145deg,#0A0C12,#141928)',
+                    borderRadius:22, padding:'28px 32px', marginBottom:24,
+                    display:'flex', alignItems:'center', gap:32, flexWrap:'wrap',
+                    position:'relative', overflow:'hidden',
+                    border:'1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
+                      background:`linear-gradient(90deg,transparent,${C.gold},transparent)` }} />
+                    <div style={{ textAlign:'center', flexShrink:0 }}>
+                      <motion.div initial={{ scale:0.5, opacity:0 }} animate={{ scale:1, opacity:1 }}
+                        transition={{ duration:0.5 }}
+                        style={{ fontFamily:'DM Serif Display,serif', fontSize:80,
+                          color:C.goldLt, lineHeight:1, letterSpacing:'-3px' }}>
                         {rating.toFixed(1)}
                       </motion.div>
-                      <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 10 }}>
-                        {[1,2,3,4,5].map(s => (
-                          <motion.div key={s} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3 + s * 0.07 }}>
-                            <Star style={{ width: 16, height: 16, fill: s <= Math.round(rating) ? '#F0D98A' : 'transparent', color: s <= Math.round(rating) ? '#F0D98A' : 'rgba(255,255,255,0.18)' }} />
-                          </motion.div>
+                      <div style={{ display:'flex', gap:4, justifyContent:'center', marginTop:8 }}>
+                        {[1,2,3,4,5].map(s=>(
+                          <Star key={s} style={{ width:15, height:15,
+                            fill:s<=Math.round(rating)?C.goldLt:'transparent',
+                            color:s<=Math.round(rating)?C.goldLt:'rgba(255,255,255,0.18)' }} />
                         ))}
                       </div>
-                      <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.32)', marginTop: 6 }}>{reviews?.total ?? 0} reviews</div>
+                      <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11,
+                        color:'rgba(255,255,255,0.3)', marginTop:6 }}>{reviews?.total??0} reviews</div>
                     </div>
-                    {/* Bar chart */}
-                    <div style={{ flex: 1, minWidth: 180 }}>
-                      {[5,4,3,2,1].map((star, si) => {
-                        const cnt = reviewList.filter(r => Math.round(Number(r.rating)) === star).length
-                        const pct = reviews?.total ? Math.round((cnt / reviews.total) * 100) : 0
+                    <div style={{ flex:1, minWidth:160 }}>
+                      {[5,4,3,2,1].map((star,si)=>{
+                        const cnt=list.filter(r=>Math.round(Number(r.rating))===star).length
+                        const pct=reviews?.total?Math.round((cnt/reviews.total)*100):0
                         return (
-                          <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: si < 4 ? 12 : 0 }}>
-                            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.38)', width: 10 }}>{star}</span>
-                            <Star style={{ width: 10, height: 10, fill: T.champ, color: T.champ, flexShrink: 0 }} />
-                            <div style={{ flex: 1, height: 7, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${pct}%` }}
-                                transition={{ delay: 0.4 + si * 0.09, duration: 0.8, ease: 'easeOut' }}
-                                style={{ height: '100%', background: `linear-gradient(90deg, ${T.champ}, #F0D98A)`, borderRadius: 99 }}
-                              />
+                          <div key={star} style={{ display:'flex', alignItems:'center',
+                            gap:9, marginBottom:si<4?10:0 }}>
+                            <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11,
+                              color:'rgba(255,255,255,0.38)', width:10 }}>{star}</span>
+                            <Star style={{ width:10, height:10, fill:C.gold, color:C.gold, flexShrink:0 }} />
+                            <div style={{ flex:1, height:6, borderRadius:99,
+                              background:'rgba(255,255,255,0.07)', overflow:'hidden' }}>
+                              <motion.div initial={{ width:0 }} animate={{ width:`${pct}%` }}
+                                transition={{ delay:0.4+si*0.08, duration:0.7, ease:'easeOut' }}
+                                style={{ height:'100%',
+                                  background:`linear-gradient(90deg,${C.gold},${C.goldLt})`,
+                                  borderRadius:99 }} />
                             </div>
-                            <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.25)', width: 28 }}>{pct}%</span>
+                            <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:10,
+                              color:'rgba(255,255,255,0.25)', width:26 }}>{pct}%</span>
                           </div>
                         )
                       })}
                     </div>
                   </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {reviewList.map((r, i) => <ReviewCard key={r.id} review={r} i={i} />)}
-                    {!reviewList.length && (
-                      <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: 'Outfit, sans-serif', color: T.inkFaint }}>
-                        <div style={{ fontSize: 52, marginBottom: 12 }}>⭐</div>No reviews yet.
+                  <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                    {list.map((r,i)=><ReviewCard key={r.id} review={r} i={i} />)}
+                    {!list.length && (
+                      <div style={{ textAlign:'center', padding:'80px 0',
+                        fontFamily:'Plus Jakarta Sans,sans-serif', color:C.faint }}>
+                        <div style={{ fontSize:52, marginBottom:12 }}>⭐</div>No reviews yet.
                       </div>
                     )}
                   </div>
@@ -1074,174 +855,205 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
               )}
 
               {/* ── GALLERY ── */}
-              {activeTab === 'Gallery' && (
-                <motion.div key="ga" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
-                  <SectionHead title="School Gallery" />
+              {tab==='Gallery' && (
+                <motion.div key="ga" initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+                  exit={{ opacity:0, y:-8 }} transition={{ duration:0.2 }}>
+                  <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:26, color:C.ink,
+                    marginBottom:20 }}>School Gallery</h2>
                   {school.galleryImages?.length ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 12 }}>
-                      {school.galleryImages.map((img, i) => (
-                        <motion.div key={i}
-                          initial={{ opacity: 0, scale: 0.94 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: i * 0.055 }}
-                          whileHover={{ scale: 1.03, boxShadow: '0 20px 50px rgba(12,14,19,0.2)' }}
-                          style={{ aspectRatio: '4/3', borderRadius: 18, overflow: 'hidden', background: '#EDE9E2', cursor: 'pointer' }}
-                        >
-                          <img src={img} alt={`Gallery ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.5s cubic-bezier(0.25,0.46,0.45,0.94)' }}
-                            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.09)')}
-                            onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-                            loading="lazy" />
+                    <div style={{ display:'grid',
+                      gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:12 }}>
+                      {school.galleryImages.map((img:string,i:number)=>(
+                        <motion.div key={i} initial={{ opacity:0, scale:0.94 }}
+                          animate={{ opacity:1, scale:1 }} transition={{ delay:i*0.05 }}
+                          whileHover={{ scale:1.03 }}
+                          style={{ aspectRatio:'4/3', borderRadius:16,
+                            overflow:'hidden', background:'#EDE9E2', cursor:'pointer' }}>
+                          <img src={img} alt={`${i+1}`} loading="lazy"
+                            style={{ width:'100%', height:'100%', objectFit:'cover',
+                              transition:'transform 0.5s ease' }}
+                            onMouseEnter={e=>(e.currentTarget.style.transform='scale(1.08)')}
+                            onMouseLeave={e=>(e.currentTarget.style.transform='scale(1)')} />
                         </motion.div>
                       ))}
                     </div>
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: 'Outfit, sans-serif', color: T.inkFaint }}>
-                      <div style={{ fontSize: 52, marginBottom: 12 }}>🖼️</div>No gallery images yet.
+                    <div style={{ textAlign:'center', padding:'80px 0',
+                      fontFamily:'Plus Jakarta Sans,sans-serif', color:C.faint }}>
+                      <div style={{ fontSize:52, marginBottom:12 }}>🖼️</div>No gallery images yet.
                     </div>
                   )}
                 </motion.div>
               )}
 
             </AnimatePresence>
-          </motion.div>
+          </div>
 
-          {/* ── RIGHT SIDEBAR ── */}
+          {/* ── RIGHT SIDEBAR — CTA only, zero data duplication ── */}
           <div>
-            <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.26, duration: 0.5 }}
-              style={{ position: 'sticky', top: 86 }}>
+            <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
+              transition={{ delay:0.22, duration:0.5 }}
+              style={{ position:'sticky', top:86 }}>
 
-              {/* PRIMARY CTA CARD */}
-              <div style={{
-                background: 'linear-gradient(155deg, #0C0E13 0%, #161B27 100%)',
-                borderRadius: 28, overflow: 'hidden', position: 'relative',
-                marginBottom: 14, padding: '34px 26px 26px',
-                boxShadow: '0 24px 60px rgba(12,14,19,0.28)',
-                border: '1px solid rgba(255,255,255,0.05)',
-              }}>
-                {/* Top accent */}
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, transparent, ${T.champ}, #F0D98A, ${T.champ}, transparent)` }} />
-                {/* Bottom glow orb */}
-                <div style={{ position: 'absolute', bottom: -50, left: '50%', transform: 'translateX(-50%)', width: 180, height: 180, borderRadius: '50%', background: `radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%)`, pointerEvents: 'none' }} />
+              {/* CTA card */}
+              <div style={{ background:'linear-gradient(155deg,#0A0C12 0%,#141928 100%)',
+                borderRadius:26, overflow:'hidden', position:'relative',
+                padding:'30px 22px 22px', marginBottom:12,
+                boxShadow:'0 24px 60px rgba(10,12,18,0.32)',
+                border:'1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ position:'absolute', top:0, left:0, right:0, height:3,
+                  background:`linear-gradient(90deg,transparent,${C.gold},${C.goldLt},${C.gold},transparent)` }} />
+                <div style={{ position:'absolute', bottom:-40, left:'50%',
+                  transform:'translateX(-50%)', width:150, height:150, borderRadius:'50%',
+                  background:'radial-gradient(circle,rgba(184,146,10,0.1),transparent 70%)',
+                  pointerEvents:'none' }} />
 
-                {/* Fee display */}
+                {/* fee */}
                 {school.monthlyFeeMin && (
-                  <div style={{ textAlign: 'center', paddingBottom: 22, marginBottom: 22, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 8 }}>Monthly Fee Starting</div>
-                    <motion.div
-                      initial={{ scale: 0.78, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.36, duration: 0.42 }}
-                      style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 52, color: '#F0D98A', lineHeight: 1, letterSpacing: '-3px' }}
-                    >
+                  <div style={{ textAlign:'center', paddingBottom:18, marginBottom:18,
+                    borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:9, fontWeight:700,
+                      color:'rgba(255,255,255,0.3)', textTransform:'uppercase',
+                      letterSpacing:'0.16em', marginBottom:7 }}>Monthly Fee Starting</div>
+                    <motion.div initial={{ scale:0.8, opacity:0 }}
+                      animate={{ scale:1, opacity:1 }} transition={{ delay:0.34, duration:0.4 }}
+                      style={{ fontFamily:'DM Serif Display,serif', fontSize:48,
+                        color:C.goldLt, lineHeight:1, letterSpacing:'-3px' }}>
                       ₹{school.monthlyFeeMin.toLocaleString('en-IN')}
                     </motion.div>
-                    {rating > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginTop: 10 }}>
-                        {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 12, height: 12, fill: s <= Math.round(rating) ? T.champ : 'transparent', color: s <= Math.round(rating) ? T.champ : 'rgba(255,255,255,0.14)' }} />)}
-                        <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 12, color: 'rgba(255,255,255,0.38)', marginLeft: 5 }}>{rating.toFixed(1)} rating</span>
+                    {rating>0 && (
+                      <div style={{ display:'flex', alignItems:'center',
+                        justifyContent:'center', gap:3, marginTop:9 }}>
+                        {[1,2,3,4,5].map(s=>(
+                          <Star key={s} style={{ width:11, height:11,
+                            fill:s<=Math.round(rating)?C.gold:'transparent',
+                            color:s<=Math.round(rating)?C.gold:'rgba(255,255,255,0.14)' }} />
+                        ))}
+                        <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11,
+                          color:'rgba(255,255,255,0.38)', marginLeft:5 }}>
+                          {rating.toFixed(1)} rating</span>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* CTA buttons */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }}>
+                {/* admission status */}
+                {school.admissionInfo?.admissionOpen !== undefined && (
+                  <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px',
+                    borderRadius:10, marginBottom:13,
+                    background:school.admissionInfo.admissionOpen
+                      ?'rgba(16,185,129,0.1)':'rgba(220,38,38,0.08)',
+                    border:`1px solid ${school.admissionInfo.admissionOpen
+                      ?'rgba(16,185,129,0.28)':'rgba(220,38,38,0.22)'}` }}>
+                    <div style={{ width:7, height:7, borderRadius:'50%', flexShrink:0,
+                      background:school.admissionInfo.admissionOpen?'#10B981':'#EF4444',
+                      boxShadow:`0 0 6px ${school.admissionInfo.admissionOpen?'#10B981':'#EF4444'}` }} />
+                    <span style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontWeight:600,
+                      fontSize:12, color:school.admissionInfo.admissionOpen
+                        ?'#6EE7B7':'#FCA5A5' }}>
+                      Admissions {school.admissionInfo.admissionOpen?'Open Now':'Currently Closed'}
+                    </span>
+                  </div>
+                )}
+
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  <motion.div whileHover={{ scale:1.02, y:-2 }} whileTap={{ scale:0.97 }}>
                     <Link href={`/apply/${school.id}`}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 20px', borderRadius: 16, background: `linear-gradient(135deg, ${T.champ}, ${T.champDark})`, color: '#fff', fontFamily: 'Outfit, sans-serif', fontSize: 15, fontWeight: 700, textDecoration: 'none', boxShadow: `0 10px 28px ${T.champGlow}`, letterSpacing: '0.01em' }}>
-                      Apply Now <ArrowRight style={{ width: 15, height: 15 }} />
+                      style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                        gap:8, padding:'15px 20px', borderRadius:15,
+                        background:`linear-gradient(135deg,${C.gold},#7A5C00)`,
+                        color:'#fff', fontFamily:'Plus Jakarta Sans,sans-serif',
+                        fontSize:15, fontWeight:700, textDecoration:'none',
+                        boxShadow:`0 10px 28px rgba(184,146,10,0.28)`,
+                        letterSpacing:'0.01em' }}>
+                      Apply Now <ArrowRight style={{ width:15, height:15 }} />
                     </Link>
                   </motion.div>
 
-                  <motion.button
-                    whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.97 }}
-                    onClick={() => setShowCallModal(true)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 20px', borderRadius: 16, border: `1.5px solid ${T.champLine}`, background: 'rgba(201,168,76,0.1)', color: '#F0D98A', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    <PhoneCall style={{ width: 13, height: 13 }} /> Request Call Back
+                  <motion.button whileHover={{ scale:1.02, y:-2 }} whileTap={{ scale:0.97 }}
+                    onClick={()=>setModal(true)}
+                    style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                      gap:8, padding:'12px 20px', borderRadius:15,
+                      border:`1.5px solid ${C.goldBdr}`, background:'rgba(184,146,10,0.09)',
+                      color:C.goldLt, fontFamily:'Plus Jakarta Sans,sans-serif',
+                      fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                    <PhoneCall style={{ width:13, height:13 }} /> Request Call Back
                   </motion.button>
 
                   <Link href="/counselling"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 16, border: '1.5px solid rgba(255,255,255,0.08)', background: 'transparent', color: 'rgba(255,255,255,0.6)', fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 500, textDecoration: 'none' }}>
+                    style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                      gap:8, padding:'11px 20px', borderRadius:15,
+                      border:'1.5px solid rgba(255,255,255,0.08)',
+                      background:'transparent', color:'rgba(255,255,255,0.52)',
+                      fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:13,
+                      fontWeight:500, textDecoration:'none' }}>
                     🎓 Get Expert Counselling
                   </Link>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
                     <button onClick={handleSave}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px', borderRadius: 14, cursor: 'pointer', border: `1.5px solid ${saved ? T.champLine : 'rgba(255,255,255,0.08)'}`, background: saved ? 'rgba(201,168,76,0.12)' : 'transparent', color: saved ? '#F0D98A' : 'rgba(255,255,255,0.45)', fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600 }}>
-                      <Heart style={{ width: 13, height: 13, fill: saved ? '#F0D98A' : 'transparent' }} />
-                      {saved ? 'Saved' : 'Save'}
+                      style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                        gap:6, padding:'10px', borderRadius:13, cursor:'pointer',
+                        border:`1.5px solid ${saved?C.goldBdr:'rgba(255,255,255,0.08)'}`,
+                        background:saved?'rgba(184,146,10,0.12)':'transparent',
+                        color:saved?C.goldLt:'rgba(255,255,255,0.42)',
+                        fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12, fontWeight:600 }}>
+                      <Heart style={{ width:12, height:12,
+                        fill:saved?C.goldLt:'transparent' }} />
+                      {saved?'Saved':'Save'}
                     </button>
                     <Link href={`/compare?add=${school.id}`}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '11px', borderRadius: 14, border: '1.5px solid rgba(255,255,255,0.08)', background: 'transparent', color: 'rgba(255,255,255,0.45)', fontFamily: 'Outfit, sans-serif', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}>
-                      <GitCompare style={{ width: 13, height: 13 }} /> Compare
+                      onClick={()=>lead('compare',school.id)}
+                      style={{ display:'flex', alignItems:'center', justifyContent:'center',
+                        gap:6, padding:'10px', borderRadius:13,
+                        border:'1.5px solid rgba(255,255,255,0.08)',
+                        background:'transparent', color:'rgba(255,255,255,0.42)',
+                        fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12,
+                        fontWeight:600, textDecoration:'none' }}>
+                      <GitCompare style={{ width:12, height:12 }} /> Compare
                     </Link>
                   </div>
                 </div>
               </div>
 
-              {/* CONTACT & TRUST CARD — new value, not a duplicate */}
-              <div style={{ ...card(), padding: '22px 22px', overflow: 'hidden', position: 'relative' }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, ${T.champ}, transparent)` }} />
-                <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: 9, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 14 }}>Contact & Trust</div>
-
-                {/* Trust badges */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-                  {school.isVerified && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(26,158,92,0.06)', border: '1px solid rgba(26,158,92,0.18)' }}>
-                      <BadgeCheck style={{ width: 16, height: 16, color: T.green, flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: T.green }}>Verified School</div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint }}>Details confirmed by our team</div>
-                      </div>
-                    </div>
-                  )}
-                  {school.isFeatured && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: T.champBg, border: `1px solid ${T.champLine}` }}>
-                      <Sparkles style={{ width: 15, height: 15, color: T.champ, flexShrink: 0 }} />
-                      <div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: T.champDark }}>Featured School</div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint }}>Top-rated in your area</div>
-                      </div>
-                    </div>
-                  )}
-                  {rating > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: T.champBg, border: `1px solid ${T.champLine}` }}>
-                      <div style={{ flexShrink: 0 }}>
-                        <div style={{ display: 'flex', gap: 2 }}>
-                          {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 10, height: 10, fill: s <= Math.round(rating) ? T.champ : 'transparent', color: s <= Math.round(rating) ? T.champ : '#DDD' }} />)}
+              {/* Verified / Featured badge card — only if applicable */}
+              {(school.isVerified||school.isFeatured) && (
+                <div style={{ background:C.white, border:`1px solid ${C.border}`,
+                  borderRadius:20, padding:'18px 20px', overflow:'hidden', position:'relative' }}>
+                  <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
+                    background:`linear-gradient(to right,${C.gold},transparent)` }} />
+                  <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontWeight:700,
+                    fontSize:9, color:C.faint, textTransform:'uppercase',
+                    letterSpacing:'0.16em', marginBottom:12 }}>Verified Info</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {school.isVerified && (
+                      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px',
+                        borderRadius:11, background:'rgba(16,185,129,0.06)',
+                        border:'1px solid rgba(16,185,129,0.18)' }}>
+                        <BadgeCheck style={{ width:15, height:15, color:'#10B981', flexShrink:0 }} />
+                        <div>
+                          <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontWeight:600,
+                            fontSize:13, color:'#065F46' }}>Verified School</div>
+                          <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11,
+                            color:C.faint }}>Details confirmed by our team</div>
                         </div>
                       </div>
-                      <div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: T.champDark }}>{rating.toFixed(1)} / 5 Rating</div>
-                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint }}>Based on {school.totalReviews ?? 0} parent reviews</div>
+                    )}
+                    {school.isFeatured && (
+                      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'9px 12px',
+                        borderRadius:11, background:C.goldBg, border:`1px solid ${C.goldBdr}` }}>
+                        <Sparkles style={{ width:14, height:14, color:C.gold, flexShrink:0 }} />
+                        <div>
+                          <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontWeight:600,
+                            fontSize:13, color:C.gold }}>Featured School</div>
+                          <div style={{ fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:11,
+                            color:C.faint }}>Top-rated in your area</div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Admission season note */}
-                {school.admissionInfo?.admissionOpen !== undefined && (
-                  <div style={{ padding: '11px 14px', borderRadius: 12, background: school.admissionInfo.admissionOpen ? 'rgba(26,158,92,0.06)' : 'rgba(220,38,38,0.05)', border: `1px solid ${school.admissionInfo.admissionOpen ? 'rgba(26,158,92,0.2)' : 'rgba(220,38,38,0.15)'}`, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: school.admissionInfo.admissionOpen ? T.green : T.red, flexShrink: 0, boxShadow: `0 0 6px ${school.admissionInfo.admissionOpen ? T.green : T.red}` }} />
-                    <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: school.admissionInfo.admissionOpen ? T.green : T.red }}>
-                      Admissions {school.admissionInfo.admissionOpen ? 'Open' : 'Closed'}
-                    </span>
-                    {school.admissionInfo.academicYear && (
-                      <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint, marginLeft: 'auto' }}>{school.admissionInfo.academicYear}</span>
                     )}
                   </div>
-                )}
-
-                {/* Phone if available */}
-                {school.phone && (
-                  <a href={`tel:${school.phone}`}
-                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', borderRadius: 12, background: 'rgba(12,14,19,0.03)', border: `1px solid ${T.bdr}`, textDecoration: 'none' }}>
-                    <Phone style={{ width: 14, height: 14, color: T.champ, flexShrink: 0 }} />
-                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 600, color: T.ink }}>{school.phone}</span>
-                  </a>
-                )}
-              </div>
+                </div>
+              )}
 
             </motion.div>
           </div>
