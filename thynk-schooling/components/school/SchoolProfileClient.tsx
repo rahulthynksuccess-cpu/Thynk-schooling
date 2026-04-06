@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import {
-  MapPin, Globe, Star, BadgeCheck, Heart, Share2, GitCompare,
-  ArrowRight, GraduationCap, ExternalLink, BookOpen, Users,
+  MapPin, Star, BadgeCheck, Heart, Share2, GitCompare,
+  ArrowRight, GraduationCap, BookOpen, Users,
   Calendar, Award, Building2, BookOpenCheck, Mic, X,
   CheckCircle2, Sparkles, PhoneCall,
 } from 'lucide-react'
@@ -380,9 +380,7 @@ export function SchoolProfileClient({ slug }:{ slug:string }) {
       </AnimatePresence>
 
       {/* ════════════════════════════════
-          HERO — compact, one band only
-          Everything shown here is UNIQUE
-          and appears NOWHERE else
+          HERO
       ════════════════════════════════ */}
       <div style={{ position:'relative', overflow:'hidden',
         background:'linear-gradient(160deg,#0A0C12 0%,#141928 60%,#0E1620 100%)' }}>
@@ -482,7 +480,7 @@ export function SchoolProfileClient({ slug }:{ slug:string }) {
             </div>
           </div>
 
-          {/* Meta pills — single source of truth */}
+          {/* Meta pills — website removed */}
           <div style={{ display:'flex', flexWrap:'wrap', gap:7 }}>
             {loc && (
               <span style={{ display:'flex', alignItems:'center', gap:5,
@@ -522,17 +520,6 @@ export function SchoolProfileClient({ slug }:{ slug:string }) {
                 <Star style={{ width:11, height:11, fill:C.goldLt, color:C.goldLt }} />
                 {rating.toFixed(1)} · {school.totalReviews??0} reviews
               </span>
-            )}
-            {school.websiteUrl && (
-              <a href={school.websiteUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display:'flex', alignItems:'center', gap:5,
-                  background:'rgba(184,146,10,0.22)', backdropFilter:'blur(10px)',
-                  border:`1px solid ${C.goldBdr}`, color:C.goldLt,
-                  fontFamily:'Plus Jakarta Sans,sans-serif', fontSize:12, fontWeight:600,
-                  padding:'5px 12px', borderRadius:99, textDecoration:'none' }}>
-                <Globe style={{ width:11, height:11 }} /> Website
-                <ExternalLink style={{ width:10, height:10 }} />
-              </a>
             )}
           </div>
         </div>
@@ -593,7 +580,7 @@ export function SchoolProfileClient({ slug }:{ slug:string }) {
                     </div>
                   )}
 
-                  {/* ══ COLOURFUL CARD GRID — one card per data point ══ */}
+                  {/* ══ COLOURFUL CARD GRID ══ */}
                   <div style={{ marginBottom:36 }}>
                     <h2 style={{ fontFamily:'DM Serif Display,serif', fontSize:24, color:C.ink,
                       marginBottom:18 }}>School Details</h2>
@@ -889,7 +876,7 @@ export function SchoolProfileClient({ slug }:{ slug:string }) {
             </AnimatePresence>
           </div>
 
-          {/* ── RIGHT SIDEBAR — CTA only, zero data duplication ── */}
+          {/* ── RIGHT SIDEBAR ── */}
           <div>
             <motion.div initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
               transition={{ delay:0.22, duration:0.5 }}
@@ -1016,7 +1003,7 @@ export function SchoolProfileClient({ slug }:{ slug:string }) {
                 </div>
               </div>
 
-              {/* Verified / Featured badge card — only if applicable */}
+              {/* Verified / Featured badge card */}
               {(school.isVerified||school.isFeatured) && (
                 <div style={{ background:C.white, border:`1px solid ${C.border}`,
                   borderRadius:20, padding:'18px 20px', overflow:'hidden', position:'relative' }}>
