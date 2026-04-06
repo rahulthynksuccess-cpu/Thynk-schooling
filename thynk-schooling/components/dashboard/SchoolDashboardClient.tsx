@@ -156,11 +156,9 @@ function StatCard({ icon: Icon, label, value, sub, color, href, trend, trendVal,
 
 // ─── Credit Ring ──────────────────────────────────────────────────────────────
 function CreditRing({ credits }: { credits: LeadCredits }) {
-  const avail = Number(credits?.availableCredits) || 0
-  const used  = Number(credits?.usedCredits)  || 0
   const data = [
-    { name: 'Used',      value: used,  fill: '#E5E7EB' },
-    { name: 'Available', value: Math.max(avail, 0), fill: '#F59E0B' },
+    { name: 'Used',      value: Number(credits?.usedCredits) || 0,      fill: '#E5E7EB' },
+    { name: 'Available', value: Math.max(Number(credits?.availableCredits) || 0, 0), fill: '#F59E0B' },
   ]
   if (data[0].value === 0 && data[1].value === 0) data[1].value = 1
   return (
@@ -174,7 +172,7 @@ function CreditRing({ credits }: { credits: LeadCredits }) {
         </PieChart>
       </ResponsiveContainer>
       <div className="credit-ring-center">
-        <div className="credit-ring-val"><AnimatedNumber value={avail} /></div>
+        <div className="credit-ring-val"><AnimatedNumber value={Number(credits?.availableCredits) || 0} /></div>
         <div className="credit-ring-sub">credits</div>
       </div>
     </div>
@@ -385,47 +383,7 @@ export function SchoolDashboardClient() {
           {/* Scrollable content */}
           <main className="dash-content">
 
-          {/* ── School Identity Banner ── */}
-          {stats && (stats as any).schoolName && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-              style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 20px', marginBottom: 20, background: '#fff', border: '1px solid rgba(13,17,23,0.07)', borderRadius: 16, boxShadow: '0 2px 12px rgba(13,17,23,0.05)' }}>
-              {/* Logo */}
-              <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(184,134,11,0.08)', border: '1.5px solid rgba(184,134,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-                {(stats as any).schoolLogo
-                  ? <img src={(stats as any).schoolLogo} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 6 }} />
-                  : <GraduationCap size={22} color="#B8860B" />}
-              </div>
-              {/* Name + location */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: '#0D1117', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {(stats as any).schoolName}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                  {(stats as any).schoolCity && (
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#718096' }}>
-                      <MapPin size={10} color="#B8860B" />
-                      {(stats as any).schoolCity}{(stats as any).schoolState ? `, ${(stats as any).schoolState}` : ''}
-                    </span>
-                  )}
-                  {Array.isArray((stats as any).schoolBoard) && (stats as any).schoolBoard.slice(0, 2).map((b: string) => (
-                    <span key={b} style={{ padding: '2px 8px', borderRadius: 99, background: 'rgba(184,134,11,0.1)', border: '1px solid rgba(184,134,11,0.25)', fontFamily: 'Inter,sans-serif', fontSize: 11, fontWeight: 600, color: '#9A6F0B' }}>{b}</span>
-                  ))}
-                </div>
-              </div>
-              {/* Quick actions */}
-              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                <Link href={`/schools`} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, border: '1px solid rgba(13,17,23,0.1)', background: 'transparent', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: '#718096', textDecoration: 'none' }}>
-                  <ArrowUpRight size={12} /> View Profile
-                </Link>
-                <Link href="/school/complete-profile" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 14px', borderRadius: 9, border: 'none', background: '#B8860B', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: '#fff', textDecoration: 'none' }}>
-                  <Settings size={12} /> Edit Profile
-                </Link>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Profile Banner */}
+            {/* Profile Banner */}
             {stats && (stats as any).profileCompleteness < 100 && (
               <motion.div className="profile-banner"
                 initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
@@ -450,6 +408,30 @@ export function SchoolDashboardClient() {
                   Complete Now <ChevronRight size={14} />
                 </Link>
               </motion.div>
+            )}
+
+
+            {/* School Name Banner */}
+            {stats && (stats as any).schoolName && (
+              <div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 18px', marginBottom:16, background:'#fff', border:'1px solid rgba(13,17,23,0.08)', borderRadius:14, boxShadow:'0 2px 12px rgba(13,17,23,0.05)' }}>
+                <div style={{ width:48, height:48, borderRadius:13, background:'rgba(184,134,11,0.08)', border:'1.5px solid rgba(184,134,11,0.2)', display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden', flexShrink:0 }}>
+                  {(stats as any).schoolLogo
+                    ? <img src={(stats as any).schoolLogo} alt="" style={{ width:'100%', height:'100%', objectFit:'contain', padding:6 }} />
+                    : <GraduationCap size={20} color="#B8860B" />}
+                </div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontFamily:'serif', fontWeight:700, fontSize:18, color:'#0D1117', lineHeight:1.1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                    {(stats as any).schoolName}
+                  </div>
+                  <div style={{ fontSize:12, color:'#718096', marginTop:3 }}>
+                    {(stats as any).schoolCity}{(stats as any).schoolState ? `, ${(stats as any).schoolState}` : ''}
+                    {Array.isArray((stats as any).schoolBoard) && (stats as any).schoolBoard[0] ? ` · ${(stats as any).schoolBoard[0]}` : ''}
+                  </div>
+                </div>
+                <Link href="/school/complete-profile" style={{ display:'flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:9, background:'#B8860B', color:'#fff', textDecoration:'none', fontSize:12, fontWeight:700, fontFamily:'Inter,sans-serif', flexShrink:0 }}>
+                  Edit Profile
+                </Link>
+              </div>
             )}
 
             {/* Stats */}
@@ -532,8 +514,8 @@ export function SchoolDashboardClient() {
                     <CreditRing credits={credits} />
                     <div className="credit-stats">
                       {[
-                        { label: 'Total Purchased', val: Number(credits?.totalCredits)     || 0, color: '#374151' },
-                        { label: 'Used',            val: Number(credits?.usedCredits)      || 0, color: '#EF4444' },
+                        { label: 'Total Purchased', val: Number(credits?.totalCredits) || 0,     color: '#374151' },
+                        { label: 'Used',            val: Number(credits?.usedCredits) || 0,      color: '#EF4444' },
                         { label: 'Available',       val: Number(credits?.availableCredits) || 0, color: '#10B981' },
                       ].map(({ label, val, color }) => (
                         <div key={label} className="credit-stat-row">
