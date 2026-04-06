@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const { id: schoolId, profile_completed, rating, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard } = school.rows[0]
+    const { id: schoolId, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard, profile_completed, rating } = school.rows[0]
 
     const [leads, newLeads, apps, credits, reviews] = await Promise.all([
       db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [schoolId])
@@ -84,7 +84,6 @@ export async function GET(req: NextRequest) {
       profileViews: 0,
       credits: credits.rows[0]?.credits ?? 0,
       profileCompleteness,
-      // School identity — used in dashboard header
       schoolName:  schoolName  || null,
       schoolLogo:  schoolLogo  || null,
       schoolCity:  schoolCity  || null,
