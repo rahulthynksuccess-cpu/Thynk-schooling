@@ -9,8 +9,7 @@ import {
   GraduationCap, ArrowRight, ArrowLeft, Save, Loader2,
   Upload, MapPin, Phone, Mail, Globe, DollarSign,
   School, CheckCircle2, X, Star,
-} from 'lucide-react'
-import { useDropdown } from '@/hooks/useDropdown'
+} from 'lucide-react'import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 
@@ -350,6 +349,8 @@ export default function SchoolCompleteProfilePage() {
   const { setUser, user, accessToken } = useAuthStore()
   const [step, setStep] = useState(0)
   const [mounted, setMounted] = useState(false)
+  const [mode, setMode] = useState<'loading' | 'existing' | 'form'>('loading')
+  const [existingSchool, setExistingSchool] = useState<any>(null)
   const [formData, setFormData] = useState<FD>({
     board: [], admissionOpen: false,
     facilities: [], sports: [], languages: [], extracurriculars: [],
@@ -357,8 +358,68 @@ export default function SchoolCompleteProfilePage() {
   const [logoFile,  setLogoFile]  = useState<File | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
 
-  // Prevent AnimatePresence hydration mismatch between SSR and client
   useEffect(() => { setMounted(true) }, [])
+
+  // On mount: fetch existing school profile and either prefill or show card
+  useEffect(() => {
+    if (!mounted) return
+    const token = accessToken || (typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') : '') || ''
+    if (!token) { setMode('form'); return }
+    fetch('/api/schools/profile', {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const s = d?.school
+        if (s && s.name) {
+          setExistingSchool(s)
+          // Prefill formData with existing values
+          setFormData({
+            name:                 s.name             || '',
+            tagline:              s.tagline           || '',
+            affiliationNo:        s.affiliation_no    || '',
+            description:          s.description       || '',
+            foundingYear:         s.founding_year     || '',
+            totalStudents:        s.total_students    || '',
+            studentTeacherRatio:  s.student_teacher_ratio || '',
+            schoolType:           s.school_type       || '',
+            board:                Array.isArray(s.board) ? s.board : [],
+            genderPolicy:         s.gender_policy     || '',
+            mediumOfInstruction:  s.medium_of_instruction || '',
+            recognition:          s.recognition       || '',
+            classesFrom:          s.classes_from      || '',
+            classesTo:            s.classes_to        || '',
+            monthlyFeeMin:        s.monthly_fee_min   || '',
+            monthlyFeeMax:        s.monthly_fee_max   || '',
+            annualFee:            s.annual_fee        || '',
+            admissionAcademicYear: s.admission_academic_year || '',
+            admissionOpen:        s.admission_open    || false,
+            facilities:           Array.isArray(s.facilities)      ? s.facilities      : [],
+            sports:               Array.isArray(s.sports)          ? s.sports          : [],
+            languages:            Array.isArray(s.languages)       ? s.languages       : [],
+            extracurriculars:     Array.isArray(s.extra_curricular) ? s.extra_curricular : [],
+            addressLine1:         s.address_line1     || '',
+            addressLine2:         s.address_line2     || '',
+            city:                 s.city              || '',
+            state:                s.state             || '',
+            pincode:              s.pincode           || '',
+            latitude:             s.latitude          || '',
+            longitude:            s.longitude         || '',
+            phone:                s.phone             || '',
+            email:                s.email             || '',
+            websiteUrl:           s.website_url       || '',
+            principalName:        s.principal_name    || '',
+          })
+          setMode('existing')
+        } else {
+          setMode('form')
+          setStep(-1)  // Show checklist first for new schools
+        }
+      })
+      .catch(() => setMode('form'))
+  }, [mounted, accessToken])
 
   const set    = (k: string, v: FD[string]) => setFormData(p => ({ ...p, [k]: v }))
   const setS   = (k: string, v: string)     => set(k, v)
@@ -427,7 +488,6 @@ export default function SchoolCompleteProfilePage() {
   const pct    = Math.round(((step + 1) / STEPS.length) * 100)
   const isLast  = step === STEPS.length - 1
   const isFirst = step === 0
-
   const renderStep = () => {
     /* ── STEP 0: Basic Info ── */
     if (step === 0) return (
@@ -610,6 +670,217 @@ export default function SchoolCompleteProfilePage() {
   }
 
   if (!mounted) return null
+
+  // ── LOADING STATE ──
+  if (mode === 'loading') return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F0E8', fontFamily: 'Inter,sans-serif' }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: 48, height: 48, border: '3px solid rgba(212,82,15,.2)', borderTop: '3px solid #D4520F', borderRadius: '50%', margin: '0 auto 16px', animation: 'sp-spin 0.8s linear infinite' }} />
+        <div style={{ color: '#718096', fontSize: 14 }}>Loading your profile…</div>
+      </div>
+    </div>
+  )
+
+  // ── EXISTING SCHOOL CARD MODE ──
+  if (mode === 'existing' && existingSchool) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{ minHeight: '100vh', background: '#F5F0E8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '48px 24px' }}>
+
+        {/* Header */}
+        <div style={{ width: '100%', maxWidth: 720, marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#D4520F,#E87B3F)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <GraduationCap size={18} color="#fff" />
+            </div>
+            <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, color: '#14110E' }}>Thynk<span style={{ color: '#D4520F' }}>Schooling</span></span>
+          </div>
+          <h1 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 32, color: '#14110E', letterSpacing: '-0.02em', margin: '16px 0 6px' }}>
+            Your Schools
+          </h1>
+          <p style={{ color: '#718096', fontSize: 15, fontFamily: 'Inter,sans-serif' }}>
+            Manage your registered school profiles or add a new one.
+          </p>
+        </div>
+
+        {/* Existing school card */}
+        <div style={{ width: '100%', maxWidth: 720 }}>
+          <div style={{ background: '#fff', border: '1.5px solid rgba(212,82,15,0.2)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 4px 24px rgba(20,17,14,0.07)', marginBottom: 16 }}>
+            {/* Gold top bar */}
+            <div style={{ height: 4, background: 'linear-gradient(90deg,#D4520F,#E87B3F,#D4520F)' }} />
+
+            <div style={{ padding: '24px 28px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18 }}>
+                {/* Logo */}
+                <div style={{ width: 72, height: 72, borderRadius: 16, background: 'rgba(212,82,15,0.08)', border: '1.5px solid rgba(212,82,15,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+                  {existingSchool.logo_url
+                    ? <img src={existingSchool.logo_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 8 }} />
+                    : <GraduationCap size={28} color="#D4520F" />}
+                </div>
+                {/* Info */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                    <h2 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 20, color: '#14110E', margin: 0 }}>{existingSchool.name}</h2>
+                    {existingSchool.is_verified && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 99, background: 'rgba(22,163,74,0.1)', border: '1px solid rgba(22,163,74,0.25)', fontSize: 11, fontWeight: 700, color: '#15803d', fontFamily: 'Inter,sans-serif' }}>
+                        <CheckCircle2 size={9} /> Verified
+                      </span>
+                    )}
+                    {existingSchool.is_active === false && (
+                      <span style={{ padding: '3px 10px', borderRadius: 99, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)', fontSize: 11, fontWeight: 700, color: '#b45309', fontFamily: 'Inter,sans-serif' }}>
+                        Pending Approval
+                      </span>
+                    )}
+                  </div>
+                  {/* Meta */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                    {existingSchool.city && (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: 'Inter,sans-serif', fontSize: 13, color: '#718096' }}>
+                        <MapPin size={11} color="#D4520F" /> {existingSchool.city}{existingSchool.state ? `, ${existingSchool.state}` : ''}
+                      </span>
+                    )}
+                    {Array.isArray(existingSchool.board) && existingSchool.board.length > 0 && (
+                      <span style={{ padding: '2px 10px', borderRadius: 99, background: 'rgba(212,82,15,0.08)', border: '1px solid rgba(212,82,15,0.2)', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: '#D4520F' }}>
+                        {existingSchool.board.slice(0, 2).join(' · ')}
+                      </span>
+                    )}
+                    {existingSchool.school_type && (
+                      <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#9CA3AF' }}>{existingSchool.school_type}</span>
+                    )}
+                  </div>
+                  {existingSchool.tagline && (
+                    <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: '#9CA3AF', fontStyle: 'italic', margin: 0 }}>&ldquo;{existingSchool.tagline}&rdquo;</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setMode('form')}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 20px', borderRadius: 12, border: 'none', background: '#14110E', fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, color: '#fff', cursor: 'pointer', transition: 'all .2s', boxShadow: '0 4px 16px rgba(20,17,14,0.2)' }}>
+                  <Star size={15} /> Edit School Profile
+                </button>
+                {existingSchool.slug && (
+                  <a href={`/schools/${existingSchool.slug}`} target="_blank" rel="noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '13px 20px', borderRadius: 12, border: '1.5px solid rgba(20,17,14,0.12)', background: 'transparent', fontFamily: 'Inter,sans-serif', fontSize: 14, fontWeight: 600, color: '#4A5568', textDecoration: 'none', transition: 'all .2s' }}>
+                    <Globe size={14} /> View Public Profile
+                  </a>
+                )}
+                <button onClick={() => router.push('/dashboard/school')}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '13px 20px', borderRadius: 12, border: '1.5px solid rgba(20,17,14,0.12)', background: 'transparent', fontFamily: 'Inter,sans-serif', fontSize: 14, fontWeight: 600, color: '#4A5568', cursor: 'pointer', transition: 'all .2s' }}>
+                  ← Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Add another school */}
+          <button
+            onClick={() => {
+              setExistingSchool(null)
+              setFormData({ board: [], admissionOpen: false, facilities: [], sports: [], languages: [], extracurriculars: [] })
+              setStep(0)
+              setMode('form')
+            }}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px', borderRadius: 16, border: '2px dashed rgba(212,82,15,0.3)', background: 'rgba(212,82,15,0.03)', fontFamily: 'Inter,sans-serif', fontSize: 14, fontWeight: 600, color: '#D4520F', cursor: 'pointer', transition: 'all .2s' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(212,82,15,0.07)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,82,15,0.5)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(212,82,15,0.03)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(212,82,15,0.3)' }}>
+            <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(212,82,15,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>+</div>
+            Add Another School
+          </button>
+        </div>
+      </div>
+    </>
+  )
+
+  // ── CHECKLIST MODE (shown before step 0 for new schools) ──
+  // We inject a pre-form checklist as step -1
+  const showChecklist = mode === 'form' && step === -1
+
+  if (showChecklist) return (
+    <>
+      <style>{CSS}</style>
+      <div style={{ minHeight: '100vh', background: '#F5F0E8', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '48px 24px' }}>
+        <div style={{ width: '100%', maxWidth: 680 }}>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 11, background: 'linear-gradient(135deg,#D4520F,#E87B3F)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <GraduationCap size={18} color="#fff" />
+            </div>
+            <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, color: '#14110E' }}>Thynk<span style={{ color: '#D4520F' }}>Schooling</span></span>
+          </div>
+
+          <div style={{ background: '#fff', borderRadius: 24, overflow: 'hidden', boxShadow: '0 4px 32px rgba(20,17,14,0.08)' }}>
+            <div style={{ height: 5, background: 'linear-gradient(90deg,#D4520F,#E87B3F)' }} />
+            <div style={{ padding: '36px 40px' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(212,82,15,0.08)', border: '1px solid rgba(212,82,15,0.2)', color: '#D4520F', borderRadius: 99, padding: '5px 14px', fontSize: 11, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase' as const, fontFamily: 'Inter,sans-serif', marginBottom: 18 }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#D4520F', flexShrink: 0 }} /> Before you begin
+              </div>
+              <h1 style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 36, color: '#14110E', letterSpacing: '-0.02em', margin: '0 0 10px' }}>
+                Keep this info <span style={{ color: '#D4520F' }}>ready</span>
+              </h1>
+              <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 15, color: '#718096', lineHeight: 1.65, margin: '0 0 32px' }}>
+                The form has 6 steps and takes about 10 minutes. Here&apos;s everything you&apos;ll need to fill it completely.
+              </p>
+
+              {/* Step checklist */}
+              {[
+                {
+                  step: 'Step 1 — Basic Info', color: '#6366F1',
+                  items: ['School full legal name', 'A short tagline (1 line)', 'School description / mission (2–4 sentences)', 'Year established (e.g. 1992)', 'CBSE/ICSE affiliation number (if applicable)'],
+                },
+                {
+                  step: 'Step 2 — Type & Board', color: '#0EA5E9',
+                  items: ['School type (Day / Boarding / Residential)', 'Board(s) of Education (CBSE, ICSE, IB, State…)', 'Gender policy (Co-ed, Boys, Girls)', 'Medium of instruction', 'Approx. total student strength', 'Student : Teacher ratio (e.g. 25:1)'],
+                },
+                {
+                  step: 'Step 3 — Classes & Fees', color: '#10B981',
+                  items: ['Classes offered — from (e.g. Nursery / KG1) and to (e.g. Class 12)', 'Monthly tuition fee range (min & max in ₹)', 'Annual / admission fee amount', 'Current academic year & whether admissions are open'],
+                },
+                {
+                  step: 'Step 4 — Features', color: '#F59E0B',
+                  items: ['Facilities available (lab, library, pool, CCTV…)', 'Sports offered (cricket, football, chess…)', 'Languages taught (Hindi, French, German…)', 'Extracurricular activities (drama, music, robotics…)'],
+                },
+                {
+                  step: 'Step 5 — Location', color: '#EF4444',
+                  items: ['Full address (street, locality, city, state, pincode)', 'GPS coordinates (lat/long) — optional but recommended for map visibility'],
+                },
+                {
+                  step: 'Step 6 — Contact & Media', color: '#8B5CF6',
+                  items: ['School phone number', 'Admissions email address', 'School website URL (optional)', "Principal's name", 'School logo (square, JPG/PNG, max 1 MB)', 'Cover / banner photo (1200×400px recommended, max 1 MB)'],
+                },
+              ].map((section, i) => (
+                <div key={i} style={{ marginBottom: 20, padding: '18px 20px', borderRadius: 14, border: `1px solid ${section.color}20`, background: `${section.color}06` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 8, background: section.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 12, color: '#fff', flexShrink: 0 }}>{i + 1}</div>
+                    <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: '#14110E' }}>{section.step}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                    {section.items.map((item, j) => (
+                      <div key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontFamily: 'Inter,sans-serif', fontSize: 13, color: '#4A5568', lineHeight: 1.5 }}>
+                        <CheckCircle2 size={13} color={section.color} style={{ marginTop: 2, flexShrink: 0 }} />
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(212,82,15,0.06)', border: '1px solid rgba(212,82,15,0.15)', fontFamily: 'Inter,sans-serif', fontSize: 13, color: '#6B4226', lineHeight: 1.65, marginBottom: 28 }}>
+                💡 <strong>Tip:</strong> You can save and come back anytime — your progress is saved after each step.
+              </div>
+
+              <button onClick={() => setStep(0)}
+                style={{ width: '100%', padding: '16px', borderRadius: 14, border: 'none', background: '#14110E', fontFamily: "'Syne',sans-serif", fontSize: 16, fontWeight: 800, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, boxShadow: '0 8px 24px rgba(20,17,14,0.22)', transition: 'all .2s', letterSpacing: '-0.01em' }}>
+                I&apos;m ready — Start Registration <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
 
   return (
     <>
