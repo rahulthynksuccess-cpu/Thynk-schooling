@@ -388,15 +388,29 @@ async function getAnalytics(req: NextRequest) {
 
 async function getDashboardStats(req: NextRequest) {
   const userId = getUserId(req)
-  const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
-  if (!school.rows.length) return NextResponse.json({ totalLeads: 0, totalApplications: 0, profileViews: 0, credits: 0 })
-  const sid = school.rows[0].id
+  const school = await db.query(
+    'SELECT id, name, logo_url, city, state, board FROM schools WHERE admin_user_id=$1',
+    [userId]
+  ).catch(() => ({ rows: [] }))
+  if (!school.rows.length) return NextResponse.json({ totalLeads: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0 })
+  const { id: sid, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard } = school.rows[0]
   const [leads, apps, credits] = await Promise.all([
     db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
   ])
-  return NextResponse.json({ totalLeads: Number(leads.rows[0].count), totalApplications: Number(apps.rows[0].count), profileViews: 0, credits: credits.rows[0]?.credits ?? 0 })
+  return NextResponse.json({
+    totalLeads: Number(leads.rows[0].count),
+    totalApplications: Number(apps.rows[0].count),
+    profileViews: 0,
+    credits: credits.rows[0]?.credits ?? 0,
+    profileCompleteness: 0,
+    schoolName:  schoolName  || null,
+    schoolLogo:  schoolLogo  || null,
+    schoolCity:  schoolCity  || null,
+    schoolState: schoolState || null,
+    schoolBoard: Array.isArray(schoolBoard) ? schoolBoard : [],
+  })
 }
 
 // ─── router ───────────────────────────────────────────────────────────────────
