@@ -373,7 +373,7 @@ export default function SchoolCompleteProfilePage() {
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const s = d?.school
-        if (s && s.name) {
+        if (s && s.id) {
           setExistingSchool(s)
           setFormData({
             name: s.name||'', tagline: s.tagline||'', affiliationNo: s.affiliation_no||'',
