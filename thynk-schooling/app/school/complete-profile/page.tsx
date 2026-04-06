@@ -9,7 +9,8 @@ import {
   GraduationCap, ArrowRight, ArrowLeft, Save, Loader2,
   Upload, MapPin, Phone, Mail, Globe, DollarSign,
   School, CheckCircle2, X, Star,
-} from 'lucide-react'import { useDropdown } from '@/hooks/useDropdown'
+} from 'lucide-react'
+import { useDropdown } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 
