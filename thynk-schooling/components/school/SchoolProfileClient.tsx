@@ -591,7 +591,7 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
   const heroStats = [
     school.foundingYear ? { icon: '🏛', value: school.foundingYear.toString(), label: 'Established', sub: yearsOld > 0 ? `${yearsOld} yrs` : '' } : null,
     school.totalStudents ? { icon: '👨‍🎓', value: school.totalStudents.toLocaleString('en-IN'), label: 'Students', sub: 'Enrolled' } : null,
-    school.classesFrom && school.classesTo ? { icon: '📚', value: `${school.classesFrom}–${school.classesTo}`, label: 'Classes', sub: 'Grade range' } : null,
+    school.classesFrom && school.classesTo ? { icon: '📚', value: `${fmt(String(school.classesFrom))}–${fmt(String(school.classesTo))}`, label: 'Classes', sub: 'Grade range' } : null,
     rating > 0 ? { icon: '⭐', value: rating.toFixed(1), label: 'Rating', sub: `${school.totalReviews ?? 0} reviews` } : null,
     school.studentTeacherRatio ? { icon: '👩‍🏫', value: school.studentTeacherRatio, label: 'Student : Teacher', sub: '' } : null,
   ].filter(Boolean) as { icon: string; value: string; label: string; sub: string }[]
@@ -722,7 +722,7 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
             )}
             {school.classesFrom && school.classesTo && (
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.09)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.85)', fontFamily: 'Outfit, sans-serif', fontSize: 12, padding: '5px 13px', borderRadius: 99 }}>
-                <GraduationCap style={{ width: 11, height: 11 }} /> Class {school.classesFrom}–{school.classesTo}
+                <GraduationCap style={{ width: 11, height: 11 }} /> {fmt(String(school.classesFrom))}–{fmt(String(school.classesTo))}
               </span>
             )}
             {rating > 0 && (
@@ -737,40 +737,28 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
       {/* ══════ LAYOUT ══════ */}
       <div style={{ maxWidth: 1240, margin: '0 auto', padding: '0 clamp(20px,4vw,56px)' }}>
 
-        {/* Profile avatar strip */}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 22, marginTop: -54, marginBottom: 40, flexWrap: 'wrap' }}>
+        {/* Profile avatar strip — logo only, name already in hero */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: -40, marginBottom: 32, flexWrap: 'wrap' }}>
           <motion.div
-            initial={{ opacity: 0, scale: 0.5, y: 30 }}
+            initial={{ opacity: 0, scale: 0.5, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.6, ease: [0.22,1,0.36,1] }}
-            style={{ width: 108, height: 108, borderRadius: 26, background: '#fff', border: `3.5px solid ${T.bg}`, boxShadow: '0 14px 44px rgba(12,14,19,0.22)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, position: 'relative' }}
+            style={{ width: 88, height: 88, borderRadius: 22, background: '#fff', border: `3px solid ${T.bg}`, boxShadow: '0 10px 36px rgba(12,14,19,0.18)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, position: 'relative' }}
           >
             {school.logoUrl
-              ? <img src={school.logoUrl} alt={school.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 12 }} />
-              : <GraduationCap style={{ width: 44, height: 44, color: T.champ }} />}
+              ? <img src={school.logoUrl} alt={school.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 10 }} />
+              : <GraduationCap style={{ width: 38, height: 38, color: T.champ }} />}
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.5 }}
-            style={{ flex: 1, minWidth: 0, paddingBottom: 4 }}>
-            <h1 style={{ fontFamily: 'Cormorant Garamond, serif', fontWeight: 700, fontSize: 'clamp(22px,3vw,38px)', color: T.ink, lineHeight: 1.05, letterSpacing: '-0.022em', marginBottom: 10 }}>
-              {school.name}
-            </h1>
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-              {school.city && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.inkSoft }}>
-                  <MapPin style={{ width: 12, height: 12, color: T.champ, flexShrink: 0 }} />
-                  {school.addressLine1 ? `${school.addressLine1}, ` : ''}{school.city}{school.state ? `, ${school.state}` : ''}
-                </span>
-              )}
-              {boards.length > 0 && <Chip label={boards.join(' · ')} color="champ" />}
-              {school.foundingYear && <Chip label={`Est. ${school.foundingYear}`} color="neutral" />}
-              {school.websiteUrl && (
-                <a href={school.websiteUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.champ, textDecoration: 'none', fontWeight: 600 }}>
-                  <Globe style={{ width: 12, height: 12 }} /> Visit Website <ExternalLink style={{ width: 11, height: 11 }} />
-                </a>
-              )}
-            </div>
+          {/* Only show website — everything else is already in the hero */}
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12, duration: 0.4 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 44 }}>
+            {school.websiteUrl && (
+              <a href={school.websiteUrl} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Outfit, sans-serif', fontSize: 13, color: T.champ, textDecoration: 'none', fontWeight: 600, padding: '7px 14px', borderRadius: 99, background: T.champBg, border: `1px solid ${T.champLine}` }}>
+                <Globe style={{ width: 12, height: 12 }} /> Visit Website <ExternalLink style={{ width: 11, height: 11 }} />
+              </a>
+            )}
           </motion.div>
         </div>
 
@@ -884,7 +872,7 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                       <FactRow icon={Building2} label="School Type" value={fmt(school.schoolType)} />
                       <FactRow icon={Users} label="Gender Policy" value={fmt(school.genderPolicy)} />
                       <FactRow icon={Mic} label="Medium of Instruction" value={school.mediumOfInstruction} />
-                      <FactRow icon={GraduationCap} label="Classes" value={school.classesFrom && school.classesTo ? `${school.classesFrom} – ${school.classesTo}` : null} />
+                      <FactRow icon={GraduationCap} label="Classes" value={school.classesFrom && school.classesTo ? `${fmt(String(school.classesFrom))} – ${fmt(String(school.classesTo))}` : null} />
                       <FactRow icon={Users} label="Total Students" value={school.totalStudents?.toLocaleString('en-IN')} />
                       <FactRow icon={BookOpen} label="Student : Teacher Ratio" value={school.studentTeacherRatio} />
                       <FactRow icon={Award} label="Recognition" value={school.recognition} />
@@ -1192,17 +1180,67 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
                 </div>
               </div>
 
-              {/* QUICK FACTS CARD */}
-              <div style={{ ...card(), padding: '20px 22px' }}>
-                <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: 9, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 4 }}>Quick Facts</div>
-                <ChampLine />
-                <div style={{ marginTop: 4 }}>
-                  <FactRow icon={BookOpenCheck} label="Board"    value={boards.join(', ')}                                            accent />
-                  <FactRow icon={Calendar}      label="Founded"  value={school.foundingYear?.toString()} />
-                  <FactRow icon={GraduationCap} label="Classes"  value={school.classesFrom && school.classesTo ? `${school.classesFrom}–${school.classesTo}` : null} />
-                  <FactRow icon={Users}         label="Students" value={school.totalStudents?.toLocaleString('en-IN')} />
-                  <FactRow icon={Building2}     label="Type"     value={fmt(school.schoolType)} />
+              {/* CONTACT & TRUST CARD — new value, not a duplicate */}
+              <div style={{ ...card(), padding: '22px 22px', overflow: 'hidden', position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(to right, ${T.champ}, transparent)` }} />
+                <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 700, fontSize: 9, color: T.inkFaint, textTransform: 'uppercase', letterSpacing: '0.16em', marginBottom: 14 }}>Contact & Trust</div>
+
+                {/* Trust badges */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                  {school.isVerified && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: 'rgba(26,158,92,0.06)', border: '1px solid rgba(26,158,92,0.18)' }}>
+                      <BadgeCheck style={{ width: 16, height: 16, color: T.green, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: T.green }}>Verified School</div>
+                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint }}>Details confirmed by our team</div>
+                      </div>
+                    </div>
+                  )}
+                  {school.isFeatured && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: T.champBg, border: `1px solid ${T.champLine}` }}>
+                      <Sparkles style={{ width: 15, height: 15, color: T.champ, flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: T.champDark }}>Featured School</div>
+                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint }}>Top-rated in your area</div>
+                      </div>
+                    </div>
+                  )}
+                  {rating > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 12, background: T.champBg, border: `1px solid ${T.champLine}` }}>
+                      <div style={{ flexShrink: 0 }}>
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 10, height: 10, fill: s <= Math.round(rating) ? T.champ : 'transparent', color: s <= Math.round(rating) ? T.champ : '#DDD' }} />)}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: T.champDark }}>{rating.toFixed(1)} / 5 Rating</div>
+                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint }}>Based on {school.totalReviews ?? 0} parent reviews</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+
+                {/* Admission season note */}
+                {school.admissionInfo?.admissionOpen !== undefined && (
+                  <div style={{ padding: '11px 14px', borderRadius: 12, background: school.admissionInfo.admissionOpen ? 'rgba(26,158,92,0.06)' : 'rgba(220,38,38,0.05)', border: `1px solid ${school.admissionInfo.admissionOpen ? 'rgba(26,158,92,0.2)' : 'rgba(220,38,38,0.15)'}`, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: school.admissionInfo.admissionOpen ? T.green : T.red, flexShrink: 0, boxShadow: `0 0 6px ${school.admissionInfo.admissionOpen ? T.green : T.red}` }} />
+                    <span style={{ fontFamily: 'Outfit, sans-serif', fontWeight: 600, fontSize: 13, color: school.admissionInfo.admissionOpen ? T.green : T.red }}>
+                      Admissions {school.admissionInfo.admissionOpen ? 'Open' : 'Closed'}
+                    </span>
+                    {school.admissionInfo.academicYear && (
+                      <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 11, color: T.inkFaint, marginLeft: 'auto' }}>{school.admissionInfo.academicYear}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Phone if available */}
+                {school.phone && (
+                  <a href={`tel:${school.phone}`}
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '11px 14px', borderRadius: 12, background: 'rgba(12,14,19,0.03)', border: `1px solid ${T.bdr}`, textDecoration: 'none' }}>
+                    <Phone style={{ width: 14, height: 14, color: T.champ, flexShrink: 0 }} />
+                    <span style={{ fontFamily: 'Outfit, sans-serif', fontSize: 13, fontWeight: 600, color: T.ink }}>{school.phone}</span>
+                  </a>
+                )}
               </div>
 
             </motion.div>
