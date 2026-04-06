@@ -365,11 +365,17 @@ export default function SchoolCompleteProfilePage() {
   useEffect(() => {
     if (!mounted) return
     const token = accessToken || (typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') : '') || ''
-    if (!token) { setMode('form'); return }
+    if (!token) { setMode('form'); setStep(-1); return }
+
+    // 4s timeout — don't let a slow DB block the form
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 4000)
+
     fetch('/api/schools/profile', {
       cache: 'no-store',
       credentials: 'include',
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
@@ -419,7 +425,8 @@ export default function SchoolCompleteProfilePage() {
           setStep(-1)  // Show checklist first for new schools
         }
       })
-      .catch(() => setMode('form'))
+      .catch(() => { setMode('form'); setStep(-1) })
+      .finally(() => clearTimeout(timeout))
   }, [mounted, accessToken])
 
   const set    = (k: string, v: FD[string]) => setFormData(p => ({ ...p, [k]: v }))
@@ -758,7 +765,7 @@ export default function SchoolCompleteProfilePage() {
               {/* Action buttons */}
               <div style={{ display: 'flex', gap: 10, marginTop: 22, flexWrap: 'wrap' }}>
                 <button
-                  onClick={() => setMode('form')}
+                  onClick={() => { setStep(0); setMode('form') }}
                   style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px 20px', borderRadius: 12, border: 'none', background: '#14110E', fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 800, color: '#fff', cursor: 'pointer', transition: 'all .2s', boxShadow: '0 4px 16px rgba(20,17,14,0.2)' }}>
                   <Star size={15} /> Edit School Profile
                 </button>

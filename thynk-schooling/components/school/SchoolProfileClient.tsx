@@ -1,176 +1,134 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion, AnimatePresence, useScroll, useTransform, useSpring } from 'framer-motion'
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import Link from 'next/link'
 import {
-  MapPin, Phone, Globe, Star, BadgeCheck, Heart, Share2,
-  GitCompare, ArrowRight, GraduationCap, ExternalLink,
-  BookOpen, Users, Calendar, Award, Building2,
-  BookOpenCheck, Mic, X, CheckCircle2, Zap, Trophy,
-  ChevronRight, Sparkles, PhoneCall, Bell, ShieldCheck,
-  TrendingUp, Clock, Eye, Bookmark,
+  MapPin, Star, BadgeCheck, Heart, Share2, GitCompare,
+  ArrowRight, GraduationCap, BookOpen, Users, Calendar,
+  Award, Building2, BookOpenCheck, Mic, X, CheckCircle2,
+  Sparkles, PhoneCall,
 } from 'lucide-react'
 import { School, Review } from '@/types'
 
-/* ── palette ── */
-const C = {
-  bg: '#FAF7F2', card: '#FFFFFF', border: 'rgba(13,17,23,0.07)',
-  ink: '#0D1117', inkMuted: '#5A6472', inkFaint: '#A0ADB8',
-  gold: '#B8860B', goldBg: 'rgba(184,134,11,0.08)', goldBdr: 'rgba(184,134,11,0.2)',
-  goldLight: '#E8C547', success: '#16A34A', successBg: 'rgba(22,163,74,0.09)',
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+const T = {
+  bg:       '#F8F4EE',
+  cream:    '#EFE9DF',
+  white:    '#FFFFFF',
+  ink:      '#0C0F14',
+  inkMid:   '#3D4452',
+  inkMuted: '#727D8F',
+  inkFaint: '#A8B0BC',
+  gold:     '#A8720A',
+  goldVib:  '#C9890E',
+  goldPale: '#FBF3E3',
+  goldBdr:  'rgba(168,114,10,0.22)',
+  green:    '#166534',
+  border:   'rgba(12,15,20,0.08)',
+  shadow:   '0 2px 24px rgba(12,15,20,0.07)',
+  shadowMd: '0 8px 40px rgba(12,15,20,0.11)',
+  shadowLg: '0 20px 60px rgba(12,15,20,0.14)',
 }
 
-const card: React.CSSProperties = {
-  background: C.card, border: `1px solid ${C.border}`,
-  borderRadius: 20, boxShadow: '0 2px 20px rgba(13,17,23,0.05)',
-}
-
-
-/* ── format raw DB values to readable labels ── */
-function formatLabel(raw?: string | null): string {
+/* ─── Label formatter ────────────────────────────────────────────────────── */
+function fmt(raw?: string | null): string {
   if (!raw) return ''
-  return raw
-    .replace(/_/g, ' ')
-    .replace(/\w/g, c => c.toUpperCase())
+  return raw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
     .replace('Co Educational Boys Girls', 'Co-Educational')
     .replace('Co Educational', 'Co-Educational')
-    .replace('Cbse', 'CBSE')
-    .replace('Icse', 'ICSE')
-    .replace('Ib ', 'IB ')
-    .replace('K12', 'K–12')
-    .replace('Day School', 'Day School')
-    .replace('Boarding School', 'Boarding School')
-    .replace('Pre Primary', 'Pre-Primary')
-    .replace('Senior Secondary', 'Senior Secondary')
+    .replace('Cbse', 'CBSE').replace('Icse', 'ICSE')
+    .replace('Ib ', 'IB ').replace('K12', 'K–12')
 }
 
 const TABS = ['Overview', 'Facilities', 'Fees', 'Admission', 'Reviews', 'Gallery']
 
-/* ── floating particle ── */
-function Particle({ x, y, size, delay, duration }: { x: number; y: number; size: number; delay: number; duration: number }) {
-  return (
-    <motion.div
-      style={{ position: 'absolute', left: `${x}%`, top: `${y}%`, width: size, height: size, borderRadius: '50%', background: 'rgba(184,134,11,0.35)', pointerEvents: 'none' }}
-      animate={{ y: [-12, 12, -12], opacity: [0.2, 0.6, 0.2], scale: [0.8, 1.2, 0.8] }}
-      transition={{ duration, delay, repeat: Infinity, ease: 'easeInOut' }}
-    />
-  )
-}
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 22 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.52, delay, ease: [0.22, 1, 0.36, 1] as any },
+})
 
-/* ── stat card ── */
-function StatCard({ icon: Icon, label, value, accent }: { icon: React.ElementType; label: string; value?: string | number | null; accent?: boolean }) {
-  if (!value && value !== 0) return null
-  return (
-    <motion.div
-      whileHover={{ y: -2, boxShadow: '0 8px 28px rgba(13,17,23,0.10)' }}
-      transition={{ duration: 0.2 }}
-      style={{
-        background: accent ? 'linear-gradient(135deg,rgba(184,134,11,0.08),rgba(184,134,11,0.03))' : '#fff',
-        border: `1px solid ${accent ? C.goldBdr : C.border}`,
-        borderRadius: 14, padding: '16px 18px', cursor: 'default',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: accent ? C.goldBg : 'rgba(13,17,23,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon style={{ width: 13, height: 13, color: accent ? C.gold : C.inkFaint }} />
-        </div>
-        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.inkFaint }}>{label}</span>
-      </div>
-      <div style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 17, color: accent ? C.gold : C.ink, lineHeight: 1.2 }}>{value}</div>
-    </motion.div>
-  )
-}
-
-/* ── tag chip ── */
-function Tag({ label, color = 'gold' }: { label: string; color?: 'gold' | 'green' | 'blue' | 'purple' }) {
-  const map = {
-    gold:   { bg: 'rgba(184,134,11,0.09)', b: 'rgba(184,134,11,0.25)', t: '#9A6F0B' },
-    green:  { bg: 'rgba(22,163,74,0.09)',  b: 'rgba(22,163,74,0.25)',  t: '#15803d' },
-    blue:   { bg: 'rgba(59,130,246,0.09)', b: 'rgba(59,130,246,0.25)', t: '#1d4ed8' },
-    purple: { bg: 'rgba(139,92,246,0.09)', b: 'rgba(139,92,246,0.25)', t: '#6d28d9' },
+/* ─── Tag pill ───────────────────────────────────────────────────────────── */
+function Pill({ label, variant = 'default' }: { label: string; variant?: 'default' | 'gold' | 'green' | 'blue' | 'purple' }) {
+  const s: Record<string, React.CSSProperties> = {
+    default: { background: T.cream,    color: T.inkMid,  border: `1px solid ${T.border}` },
+    gold:    { background: T.goldPale, color: T.gold,    border: `1px solid ${T.goldBdr}` },
+    green:   { background: 'rgba(22,101,52,0.07)',  color: T.green,  border: '1px solid rgba(22,101,52,0.18)' },
+    blue:    { background: 'rgba(29,78,216,0.06)',  color: '#1d4ed8',border: '1px solid rgba(29,78,216,0.15)' },
+    purple:  { background: 'rgba(109,40,217,0.06)', color: '#6d28d9',border: '1px solid rgba(109,40,217,0.15)' },
   }
-  const s = map[color]
   return (
-    <motion.span whileHover={{ scale: 1.04 }} style={{ display: 'inline-flex', alignItems: 'center', background: s.bg, border: `1px solid ${s.b}`, color: s.t, fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, padding: '5px 13px', borderRadius: 100, cursor: 'default' }}>
+    <motion.span whileHover={{ scale: 1.03 }} style={{ display: 'inline-flex', alignItems: 'center', padding: '5px 14px', borderRadius: 100, fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, cursor: 'default', ...s[variant] }}>
       {label}
     </motion.span>
   )
 }
 
-/* ── review card ── */
+/* ─── Sidebar fact row ───────────────────────────────────────────────────── */
+function FactRow({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: `1px solid ${T.border}` }}>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: T.inkMuted }}>
+        <Icon style={{ width: 13, height: 13, color: T.goldVib }} /> {label}
+      </span>
+      <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 15, color: T.ink }}>{value}</span>
+    </div>
+  )
+}
+
+/* ─── Overview detail card ───────────────────────────────────────────────── */
+function DetailCard({ icon: Icon, label, value, accent }: { icon: React.ElementType; label: string; value?: string | number | null; accent?: boolean }) {
+  if (!value && value !== 0) return null
+  return (
+    <motion.div whileHover={{ y: -3, boxShadow: T.shadowMd }} transition={{ duration: 0.2 }}
+      style={{ background: accent ? `linear-gradient(135deg,${T.goldPale},rgba(251,243,227,0.4))` : T.white, border: `1.5px solid ${accent ? T.goldBdr : T.border}`, borderRadius: 16, padding: '18px 20px', boxShadow: T.shadow, cursor: 'default' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: accent ? T.goldPale : T.cream, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon style={{ width: 13, height: 13, color: accent ? T.goldVib : T.inkFaint }} />
+        </div>
+        <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: accent ? T.gold : T.inkFaint }}>{label}</span>
+      </div>
+      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: accent ? T.goldVib : T.ink, lineHeight: 1.1 }}>{value}</div>
+    </motion.div>
+  )
+}
+
+/* ─── Review card ────────────────────────────────────────────────────────── */
 function ReviewCard({ review, i }: { review: Review; i: number }) {
-  const initials = review.parentName?.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || '?'
+  const initials = (review.parentName || '?').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
   const rating = Number(review.rating) || 0
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}
-      style={{ ...card, padding: '22px 26px' }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+    <motion.div {...fadeUp(i * 0.06)} style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 20, padding: '24px 28px', boxShadow: T.shadow }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 14, background: `linear-gradient(135deg,${C.goldBg},rgba(184,134,11,0.18))`, border: `1px solid ${C.goldBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 18, color: C.gold, flexShrink: 0 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 14, background: `linear-gradient(135deg,${T.goldPale},rgba(201,137,14,0.15))`, border: `1px solid ${T.goldBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: T.goldVib, flexShrink: 0 }}>
             {initials}
           </div>
           <div>
-            <div style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 14, color: C.ink }}>{review.parentName}</div>
-            <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: C.inkFaint, marginTop: 2 }}>
-              {new Date(review.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
-            </div>
+            <div style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 700, fontSize: 14, color: T.ink }}>{review.parentName}</div>
+            <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: T.inkFaint, marginTop: 2 }}>{new Date(review.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}</div>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: C.goldBg, border: `1px solid ${C.goldBdr}`, padding: '5px 11px', borderRadius: 99, flexShrink: 0 }}>
-          {[1, 2, 3, 4, 5].map(s => <Star key={s} style={{ width: 11, height: 11, fill: s <= rating ? C.gold : 'transparent', color: s <= rating ? C.gold : '#D0D5DB' }} />)}
-          <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 700, color: C.gold, marginLeft: 4 }}>{rating}.0</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: T.goldPale, border: `1px solid ${T.goldBdr}`, padding: '5px 10px', borderRadius: 99, flexShrink: 0 }}>
+          {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 10, height: 10, fill: s <= rating ? T.goldVib : 'none', color: s <= rating ? T.goldVib : '#D0D5DB' }} />)}
+          <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 700, color: T.goldVib, marginLeft: 4 }}>{rating}.0</span>
         </div>
       </div>
-      {review.title && <h4 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 18, color: C.ink, marginBottom: 6 }}>{review.title}</h4>}
-      <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 14, color: C.inkMuted, lineHeight: 1.8 }}>{review.body}</p>
+      {review.title && <h4 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 19, color: T.ink, marginBottom: 7 }}>{review.title}</h4>}
+      <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: T.inkMid, lineHeight: 1.8, fontWeight: 300 }}>{review.body}</p>
       {review.schoolReply && (
-        <div style={{ marginTop: 14, padding: '13px 16px', borderRadius: 12, background: 'rgba(184,134,11,0.05)', border: `1px solid ${C.goldBdr}` }}>
-          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, fontWeight: 700, color: C.gold, marginBottom: 5 }}>School Response</div>
-          <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.inkMuted, lineHeight: 1.65 }}>{review.schoolReply}</p>
+        <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 12, background: T.goldPale, border: `1px solid ${T.goldBdr}` }}>
+          <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 700, color: T.gold, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 5 }}>School Response</div>
+          <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: T.inkMid, lineHeight: 1.65, fontWeight: 300 }}>{review.schoolReply}</p>
         </div>
       )}
     </motion.div>
   )
 }
 
-/* ── share toast ── */
-function ShareToast({ onClose }: { onClose: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16 }}
-      style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 300, background: '#0D1117', color: '#fff', borderRadius: 16, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 16px 48px rgba(13,17,23,0.4)', fontFamily: 'Inter,sans-serif', fontSize: 14, fontWeight: 600 }}
-    >
-      <CheckCircle2 style={{ width: 17, height: 17, color: '#4ADE80', flexShrink: 0 }} />
-      Link copied to clipboard
-      <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', borderRadius: 6, padding: '3px 7px', color: '#fff', display: 'flex', alignItems: 'center' }}>
-        <X style={{ width: 12, height: 12 }} />
-      </button>
-    </motion.div>
-  )
-}
-
-/* ── success toast ── */
-function SuccessToast({ message, onClose }: { message: string; onClose: () => void }) {
-  useEffect(() => {
-    const t = setTimeout(onClose, 3000)
-    return () => clearTimeout(t)
-  }, [onClose])
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16 }}
-      style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', zIndex: 300, background: '#166534', color: '#fff', borderRadius: 16, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 12, boxShadow: '0 16px 48px rgba(22,101,52,0.4)', fontFamily: 'Inter,sans-serif', fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' }}
-    >
-      <CheckCircle2 style={{ width: 17, height: 17, color: '#4ADE80', flexShrink: 0 }} />
-      {message}
-    </motion.div>
-  )
-}
-
-/* ── Request Call Modal ── */
-function RequestCallModal({ school, onClose, onSuccess }: { school: School; onClose: () => void; onSuccess: () => void }) {
+/* ─── Request Call Modal ─────────────────────────────────────────────────── */
+function CallModal({ school, onClose, onSuccess }: { school: School; onClose: () => void; onSuccess: () => void }) {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [childName, setChildName] = useState('')
@@ -178,147 +136,102 @@ function RequestCallModal({ school, onClose, onSuccess }: { school: School; onCl
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const handleSubmit = async () => {
+  const submit = async () => {
     if (!name.trim() || !phone.trim()) { setError('Name and phone are required'); return }
-    if (!/^\d{10}$/.test(phone.replace(/\s/g, ''))) { setError('Enter a valid 10-digit phone number'); return }
+    if (!/^\d{10}$/.test(phone.replace(/\s/g, ''))) { setError('Enter a valid 10-digit number'); return }
     setLoading(true); setError('')
     try {
-      const res = await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          schoolId: school.id, action: 'request_call',
-          parentName: name, phone, childName, classApplyingFor: classFor,
-          source: 'request_call',
-        }),
-      })
-      if (!res.ok) throw new Error('Failed to submit')
-      onSuccess()
-      onClose()
-    } catch {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+      await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schoolId: school.id, action: 'request_call', parentName: name, phone, childName, classApplyingFor: classFor, source: 'request_call' }) })
+      onSuccess(); onClose()
+    } catch { setError('Something went wrong. Please try again.') }
+    setLoading(false)
   }
 
+  const inp: React.CSSProperties = { width: '100%', padding: '12px 16px', borderRadius: 12, border: `1.5px solid ${T.border}`, fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: T.ink, outline: 'none', background: T.bg, boxSizing: 'border-box' as const, transition: 'border-color 0.15s' }
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(13,17,23,0.6)', backdropFilter: 'blur(8px)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
-      onClick={e => e.target === e.currentTarget && onClose()}
-    >
-      <motion.div
-        initial={{ scale: 0.88, opacity: 0, y: 32 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.92, opacity: 0 }} transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        style={{ background: '#fff', borderRadius: 28, padding: '40px', width: '100%', maxWidth: 480, boxShadow: '0 40px 120px rgba(13,17,23,0.3)', position: 'relative' }}
-      >
-        {/* gold top border */}
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, borderRadius: '28px 28px 0 0', background: `linear-gradient(90deg,transparent,${C.gold},${C.goldLight},${C.gold},transparent)` }} />
-
-        <button onClick={onClose} style={{ position: 'absolute', top: 18, right: 18, background: 'rgba(13,17,23,0.05)', border: 'none', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-          <X style={{ width: 15, height: 15, color: C.inkMuted }} />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(12,15,20,0.65)', backdropFilter: 'blur(12px)', zIndex: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <motion.div initial={{ scale: 0.88, y: 32, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }} exit={{ scale: 0.92, opacity: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        style={{ background: T.white, borderRadius: 28, padding: '44px 40px', width: '100%', maxWidth: 460, boxShadow: T.shadowLg, position: 'relative' }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, borderRadius: '28px 28px 0 0', background: `linear-gradient(90deg,transparent,${T.goldVib},#E8C547,${T.goldVib},transparent)` }} />
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: T.cream, border: 'none', borderRadius: 10, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <X style={{ width: 14, height: 14, color: T.inkMuted }} />
         </button>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 16, background: C.goldBg, border: `1.5px solid ${C.goldBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <PhoneCall style={{ width: 22, height: 22, color: C.gold }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 16, background: T.goldPale, border: `1.5px solid ${T.goldBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PhoneCall style={{ width: 22, height: 22, color: T.goldVib }} />
           </div>
           <div>
-            <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 24, color: C.ink, marginBottom: 3 }}>Request a Call Back</h2>
-            <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.inkMuted }}>{school.name} will call you within 24 hours</p>
+            <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: T.ink, marginBottom: 3 }}>Request a Call Back</h2>
+            <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: T.inkMuted, fontWeight: 300 }}>{school.name} will call you within 24 hours</p>
           </div>
         </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {[
-            { label: 'Your Name *', value: name, onChange: setName, placeholder: 'Enter your full name', type: 'text' },
-            { label: 'Mobile Number *', value: phone, onChange: setPhone, placeholder: '10-digit mobile number', type: 'tel' },
-            { label: "Child's Name", value: childName, onChange: setChildName, placeholder: "Child's full name (optional)", type: 'text' },
-            { label: 'Applying for Class', value: classFor, onChange: setClassFor, placeholder: 'e.g. Grade 5, Nursery', type: 'text' },
+            { label: 'Your Name *', val: name, set: setName, ph: 'Full name', type: 'text' },
+            { label: 'Mobile Number *', val: phone, set: setPhone, ph: '10-digit mobile', type: 'tel' },
+            { label: "Child's Name", val: childName, set: setChildName, ph: 'Optional', type: 'text' },
+            { label: 'Applying for Class', val: classFor, set: setClassFor, ph: 'e.g. Grade 5, Nursery', type: 'text' },
           ].map(f => (
             <div key={f.label}>
-              <label style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: C.inkMuted, display: 'block', marginBottom: 6 }}>{f.label}</label>
-              <input
-                type={f.type} value={f.value} onChange={e => f.onChange(e.target.value)}
-                placeholder={f.placeholder}
-                style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: `1.5px solid ${C.border}`, fontFamily: 'Inter,sans-serif', fontSize: 14, color: C.ink, outline: 'none', background: '#FAFAF8', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
-                onFocus={e => (e.currentTarget.style.borderColor = C.gold)}
-                onBlur={e => (e.currentTarget.style.borderColor = C.border)}
-              />
+              <label style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.07em', color: T.inkFaint, display: 'block', marginBottom: 6 }}>{f.label}</label>
+              <input type={f.type} value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph} style={inp}
+                onFocus={e => (e.currentTarget.style.borderColor = T.goldVib)}
+                onBlur={e => (e.currentTarget.style.borderColor = T.border)} />
             </div>
           ))}
         </div>
-
-        {error && (
-          <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(220,38,38,0.07)', border: '1px solid rgba(220,38,38,0.2)', fontFamily: 'Inter,sans-serif', fontSize: 13, color: '#B91C1C' }}>
-            {error}
-          </div>
-        )}
-
-        <motion.button
-          whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.97 }}
-          onClick={handleSubmit} disabled={loading}
-          style={{ marginTop: 22, width: '100%', padding: '16px', borderRadius: 16, border: 'none', background: loading ? '#ccc' : `linear-gradient(135deg,${C.gold},#9A6F0B)`, color: '#fff', fontFamily: 'Inter,sans-serif', fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 8px 28px rgba(184,134,11,0.38)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-        >
-          {loading ? 'Submitting…' : <><PhoneCall style={{ width: 16, height: 16 }} /> Request Call Back</>}
+        {error && <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(220,38,38,0.06)', border: '1px solid rgba(220,38,38,0.18)', fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: '#B91C1C' }}>{error}</div>}
+        <motion.button whileHover={{ scale: 1.02, y: -1 }} whileTap={{ scale: 0.97 }} onClick={submit} disabled={loading}
+          style={{ marginTop: 22, width: '100%', padding: '15px', borderRadius: 16, border: 'none', background: loading ? T.cream : `linear-gradient(135deg,${T.goldVib},${T.gold})`, color: loading ? T.inkMuted : '#fff', fontFamily: "'DM Sans',sans-serif", fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 8px 28px rgba(168,114,10,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <PhoneCall style={{ width: 16, height: 16 }} /> {loading ? 'Submitting…' : 'Request Call Back'}
         </motion.button>
-
-        <p style={{ marginTop: 14, fontFamily: 'Inter,sans-serif', fontSize: 11, color: C.inkFaint, textAlign: 'center', lineHeight: 1.6 }}>
-          🔒 Your contact info is shared only with this school and protected by our privacy policy.
-        </p>
+        <p style={{ marginTop: 14, fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: T.inkFaint, textAlign: 'center', lineHeight: 1.6 }}>🔒 Your info is shared only with this school</p>
       </motion.div>
     </motion.div>
   )
 }
 
-/* ── skeleton ── */
-function ProfileSkeleton() {
+/* ─── Skeleton ───────────────────────────────────────────────────────────── */
+function Skeleton() {
+  const p = { animation: 'skP 1.6s ease-in-out infinite', background: `linear-gradient(90deg,${T.cream} 25%,#e8e2d8 50%,${T.cream} 75%)`, backgroundSize: '400% 100%' } as React.CSSProperties
   return (
-    <div style={{ background: C.bg }}>
-      <div className="skeleton" style={{ height: 340, borderRadius: 0 }} />
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 32px' }}>
-        <div style={{ display: 'flex', gap: 24, marginTop: -60, marginBottom: 40 }}>
-          <div className="skeleton" style={{ width: 120, height: 120, borderRadius: 24, flexShrink: 0 }} />
-          <div style={{ flex: 1, paddingTop: 70 }}>
-            <div className="skeleton" style={{ height: 34, width: '42%', marginBottom: 12 }} />
-            <div className="skeleton" style={{ height: 14, width: '30%' }} />
+    <>
+      <style>{`@keyframes skP{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}`}</style>
+      <div style={{ background: T.bg }}>
+        <div style={{ ...p, height: 360 }} />
+        <div style={{ maxWidth: 1320, margin: '0 auto', padding: '0 40px' }}>
+          <div style={{ display: 'flex', gap: 24, marginTop: -64, marginBottom: 48 }}>
+            <div style={{ ...p, width: 120, height: 120, borderRadius: 24, flexShrink: 0 }} />
+            <div style={{ flex: 1, paddingTop: 72 }}>
+              <div style={{ ...p, height: 36, width: '38%', marginBottom: 14, borderRadius: 8 }} />
+              <div style={{ ...p, height: 14, width: '22%', borderRadius: 6 }} />
+            </div>
           </div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr clamp(300px,27vw,360px)', gap: 40 }}>
-          <div>
-            <div className="skeleton" style={{ height: 52, borderRadius: 14, marginBottom: 36 }} />
-            <div className="skeleton" style={{ height: 220, borderRadius: 20, marginBottom: 16 }} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: 48 }}>
+            <div><div style={{ ...p, height: 52, borderRadius: 14, marginBottom: 32 }} /><div style={{ ...p, height: 220, borderRadius: 20 }} /></div>
+            <div style={{ ...p, height: 500, borderRadius: 24 }} />
           </div>
-          <div className="skeleton" style={{ height: 480, borderRadius: 24 }} />
         </div>
       </div>
-    </div>
+    </>
   )
 }
 
-/* ══════════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════════════════ */
 export function SchoolProfileClient({ slug }: { slug: string }) {
   const [activeTab, setActiveTab] = useState('Overview')
   const [saved, setSaved] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [showCallModal, setShowCallModal] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-
-  const coverRef = useRef<HTMLDivElement>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
   const { scrollY } = useScroll()
-  const coverYRaw = useTransform(scrollY, [0, 500], [0, 80])
-  const coverY = useSpring(coverYRaw, { stiffness: 80, damping: 20 })
-
-  const particles = useRef(
-    Array.from({ length: 14 }, (_, i) => ({
-      x: 5 + (i * 37 + 13) % 90,
-      y: 5 + (i * 53 + 7) % 85,
-      size: 2 + (i % 3),
-      delay: i * 0.3,
-      duration: 3 + (i % 5),
-    }))
-  )
+  const heroY = useTransform(scrollY, [0, 400], [0, 70])
 
   const { data: school, isLoading } = useQuery<School>({
     queryKey: ['school', slug],
@@ -328,625 +241,419 @@ export function SchoolProfileClient({ slug }: { slug: string }) {
 
   const { data: reviews } = useQuery<{ data: Review[]; total: number }>({
     queryKey: ['school-reviews', slug],
-    queryFn: () => fetch(`/api/schools/${slug}/reviews?limit=6`, { cache: 'no-store' }).then(r => r.ok ? r.json() : ({ data: [], total: 0 })).catch(() => ({ data: [], total: 0 })),
+    queryFn: () => fetch(`/api/schools/${slug}/reviews?limit=6`, { cache: 'no-store' }).then(r => r.ok ? r.json() : { data: [], total: 0 }).catch(() => ({ data: [], total: 0 })),
     enabled: !!school,
     staleTime: 5 * 60 * 1000,
   })
 
-  const handleShare = () => {
-    navigator.clipboard?.writeText(window.location.href)
-    setShowShare(true)
-    setTimeout(() => setShowShare(false), 2500)
-  }
-
-  // Create lead for Save / Compare / Request Call actions
   const createLead = useCallback(async (source: string, schoolId: string) => {
-    try {
-      await fetch('/api/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId, action: 'create_lead', source }),
-      })
-    } catch { /* silent */ }
+    try { await fetch('/api/leads', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schoolId, action: 'create_lead', source }) }) } catch {}
   }, [])
 
-  const handleSave = () => {
-    if (!saved && school) createLead('save', school.id)
-    setSaved(!saved)
-    if (!saved) setToast('School saved to your wishlist!')
-  }
+  const handleShare = () => { navigator.clipboard?.writeText(window.location.href); setShowShare(true); setTimeout(() => setShowShare(false), 2500) }
+  const handleSave = () => { if (!saved && school) createLead('save', school.id); setSaved(!saved); if (!saved) setToast('School saved to wishlist!') }
 
-  const handleCompare = () => {
-    if (school) createLead('compare', school.id)
-  }
-
-  if (isLoading) return <ProfileSkeleton />
+  if (isLoading) return <Skeleton />
   if (!school) return (
-    <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: C.bg }}>
-      <motion.div initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} style={{ fontSize: 72 }}>🏫</motion.div>
-      <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 32, color: C.ink }}>School Not Found</h2>
-      <Link href="/schools" style={{ padding: '13px 32px', borderRadius: 14, background: C.ink, color: '#fff', fontFamily: 'Inter,sans-serif', fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Browse Schools</Link>
+    <div style={{ minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: T.bg }}>
+      <motion.div initial={{ scale: 0.7 }} animate={{ scale: 1 }} style={{ fontSize: 72 }}>🏫</motion.div>
+      <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 32, color: T.ink }}>School Not Found</h2>
+      <Link href="/schools" style={{ padding: '13px 32px', borderRadius: 14, background: T.ink, color: '#fff', fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: 14, textDecoration: 'none' }}>Browse Schools</Link>
     </div>
   )
 
   const reviewList = reviews?.data ?? []
   const rating = Number(school.avgRating) || 0
-  const boards = (school.board || [])
+  const boards = school.board || []
+
+  const CSS = `
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0}
+    .sptab{padding:10px 22px;border-radius:12px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;white-space:nowrap;transition:all .22s;flex-shrink:0}
+    .sptab-on{background:${T.ink};color:#fff;box-shadow:0 4px 16px rgba(12,15,20,0.22)}
+    .sptab-off{background:transparent;color:${T.inkMuted}}
+    .sptab-off:hover{background:${T.cream};color:${T.ink}}
+    .spbtn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px 20px;border-radius:14px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;width:100%;border:none}
+    .spbtn-primary{background:linear-gradient(135deg,${T.goldVib},${T.gold});color:#fff;box-shadow:0 8px 28px rgba(168,114,10,0.36)}
+    .spbtn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(168,114,10,0.45)}
+    .spbtn-outline{border:1.5px solid ${T.goldBdr}!important;background:${T.goldPale};color:${T.goldVib}}
+    .spbtn-outline:hover{background:rgba(201,137,14,0.12)}
+    .spbtn-ghost{border:1.5px solid ${T.border}!important;background:transparent;color:${T.inkMuted}}
+    .spbtn-ghost:hover{border-color:${T.ink}!important;color:${T.ink};background:${T.cream}}
+    @keyframes skP{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+  `
 
   return (
-    <div style={{ background: C.bg, paddingBottom: 100 }}>
+    <div style={{ background: T.bg, paddingBottom: 120 }}>
+      <style>{CSS}</style>
+
       <AnimatePresence>
-        {showShare && <ShareToast onClose={() => setShowShare(false)} />}
-        {toast && <SuccessToast message={toast} onClose={() => setToast(null)} />}
-        {showCallModal && (
-          <RequestCallModal
-            school={school}
-            onClose={() => setShowCallModal(false)}
-            onSuccess={() => setToast('Request submitted! The school will call you soon.')}
-          />
+        {showShare && (
+          <motion.div initial={{ opacity: 0, y: 14, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0, y: 10, x: '-50%' }}
+            style={{ position: 'fixed', bottom: 28, left: '50%', zIndex: 500, background: T.ink, color: '#fff', borderRadius: 16, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: T.shadowLg, fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' as const }}>
+            <CheckCircle2 style={{ width: 16, height: 16, color: '#4ADE80' }} /> Link copied!
+            <button onClick={() => setShowShare(false)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', cursor: 'pointer', borderRadius: 6, padding: '3px 7px', color: '#fff', display: 'flex', alignItems: 'center' }}><X style={{ width: 11, height: 11 }} /></button>
+          </motion.div>
         )}
+        {toast && (
+          <motion.div key={toast} initial={{ opacity: 0, y: 14, x: '-50%' }} animate={{ opacity: 1, y: 0, x: '-50%' }} exit={{ opacity: 0 }}
+            onAnimationComplete={() => setTimeout(() => setToast(null), 2500)}
+            style={{ position: 'fixed', bottom: 28, left: '50%', zIndex: 500, background: '#166534', color: '#fff', borderRadius: 16, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: T.shadowLg, fontFamily: "'DM Sans',sans-serif", fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap' as const }}>
+            <CheckCircle2 style={{ width: 16, height: 16, color: '#86EFAC' }} /> {toast}
+          </motion.div>
+        )}
+        {showCallModal && <CallModal school={school} onClose={() => setShowCallModal(false)} onSuccess={() => setToast('The school will call you soon!')} />}
       </AnimatePresence>
 
-      {/* ════════════════════ COMPACT HERO ════════════════════
-          Smaller hero with meaningful content (school name, stats, quick info)
-          so the space feels intentional, not empty. */}
-      <div
-        ref={coverRef}
-        style={{
-          position: 'relative',
-          height: 'clamp(280px,35vw,380px)',
-          overflow: 'hidden',
-          background: 'linear-gradient(135deg,#060a14 0%,#0d1829 40%,#0f2642 100%)',
-        }}
-      >
-        {/* Parallax cover or animated bg */}
-        <motion.div style={{ y: coverY, position: 'absolute', inset: '-15%', insetInline: 0 }}>
-          {school.coverImageUrl ? (
-            <>
-              <img src={school.coverImageUrl} alt={school.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.45) saturate(0.8)' }} />
-            </>
-          ) : (
-            <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
-              {/* animated rings */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
-                {[300, 460, 620, 780].map((size, i) => (
-                  <motion.div key={i} style={{ position: 'absolute', borderRadius: '50%', width: size, height: size, top: -size/2, left: -size/2, border: `1px solid rgba(184,134,11,${0.18 - i*0.03})` }}
-                    animate={{ scale: [1, 1.05, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 3 + i * 0.8, delay: i * 0.4, repeat: Infinity, ease: 'easeInOut' }}
-                  />
+      {/* ══ HERO ══ */}
+      <div ref={heroRef} style={{ position: 'relative', height: 'clamp(300px,40vw,440px)', overflow: 'hidden', background: 'linear-gradient(155deg,#06080f 0%,#0d1829 50%,#0e1f38 100%)' }}>
+        <motion.div style={{ y: heroY, position: 'absolute', inset: '-15% 0', willChange: 'transform' }}>
+          {school.coverImageUrl
+            ? <img src={school.coverImageUrl} alt="" style={{ width: '100%', height: '115%', objectFit: 'cover', filter: 'brightness(0.4) saturate(0.75)' }} />
+            : <>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)' }}>
+                  {[280,440,600,760].map((s,i) => (
+                    <motion.div key={i} style={{ position: 'absolute', width: s, height: s, borderRadius: '50%', top: -s/2, left: -s/2, border: `1px solid rgba(168,114,10,${0.16-i*0.03})` }}
+                      animate={{ scale: [1,1.04,1], opacity: [0.5,1,0.5] }} transition={{ duration: 3+i, delay: i*0.5, repeat: Infinity, ease: 'easeInOut' }} />
+                  ))}
+                </div>
+                {[{x:15,y:20,r:3},{x:75,y:35,r:2},{x:30,y:70,r:4},{x:85,y:60,r:2.5},{x:50,y:80,r:3.5},{x:8,y:55,r:2}].map((o,i) => (
+                  <motion.div key={i} style={{ position: 'absolute', left: `${o.x}%`, top: `${o.y}%`, width: o.r*2, height: o.r*2, borderRadius: '50%', background: 'rgba(168,114,10,0.5)' }}
+                    animate={{ y: [-10,10,-10], opacity: [0.3,0.8,0.3] }} transition={{ duration: 3+i*0.7, repeat: Infinity, ease: 'easeInOut' }} />
                 ))}
-              </div>
-              {particles.current.map((p, i) => <Particle key={i} {...p} />)}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 100, height: 100, borderRadius: 28, background: 'rgba(184,134,11,0.12)', border: '1.5px solid rgba(184,134,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <GraduationCap style={{ width: 46, height: 46, color: 'rgba(184,134,11,0.6)' }} />
-              </div>
-              <div style={{ position: 'absolute', inset: 0, opacity: 0.04, backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 256 256\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'n\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' stitchTiles=\'stitch\'/%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/%3E%3C/svg%3E")', backgroundRepeat: 'repeat', backgroundSize: '200px 200px' }} />
-            </div>
-          )}
+              </>
+          }
         </motion.div>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(6,8,15,0.97) 0%,rgba(6,8,15,0.5) 45%,rgba(6,8,15,0.1) 80%,transparent 100%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right,rgba(6,8,15,0.55) 0%,transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 70% 60% at 50% 100%,rgba(168,114,10,0.15) 0%,transparent 65%)', pointerEvents: 'none' }} />
 
-        {/* gradient layers */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top,rgba(6,10,20,0.97) 0%,rgba(6,10,20,0.55) 45%,rgba(6,10,20,0.15) 75%,transparent 100%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right,rgba(6,10,20,0.6) 0%,transparent 55%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 50% at 50% 100%,rgba(184,134,11,0.12) 0%,transparent 70%)', pointerEvents: 'none' }} />
-
-        {/* ── top-right action pills ── */}
+        {/* Action pills */}
         <div style={{ position: 'absolute', top: 20, right: 20, display: 'flex', gap: 8, zIndex: 10 }}>
-          {[
-            { label: saved ? 'Saved' : 'Save', icon: Heart, onClick: handleSave, active: saved },
-            { label: 'Share', icon: Share2, onClick: handleShare, active: false },
-          ].map((a, i) => (
+          {[{label: saved ? 'Saved' : 'Save', icon: Heart, onClick: handleSave, active: saved},{label:'Share',icon: Share2,onClick: handleShare,active:false}].map((a,i)=>(
             <motion.button key={i} whileHover={{ scale: 1.06, y: -2 }} whileTap={{ scale: 0.94 }} onClick={a.onClick}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, border: '1px solid rgba(255,255,255,0.18)', background: a.active ? 'rgba(184,134,11,0.38)' : 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
-              <a.icon style={{ width: 13, height: 13, fill: (i === 0 && saved) ? '#fff' : 'transparent', color: '#fff' }} />
-              {a.label}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, border: '1px solid rgba(255,255,255,0.18)', background: a.active ? 'rgba(168,114,10,0.42)' : 'rgba(255,255,255,0.1)', backdropFilter: 'blur(20px)', cursor: 'pointer', fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, color: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+              <a.icon style={{ width: 13, height: 13, fill: (i===0&&saved)?'#fff':'transparent', color: '#fff' }} />{a.label}
             </motion.button>
           ))}
           <motion.div whileHover={{ scale: 1.06, y: -2 }} whileTap={{ scale: 0.94 }}>
-            <Link href={`/compare?add=${school.id}`} onClick={handleCompare}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, border: '1px solid rgba(184,134,11,0.4)', background: 'rgba(184,134,11,0.22)', backdropFilter: 'blur(20px)', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: '#fff', textDecoration: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
+            <Link href={`/compare?add=${school.id}`} onClick={() => createLead('compare', school.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 99, border: '1px solid rgba(168,114,10,0.4)', background: 'rgba(168,114,10,0.22)', backdropFilter: 'blur(20px)', fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, color: '#fff', textDecoration: 'none', boxShadow: '0 4px 16px rgba(0,0,0,0.25)' }}>
               <GitCompare style={{ width: 13, height: 13 }} /> Compare
             </Link>
           </motion.div>
         </div>
 
-        {/* ── Hero bottom: school name + key stats ── */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '0 clamp(20px,4vw,56px) 28px', zIndex: 5 }}>
-          {/* badges */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 12 }}>
-            {school.isVerified && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(22,163,74,0.88)', backdropFilter: 'blur(12px)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, fontFamily: 'Inter,sans-serif' }}>
-                <BadgeCheck style={{ width: 11, height: 11 }} /> Verified School
-              </span>
-            )}
-            {school.isFeatured && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(184,134,11,0.9)', backdropFilter: 'blur(12px)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, fontFamily: 'Inter,sans-serif' }}>
-                <Sparkles style={{ width: 10, height: 10 }} /> Featured
-              </span>
-            )}
-            {boards.slice(0, 3).map(b => (
-              <span key={b} style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.13)', backdropFilter: 'blur(12px)', color: '#fff', border: '1px solid rgba(255,255,255,0.28)', fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 100, fontFamily: 'Inter,sans-serif' }}>{b}</span>
-            ))}
+        {/* Hero text */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 'clamp(24px,5vw,60px)', paddingTop: 0, paddingBottom: 32, zIndex: 5 }}>
+          <motion.div {...fadeUp(0.08)} style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 14 }}>
+            {school.isVerified && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(22,101,52,0.85)', backdropFilter: 'blur(12px)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, fontFamily: "'DM Sans',sans-serif" }}><BadgeCheck style={{ width: 11, height: 11 }} /> Verified</span>}
+            {school.isFeatured && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(168,114,10,0.88)', backdropFilter: 'blur(12px)', color: '#fff', fontSize: 11, fontWeight: 700, padding: '4px 12px', borderRadius: 100, fontFamily: "'DM Sans',sans-serif" }}><Sparkles style={{ width: 10, height: 10 }} /> Featured</span>}
+            {boards.slice(0,3).map(b => <span key={b} style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(12px)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)', fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 100, fontFamily: "'DM Sans',sans-serif" }}>{b}</span>)}
           </motion.div>
-
-          {/* School name in hero */}
-          <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.55 }}
-            style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 'clamp(24px,4vw,46px)', color: '#fff', lineHeight: 1.05, letterSpacing: '-0.02em', marginBottom: 14, textShadow: '0 2px 20px rgba(0,0,0,0.5)' }}>
+          <motion.h1 {...fadeUp(0.14)} style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 'clamp(26px,4.5vw,52px)', color: '#fff', lineHeight: 1.0, letterSpacing: '-0.025em', marginBottom: 16, textShadow: '0 3px 24px rgba(0,0,0,0.4)' }}>
             {school.name}
           </motion.h1>
-
-          {/* Quick stats strip inside hero */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.5 }}
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {school.city && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.88)', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 500, padding: '5px 13px', borderRadius: 99 }}>
-                <MapPin style={{ width: 11, height: 11 }} />
-                {school.addressLine1 ? `${school.addressLine1}, ` : ''}{school.city}{school.state ? `, ${school.state}` : ''}
-              </span>
-            )}
-            {school.foundingYear && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.88)', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 500, padding: '5px 13px', borderRadius: 99 }}>
-                <Calendar style={{ width: 11, height: 11 }} /> Est. {school.foundingYear}
-              </span>
-            )}
-            {boards[0] && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(184,134,11,0.22)', backdropFilter: 'blur(10px)', border: '1px solid rgba(184,134,11,0.35)', color: '#FFD97D', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, padding: '5px 13px', borderRadius: 99 }}>
-                <BookOpenCheck style={{ width: 11, height: 11 }} /> {boards.join(' · ')}
-              </span>
-            )}
-            {school.classesFrom && school.classesTo && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.88)', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 500, padding: '5px 13px', borderRadius: 99 }}>
-                <GraduationCap style={{ width: 11, height: 11 }} /> Class {school.classesFrom}–{school.classesTo}
-              </span>
-            )}
-            {rating > 0 && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(184,134,11,0.22)', backdropFilter: 'blur(10px)', border: '1px solid rgba(184,134,11,0.35)', color: '#FFD97D', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, padding: '5px 13px', borderRadius: 99 }}>
-                <Star style={{ width: 11, height: 11, fill: '#FFD97D', color: '#FFD97D' }} /> {rating.toFixed(1)} ({school.totalReviews || 0} reviews)
-              </span>
-            )}
+          <motion.div {...fadeUp(0.2)} style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+            {school.city && <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 500, padding: '5px 13px', borderRadius: 99 }}><MapPin style={{ width: 10, height: 10 }} />{school.city}{school.state?`,${school.state}`:''}</span>}
+            {school.foundingYear && <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.9)', fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 500, padding: '5px 13px', borderRadius: 99 }}><Calendar style={{ width: 10, height: 10 }} /> Est. {school.foundingYear}</span>}
+            {boards[0] && <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(168,114,10,0.28)', backdropFilter: 'blur(10px)', border: '1px solid rgba(168,114,10,0.4)', color: '#FFD97D', fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, padding: '5px 13px', borderRadius: 99 }}><BookOpenCheck style={{ width: 10, height: 10 }} />{boards.join(' · ')}</span>}
+            {rating > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(168,114,10,0.28)', backdropFilter: 'blur(10px)', border: '1px solid rgba(168,114,10,0.4)', color: '#FFD97D', fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, padding: '5px 13px', borderRadius: 99 }}><Star style={{ width: 10, height: 10, fill: '#FFD97D' }} />{rating.toFixed(1)} ({school.totalReviews||0})</span>}
           </motion.div>
         </div>
-
-        {/* gold bottom edge */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(to right,transparent,rgba(184,134,11,0.4),transparent)' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 1, background: 'linear-gradient(to right,transparent,rgba(168,114,10,0.5),transparent)' }} />
       </div>
 
-      {/* ════════════════════ PROFILE HEADER ════════════════════ */}
-      <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 clamp(20px,4vw,56px)' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24, marginTop: -56, marginBottom: 36, flexWrap: 'wrap' }}>
+      {/* ══ CONTENT ══ */}
+      <div style={{ maxWidth: 1320, margin: '0 auto', padding: '0 clamp(20px,4vw,60px)' }}>
 
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.65, y: 28 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            style={{ width: 112, height: 112, borderRadius: 24, background: '#fff', border: `4px solid ${C.bg}`, boxShadow: '0 10px 36px rgba(13,17,23,0.22)', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10 }}
-          >
+        {/* Profile header row */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24, marginTop: -60, marginBottom: 40, flexWrap: 'wrap' }}>
+          <motion.div initial={{ opacity: 0, scale: 0.6, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22,1,0.36,1] }}
+            style={{ width: 116, height: 116, borderRadius: 26, background: T.white, border: `4px solid ${T.bg}`, boxShadow: T.shadowLg, overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10 }}>
             {school.logoUrl
               ? <img src={school.logoUrl} alt={school.name} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 12 }} />
-              : <GraduationCap style={{ width: 48, height: 48, color: C.gold }} />
+              : <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg,${T.goldPale},rgba(201,137,14,0.12))`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><GraduationCap style={{ width: 46, height: 46, color: T.goldVib }} /></div>
             }
           </motion.div>
-
-          {/* Name + meta row (for screens where hero name might be hidden) */}
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}
-            style={{ flex: 1, minWidth: 0, paddingBottom: 6 }}>
-            <h1 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 'clamp(22px,3vw,38px)', color: C.ink, lineHeight: 1.08, letterSpacing: '-0.022em', marginBottom: 10 }}>
-              {school.name}
-            </h1>
-
-            {/* ── Rich meta chips with board + founded year ── */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
-              {school.city && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.inkMuted }}>
-                  <MapPin style={{ width: 12, height: 12, color: C.gold, flexShrink: 0 }} />
-                  {school.addressLine1 ? `${school.addressLine1}, ` : ''}{school.city}{school.state ? `, ${school.state}` : ''}
-                </span>
-              )}
-
-              {/* Board chips */}
-              {boards.length > 0 && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 99, background: C.goldBg, border: `1px solid ${C.goldBdr}`, fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 700, color: C.gold }}>
-                  <BookOpenCheck style={{ width: 11, height: 11 }} />
-                  {boards.join(' · ')}
-                </span>
-              )}
-
-              {/* Founded year */}
-              {school.foundingYear && (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 99, background: 'rgba(13,17,23,0.05)', border: `1px solid ${C.border}`, fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: C.inkMuted }}>
-                  <Calendar style={{ width: 11, height: 11 }} /> Est. {school.foundingYear}
-                </span>
-              )}
-
-              {/* Rating */}
+          <motion.div {...fadeUp(0.1)} style={{ flex: 1, minWidth: 0, paddingBottom: 8 }}>
+            <h1 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 'clamp(24px,3vw,42px)', color: T.ink, lineHeight: 1.05, letterSpacing: '-0.025em', marginBottom: 12 }}>{school.name}</h1>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+              {school.city && <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: T.inkMuted }}><MapPin style={{ width: 12, height: 12, color: T.goldVib, flexShrink: 0 }} />{school.addressLine1?`${school.addressLine1}, `:''}{school.city}{school.state?`, ${school.state}`:''}</span>}
+              {boards.length > 0 && <Pill label={boards.join(' · ')} variant="gold" />}
+              {school.foundingYear && <Pill label={`Est. ${school.foundingYear}`} />}
               {rating > 0 && (
-                <motion.div whileHover={{ scale: 1.03 }}
-                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 13px', borderRadius: 99, background: C.goldBg, border: `1px solid ${C.goldBdr}`, cursor: 'default' }}>
-                  <div style={{ display: 'flex', gap: 2 }}>
-                    {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 11, height: 11, fill: s <= Math.round(rating) ? C.gold : 'transparent', color: s <= Math.round(rating) ? C.gold : '#D0D5DB' }} />)}
-                  </div>
-                  <span style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, color: C.gold }}>{rating.toFixed(1)}</span>
-                  <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: C.inkFaint }}>({school.totalReviews || 0})</span>
+                <motion.div whileHover={{ scale: 1.04 }} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 12px', borderRadius: 99, background: T.goldPale, border: `1px solid ${T.goldBdr}`, cursor: 'default' }}>
+                  {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 11, height: 11, fill: s<=Math.round(rating)?T.goldVib:'none', color: s<=Math.round(rating)?T.goldVib:'#D0D5DB' }} />)}
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 700, fontSize: 12, color: T.goldVib, marginLeft: 3 }}>{rating.toFixed(1)}</span>
+                  <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 11, color: T.inkFaint }}>({school.totalReviews||0})</span>
                 </motion.div>
-              )}
-
-              {/* Website */}
-              {school.websiteUrl && (
-                <a href={school.websiteUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.gold, textDecoration: 'none', fontWeight: 600 }}>
-                  <Globe style={{ width: 12, height: 12 }} /> Visit Website <ExternalLink style={{ width: 11, height: 11 }} />
-                </a>
               )}
             </div>
           </motion.div>
         </div>
 
-        {/* ════ TWO-COLUMN LAYOUT ════ */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr clamp(300px,28vw,370px)', gap: 44, alignItems: 'start' }}>
+        {/* Two column */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr clamp(300px,27vw,360px)', gap: 48, alignItems: 'start' }}>
 
-          {/* ── LEFT ── */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-
-            {/* Tab bar */}
-            <div style={{ display: 'flex', gap: 3, background: 'rgba(13,17,23,0.04)', borderRadius: 18, padding: 5, border: `1px solid ${C.border}`, marginBottom: 36, overflowX: 'auto' }}>
+          {/* LEFT */}
+          <motion.div {...fadeUp(0.18)}>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 4, background: 'rgba(12,15,20,0.04)', borderRadius: 18, padding: 5, border: `1px solid ${T.border}`, marginBottom: 38, overflowX: 'auto', scrollbarWidth: 'none' as const }}>
               {TABS.map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)}
-                  style={{ padding: '10px 20px', borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', transition: 'all 0.22s', flexShrink: 0, background: activeTab === tab ? C.ink : 'transparent', color: activeTab === tab ? '#fff' : C.inkMuted, boxShadow: activeTab === tab ? '0 4px 14px rgba(13,17,23,0.2)' : 'none' }}>
-                  {tab}
-                </button>
+                <button key={tab} onClick={() => setActiveTab(tab)} className={`sptab ${activeTab===tab?'sptab-on':'sptab-off'}`}>{tab}</button>
               ))}
             </div>
 
             <AnimatePresence mode="wait">
-
-              {/* ── OVERVIEW ── */}
+              {/* OVERVIEW */}
               {activeTab === 'Overview' && (
-                <motion.div key="ov" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.22 }}>
-
-                  {/* About */}
+                <motion.div key="ov" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}>
                   {school.description && (
-                    <div style={{ marginBottom: 36, padding: '28px 30px', background: 'linear-gradient(135deg,rgba(184,134,11,0.04),rgba(184,134,11,0.02))', border: `1px solid ${C.goldBdr}`, borderRadius: 20 }}>
+                    <motion.div {...fadeUp(0)} style={{ marginBottom: 36, padding: '28px 32px', background: `linear-gradient(135deg,${T.goldPale},rgba(251,243,227,0.3))`, border: `1px solid ${T.goldBdr}`, borderRadius: 22, boxShadow: '0 4px 20px rgba(168,114,10,0.08)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-                        <div style={{ width: 4, height: 26, borderRadius: 2, background: `linear-gradient(to bottom,${C.gold},${C.goldLight})`, flexShrink: 0 }} />
-                        <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 24, color: C.ink }}>About {school.name}</h2>
+                        <div style={{ width: 4, height: 28, borderRadius: 2, background: `linear-gradient(to bottom,${T.goldVib},#E8C547)`, flexShrink: 0 }} />
+                        <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 26, color: T.ink }}>About {school.name}</h2>
                       </div>
-                      <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 15, color: C.inkMuted, lineHeight: 1.88, margin: 0 }}>{school.description}</p>
-                    </div>
+                      <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: T.inkMid, lineHeight: 1.9, fontWeight: 300 }}>{school.description}</p>
+                    </motion.div>
                   )}
 
-                  {/* School details grid — Board & Founded Year prominently shown */}
                   <div style={{ marginBottom: 36 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                      <div style={{ width: 4, height: 24, borderRadius: 2, background: `linear-gradient(to bottom,${C.gold},${C.goldLight})`, flexShrink: 0 }} />
-                      <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 22, color: C.ink }}>School Details</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+                      <div style={{ width: 4, height: 24, borderRadius: 2, background: `linear-gradient(to bottom,${T.goldVib},#E8C547)`, flexShrink: 0 }} />
+                      <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 24, color: T.ink }}>School Details</h2>
                     </div>
-
-                    {/* Highlighted Board + Founded Year row */}
-                    {(boards.length > 0 || school.foundingYear) && (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 10, marginBottom: 10 }}>
-                        {boards.length > 0 && (
-                          <motion.div whileHover={{ y: -2, boxShadow: '0 8px 28px rgba(184,134,11,0.18)' }}
-                            style={{ background: 'linear-gradient(135deg,rgba(184,134,11,0.12),rgba(184,134,11,0.05))', border: `1.5px solid ${C.goldBdr}`, borderRadius: 16, padding: '18px 20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                              <div style={{ width: 32, height: 32, borderRadius: 10, background: C.goldBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <BookOpenCheck style={{ width: 15, height: 15, color: C.gold }} />
-                              </div>
-                              <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.gold }}>Curriculum Board</span>
-                            </div>
-                            <div style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 20, color: C.gold }}>{boards.join(', ')}</div>
-                          </motion.div>
-                        )}
-                        {school.foundingYear && (
-                          <motion.div whileHover={{ y: -2, boxShadow: '0 8px 28px rgba(13,17,23,0.10)' }}
-                            style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 16, padding: '18px 20px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                              <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(13,17,23,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <Calendar style={{ width: 15, height: 15, color: C.inkFaint }} />
-                              </div>
-                              <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: C.inkFaint }}>Founded Year</span>
-                            </div>
-                            <div style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 20, color: C.ink }}>{school.foundingYear}</div>
-                            <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: C.inkFaint, marginTop: 3 }}>{new Date().getFullYear() - school.foundingYear} years of excellence</div>
-                          </motion.div>
-                        )}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(165px,1fr))', gap: 10 }}>
-                      <StatCard icon={Building2}    label="School Type"   value={formatLabel(school.schoolType)} />
-                      <StatCard icon={Users}        label="Gender Policy" value={formatLabel(school.genderPolicy)} />
-                      <StatCard icon={Mic}          label="Medium"        value={school.mediumOfInstruction} />
-                      <StatCard icon={GraduationCap} label="Classes"     value={school.classesFrom && school.classesTo ? `${school.classesFrom} – ${school.classesTo}` : null} />
-                      <StatCard icon={Award}        label="Recognition"   value={school.recognition} />
-                      <StatCard icon={Users}        label="Students"      value={school.totalStudents?.toLocaleString('en-IN')} />
-                      <StatCard icon={BookOpen}     label="Teacher Ratio" value={school.studentTeacherRatio} />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(170px,1fr))', gap: 12 }}>
+                      {boards.length > 0 && (
+                        <motion.div whileHover={{ y: -4, boxShadow: '0 12px 36px rgba(168,114,10,0.2)' }} transition={{ duration: 0.2 }}
+                          style={{ background: `linear-gradient(135deg,${T.goldPale},rgba(251,243,227,0.5))`, border: `1.5px solid ${T.goldBdr}`, borderRadius: 18, padding: '20px 22px', boxShadow: '0 4px 16px rgba(168,114,10,0.1)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(168,114,10,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><BookOpenCheck style={{ width: 15, height: 15, color: T.goldVib }} /></div>
+                            <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 9, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: T.gold }}>Board</span>
+                          </div>
+                          <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 19, color: T.goldVib, lineHeight: 1.2 }}>{boards.join(', ')}</div>
+                        </motion.div>
+                      )}
+                      {school.foundingYear && <DetailCard icon={Calendar} label="Founded" value={`${school.foundingYear} · ${new Date().getFullYear()-school.foundingYear}yr`} />}
+                      <DetailCard icon={Building2}     label="School Type"     value={fmt(school.schoolType)} />
+                      <DetailCard icon={Users}         label="Gender Policy"   value={fmt(school.genderPolicy)} />
+                      <DetailCard icon={Mic}           label="Medium"          value={fmt(school.mediumOfInstruction)} />
+                      <DetailCard icon={GraduationCap} label="Classes"         value={school.classesFrom&&school.classesTo?`${fmt(school.classesFrom)} – ${fmt(school.classesTo)}`:null} />
+                      <DetailCard icon={Award}         label="Recognition"     value={school.recognition} />
+                      <DetailCard icon={Users}         label="Students"        value={school.totalStudents?.toLocaleString()} />
+                      <DetailCard icon={BookOpen}      label="Teacher Ratio"   value={school.studentTeacherRatio} />
                     </div>
                   </div>
 
-                  {/* Tags */}
                   {[
-                    { label: '🏗️ Facilities', items: school.facilities as string[], color: 'gold' as const },
-                    { label: '⚽ Sports', items: school.sports as string[], color: 'green' as const },
-                    { label: '🎭 Extra Curricular', items: school.extraCurricular as string[], color: 'purple' as const },
-                    { label: '🗣️ Languages', items: school.languagesOffered as string[], color: 'blue' as const },
-                  ].filter(g => g.items?.length > 0).map(g => (
-                    <div key={g.label} style={{ marginBottom: 24 }}>
-                      <h3 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 20, color: C.ink, marginBottom: 10 }}>{g.label}</h3>
+                    { label:'Facilities & Infrastructure', items: school.facilities as string[], v:'gold' as const,   emoji:'🏗️' },
+                    { label:'Sports',                      items: school.sports as string[],     v:'green' as const,  emoji:'⚽' },
+                    { label:'Extracurricular',             items: school.extraCurricular as string[], v:'purple' as const, emoji:'🎭' },
+                    { label:'Languages Offered',           items: school.languagesOffered as string[], v:'blue' as const, emoji:'🗣️' },
+                  ].filter(g => g.items?.length > 0).map((g, gi) => (
+                    <motion.div key={g.label} {...fadeUp(gi*0.06)} style={{ marginBottom: 22, padding: '22px 26px', background: T.white, border: `1px solid ${T.border}`, borderRadius: 20, boxShadow: T.shadow }}>
+                      <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 20, color: T.ink, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}><span>{g.emoji}</span>{g.label}</h3>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {g.items.slice(0, 10).map(item => <Tag key={item} label={item} color={g.color} />)}
-                        {g.items.length > 10 && <Tag label={`+${g.items.length - 10} more`} />}
+                        {g.items.slice(0,12).map(item => <Pill key={item} label={item} variant={g.v} />)}
+                        {g.items.length > 12 && <Pill label={`+${g.items.length-12} more`} />}
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </motion.div>
               )}
 
-              {/* ── FACILITIES ── */}
+              {/* FACILITIES */}
               {activeTab === 'Facilities' && (
-                <motion.div key="fa" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.22 }} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <motion.div key="fa" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                   {[
-                    { title: 'Facilities & Infrastructure', items: school.facilities as string[], color: 'gold' as const, emoji: '🏗️' },
-                    { title: 'Sports', items: school.sports as string[], color: 'green' as const, emoji: '⚽' },
-                    { title: 'Extra Curricular', items: school.extraCurricular as string[], color: 'purple' as const, emoji: '🎭' },
-                    { title: 'Languages Offered', items: school.languagesOffered as string[], color: 'blue' as const, emoji: '🗣️' },
-                  ].filter(g => g.items?.length > 0).map(g => (
-                    <div key={g.title} style={{ ...card, padding: '26px 30px' }}>
-                      <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 22, color: C.ink, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span>{g.emoji}</span> {g.title}
-                      </h2>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                        {g.items.map(item => <Tag key={item} label={item} color={g.color} />)}
-                      </div>
-                    </div>
+                    { title:'Facilities & Infrastructure', items: school.facilities as string[], v:'gold' as const,   emoji:'🏗️' },
+                    { title:'Sports',                      items: school.sports as string[],     v:'green' as const,  emoji:'⚽' },
+                    { title:'Extra Curricular',            items: school.extraCurricular as string[], v:'purple' as const, emoji:'🎭' },
+                    { title:'Languages',                   items: school.languagesOffered as string[], v:'blue' as const, emoji:'🗣️' },
+                  ].filter(g => g.items?.length > 0).map((g, i) => (
+                    <motion.div key={g.title} {...fadeUp(i*0.07)} style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 22, padding: '26px 30px', boxShadow: T.shadow }}>
+                      <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 22, color: T.ink, marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}><span>{g.emoji}</span>{g.title}</h2>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{g.items.map(item => <Pill key={item} label={item} variant={g.v} />)}</div>
+                    </motion.div>
                   ))}
                   {!school.facilities?.length && !school.sports?.length && !school.extraCurricular?.length && !school.languagesOffered?.length && (
-                    <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: 'Inter,sans-serif', color: C.inkFaint }}>
-                      <div style={{ fontSize: 52, marginBottom: 12 }}>🏗️</div>No facility info yet.
-                    </div>
+                    <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: "'DM Sans',sans-serif", color: T.inkFaint }}><div style={{ fontSize: 52, marginBottom: 12 }}>🏗️</div>No facility info yet.</div>
                   )}
                 </motion.div>
               )}
 
-              {/* ── FEES ── */}
+              {/* FEES */}
               {activeTab === 'Fees' && (
-                <motion.div key="fe" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.22 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 14, marginBottom: 22 }}>
+                <motion.div key="fe" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(200px,1fr))', gap: 16, marginBottom: 24 }}>
                     {[
-                      { label: 'Monthly Fee From',  value: school.monthlyFeeMin ? `₹${school.monthlyFeeMin.toLocaleString('en-IN')}` : null, icon: '📅' },
-                      { label: 'Monthly Fee To',    value: school.monthlyFeeMax ? `₹${school.monthlyFeeMax.toLocaleString('en-IN')}` : null, icon: '📈' },
-                      { label: 'Annual / Admission', value: school.annualFee    ? `₹${school.annualFee.toLocaleString('en-IN')}`    : null, icon: '📋' },
-                    ].filter(f => f.value).map(f => (
-                      <motion.div key={f.label} whileHover={{ y: -3 }} style={{ background: 'linear-gradient(135deg,rgba(184,134,11,0.08),rgba(184,134,11,0.03))', border: `1px solid ${C.goldBdr}`, borderRadius: 22, padding: '32px 24px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 32, marginBottom: 12 }}>{f.icon}</div>
-                        <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, fontWeight: 700, color: C.inkFaint, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>{f.label}</div>
-                        <div style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 36, color: C.gold }}>{f.value}</div>
+                      { label:'Monthly Fee From', value: school.monthlyFeeMin ? `₹${school.monthlyFeeMin.toLocaleString()}`:null, emoji:'📅' },
+                      { label:'Monthly Fee To',   value: school.monthlyFeeMax ? `₹${school.monthlyFeeMax.toLocaleString()}`:null, emoji:'📈' },
+                      { label:'Annual Fee',        value: school.annualFee    ? `₹${school.annualFee.toLocaleString()}`:null,    emoji:'📋' },
+                    ].filter(f=>f.value).map((f,i) => (
+                      <motion.div key={f.label} {...fadeUp(i*0.07)} whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(168,114,10,0.18)' }}
+                        style={{ background: `linear-gradient(135deg,${T.goldPale},rgba(251,243,227,0.4))`, border: `1.5px solid ${T.goldBdr}`, borderRadius: 22, padding: '32px 26px', textAlign: 'center', boxShadow: '0 4px 20px rgba(168,114,10,0.1)' }}>
+                        <div style={{ fontSize: 32, marginBottom: 12 }}>{f.emoji}</div>
+                        <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 10, fontWeight: 700, color: T.inkFaint, textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 10 }}>{f.label}</div>
+                        <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 38, color: T.goldVib }}>{f.value}</div>
                       </motion.div>
                     ))}
                   </div>
-                  <div style={{ background: C.goldBg, border: `1px solid ${C.goldBdr}`, borderRadius: 14, padding: '14px 18px', fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.inkMuted, lineHeight: 1.65 }}>
-                    ℹ️ Fees are approximate. Contact school for exact fee schedule.
+                  <div style={{ background: T.goldPale, border: `1px solid ${T.goldBdr}`, borderRadius: 14, padding: '14px 18px', fontFamily: "'DM Sans',sans-serif", fontSize: 13, color: T.inkMid, lineHeight: 1.65, fontWeight: 300 }}>
+                    ℹ️ Fees are approximate. Contact school for the exact current schedule.
                   </div>
                 </motion.div>
               )}
 
-              {/* ── ADMISSION ── */}
+              {/* ADMISSION */}
               {activeTab === 'Admission' && (
-                <motion.div key="ad" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.22 }}>
-                  <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 28, color: C.ink, marginBottom: 28 }}>Admission Information</h2>
+                <motion.div key="ad" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 30, color: T.ink, marginBottom: 28 }}>Admission Information</h2>
                   {school.admissionInfo ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {[
-                        { label: 'Academic Year', value: school.admissionInfo.academicYear },
-                        { label: 'Status', value: school.admissionInfo.admissionOpen ? '🟢 Open' : '🔴 Closed' },
-                        school.admissionInfo.lastDate ? { label: 'Last Date', value: school.admissionInfo.lastDate } : null,
-                      ].filter(Boolean).map((row: any) => (
-                        <div key={row.label} style={{ ...card, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <span style={{ fontFamily: 'Inter,sans-serif', fontWeight: 600, fontSize: 14, color: C.inkMuted }}>{row.label}</span>
-                          <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 18, color: C.ink }}>{row.value}</span>
+                        { label:'Academic Year', value: school.admissionInfo.academicYear },
+                        { label:'Status', value: school.admissionInfo.admissionOpen ? '🟢 Currently Open' : '🔴 Currently Closed' },
+                        school.admissionInfo.lastDate ? { label:'Last Date', value: school.admissionInfo.lastDate } : null,
+                      ].filter(Boolean).map((row:any) => (
+                        <div key={row.label} style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 16, padding: '18px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: T.shadow }}>
+                          <span style={{ fontFamily: "'DM Sans',sans-serif", fontWeight: 600, fontSize: 14, color: T.inkMuted }}>{row.label}</span>
+                          <span style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 18, color: T.ink }}>{row.value}</span>
                         </div>
                       ))}
                       {school.admissionInfo.documentsRequired?.length > 0 && (
-                        <div style={{ ...card, padding: '24px 28px', marginTop: 8 }}>
-                          <h3 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 20, color: C.ink, marginBottom: 16 }}>Documents Required</h3>
+                        <div style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 20, padding: '24px 28px', marginTop: 8, boxShadow: T.shadow }}>
+                          <h3 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 21, color: T.ink, marginBottom: 16 }}>Documents Required</h3>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                            {school.admissionInfo.documentsRequired.map((doc: string) => (
-                              <div key={doc} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Inter,sans-serif', fontSize: 14, color: C.inkMuted }}>
-                                <CheckCircle2 style={{ width: 15, height: 15, color: C.gold, flexShrink: 0 }} /> {doc}
-                              </div>
+                            {school.admissionInfo.documentsRequired.map((doc:string) => (
+                              <div key={doc} style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: "'DM Sans',sans-serif", fontSize: 14, color: T.inkMid }}><CheckCircle2 style={{ width: 15, height: 15, color: T.goldVib, flexShrink: 0 }} />{doc}</div>
                             ))}
                           </div>
                         </div>
                       )}
                     </div>
-                  ) : <p style={{ fontFamily: 'Inter,sans-serif', color: C.inkFaint, textAlign: 'center', padding: 72 }}>Admission details not available.</p>}
+                  ) : <p style={{ fontFamily: "'DM Sans',sans-serif", color: T.inkFaint, textAlign: 'center', padding: 72 }}>Admission details not available.</p>}
                 </motion.div>
               )}
 
-              {/* ── REVIEWS ── */}
+              {/* REVIEWS */}
               {activeTab === 'Reviews' && (
-                <motion.div key="re" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.22 }}>
-                  <div style={{ ...card, padding: '28px 32px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 36, flexWrap: 'wrap' }}>
+                <motion.div key="re" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}>
+                  <div style={{ background: T.white, border: `1px solid ${T.border}`, borderRadius: 22, padding: '28px 32px', marginBottom: 22, display: 'flex', alignItems: 'center', gap: 36, flexWrap: 'wrap', boxShadow: T.shadow }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 80, color: C.gold, lineHeight: 1 }}>{rating.toFixed(1)}</div>
-                      <div style={{ display: 'flex', gap: 3, justifyContent: 'center', marginTop: 8 }}>
-                        {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 16, height: 16, fill: s <= Math.round(rating) ? C.gold : 'transparent', color: s <= Math.round(rating) ? C.gold : '#D0D5DB' }} />)}
-                      </div>
-                      <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkFaint, marginTop: 7 }}>{reviews?.total ?? 0} reviews</div>
+                      <div style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 80, color: T.goldVib, lineHeight: 1 }}>{rating.toFixed(1)}</div>
+                      <div style={{ display: 'flex', gap: 3, justifyContent: 'center', marginTop: 8 }}>{[1,2,3,4,5].map(s=><Star key={s} style={{ width:15,height:15,fill:s<=Math.round(rating)?T.goldVib:'none',color:s<=Math.round(rating)?T.goldVib:'#D0D5DB' }} />)}</div>
+                      <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: T.inkFaint, marginTop: 7 }}>{reviews?.total??0} reviews</div>
                     </div>
                     <div style={{ flex: 1, minWidth: 180 }}>
                       {[5,4,3,2,1].map(star => {
-                        const cnt = reviewList.filter(r => Math.round(Number(r.rating)) === star).length
-                        const pct = reviews?.total ? Math.round((cnt / reviews.total) * 100) : 0
+                        const cnt = reviewList.filter(r => Math.round(Number(r.rating))===star).length
+                        const pct = reviews?.total ? Math.round((cnt/reviews.total)*100) : 0
                         return (
                           <div key={star} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                            <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted, width: 8 }}>{star}</span>
-                            <Star style={{ width: 11, height: 11, fill: C.gold, color: C.gold, flexShrink: 0 }} />
-                            <div style={{ flex: 1, height: 7, borderRadius: 99, background: 'rgba(13,17,23,0.07)', overflow: 'hidden' }}>
-                              <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ delay: 0.3 + star * 0.08, duration: 0.6, ease: 'easeOut' }}
-                                style={{ height: '100%', background: `linear-gradient(90deg,${C.gold},${C.goldLight})`, borderRadius: 99 }} />
+                            <span style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: T.inkMuted, width: 8 }}>{star}</span>
+                            <Star style={{ width:11,height:11,fill:T.goldVib,color:T.goldVib,flexShrink:0 }} />
+                            <div style={{ flex:1,height:6,borderRadius:99,background:T.cream,overflow:'hidden' }}>
+                              <motion.div initial={{ width:0 }} animate={{ width:`${pct}%` }} transition={{ delay:0.3+star*0.08,duration:0.7,ease:'easeOut' }} style={{ height:'100%',background:`linear-gradient(90deg,${T.goldVib},#E8C547)`,borderRadius:99 }} />
                             </div>
-                            <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: C.inkFaint, width: 30 }}>{pct}%</span>
+                            <span style={{ fontFamily: "'DM Sans',sans-serif",fontSize:11,color:T.inkFaint,width:30 }}>{pct}%</span>
                           </div>
                         )
                       })}
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {reviewList.map((r, i) => <ReviewCard key={r.id} review={r} i={i} />)}
-                    {!reviewList.length && (
-                      <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: 'Inter,sans-serif', color: C.inkFaint }}>
-                        <div style={{ fontSize: 52, marginBottom: 12 }}>⭐</div>No reviews yet.
-                      </div>
-                    )}
+                    {reviewList.map((r,i) => <ReviewCard key={r.id} review={r} i={i} />)}
+                    {!reviewList.length && <div style={{ textAlign:'center',padding:'80px 0',fontFamily:"'DM Sans',sans-serif",color:T.inkFaint }}><div style={{ fontSize:52,marginBottom:12 }}>⭐</div>No reviews yet.</div>}
                   </div>
                 </motion.div>
               )}
 
-              {/* ── GALLERY ── */}
+              {/* GALLERY */}
               {activeTab === 'Gallery' && (
-                <motion.div key="ga" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.22 }}>
-                  <h2 style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 28, color: C.ink, marginBottom: 28 }}>School Gallery</h2>
+                <motion.div key="ga" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.22 }}>
+                  <h2 style={{ fontFamily: "'Cormorant Garamond',serif", fontWeight: 700, fontSize: 30, color: T.ink, marginBottom: 28 }}>School Gallery</h2>
                   {school.galleryImages?.length ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))', gap: 14 }}>
-                      {school.galleryImages.map((img, i) => (
-                        <motion.div key={i}
-                          initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}
-                          whileHover={{ scale: 1.02, boxShadow: '0 12px 40px rgba(13,17,23,0.18)' }}
-                          style={{ aspectRatio: '4/3', borderRadius: 18, overflow: 'hidden', background: '#e9e4dc', cursor: 'pointer' }}>
-                          <img src={img} alt={`Gallery ${i+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.45s ease' }}
-                            onMouseEnter={e => (e.currentTarget as HTMLImageElement).style.transform = 'scale(1.07)'}
-                            onMouseLeave={e => (e.currentTarget as HTMLImageElement).style.transform = 'scale(1)'}
-                            loading="lazy" />
+                      {school.galleryImages.map((img,i) => (
+                        <motion.div key={i} {...fadeUp(i*0.05)} whileHover={{ scale: 1.02, boxShadow: T.shadowLg }}
+                          style={{ aspectRatio:'4/3',borderRadius:18,overflow:'hidden',background:T.cream,cursor:'pointer' }}>
+                          <img src={img} alt={`Gallery ${i+1}`} style={{ width:'100%',height:'100%',objectFit:'cover',transition:'transform 0.4s ease' }}
+                            onMouseEnter={e=>(e.currentTarget as HTMLImageElement).style.transform='scale(1.07)'}
+                            onMouseLeave={e=>(e.currentTarget as HTMLImageElement).style.transform='scale(1)'} loading="lazy" />
                         </motion.div>
                       ))}
                     </div>
-                  ) : (
-                    <div style={{ textAlign: 'center', padding: '80px 0', fontFamily: 'Inter,sans-serif', color: C.inkFaint }}>
-                      <div style={{ fontSize: 52, marginBottom: 12 }}>🖼️</div>No gallery images.
-                    </div>
-                  )}
+                  ) : <div style={{ textAlign:'center',padding:'80px 0',fontFamily:"'DM Sans',sans-serif",color:T.inkFaint }}><div style={{ fontSize:52,marginBottom:12 }}>🖼️</div>No gallery images yet.</div>}
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
 
-          {/* ── RIGHT SIDEBAR ── */}
-          <div>
-            <motion.div initial={{ opacity: 0, x: 26 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.28, duration: 0.52 }}
-              style={{ position: 'sticky', top: 90 }}>
+          {/* RIGHT SIDEBAR */}
+          <motion.div initial={{ opacity:0,x:28 }} animate={{ opacity:1,x:0 }} transition={{ delay:0.28,duration:0.55,ease:[0.22,1,0.36,1] }}
+            style={{ position:'sticky',top:90 }}>
 
-              {/* Primary CTA card */}
-              <div style={{ ...card, padding: '30px 26px 26px', marginBottom: 14, borderRadius: 26, overflow: 'hidden', position: 'relative' }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg,transparent,${C.gold},${C.goldLight},${C.gold},transparent)` }} />
-
-                {/* Fee display */}
+            {/* CTA Card */}
+            <div style={{ background:T.white,border:`1px solid ${T.border}`,borderRadius:26,overflow:'hidden',boxShadow:T.shadowMd,marginBottom:14 }}>
+              <div style={{ height:4,background:`linear-gradient(90deg,transparent,${T.goldVib},#E8C547,${T.goldVib},transparent)` }} />
+              <div style={{ padding:'26px 24px 22px' }}>
                 {school.monthlyFeeMin && (
-                  <div style={{ textAlign: 'center', paddingBottom: 20, marginBottom: 20, borderBottom: `1px solid ${C.border}` }}>
-                    <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, fontWeight: 700, color: C.inkFaint, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Monthly Fee From</div>
-                    <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.35, duration: 0.4 }}
-                      style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 52, color: C.gold, lineHeight: 1, letterSpacing: '-3px' }}>
-                      ₹{school.monthlyFeeMin.toLocaleString('en-IN')}
+                  <div style={{ textAlign:'center',paddingBottom:20,marginBottom:20,borderBottom:`1px solid ${T.border}` }}>
+                    <div style={{ fontFamily:"'DM Sans',sans-serif",fontSize:10,fontWeight:700,color:T.inkFaint,textTransform:'uppercase' as const,letterSpacing:'0.14em',marginBottom:8 }}>Monthly Fee From</div>
+                    <motion.div initial={{ scale:0.8,opacity:0 }} animate={{ scale:1,opacity:1 }} transition={{ delay:0.4,duration:0.45 }}
+                      style={{ fontFamily:"'Cormorant Garamond',serif",fontWeight:700,fontSize:54,color:T.goldVib,lineHeight:1,letterSpacing:'-3px' }}>
+                      ₹{school.monthlyFeeMin.toLocaleString()}
                     </motion.div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 8 }}>
-                      {[1,2,3,4,5].map(s => <Star key={s} style={{ width: 12, height: 12, fill: s <= Math.round(rating) ? C.gold : 'transparent', color: s <= Math.round(rating) ? C.gold : '#D0D5DB' }} />)}
-                      <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted, marginLeft: 5 }}>{rating.toFixed(1)}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                  {/* Apply Now */}
-                  <motion.div whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.98 }}>
-                    <Link href={`/apply/${school.id}`}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 20px', borderRadius: 15, background: `linear-gradient(135deg,${C.gold},#9A6F0B)`, color: '#fff', fontFamily: 'Inter,sans-serif', fontSize: 14, fontWeight: 700, textDecoration: 'none', boxShadow: '0 8px 24px rgba(184,134,11,0.38)' }}>
-                      Apply Now <ArrowRight style={{ width: 14, height: 14 }} />
-                    </Link>
-                  </motion.div>
-
-                  {/* ── Request Call Back (replaces phone number) ── */}
-                  <motion.button
-                    whileHover={{ scale: 1.01, y: -1 }} whileTap={{ scale: 0.98 }}
-                    onClick={() => setShowCallModal(true)}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '14px 20px', borderRadius: 15, border: `1.5px solid ${C.goldBdr}`, background: C.goldBg, color: C.gold, fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>
-                    <PhoneCall style={{ width: 14, height: 14 }} /> Request Call Back
-                  </motion.button>
-
-                  <Link href="/counselling"
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 15, border: `1.5px solid ${C.border}`, background: 'transparent', color: C.ink, fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                    🎓 Get Expert Counselling
-                  </Link>
-
-                  {/* Save */}
-                  <button onClick={handleSave}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 15, cursor: 'pointer', border: `1.5px solid ${saved ? C.gold : C.border}`, background: saved ? C.goldBg : 'transparent', color: saved ? C.gold : C.inkMuted, fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 600, transition: 'all 0.2s' }}>
-                    <Heart style={{ width: 14, height: 14, fill: saved ? C.gold : 'transparent', color: saved ? C.gold : 'currentColor', transition: 'all 0.2s' }} />
-                    {saved ? 'Saved to Wishlist' : 'Save School'}
-                  </button>
-
-                  {/* Compare */}
-                  <Link href={`/compare?add=${school.id}`} onClick={handleCompare}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px 20px', borderRadius: 15, border: `1.5px solid ${C.border}`, background: 'transparent', color: C.inkMuted, fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                    <GitCompare style={{ width: 14, height: 14 }} /> Compare School
-                  </Link>
-                </div>
-
-                {/* Website link only — no email, no phone number */}
-                {school.websiteUrl && (
-                  <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 18, marginTop: 18 }}>
-                    <a href={school.websiteUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Inter,sans-serif', fontSize: 13, color: C.inkMuted, textDecoration: 'none', transition: 'color 0.15s' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLAnchorElement).style.color = C.gold}
-                      onMouseLeave={e => (e.currentTarget as HTMLAnchorElement).style.color = C.inkMuted}>
-                      <div style={{ width: 32, height: 32, borderRadius: 9, background: C.goldBg, border: `1px solid ${C.goldBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Globe style={{ width: 13, height: 13, color: C.gold }} />
+                    {rating > 0 && (
+                      <div style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:3,marginTop:10 }}>
+                        {[1,2,3,4,5].map(s=><Star key={s} style={{ width:12,height:12,fill:s<=Math.round(rating)?T.goldVib:'none',color:s<=Math.round(rating)?T.goldVib:'#D0D5DB' }} />)}
+                        <span style={{ fontFamily:"'DM Sans',sans-serif",fontSize:12,color:T.inkMuted,marginLeft:5 }}>{rating.toFixed(1)} · {school.totalReviews||0} reviews</span>
                       </div>
-                      Visit School Website <ExternalLink style={{ width: 11, height: 11, marginLeft: 2 }} />
-                    </a>
+                    )}
                   </div>
                 )}
-              </div>
-
-              {/* Quick stats card with Board + Founded Year prominently */}
-              <div style={{ ...card, padding: '20px 24px', borderRadius: 20 }}>
-                <div style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 10, color: C.inkFaint, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 14 }}>Quick Facts</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {boards.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted }}><BookOpenCheck style={{ width: 13, height: 13, color: C.gold }} /> Board</span>
-                      <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 15, color: C.gold }}>{boards.join(', ')}</span>
-                    </div>
-                  )}
-                  {school.foundingYear && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted }}><Calendar style={{ width: 13, height: 13, color: C.gold }} /> Founded</span>
-                      <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 15, color: C.ink }}>{school.foundingYear}</span>
-                    </div>
-                  )}
-                  {school.classesFrom && school.classesTo && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted }}><GraduationCap style={{ width: 13, height: 13, color: C.gold }} /> Classes</span>
-                      <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 15, color: C.ink }}>{school.classesFrom} – {school.classesTo}</span>
-                    </div>
-                  )}
-                  {school.totalStudents && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted }}><Users style={{ width: 13, height: 13, color: C.gold }} /> Students</span>
-                      <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 15, color: C.ink }}>{school.totalStudents.toLocaleString('en-IN')}</span>
-                    </div>
-                  )}
-                  {school.schoolType && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'Inter,sans-serif', fontSize: 12, color: C.inkMuted }}><Building2 style={{ width: 13, height: 13, color: C.gold }} /> Type</span>
-                      <span style={{ fontFamily: 'Cormorant Garamond,serif', fontWeight: 700, fontSize: 15, color: C.ink }}>{formatLabel(school.schoolType)}</span>
-                    </div>
-                  )}
+                <div style={{ display:'flex',flexDirection:'column',gap:9 }}>
+                  <motion.div whileHover={{ scale:1.01,y:-1 }} whileTap={{ scale:0.98 }}>
+                    <Link href={`/apply/${school.id}`} className="spbtn spbtn-primary">Apply Now <ArrowRight style={{ width:15,height:15 }} /></Link>
+                  </motion.div>
+                  <motion.button whileHover={{ scale:1.01,y:-1 }} whileTap={{ scale:0.98 }} onClick={() => setShowCallModal(true)} className="spbtn spbtn-outline" style={{ border:`1.5px solid ${T.goldBdr}` }}>
+                    <PhoneCall style={{ width:14,height:14 }} /> Request Call Back
+                  </motion.button>
+                  <Link href="/counselling" className="spbtn spbtn-ghost">🎓 Get Expert Counselling</Link>
+                  <motion.button whileHover={{ scale:1.01 }} whileTap={{ scale:0.97 }} onClick={handleSave}
+                    className="spbtn spbtn-ghost"
+                    style={{ border:`1.5px solid ${saved?T.goldBdr:T.border}`,background:saved?T.goldPale:'transparent',color:saved?T.goldVib:T.inkMuted }}>
+                    <Heart style={{ width:14,height:14,fill:saved?T.goldVib:'none',color:saved?T.goldVib:'currentColor',transition:'all 0.2s' }} />
+                    {saved ? 'Saved to Wishlist' : 'Save School'}
+                  </motion.button>
+                  <Link href={`/compare?add=${school.id}`} onClick={() => createLead('compare',school.id)} className="spbtn spbtn-ghost">
+                    <GitCompare style={{ width:14,height:14 }} /> Compare School
+                  </Link>
                 </div>
               </div>
+            </div>
 
-            </motion.div>
-          </div>
+            {/* Quick Facts */}
+            <div style={{ background:T.white,border:`1px solid ${T.border}`,borderRadius:22,padding:'22px 24px',boxShadow:T.shadow }}>
+              <div style={{ fontFamily:"'DM Sans',sans-serif",fontWeight:700,fontSize:10,color:T.inkFaint,textTransform:'uppercase' as const,letterSpacing:'0.14em',marginBottom:6 }}>Quick Facts</div>
+              {boards.length > 0 && <FactRow icon={BookOpenCheck} label="Board" value={boards.join(', ')} />}
+              {school.foundingYear && <FactRow icon={Calendar} label="Founded" value={String(school.foundingYear)} />}
+              {school.classesFrom && school.classesTo && <FactRow icon={GraduationCap} label="Classes" value={`${fmt(school.classesFrom)} – ${fmt(school.classesTo)}`} />}
+              {school.totalStudents && <FactRow icon={Users} label="Students" value={school.totalStudents.toLocaleString()} />}
+              {school.schoolType && <FactRow icon={Building2} label="Type" value={fmt(school.schoolType)} />}
+              {school.genderPolicy && <FactRow icon={Users} label="Gender" value={fmt(school.genderPolicy)} />}
+              {school.mediumOfInstruction && <FactRow icon={Mic} label="Medium" value={fmt(school.mediumOfInstruction)} />}
+              <motion.div whileHover={{ scale:1.02 }} style={{ marginTop:16 }}>
+                <Link href={`/apply/${school.id}`} style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:6,padding:'11px',borderRadius:12,background:T.goldPale,border:`1px solid ${T.goldBdr}`,fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:700,color:T.goldVib,textDecoration:'none' }}>
+                  Apply for Admission <ArrowRight style={{ width:13,height:13 }} />
+                </Link>
+              </motion.div>
+            </div>
 
+          </motion.div>
         </div>
       </div>
     </div>
