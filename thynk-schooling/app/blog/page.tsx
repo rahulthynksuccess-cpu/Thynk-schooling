@@ -59,10 +59,15 @@ export default function BlogPage() {
   const [activeTag, setActiveTag] = useState('all')
 
   useEffect(() => {
-    fetch('/api/admin?action=blog')
+    fetch('/api/admin?action=blog', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (d?.posts?.length) setPosts(d.posts)
+        // Only use DB posts if the fetch succeeded — even if array is empty
+        // Don't fall back to FALLBACK if DB returned a valid (possibly empty) response
+        if (d && Array.isArray(d.posts)) {
+          setPosts(d.posts.length > 0 ? d.posts : [])
+        }
+        // d === null means fetch failed — keep FALLBACK showing
         setLoading(false)
       })
       .catch(() => setLoading(false))

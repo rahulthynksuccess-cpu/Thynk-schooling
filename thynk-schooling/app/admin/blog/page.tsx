@@ -104,17 +104,24 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
     })
   }
 
-  const insertBlock = (tag: string, _content = 'Your heading here') => {
+  const insertBlock = (tag: string, content = 'Your heading here') => {
     editorRef.current?.focus()
-    // formatBlock is the standard way to apply block-level tags
-    // It converts the current block (or selection) to the given tag
-    const supported = ['h1','h2','h3','h4','p','blockquote','pre']
-    if (supported.includes(tag)) {
-      document.execCommand('formatBlock', false, tag)
+    const sel = window.getSelection()
+    if (sel && sel.rangeCount) {
+      const range = sel.getRangeAt(0)
+      const el = document.createElement(tag)
+      const selectedText = range.toString()
+      el.textContent = selectedText || content
+      range.deleteContents()
+      range.insertNode(el)
+      // Move cursor after
+      range.setStartAfter(el)
+      range.collapse(true)
+      sel.removeAllRanges()
+      sel.addRange(range)
     } else {
-      document.execCommand('insertHTML', false, `<${tag}><br></${tag}><p><br></p>`)
+      document.execCommand('insertHTML', false, `<${tag}>${content}</${tag}><p><br></p>`)
     }
-    syncFormats()
     if (editorRef.current) onChange(editorRef.current.innerHTML)
   }
 
@@ -225,7 +232,6 @@ function RichEditor({ value, onChange }: { value: string; onChange: (v: string) 
           color: '#0D1117',
           background: '#fff',
           overflowY: 'auto' as const,
-          colorScheme: 'light' as any,
         }}
       />
 
@@ -450,7 +456,7 @@ export default function AdminBlogPage() {
   /* ══════════ EDITOR PANEL ══════════ */
   if (editorOpen) {
     return (
-      <AdminLayout pageClass="admin-page-blog" title="Blog Editor" subtitle="">
+      <AdminLayout pageClass="admin-page-blog" title="" subtitle="">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, alignItems: 'start' }}>
 
           {/* ── Left: Main editor ── */}
@@ -495,15 +501,13 @@ export default function AdminBlogPage() {
                   <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(13,17,23,0.06)' }}>
                     <input value={form.title} onChange={e => set('title', e.target.value)}
                       placeholder="Post title..."
-                      data-blog-title="1"
-                      style={{ width: '100%', border: 'none', outline: 'none', fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 700, color: '#0D1117', background: 'transparent', letterSpacing: '-0.5px', colorScheme: 'light' as any }} />
+                      style={{ width: '100%', border: 'none', outline: 'none', fontFamily: "'Cormorant Garamond', serif", fontSize: 28, fontWeight: 700, color: '#0D1117', background: 'transparent', letterSpacing: '-0.5px' }} />
                   </div>
                   <div style={{ padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#A0ADB8' }}>Permalink:</span>
                     <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#718096' }}>/blog/</span>
                     <input value={form.slug} onChange={e => { setSlugEdited(true); set('slug', toSlug(e.target.value)) }}
-                      data-blog-slug="1"
-                      style={{ fontFamily: 'monospace', fontSize: 11, color: '#B8860B', border: 'none', outline: 'none', background: 'transparent', minWidth: 120, borderBottom: '1px dashed #EDE5D8', colorScheme: 'light' as any }} />
+                      style={{ fontFamily: 'monospace', fontSize: 11, color: '#B8860B', border: 'none', outline: 'none', background: 'transparent', minWidth: 120, borderBottom: '1px dashed #EDE5D8' }} />
                     <button onClick={() => { setSlugEdited(false); set('slug', toSlug(form.title)) }}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#A0ADB8', padding: 0 }}>
                       <RotateCcw style={{ width: 11, height: 11 }} />

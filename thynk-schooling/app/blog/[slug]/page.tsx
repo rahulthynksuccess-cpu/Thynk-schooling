@@ -1,5 +1,7 @@
 // app/blog/[slug]/page.tsx
 // Reads from DB (blog_posts table) with fallback to original hardcoded content
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
@@ -44,8 +46,12 @@ const HARDCODED: Record<string, { title: string; tag: string; time: string; date
 // ── Fetch from DB ────────────────────────────────────────────────────
 async function fetchPost(slug: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-    const res = await fetch(`${baseUrl}/api/admin?action=blog&slug=${slug}`, { cache: 'no-store' })
+    // Use NEXT_PUBLIC_APP_URL (set in your .env), fall back to localhost
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const res = await fetch(`${baseUrl}/api/admin?action=blog&slug=${encodeURIComponent(slug)}`, {
+      cache: 'no-store',
+      next: { revalidate: 0 },
+    })
     if (!res.ok) return null
     const data = await res.json()
     return data.post ?? null
@@ -56,8 +62,11 @@ async function fetchPost(slug: string) {
 
 async function fetchAllPosts() {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-    const res = await fetch(`${baseUrl}/api/admin?action=blog`, { cache: 'no-store' })
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const res = await fetch(`${baseUrl}/api/admin?action=blog`, {
+      cache: 'no-store',
+      next: { revalidate: 0 },
+    })
     if (!res.ok) return []
     const data = await res.json()
     return data.posts ?? []
@@ -91,9 +100,8 @@ function renderPlainBody(body: string) {
 
 type Params = { slug: string }
 
-export async function generateStaticParams() {
-  return Object.keys(HARDCODED).map(slug => ({ slug }))
-}
+// generateStaticParams intentionally removed — pages are server-rendered
+// dynamically so edits in the admin panel appear immediately on the live site.
 
 export async function generateMetadata({ params }: { params: Params }) {
   const dbPost = await fetchPost(params.slug)
