@@ -409,27 +409,40 @@ async function getAnalytics(req: NextRequest) {
 async function getDashboardStats(req: NextRequest) {
   const userId = getUserId(req)
   if (!userId) return NextResponse.json({ totalLeads: 0, newLeadsThisMonth: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0, avgRating: 0, totalReviews: 0 })
+
+  await ensureSchoolsTable()
+
   let school = await db.query(
-    'SELECT id, name, logo_url, city, state, board FROM schools WHERE admin_user_id=$1',
+    'SELECT id, name, logo_url, city, state, board, profile_completed FROM schools WHERE admin_user_id=$1',
     [userId]
   ).catch(() => ({ rows: [] as any[] }))
+
   // Fallback: link orphaned school by user email
   if (!school.rows.length) {
     const uRow = await db.query('SELECT email FROM users WHERE id=$1', [userId]).catch(() => ({ rows: [] as any[] }))
     if (uRow.rows[0]?.email) {
-      school = await db.query('SELECT id, name, logo_url, city, state, board FROM schools WHERE email=$1', [uRow.rows[0].email]).catch(() => ({ rows: [] as any[] }))
+      school = await db.query('SELECT id, name, logo_url, city, state, board, profile_completed FROM schools WHERE email=$1', [uRow.rows[0].email]).catch(() => ({ rows: [] as any[] }))
       if (school.rows.length) await db.query('UPDATE schools SET admin_user_id=$1 WHERE id=$2', [userId, school.rows[0].id]).catch(() => {})
     }
   }
   if (!school.rows.length) return NextResponse.json({ totalLeads: 0, newLeadsThisMonth: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0, avgRating: 0, totalReviews: 0 })
+
   const { id: sid, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard } = school.rows[0]
+
+  // Self-heal: if school has a name saved but profile_completed is still false, fix it in DB now
+  let profileCompleteness = school.rows[0].profile_completed === true ? 100 : 0
+  if (profileCompleteness === 0 && schoolName && schoolName !== 'School') {
+    await db.query('UPDATE schools SET profile_completed=true WHERE id=$1', [sid]).catch(() => {})
+    profileCompleteness = 100
+  }
+
   const [leads, newLeads, apps, credits] = await Promise.all([
     db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query(`SELECT COUNT(*) FROM leads WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '30 days'`, [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
   ])
-  // Use profile_completed boolean as source of truth (set to true when school saves profile)
+
   const pcRow = await db.query('SELECT profile_completed FROM schools WHERE id=$1', [sid]).catch(() => ({ rows: [{}] }))
   const profileCompleteness = pcRow.rows[0]?.profile_completed === true ? 100 : 0
 
