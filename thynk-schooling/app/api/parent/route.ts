@@ -54,10 +54,28 @@ async function sendCounsellingEmail(data: any) {
 // ─── GET handlers ─────────────────────────────────────────────────────────────
 
 async function getApplications(req: NextRequest) {
-  await db.query(`CREATE TABLE IF NOT EXISTS applications (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), parent_id UUID, school_id UUID, status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await db.query(`CREATE TABLE IF NOT EXISTS applications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    parent_id UUID, school_id UUID, lead_id UUID,
+    status VARCHAR(50) DEFAULT 'submitted',
+    child_name VARCHAR(200), class_applying_for VARCHAR(50),
+    message TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
+  )`).catch(() => {})
+  await db.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS child_name VARCHAR(200)`).catch(() => {})
+  await db.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS class_applying_for VARCHAR(50)`).catch(() => {})
+  await db.query(`ALTER TABLE applications ADD COLUMN IF NOT EXISTS lead_id UUID`).catch(() => {})
   const userId = getUserId(req)
-  const limit = Number(new URL(req.url).searchParams.get('limit') || 5)
-  const rows = await db.query(`SELECT a.*, s.name AS school_name FROM applications a LEFT JOIN schools s ON s.id=a.school_id WHERE a.parent_id=$1 ORDER BY a.created_at DESC LIMIT $2`, [userId, limit])
+  if (!userId) return NextResponse.json([])
+  const limit = Math.min(50, Number(new URL(req.url).searchParams.get('limit') || 20))
+  const rows = await db.query(
+    `SELECT a.id, a.status, a.child_name, a.class_applying_for, a.created_at,
+            s.name AS school_name, s.logo_url AS school_logo, s.city AS school_city, s.slug AS school_slug
+     FROM applications a
+     LEFT JOIN schools s ON s.id = a.school_id
+     WHERE a.parent_id = $1
+     ORDER BY a.created_at DESC LIMIT $2`,
+    [userId, limit]
+  )
   return NextResponse.json(rows.rows)
 }
 
@@ -83,14 +101,15 @@ async function getParentProfile(req: NextRequest) {
 async function getSavedSchools(req: NextRequest) {
   await db.query(`CREATE TABLE IF NOT EXISTS saved_schools (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID, school_id UUID, UNIQUE(user_id,school_id), created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
   const userId = getUserId(req)
+  if (!userId) return NextResponse.json([])
   const limit = Number(new URL(req.url).searchParams.get('limit') || 4)
-  const rows = await db.query(`SELECT s.* FROM saved_schools ss JOIN schools s ON s.id=ss.school_id WHERE ss.user_id=$1 ORDER BY ss.created_at DESC LIMIT $2`, [userId, limit])
+  const rows = await db.query(`SELECT s.id, s.name, s.slug, s.city, s.state, s.logo_url, s.avg_rating, s.monthly_fee_min, s.board FROM saved_schools ss JOIN schools s ON s.id=ss.school_id WHERE ss.user_id=$1 ORDER BY ss.created_at DESC LIMIT $2`, [userId, limit])
   return NextResponse.json(rows.rows)
 }
 
 async function getRecommendations(req: NextRequest) {
   const limit = Number(new URL(req.url).searchParams.get('limit') || 4)
-  const rows = await db.query(`SELECT * FROM schools WHERE is_active=true ORDER BY rating DESC NULLS LAST LIMIT $1`, [limit]).catch(() => ({ rows: [] }))
+  const rows = await db.query(`SELECT id, name, slug, city, state, logo_url, avg_rating, monthly_fee_min, board, school_type FROM schools WHERE (is_active=true OR is_active IS NULL) ORDER BY avg_rating DESC NULLS LAST, created_at DESC LIMIT $1`, [limit]).catch(() => ({ rows: [] }))
   return NextResponse.json(rows.rows)
 }
 
@@ -100,7 +119,10 @@ async function getLeadCredits(req: NextRequest) {
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId])
   if (!school.rows.length) return NextResponse.json({ credits: 0 })
   const cred = await db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [school.rows[0].id])
-  return NextResponse.json({ credits: cred.rows[0]?.credits ?? 0 })
+  const c = cred.rows[0] || {}
+  const avail = c.credits ?? 0
+  const used  = c.used_credits ?? 0
+  return NextResponse.json({ credits: avail, availableCredits: avail, usedCredits: used, totalCredits: avail + used })
 }
 
 // ─── POST handlers ────────────────────────────────────────────────────────────

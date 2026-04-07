@@ -287,8 +287,8 @@ export function SchoolDashboardClient() {
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
   const firstName = user?.fullName?.split(' ')[0] || 'Admin'
   const profilePct = stats?.profileCompleteness ?? 0
-  const avail = Number(credits?.availableCredits) || Number((credits as any)?.credits) || 0
-  const used  = Number(credits?.usedCredits) || 0
+  const avail = Number((credits as any)?.availableCredits ?? (credits as any)?.credits ?? 0)
+  const used  = Number((credits as any)?.usedCredits ?? 0)
 
   return (
     <>

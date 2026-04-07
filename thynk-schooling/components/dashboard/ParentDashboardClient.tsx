@@ -216,10 +216,11 @@ export function ParentDashboardClient() {
   }, [mounted, accessToken, user, router])
 
   const enabled = !!accessToken && mounted
-  const { data: children, isLoading: loadKids }  = useQuery<any[]>({ queryKey: ['students'], queryFn: () => fetch('/api/students',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 5*60*1000 })
-  const { data: appsRaw,  isLoading: loadApps }  = useQuery<any[]>({ queryKey: ['applications'], queryFn: () => fetch('/api/applications?limit=5',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 2*60*1000 })
-  const { data: savedRaw }  = useQuery<any[]>({ queryKey: ['saved-schools'], queryFn: () => fetch('/api/saved-schools?limit=4',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 5*60*1000 })
-  const { data: recsRaw }   = useQuery<any[]>({ queryKey: ['recommendations'], queryFn: () => fetch('/api/recommendations?limit=6',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 10*60*1000 })
+  const { data: children, isLoading: loadKids }  = useQuery<any[]>({ queryKey: ['students'], queryFn: () => fetch('/api/parent?action=students',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 5*60*1000 })
+  const { data: appsRaw,  isLoading: loadApps }  = useQuery<any[]>({ queryKey: ['applications'], queryFn: () => fetch('/api/parent?action=applications&limit=5',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 2*60*1000 })
+  const { data: savedRaw }  = useQuery<any[]>({ queryKey: ['saved-schools'], queryFn: () => fetch('/api/parent?action=saved-schools&limit=4',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 5*60*1000 })
+  const { data: recsRaw }   = useQuery<any[]>({ queryKey: ['recommendations'], queryFn: () => fetch('/api/parent?action=recommendations&limit=6',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled, staleTime: 10*60*1000 })
+  const { data: blogsRaw }  = useQuery<any[]>({ queryKey: ['blog-posts-dash'], queryFn: () => fetch('/api/admin?action=blog&limit=3').then(r=>r.ok?r.json():[]).then(d=>Array.isArray(d)?d:d.posts||[]), staleTime: 15*60*1000 })
 
   if (!mounted || !accessToken || !user) {
     return (
@@ -234,6 +235,7 @@ export function ParentDashboardClient() {
   const apps  = Array.isArray(appsRaw)  ? appsRaw  : (appsRaw as any)?.data ?? []
   const saved = Array.isArray(savedRaw) ? savedRaw : (savedRaw as any)?.data ?? []
   const recs  = Array.isArray(recsRaw)  ? recsRaw  : (recsRaw as any)?.data ?? []
+  const blogs = Array.isArray(blogsRaw) ? blogsRaw : []
 
   const firstName = user.fullName?.split(' ')[0] || 'there'
   const hour = new Date().getHours()
@@ -423,6 +425,34 @@ export function ParentDashboardClient() {
         )}
       </div>
 
+      {/* Blog section */}
+      {blogs.length > 0 && (
+        <div style={{ background: C.card, border: `1px solid ${C.bdr}`, borderRadius: 16, padding: '22px', marginBottom: 18, boxShadow: '0 1px 4px rgba(13,17,23,0.05)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div>
+              <h3 style={{ fontFamily: C.serif, fontWeight: 700, fontSize: 19, color: C.ink, margin: 0 }}>From Our Blog</h3>
+              <p style={{ fontFamily: C.sans, fontSize: 12, color: C.faint, margin: '4px 0 0' }}>Tips and guides for school admissions</p>
+            </div>
+            <a href="/blog" style={{ fontFamily: C.sans, fontSize: 13, color: C.gold, textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>View All →</a>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 14 }}>
+            {blogs.slice(0,3).map((post: any) => (
+              <a key={post.id || post.slug} href={`/blog/${post.slug}`} style={{ textDecoration: 'none' }}>
+                <div style={{ background: C.bg, border: `1px solid ${C.bdr}`, borderRadius: 14, padding: '16px', transition: 'all .2s', cursor: 'pointer' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(184,134,11,0.3)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)' }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = C.bdr; (e.currentTarget as HTMLElement).style.transform = '' }}>
+                  <div style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 99, background: C.goldBg, color: C.gold, fontSize: 11, fontWeight: 700, marginBottom: 10 }}>{post.tag || 'Guide'}</div>
+                  <div style={{ fontFamily: C.sans, fontWeight: 700, fontSize: 13, color: C.ink, lineHeight: 1.4, marginBottom: 8, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{post.title}</div>
+                  <div style={{ fontFamily: C.sans, fontSize: 11, color: C.faint, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span>🕐</span> {post.readTime || post.read_time || '5 min read'}
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* counselling CTA */}
       <div style={{ background: 'linear-gradient(135deg,#FEF7E0 0%,#FAF7F2 60%)', border: `1px solid rgba(184,134,11,0.2)`, borderRadius: 16, padding: '22px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, boxShadow: '0 1px 4px rgba(13,17,23,0.05)' }}>
         <div>
@@ -449,7 +479,7 @@ export function ChildrenPageClient() {
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (mounted && (!accessToken || !user)) router.replace('/login') }, [mounted, accessToken, user, router])
   const enabled = !!accessToken && mounted
-  const { data, isLoading, refetch } = useQuery<any[]>({ queryKey: ['students'], queryFn: () => fetch('/api/students',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
+  const { data, isLoading, refetch } = useQuery<any[]>({ queryKey: ['students'], queryFn: () => fetch('/api/parent?action=students',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
   const kids = Array.isArray(data) ? data : []
   if (!mounted) return null
   return (
@@ -524,7 +554,7 @@ export function AddChildPageClient() {
   const handleSubmit = async () => {
     if (!form.fullName.trim()) return
     setSaving(true)
-    await fetch('/api/students', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+    await fetch('/api/parent?action=students', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
     setSaving(false)
     router.push('/dashboard/parent/children')
   }
@@ -576,7 +606,7 @@ export function ApplicationsPageClient() {
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (mounted && (!accessToken || !user)) router.replace('/login') }, [mounted, accessToken, user, router])
   const enabled = !!accessToken && mounted
-  const { data, isLoading } = useQuery<any[]>({ queryKey: ['applications-all'], queryFn: () => fetch('/api/applications?limit=50',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
+  const { data, isLoading } = useQuery<any[]>({ queryKey: ['applications-all'], queryFn: () => fetch('/api/parent?action=applications&limit=50',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
   const apps = Array.isArray(data) ? data : (data as any)?.data ?? []
   if (!mounted) return null
   return (
@@ -621,7 +651,7 @@ export function SavedSchoolsPageClient() {
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (mounted && (!accessToken || !user)) router.replace('/login') }, [mounted, accessToken, user, router])
   const enabled = !!accessToken && mounted
-  const { data, isLoading } = useQuery<any[]>({ queryKey: ['saved-schools-all'], queryFn: () => fetch('/api/saved-schools?limit=50',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
+  const { data, isLoading } = useQuery<any[]>({ queryKey: ['saved-schools-all'], queryFn: () => fetch('/api/parent?action=saved-schools&limit=50',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
   const schools = Array.isArray(data) ? data : (data as any)?.data ?? []
   if (!mounted) return null
   return (
@@ -672,7 +702,7 @@ export function RecommendationsPageClient() {
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (mounted && (!accessToken || !user)) router.replace('/login') }, [mounted, accessToken, user, router])
   const enabled = !!accessToken && mounted
-  const { data, isLoading } = useQuery<any[]>({ queryKey: ['recs-all'], queryFn: () => fetch('/api/recommendations?limit=20',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
+  const { data, isLoading } = useQuery<any[]>({ queryKey: ['recs-all'], queryFn: () => fetch('/api/parent?action=recommendations&limit=20',{credentials:'include'}).then(r=>r.ok?r.json():[]), enabled })
   const recs = Array.isArray(data) ? data : (data as any)?.data ?? []
   if (!mounted) return null
   return (

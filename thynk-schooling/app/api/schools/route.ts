@@ -375,6 +375,7 @@ async function saveProfile(req: NextRequest) {
 
 async function getAnalytics(req: NextRequest) {
   const userId = getUserId(req)
+  if (!userId) return NextResponse.json({ leads: [], applications: [] })
   const days = Number(new URL(req.url).searchParams.get('days') || 30)
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
   if (!school.rows.length) return NextResponse.json({ leads: [], applications: [] })
@@ -388,11 +389,12 @@ async function getAnalytics(req: NextRequest) {
 
 async function getDashboardStats(req: NextRequest) {
   const userId = getUserId(req)
+  if (!userId) return NextResponse.json({ totalLeads: 0, newLeadsThisMonth: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0, avgRating: 0, totalReviews: 0 })
   const school = await db.query(
     'SELECT id, name, logo_url, city, state, board FROM schools WHERE admin_user_id=$1',
     [userId]
   ).catch(() => ({ rows: [] }))
-  if (!school.rows.length) return NextResponse.json({ totalLeads: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0 })
+  if (!school.rows.length) return NextResponse.json({ totalLeads: 0, newLeadsThisMonth: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0, avgRating: 0, totalReviews: 0 })
   const { id: sid, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard } = school.rows[0]
   const [leads, newLeads, apps, credits] = await Promise.all([
     db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
@@ -400,19 +402,46 @@ async function getDashboardStats(req: NextRequest) {
     db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
   ])
+  // Compute profile completeness from actual school row
+  const fullRow = await db.query('SELECT * FROM schools WHERE id=$1', [sid]).catch(() => ({ rows: [{}] }))
+  const row = fullRow.rows[0] || {}
+  const fields = ['name','description','school_type','board','city','state','phone','email','address_line1','logo_url','principal_name','monthly_fee_min','classes_from','classes_to']
+  const filled = fields.filter(f => { const v = row[f]; if (Array.isArray(v)) return v.length > 0; return v !== null && v !== undefined && v !== '' }).length
+  const profileCompleteness = Math.round((filled / fields.length) * 100)
+
   return NextResponse.json({
     totalLeads: Number(leads.rows[0].count),
     newLeadsThisMonth: Number(newLeads.rows[0].count),
     totalApplications: Number(apps.rows[0].count),
     profileViews: 0,
+    totalReviews: 0,
+    avgRating: 0,
     credits: credits.rows[0]?.credits ?? 0,
-    profileCompleteness: 0,
+    profileCompleteness,
     schoolName:  schoolName  || null,
     schoolLogo:  schoolLogo  || null,
     schoolCity:  schoolCity  || null,
     schoolState: schoolState || null,
     schoolBoard: Array.isArray(schoolBoard) ? schoolBoard : [],
   })
+}
+
+async function getSchoolApplications(req: NextRequest) {
+  const userId = getUserId(req)
+  if (!userId) return NextResponse.json([], { status: 401 })
+  const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
+  if (!school.rows.length) return NextResponse.json([])
+  const sid = school.rows[0].id
+  const rows = await db.query(
+    `SELECT a.*, 
+            COALESCE(u.full_name, a.child_name) AS parent_name,
+            a.child_name, a.class_applying_for, a.status, a.created_at
+     FROM applications a
+     LEFT JOIN users u ON u.id = a.parent_id
+     WHERE a.school_id = $1 ORDER BY a.created_at DESC`,
+    [sid]
+  ).catch(() => ({ rows: [] }))
+  return NextResponse.json(rows.rows)
 }
 
 // ─── router ───────────────────────────────────────────────────────────────────
@@ -423,6 +452,7 @@ export async function GET(req: NextRequest) {
     if (action === 'profile')         return await getProfile(req)
     if (action === 'analytics')       return await getAnalytics(req)
     if (action === 'dashboard-stats') return await getDashboardStats(req)
+    if (action === 'applications')    return await getSchoolApplications(req)
     return await listSchools(req)
   } catch (e: any) {
     console.error('[schools GET]', e)

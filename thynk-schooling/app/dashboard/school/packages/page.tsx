@@ -95,13 +95,12 @@ export default function LeadPackagesPage() {
       const order = await orderRes.json()
       if (!orderRes.ok) throw new Error(order.error || 'Order creation failed')
 
-      if (order._dev) {
-        await fetch('/api/lead-packages?action=verify-payment', {
-          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ gateway: gatewayId, orderId: order.orderId }),
-        })
-        toast.success('Credits added! (dev mode)')
-        setPayingId(null); return
+      if (order._dev || order.success) {
+        toast.success(`✅ ${pkg.leadCredits} credits added successfully!`)
+        setPayingId(null)
+        // refresh credits
+        window.dispatchEvent(new Event('creditsUpdated'))
+        return
       }
 
       if (gatewayId === 'razorpay') {
@@ -231,8 +230,9 @@ export default function LeadPackagesPage() {
                   <button
                     onClick={() => {
                       if (!accessToken) { toast.error('Please log in first'); router.push('/login'); return }
-                      if (gateways.length === 0) { toast.error('No payment gateway configured. Contact support.'); return }
-                      if (gateways.length === 1) { handlePay(pkg, gateways[0].id as GatewayId) } else { setSelectedPkg(pkg) }
+                      if (gateways.length === 0) { handlePay(pkg, 'razorpay') } // dev mode - no gateway needed
+                      else if (gateways.length === 1) { handlePay(pkg, gateways[0].id as GatewayId) }
+                      else { setSelectedPkg(pkg) }
                     }}
                     disabled={payingId === pkg.id}
                     style={S.btn(hot)}

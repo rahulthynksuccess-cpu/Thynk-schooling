@@ -170,6 +170,32 @@ export async function POST(req: NextRequest) {
       ).catch(() => ({ rows: [] }))
       const buyer = userInfo.rows[0] || {}
 
+      // ── Dev/fallback mode: if no gateway keys configured, auto-approve ──
+      const gwConfig = await db.query(
+        "SELECT key_id, key_secret FROM payment_gateways WHERE id=$1 AND enabled=true",
+        [gatewayId]
+      ).catch(() => ({ rows: [] }))
+      const hasKeys = gwConfig.rows.length > 0 && gwConfig.rows[0].key_id && gwConfig.rows[0].key_secret
+
+      if (!hasKeys) {
+        // No gateway configured — credit directly (dev/demo mode)
+        await db.query(
+          `INSERT INTO lead_credits (school_id, credits, total_credits, updated_at)
+           VALUES ($1, $2, $2, NOW())
+           ON CONFLICT (school_id) DO UPDATE
+           SET credits = lead_credits.credits + $2,
+               total_credits = lead_credits.total_credits + $2,
+               updated_at = NOW()`,
+          [schoolId, p.leads_count]
+        )
+        await db.query(
+          `INSERT INTO lead_package_payments (school_id, package_id, gateway, amount_paise, status, created_at)
+           VALUES ($1, $2, 'demo', $3, 'completed', NOW())`,
+          [schoolId, packageId, p.price_paise]
+        ).catch(() => {})
+        return NextResponse.json({ success: true, _dev: true, orderId: 'demo_' + Date.now(), message: 'Credits added (demo mode — configure payment gateway in Admin > Integrations)' })
+      }
+
       try {
         const order = await createOrder(
           gatewayId,

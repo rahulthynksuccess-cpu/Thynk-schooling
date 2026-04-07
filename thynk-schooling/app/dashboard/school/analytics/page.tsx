@@ -1,89 +1,94 @@
 'use client'
 export const dynamic = 'force-dynamic'
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { TrendingUp, Eye, Users, Star, BarChart3 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { GraduationCap, Eye, Users, FileText, Star, MessageSquare, Heart, TrendingUp } from 'lucide-react'
 
-const NAV = [
-  {href:'/dashboard/school',label:'Overview',icon:'📊'},
-  {href:'/dashboard/school/leads',label:'Leads',icon:'📋'},
-  {href:'/dashboard/school/applications',label:'Applications',icon:'📝'},
-  {href:'/dashboard/school/reviews',label:'Reviews',icon:'⭐'},
-  {href:'/dashboard/school/analytics',label:'Analytics',icon:'📈'},
-  
+const CARDS = [
+  { key:'totalLeads',        label:'Total Leads',        icon:Users,        grad:'linear-gradient(135deg,#667eea,#764ba2)', shadow:'rgba(102,126,234,0.4)' },
+  { key:'totalApplications', label:'Applications',       icon:FileText,     grad:'linear-gradient(135deg,#4facfe,#00f2fe)', shadow:'rgba(79,172,254,0.4)' },
+  { key:'avgRating',         label:'Avg Rating',         icon:Star,         grad:'linear-gradient(135deg,#43e97b,#38f9d7)', shadow:'rgba(67,233,123,0.4)' },
+  { key:'totalReviews',      label:'Reviews',            icon:MessageSquare,grad:'linear-gradient(135deg,#f093fb,#f5576c)', shadow:'rgba(245,87,108,0.4)' },
+  { key:'profileViews',      label:'Profile Views',      icon:Eye,          grad:'linear-gradient(135deg,#fa709a,#fee140)', shadow:'rgba(250,112,154,0.4)' },
+  { key:'newLeadsThisMonth', label:'New This Month',     icon:TrendingUp,   grad:'linear-gradient(135deg,#30cfd0,#330867)', shadow:'rgba(48,207,208,0.4)' },
 ]
 
-function SchoolLayout({ children, title }: { children: React.ReactNode; title: string }) {
-  const { user } = useAuthStore()
-  const pathname = usePathname()
+export default function AnalyticsPage() {
+  const { accessToken, user } = useAuthStore()
+  const router = useRouter()
+  const [stats, setStats] = useState<any>({})
+  const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    if (!mounted) return
+    if (!accessToken || !user) { router.replace('/login'); return }
+    fetch('/api/schools?action=dashboard-stats', { credentials: 'include' })
+      .then(r => r.json()).then(d => setStats(d)).catch(() => {}).finally(() => setLoading(false))
+  }, [mounted, accessToken])
+
+  if (!mounted) return null
+
   return (
-    <div style={{ display:'flex', minHeight:'100vh', background:'var(--ivory,#FAF7F2)' }}>
-      <aside style={{ width:240, background:'#0D1117', display:'flex', flexDirection:'column', flexShrink:0, position:'sticky', top:0, height:'100vh', overflowY:'auto' }}>
-        <div style={{ padding:'22px 20px', borderBottom:'1px solid rgba(255,255,255,0.07)' }}>
-          <Link href="/" style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:18, color:'#FAF7F2', textDecoration:'none' }}>
-            Thynk<em style={{ fontStyle:'italic', color:'#B8860B' }}>Schooling</em>
+    <div style={{ display:'flex', minHeight:'100vh', background:'#F0EDE8', fontFamily:"'Bricolage Grotesque',system-ui,sans-serif" }}>
+      <aside style={{ width:252, background:'#0A0A0F', display:'flex', flexDirection:'column', flexShrink:0, position:'sticky', top:0, height:'100vh' }}>
+        <div style={{ padding:'22px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
+          <Link href="/" style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
+            <div style={{ width:36, height:36, borderRadius:11, background:'linear-gradient(135deg,#B8860B,#F59E0B)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <GraduationCap size={17} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontFamily:"'Clash Display',sans-serif", fontSize:17, fontWeight:700, color:'#FAF7F2' }}>Thynk<span style={{ color:'#F59E0B' }}>Schooling</span></div>
+              <div style={{ fontSize:10, color:'rgba(255,255,255,0.25)', marginTop:2, letterSpacing:'0.1em', textTransform:'uppercase' }}>School Portal</div>
+            </div>
           </Link>
-          <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:4, fontFamily:'DM Sans,sans-serif' }}>School Dashboard</div>
         </div>
-        <nav style={{ flex:1, padding:'8px 10px', display:'flex', flexDirection:'column', gap:2 }}>
-          {NAV.map(item => (
-            <Link key={item.href} href={item.href} style={{
-              display:'flex', alignItems:'center', gap:10, padding:'9px 12px', borderRadius:9,
-              textDecoration:'none', fontFamily:'DM Sans,sans-serif', fontSize:13,
-              fontWeight: pathname===item.href ? 600 : 400,
-              background: pathname===item.href ? 'rgba(184,134,11,0.12)' : 'transparent',
-              color: pathname===item.href ? '#E8C547' : 'rgba(255,255,255,0.5)',
-              borderLeft: pathname===item.href ? '3px solid #B8860B' : '3px solid transparent',
-            }}>
+        <nav style={{ flex:1, padding:'10px 12px' }}>
+          {[
+            { href:'/dashboard/school', label:'Dashboard', icon:'📊' },
+            { href:'/dashboard/school/leads', label:'Leads', icon:'👥' },
+            { href:'/dashboard/school/applications', label:'Applications', icon:'📝' },
+            { href:'/dashboard/school/reviews', label:'Reviews', icon:'⭐' },
+            { href:'/dashboard/school/packages', label:'Subscription', icon:'💳' },
+            { href:'/dashboard/school/analytics', label:'Analytics', icon:'📈' },
+          ].map(item => (
+            <Link key={item.href} href={item.href} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', borderRadius:11, textDecoration:'none', fontSize:13, fontWeight:600, marginBottom:2, color: item.href.includes('analytics') ? '#fff' : 'rgba(255,255,255,0.36)', background: item.href.includes('analytics') ? 'rgba(184,134,11,0.16)' : 'transparent' }}>
               <span>{item.icon}</span> {item.label}
             </Link>
           ))}
         </nav>
-        <div style={{ padding:'10px', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
-          <Link href="/" style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, textDecoration:'none', fontSize:12, color:'rgba(255,255,255,0.4)', fontFamily:'DM Sans,sans-serif' }}>← View Site</Link>
-        </div>
       </aside>
-      <main style={{ flex:1, overflowY:'auto', padding:'clamp(20px,3vw,40px)' }}>
-        <h1 style={{ fontFamily:'Cormorant Garamond,serif', fontWeight:700, fontSize:'clamp(1.8rem,3vw,2.8rem)', color:'#0D1117', marginBottom:24, letterSpacing:'-1px' }}>{title}</h1>
-        {children}
+
+      <main style={{ flex:1, padding:'36px 40px', overflowY:'auto' }}>
+        <h1 style={{ fontFamily:"'Clash Display',sans-serif", fontSize:28, fontWeight:700, color:'#0D1117', marginBottom:28, letterSpacing:'-0.03em' }}>Analytics</h1>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:16, marginBottom:28 }}>
+          {CARDS.map(({ key, label, icon: Icon, grad, shadow }) => {
+            const raw = stats[key]
+            const val = key === 'avgRating' && raw ? `${Number(raw).toFixed(1)}★` : (raw ?? 0)
+            return (
+              <div key={key} style={{ background:grad, borderRadius:18, padding:'24px 22px', position:'relative', overflow:'hidden', boxShadow:`0 12px 40px ${shadow}` }}>
+                <div style={{ position:'absolute', inset:0, background:'linear-gradient(135deg,rgba(255,255,255,0.2) 0%,transparent 60%)', pointerEvents:'none' }} />
+                <div style={{ width:42, height:42, borderRadius:12, background:'rgba(255,255,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:18 }}>
+                  <Icon size={18} color="#fff" />
+                </div>
+                <div style={{ fontFamily:"'Clash Display',sans-serif", fontSize:40, fontWeight:700, color:'#fff', lineHeight:1, letterSpacing:'-2px', marginBottom:6 }}>
+                  {loading ? '…' : val}
+                </div>
+                <div style={{ fontSize:13, fontWeight:700, color:'rgba(255,255,255,0.85)' }}>{label}</div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={{ background:'#fff', borderRadius:18, border:'1px solid rgba(13,17,23,0.07)', padding:28, boxShadow:'0 2px 16px rgba(13,17,23,0.05)' }}>
+          <h3 style={{ fontFamily:"'Clash Display',sans-serif", fontSize:20, fontWeight:700, color:'#0D1117', marginBottom:10 }}>Analytics Details</h3>
+          <p style={{ fontSize:14, color:'#64748B', lineHeight:1.65 }}>Detailed charts will appear once your school receives enquiries. Keep your profile complete and verified to start attracting parents.</p>
+        </div>
       </main>
     </div>
   )
 }
-
-function AnalyticsCards() {
-  const [stats, setStats] = useState<any>({})
-  const [loading, setLoading] = useState(true)
-  useEffect(() => {
-    fetch('/api/schools?action=analytics',{cache:'no-store'}).then(r=>r.json()).then(d=>setStats(d)).catch(()=>{}).finally(()=>setLoading(false))
-  },[])
-  const cards = [
-    {label:'Profile Views',value:stats.profileViews||'—',icon:'👁️',color:'#B8860B'},
-    {label:'Total Leads',value:stats.totalLeads||'—',icon:'📋',color:'#0A5F55'},
-    {label:'Applications',value:stats.totalApplications||'—',icon:'📝',color:'#7A6A52'},
-    {label:'Avg Rating',value:stats.avgRating?`${Number(stats.avgRating).toFixed(1)}★`:'—',icon:'⭐',color:'#B8860B'},
-    {label:'Reviews',value:stats.totalReviews||'—',icon:'💬',color:'#0A5F55'},
-    {label:'Saved by Parents',value:stats.savedCount||'—',icon:'❤️',color:'#7A6A52'},
-  ]
-  return (
-    <div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:16,marginBottom:24}}>
-        {cards.map(c=>(
-          <div key={c.label} style={{background:'#fff',borderRadius:12,border:'1px solid rgba(13,17,23,0.08)',padding:24}}>
-            <div style={{fontSize:28,marginBottom:10}}>{c.icon}</div>
-            <div style={{fontFamily:'Cormorant Garamond,serif',fontWeight:700,fontSize:36,color:c.color,lineHeight:1}}>{loading?'…':c.value}</div>
-            <div style={{fontFamily:'DM Sans,sans-serif',fontSize:12,color:'#718096',marginTop:4}}>{c.label}</div>
-          </div>
-        ))}
-      </div>
-      <div style={{background:'#fff',borderRadius:12,border:'1px solid rgba(13,17,23,0.08)',padding:28}}>
-        <h3 style={{fontFamily:'Cormorant Garamond,serif',fontSize:22,fontWeight:700,color:'#0D1117',marginBottom:16}}>Analytics Details</h3>
-        <p style={{fontFamily:'DM Sans,sans-serif',fontSize:14,color:'#718096',lineHeight:1.65}}>Detailed analytics charts will appear here once your school has data. Ensure your school profile is complete and verified to start attracting parent enquiries.</p>
-        <Link href="/dashboard/school" style={{display:'inline-flex',alignItems:'center',gap:8,marginTop:16,padding:'10px 20px',background:'#B8860B',color:'#fff',borderRadius:8,textDecoration:'none',fontFamily:'DM Sans,sans-serif',fontSize:13,fontWeight:600}}>Complete Profile →</Link>
-      </div>
-    </div>
-  )
-}
-export default function AnalyticsPage() { return <SchoolLayout title="Analytics"><AnalyticsCards /></SchoolLayout> }

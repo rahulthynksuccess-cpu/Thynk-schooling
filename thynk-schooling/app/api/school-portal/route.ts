@@ -16,6 +16,18 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null }
 }
 
+
+function maskName(name: string): string {
+  if (!name) return '****'
+  const parts = name.trim().split(' ')
+  return parts.map((p: string, i: number) => i === 0 ? p : p[0] + '***').join(' ')
+}
+function maskPhone(phone: string): string {
+  if (!phone) return '***** *****'
+  const d = phone.replace(/\D/g, '')
+  if (d.length < 6) return '*'.repeat(d.length)
+  return d.slice(0,2) + '*'.repeat(Math.max(0,d.length-4)) + d.slice(-2)
+}
 const VALID_STATUSES = ['new','contacted','interested','not_interested','admitted','lost']
 
 // ─── CANONICAL leads table definition — all columns used across ALL routes ────
@@ -65,25 +77,38 @@ async function getLeads(req: NextRequest) {
   const userId = getUserId(req)
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const limit = Number(new URL(req.url).searchParams.get('limit') || 10)
-  const school = await db.query('SELECT id, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
-  if (!school.rows.length) return NextResponse.json([])
-  if (!school.rows[0].profile_completed) {
-    return NextResponse.json(
-      { error: 'PROFILE_INCOMPLETE', message: 'Complete your school profile to access leads.' },
-      { status: 403 }
-    )
-  }
+  const school = await db.query('SELECT id, is_active FROM schools WHERE admin_user_id=$1', [userId])
+  if (!school.rows.length) return NextResponse.json({ data: [], total: 0, credits: { credits:0, availableCredits:0, usedCredits:0 } })
   if (school.rows[0].is_active === false) {
-    return NextResponse.json(
-      { error: 'ACCOUNT_SUSPENDED', message: 'Account suspended. Contact support.' },
-      { status: 403 }
-    )
+    return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Account suspended.' }, { status: 403 })
   }
-  const rows = await db.query(
-    `SELECT l.*, u.full_name AS parent_name FROM leads l LEFT JOIN users u ON u.id=l.parent_id WHERE l.school_id=$1 ORDER BY l.created_at DESC LIMIT $2`,
-    [school.rows[0].id, limit]
-  )
-  return NextResponse.json(rows.rows)
+  const schoolId = school.rows[0].id
+  const [rows, countRes] = await Promise.all([
+    db.query(
+      `SELECT l.id, l.status, l.is_purchased AS "isPurchased",
+              l.child_name AS "childName", l.class_applying_for AS "classApplyingFor",
+              l.city, l.created_at AS "createdAt", l.source, l.phone AS "maskedPhone",
+              l.how_did_you_hear AS "howDidYouHear",
+              COALESCE(u.full_name, l.parent_name) AS "fullName",
+              COALESCE(u.phone,    l.phone)        AS "fullPhone",
+              COALESCE(u.email,    l.email)        AS "fullEmail"
+       FROM leads l
+       LEFT JOIN users u ON u.id = l.parent_id
+       WHERE l.school_id = $1
+       ORDER BY l.created_at DESC
+       LIMIT $2`,
+      [schoolId, limit]
+    ),
+    db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [schoolId]),
+  ])
+  const data = rows.rows.map((row: any) => ({
+    ...row,
+    maskedName:  row.isPurchased ? row.fullName  : maskName(row.fullName || 'Parent'),
+    maskedPhone: row.isPurchased ? row.fullPhone : maskPhone(row.fullPhone || row.maskedPhone || ''),
+    fullName:    row.isPurchased ? row.fullName  : undefined,
+    fullPhone:   row.isPurchased ? row.fullPhone : undefined,
+  }))
+  return NextResponse.json({ data, total: Number(countRes.rows[0].count) })
 }
 
 // ─── PATCH lead status ────────────────────────────────────────────────────────
@@ -118,6 +143,53 @@ export async function PATCH(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     if (action === 'leads') return await patchLead(req)
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+  } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
+}
+
+// ─── POST: purchase lead ──────────────────────────────────────────────────────
+async function purchaseLead(req: NextRequest) {
+  await ensureLeads()
+  const userId = getUserId(req)
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const url    = new URL(req.url)
+  const leadId = url.searchParams.get('id')
+  if (!leadId) return NextResponse.json({ error: 'Lead id required' }, { status: 400 })
+
+  const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId])
+  if (!school.rows.length) return NextResponse.json({ error: 'School not found' }, { status: 403 })
+  const schoolId = school.rows[0].id
+
+  const lead = await db.query('SELECT id, is_purchased FROM leads WHERE id=$1 AND school_id=$2', [leadId, schoolId])
+  if (!lead.rows.length) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
+  if (lead.rows[0].is_purchased) return NextResponse.json({ error: 'Lead already purchased' }, { status: 400 })
+
+  const credRow = await db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [schoolId])
+  const available = credRow.rows[0]?.credits ?? 0
+  if (available < 1) return NextResponse.json({ error: 'Insufficient credits. Buy more from Subscription Plan.' }, { status: 402 })
+
+  await db.query('BEGIN')
+  try {
+    await db.query(`UPDATE lead_credits SET credits=credits-1, used_credits=COALESCE(used_credits,0)+1, updated_at=NOW() WHERE school_id=$1`, [schoolId])
+    await db.query(`UPDATE leads SET is_purchased=true, updated_at=NOW() WHERE id=$1`, [leadId])
+    await db.query('COMMIT')
+  } catch(e) { await db.query('ROLLBACK'); throw e }
+
+  const unlocked = await db.query(
+    `SELECT l.id, l.child_name AS "childName", l.class_applying_for AS "classApplyingFor",
+            COALESCE(u.full_name, l.parent_name) AS "fullName",
+            COALESCE(u.phone, l.phone) AS "fullPhone"
+     FROM leads l LEFT JOIN users u ON u.id=l.parent_id WHERE l.id=$1`,
+    [leadId]
+  )
+  return NextResponse.json({ success: true, lead: unlocked.rows[0] })
+}
+
+export async function POST(req: NextRequest) {
+  const action = new URL(req.url).searchParams.get('action')
+  try {
+    if (action === 'purchase') return await purchaseLead(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
