@@ -13,14 +13,14 @@ import { useAuthStore } from '@/store/authStore'
 const DEFAULT_FAQ=[
   {q:'What is a lead credit?',a:'One lead credit = one parent enquiry. When a parent fills an admission form for your school, you use a credit to unlock their full contact details.'},
   {q:'Can I try before I pay?',a:'Yes! Our Free subscription plan lets you list your school and receive lead credits every month, forever. No credit card required.'},
-  {q:'Do credits roll over?',a:'Monthly plan credits do not roll over. Credits refresh each month with your active subscription plan.'},
+  {q:'How do lead credits work?',a:'Each plan includes a bundle of lead credits. Use them whenever you need — there is no monthly reset or expiry. Unlock a parent\'s full contact details by spending one credit.'},
   {q:'Can I change plans anytime?',a:'Yes. Upgrade or downgrade instantly from your school dashboard. Unused credits from the old plan carry over for 30 days.'},
-  {q:'Is there a setup fee?',a:'Never. Listing is free, plans are monthly with no lock-in, and you can cancel anytime.'},
+  {q:'Is there a setup fee?',a:'Never. Listing is free, and there is no lock-in. Credits never expire — use them at your own pace.'},
 ]
 
 interface SubPlan {
   id: string; planKey: string; name: string; description: string
-  price: number; leadsPerMonth: number; features: string[]
+  price: number; leadCredits: number; features: string[]
   isHot: boolean; cta: string; sortOrder: number; isActive: boolean
 }
 
@@ -51,7 +51,7 @@ export default function PricingPage() {
   const formatPrice = (paise: number) => {
     if (paise === 0) return { label: '₹0', period: 'forever' }
     const rs = Math.round(paise / 100)
-    return { label: `₹${rs.toLocaleString('en-IN')}`, period: '/mo' }
+    return { label: `₹${rs.toLocaleString('en-IN')}`, period: '' }
   }
 
   const cols = Math.min(activePlans.length || 4, 4)
@@ -244,7 +244,7 @@ export default function PricingPage() {
               transition={{ duration: 0.6, delay: 0.18, ease }}
               style={{ fontFamily: 'Inter,sans-serif', fontSize: 'clamp(14px,1.6vw,16px)', color: 'rgba(250,247,242,0.5)', lineHeight: 1.75, fontWeight: 300, maxWidth: 500, margin: '0 auto 28px', textAlign: 'center' }}
             >
-              List free. Subscribe and get leads included monthly. No wastage, no lock-in.
+              List free. Buy a credit pack and unlock parent leads on demand. No expiry, no wastage.
             </motion.p>
 
             {/* Trust row */}

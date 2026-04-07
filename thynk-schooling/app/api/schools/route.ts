@@ -402,9 +402,12 @@ async function getDashboardStats(req: NextRequest) {
     db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
   ])
-  // Use profile_completed boolean as source of truth (set to true when school saves profile)
-  const pcRow = await db.query('SELECT profile_completed FROM schools WHERE id=$1', [sid]).catch(() => ({ rows: [{}] }))
-  const profileCompleteness = pcRow.rows[0]?.profile_completed === true ? 100 : 0
+  // Compute profile completeness from actual school row
+  const fullRow = await db.query('SELECT * FROM schools WHERE id=$1', [sid]).catch(() => ({ rows: [{}] }))
+  const row = fullRow.rows[0] || {}
+  const fields = ['name','description','school_type','board','city','state','phone','email','address_line1','logo_url','principal_name','monthly_fee_min','classes_from','classes_to']
+  const filled = fields.filter(f => { const v = row[f]; if (Array.isArray(v)) return v.length > 0; return v !== null && v !== undefined && v !== '' }).length
+  const profileCompleteness = Math.round((filled / fields.length) * 100)
 
   return NextResponse.json({
     totalLeads: Number(leads.rows[0].count),
@@ -429,15 +432,10 @@ async function getSchoolApplications(req: NextRequest) {
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
   if (!school.rows.length) return NextResponse.json([])
   const sid = school.rows[0].id
-  // Ensure columns exist before querying
-  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS parent_name VARCHAR(200)').catch(()=>{})
-  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS phone VARCHAR(30)').catch(()=>{})
   const rows = await db.query(
-    `SELECT a.id, a.status, a.created_at,
-            a.child_name    AS "childName",
-            a.class_applying_for AS "classApplyingFor",
-            COALESCE(u.full_name, a.parent_name) AS "parentName",
-            COALESCE(u.phone, a.phone) AS "phone"
+    `SELECT a.*, 
+            COALESCE(u.full_name, a.child_name) AS parent_name,
+            a.child_name, a.class_applying_for, a.status, a.created_at
      FROM applications a
      LEFT JOIN users u ON u.id = a.parent_id
      WHERE a.school_id = $1 ORDER BY a.created_at DESC`,

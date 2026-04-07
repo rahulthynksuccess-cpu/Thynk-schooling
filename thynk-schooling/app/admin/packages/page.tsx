@@ -16,12 +16,11 @@ interface PackageForm {
   name: string
   leadCredits: number
   price: number
-  validityDays: number
   description: string
   isActive: boolean
 }
 
-const EMPTY: PackageForm = { name:'', leadCredits:10, price:199900, validityDays:90, description:'', isActive:true }
+const EMPTY: PackageForm = { name:'', leadCredits:10, price:199900, description:'', isActive:true }
 
 function PackageModal({ pkg, onClose, onSave }: {
   pkg?: LeadPackage
@@ -30,8 +29,7 @@ function PackageModal({ pkg, onClose, onSave }: {
 }) {
   const [form, setForm] = useState<PackageForm>(pkg ? {
     name: pkg.name, leadCredits: pkg.leadCredits, price: pkg.price,
-    validityDays: pkg.validityDays, description: pkg.description || '',
-    isActive: pkg.isActive,
+    description: pkg.description || '', isActive: pkg.isActive,
   } : EMPTY)
 
   const set = (k: keyof PackageForm, v: PackageForm[keyof PackageForm]) => setForm(p => ({ ...p, [k]: v }))
@@ -73,12 +71,7 @@ function PackageModal({ pkg, onClose, onSave }: {
                 style={inp} />
             </div>
           </div>
-          <div>
-            <label style={lbl}>Validity (days)</label>
-            <input type="number" value={form.validityDays} min="7" max="365"
-              onChange={e => set('validityDays', Number(e.target.value))}
-              style={inp} />
-          </div>
+
           <div>
             <label style={lbl}>Description (optional)</label>
             <input value={form.description} onChange={e => set('description', e.target.value)}
@@ -184,7 +177,7 @@ export default function LeadPackagesPage() {
                   ₹{(pkg.price / 100).toLocaleString('en-IN')}
                 </div>
                 <div style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'3px', fontFamily:'DM Sans,sans-serif' }}>
-                  {pkg.leadCredits} credits · {pkg.validityDays} days
+                  {pkg.leadCredits} lead credits
                 </div>
                 <div style={{ fontSize:'11px', color:'#4ADE80', marginBottom:'14px', fontFamily:'DM Sans,sans-serif' }}>
                   ₹{Math.round(pkg.price / pkg.leadCredits / 100)}/lead

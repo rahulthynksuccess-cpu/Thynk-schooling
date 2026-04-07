@@ -262,7 +262,7 @@ export async function POST(req: NextRequest) {
       const available = credRow.rows[0]?.credits ?? 0
       if (available < 1) {
         return NextResponse.json({
-          error: 'Insufficient credits. Please upgrade your subscription plan to get more lead credits.',
+          error: 'Insufficient credits. Please purchase a lead credit package from the Packages section.',
         }, { status: 402 })
       }
 

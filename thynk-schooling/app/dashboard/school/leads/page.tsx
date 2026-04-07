@@ -87,7 +87,7 @@ function SchoolLayout({ children, title, credits }: { children: React.ReactNode;
 function SubscriptionPlanCards() {
   interface SubPlan {
     id: string; planKey: string; name: string; description: string
-    price: number; leadsPerMonth: number; features: string[]
+    price: number; leadCredits: number; features: string[]
     isHot: boolean; cta: string; sortOrder: number; isActive: boolean
   }
 
@@ -147,7 +147,7 @@ function SubscriptionPlanCards() {
                   {plan.price === 0 ? 'Free' : `₹${Math.round(plan.price / 100).toLocaleString('en-IN')}`}
                 </div>
                 <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>
-                  {plan.price === 0 ? 'forever' : '/month'} · {plan.leadsPerMonth === -1 ? 'Unlimited' : plan.leadsPerMonth} leads/mo
+                  {plan.leadCredits === -1 ? 'Unlimited credits' : `${plan.leadCredits} lead credits included`}
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'#F59E0B', fontWeight:600 }}>
                   {plan.cta} <ChevronRight size={12} />
@@ -259,7 +259,7 @@ function LeadsContent() {
             </div>
             <div style={{ flex:1, minWidth:200 }}>
               <div style={{ fontWeight:700, fontSize:14, color:'#111827', marginBottom:3 }}>You have 0 lead credits</div>
-              <div style={{ fontSize:13, color:'#6B7280' }}>Upgrade your subscription plan to get lead credits included every month and start unlocking parent contacts.</div>
+              <div style={{ fontSize:13, color:'#6B7280' }}>Purchase a lead credit package to start unlocking parent contact details. Credits never expire — use them at your own pace.</div>
             </div>
             <Link href="/dashboard/school/packages" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, flexShrink:0 }}>
               View Plans <ChevronRight size={13} />

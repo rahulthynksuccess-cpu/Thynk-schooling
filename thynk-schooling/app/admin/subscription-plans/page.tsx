@@ -14,18 +14,18 @@ const textarea: React.CSSProperties = { ...inp, minHeight: '72px', resize: 'vert
 
 interface SubPlan {
   id: string; planKey: string; name: string; description: string
-  price: number; leadsPerMonth: number; features: string[]
+  price: number; leadCredits: number; features: string[]
   isHot: boolean; cta: string; sortOrder: number; isActive: boolean
 }
 
 interface PlanForm {
   planKey: string; name: string; description: string
-  price: number; leadsPerMonth: number; featuresRaw: string
+  price: number; leadCredits: number; featuresRaw: string
   isHot: boolean; cta: string; sortOrder: number; isActive: boolean
 }
 
 const EMPTY: PlanForm = {
-  planKey: '', name: '', description: '', price: 0, leadsPerMonth: 25,
+  planKey: '', name: '', description: '', price: 0, leadCredits: 25,
   featuresRaw: '', isHot: false, cta: 'Get Started', sortOrder: 0, isActive: true,
 }
 
@@ -35,7 +35,7 @@ function PlanModal({ plan, onClose, onSave, saving }: {
 }) {
   const [form, setForm] = useState<PlanForm>(plan ? {
     planKey: plan.planKey, name: plan.name, description: plan.description,
-    price: Math.round(plan.price / 100), leadsPerMonth: plan.leadsPerMonth,
+    price: Math.round(plan.price / 100), leadCredits: plan.leadCredits,
     featuresRaw: plan.features.join('\n'), isHot: plan.isHot,
     cta: plan.cta, sortOrder: plan.sortOrder, isActive: plan.isActive,
   } : EMPTY)
@@ -83,8 +83,8 @@ function PlanModal({ plan, onClose, onSave, saving }: {
             </div>
             <div>
               <label style={lbl}>Leads/month <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px' }}>(-1 = unlimited)</span></label>
-              <input type="number" min="-1" value={form.leadsPerMonth}
-                onChange={e => set('leadsPerMonth', Number(e.target.value))} style={inp} />
+              <input type="number" min="-1" value={form.leadCredits}
+                onChange={e => set('leadCredits', Number(e.target.value))} style={inp} />
             </div>
             <div>
               <label style={lbl}>Sort Order</label>
@@ -102,7 +102,7 @@ function PlanModal({ plan, onClose, onSave, saving }: {
           <div>
             <label style={lbl}>Features <span style={{ color: 'rgba(255,255,255,0.25)', textTransform: 'none', fontSize: '10px' }}>(one per line)</span></label>
             <textarea value={form.featuresRaw} onChange={e => set('featuresRaw', e.target.value)}
-              placeholder={'75 lead credits per month\nFeatured school badge\nTop placement in search'}
+              placeholder={'75 lead credits included\nFeatured school badge\nTop placement in search'}
               style={textarea as any} />
           </div>
 
@@ -187,7 +187,7 @@ export default function SubscriptionPlansPage() {
   const handleSave = (data: PlanForm) => {
     const payload = {
       planKey: data.planKey, name: data.name, description: data.description,
-      price: data.price, leadsPerMonth: data.leadsPerMonth,
+      price: data.price, leadCredits: data.leadCredits,
       features: (data as any).features ?? data.featuresRaw.split('\n').map((s: string) => s.trim()).filter(Boolean),
       isHot: data.isHot, cta: data.cta, sortOrder: data.sortOrder, isActive: data.isActive,
     }
@@ -239,7 +239,7 @@ export default function SubscriptionPlansPage() {
                 </span>
               </div>
               <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginBottom: '4px', fontFamily: 'DM Sans,sans-serif' }}>
-                {plan.leadsPerMonth === -1 ? 'Unlimited leads/mo' : `${plan.leadsPerMonth} leads/mo`}
+                {plan.leadCredits === -1 ? 'Unlimited credits' : `${plan.leadCredits} lead credits`}
               </div>
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
                 {plan.features.length} features · sort #{plan.sortOrder}

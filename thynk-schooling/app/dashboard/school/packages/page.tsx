@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 
 type GatewayId = 'razorpay' | 'cashfree' | 'easebuzz' | 'paypal'
 interface Gateway  { id: string; name: string; priority: number }
-interface LeadPkg  { id: string; name: string; description?: string; leadCredits: number; price: number; validityDays: number }
+interface LeadPkg  { id: string; name: string; description?: string; leadCredits: number; price: number; leadCredits: number }
 
 const GW: Record<string, { emoji: string; color: string; desc: string }> = {
   razorpay: { emoji: '💙', color: '#3395FF', desc: 'UPI · Cards · Netbanking · Wallets' },
@@ -53,7 +53,7 @@ function GatewayModal({ gateways, pkg, onClose, onPay }: { gateways: Gateway[]; 
           })}
         </div>
         <p style={{ fontFamily:'Inter,sans-serif',fontSize:10,color:'#A0ADB8',textAlign:'center',marginTop:16 }}>🔒 Secure · Credits added instantly after payment</p>
-      </motion.div>
+      <tion.div>
     </div>
   )
 }
@@ -203,7 +203,7 @@ export default function LeadPackagesPage() {
             {packages.map((pkg, i) => {
               const hot = i === 1
               const pricePerLead = Math.round(pkg.price / pkg.leadCredits / 100)
-              const features = [`${pkg.leadCredits} lead credits`, `Valid for ${pkg.validityDays} days`, 'Pool with subscription credits', 'Use anytime — no expiry rush']
+              const features = [`${pkg.leadCredits} lead credits`, `Valid for ${pkg.leadCredits} days`, 'Pool with subscription credits', 'Use anytime — no expiry rush']
               return (
                 <motion.div key={pkg.id}
                   initial={{ opacity:0,y:24 }} animate={{ opacity:1,y:0 }} transition={{ delay:i*0.08 }}
@@ -242,7 +242,7 @@ export default function LeadPackagesPage() {
                       ? <Loader2 style={{ width:16,height:16,animation:'spin 1s linear infinite' }} />
                       : <><CreditCard style={{ width:15,height:15 }} /> Buy Package →</>}
                   </button>
-                </motion.div>
+                <tion.div>
               )
             })}
           </div>
