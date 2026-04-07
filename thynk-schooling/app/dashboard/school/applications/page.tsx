@@ -26,7 +26,7 @@ export default function SchoolApplicationsPage() {
   useEffect(() => {
     if (!mounted) return
     if (!accessToken || !user) { router.replace('/login'); return }
-     fetch('/api/schools?action=applications', {
+     fetch('/api/school-portal?action=applications', {
   credentials: 'include',
    headers: authHeaders(),
  })
