@@ -12,6 +12,7 @@ function getUserId(req: NextRequest): string | null {
     const token =
       req.headers.get('authorization')?.replace('Bearer ', '') ||
       req.cookies.get('ts_access_token')?.value ||
+      req.headers.get('authorization')?.replace('Bearer ', '')
       ''
     if (!token) return null
     const p = jwt.verify(token, process.env.JWT_SECRET!, { ignoreExpiration: true }) as any
