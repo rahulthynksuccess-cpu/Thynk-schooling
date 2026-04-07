@@ -143,7 +143,31 @@ async function patchLead(req: NextRequest) {
   if (!result.rows.length) return NextResponse.json({ error: 'Lead not found or does not belong to your school' }, { status: 404 })
   return NextResponse.json({ success: true, lead: result.rows[0] })
 }
+async function getApplications(req: NextRequest) {
+  const userId = getUserId(req)
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const school = await db.query(
+    'SELECT id FROM schools WHERE admin_user_id=$1',
+    [userId]
+  )
+
+  if (!school.rows.length) {
+    return NextResponse.json({ data: [], total: 0 })
+  }
+
+  const schoolId = school.rows[0].id
+
+  const result = await db.query(
+    `SELECT * FROM applications WHERE school_id=$1 ORDER BY created_at DESC`,
+    [schoolId]
+  )
+
+  return NextResponse.json({
+    data: result.rows,
+    total: result.rows.length,
+  })
+}
 // ─── router ───────────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
