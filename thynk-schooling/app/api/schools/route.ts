@@ -443,9 +443,6 @@ async function getDashboardStats(req: NextRequest) {
     db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
   ])
 
-  const pcRow = await db.query('SELECT profile_completed FROM schools WHERE id=$1', [sid]).catch(() => ({ rows: [{}] }))
-  const profileCompleteness = pcRow.rows[0]?.profile_completed === true ? 100 : 0
-
   return NextResponse.json({
     totalLeads: Number(leads.rows[0].count),
     newLeadsThisMonth: Number(newLeads.rows[0].count),
