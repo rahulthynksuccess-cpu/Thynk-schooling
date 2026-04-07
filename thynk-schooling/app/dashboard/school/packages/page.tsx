@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 
 type GatewayId = 'razorpay' | 'cashfree' | 'easebuzz' | 'paypal'
 interface Gateway  { id: string; name: string; priority: number }
-interface LeadPkg  { id: string; name: string; description?: string; leadCredits: number; price: number; leadCredits: number }
+interface LeadPkg  { id: string; name: string; description?: string; leadCredits: number; price: number }
 
 const GW: Record<string, { emoji: string; color: string; desc: string }> = {
   razorpay: { emoji: '💙', color: '#3395FF', desc: 'UPI · Cards · Netbanking · Wallets' },
@@ -53,7 +53,7 @@ function GatewayModal({ gateways, pkg, onClose, onPay }: { gateways: Gateway[]; 
           })}
         </div>
         <p style={{ fontFamily:'Inter,sans-serif',fontSize:10,color:'#A0ADB8',textAlign:'center',marginTop:16 }}>🔒 Secure · Credits added instantly after payment</p>
-      <tion.div>
+      </motion.div>
     </div>
   )
 }
@@ -242,7 +242,7 @@ export default function LeadPackagesPage() {
                       ? <Loader2 style={{ width:16,height:16,animation:'spin 1s linear infinite' }} />
                       : <><CreditCard style={{ width:15,height:15 }} /> Buy Package →</>}
                   </button>
-                <tion.div>
+                </motion.div>
               )
             })}
           </div>
