@@ -46,6 +46,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
       const prev = JSON.parse(localStorage.getItem('ts-auth') || '{}')
       localStorage.setItem('ts-auth', JSON.stringify({ ...prev, accessToken: token }))
       localStorage.setItem('ts_access_token', token)
+document.cookie = `ts_access_token=${token}; path=/`
     } catch (_) {}
   },
 
