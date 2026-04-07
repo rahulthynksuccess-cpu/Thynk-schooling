@@ -25,7 +25,11 @@ export default function SchoolApplicationsPage() {
   useEffect(() => {
     if (!mounted) return
     if (!accessToken || !user) { router.replace('/login'); return }
-    fetch('/api/schools?action=applications', { credentials: 'include' })
+    import { authHeaders } from '@/utils/authHeaders'
+    fetch('/api/schools?action=applications', {
+  credentials: 'include',
+   headers: authHeaders(),
+ })
       .then(r => r.json())
       .then(d => setApps(Array.isArray(d) ? d : d.data || d.applications || []))
       .catch(() => {})
