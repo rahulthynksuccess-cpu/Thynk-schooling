@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 type GatewayId = 'razorpay' | 'cashfree' | 'easebuzz' | 'paypal'
 interface Gateway  { id: string; name: string; priority: number }
@@ -20,7 +20,14 @@ const GW: Record<string, { emoji: string; color: string; desc: string }> = {
   paypal:   { emoji: '🌐', color: '#003087', desc: 'International · USD/AED/SAR' },
 }
 
-declare global { interface Window { Razorpay: new (o: object) => { open: () => void }; Cashfree: any } }
+declare global {
+  interface Window {
+    Razorpay: new (o: object) => { open: () => void }
+    Cashfree: (config: { mode: 'production' | 'sandbox' }) => {
+      checkout: (options: { paymentSessionId: string; returnUrl: string }) => void
+    }
+  }
+}
 
 function GatewayModal({ gateways, pkg, onClose, onPay }: { gateways: Gateway[]; pkg: LeadPkg; onClose: () => void; onPay: (g: GatewayId) => void }) {
   return (
@@ -61,12 +68,47 @@ function GatewayModal({ gateways, pkg, onClose, onPay }: { gateways: Gateway[]; 
 export default function LeadPackagesPage() {
   const { accessToken, user } = useAuthStore()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mounted, setMounted] = useState(false)
   const [selectedPkg, setSelectedPkg] = useState<LeadPkg | null>(null)
   const [payingId, setPayingId] = useState<string | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => { if (mounted && !accessToken) router.replace('/login') }, [mounted, accessToken, router])
+
+  // ── Handle Cashfree / Easebuzz return redirect ──────────────────────────────
+  useEffect(() => {
+    if (!mounted || !accessToken) return
+    const gateway = searchParams.get('gateway')
+    const orderId  = searchParams.get('order_id')
+    const status   = searchParams.get('status')
+
+    if (status === 'failed') {
+      toast.error('Payment failed or was cancelled.')
+      router.replace('/dashboard/school/packages')
+      return
+    }
+
+    if (gateway === 'cashfree' && orderId) {
+      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (accessToken) authHeaders['Authorization'] = `Bearer ${accessToken}`
+      fetch('/api/lead-packages?action=verify-payment', {
+        method: 'POST', credentials: 'include', headers: authHeaders,
+        body: JSON.stringify({ gateway: 'cashfree', orderId, cfOrderId: orderId }),
+      })
+        .then(r => r.json())
+        .then(res => {
+          if (res.success) {
+            toast.success(`✅ Payment successful! ${res.creditsAdded} credits added.`)
+            window.dispatchEvent(new Event('creditsUpdated'))
+          } else {
+            toast.error(res.error || 'Payment verification failed')
+          }
+        })
+        .catch(() => toast.error('Could not verify Cashfree payment'))
+        .finally(() => router.replace('/dashboard/school/packages'))
+    }
+  }, [mounted, accessToken, searchParams, router])
 
   const { data, isLoading } = useQuery<{ packages: LeadPkg[]; gateways: Gateway[] }>({
     queryKey: ['lead-packages'],
@@ -81,8 +123,8 @@ export default function LeadPackagesPage() {
     enabled: !!accessToken && mounted,
   })
 
-  const packages = data?.packages ?? []
-  const gateways = data?.gateways ?? []
+  const packages  = data?.packages ?? []
+  const gateways  = data?.gateways ?? []
   const availableCredits = credits?.availableCredits ?? credits?.credits ?? 0
 
   const handlePay = async (pkg: LeadPkg, gatewayId: GatewayId) => {
@@ -98,29 +140,60 @@ export default function LeadPackagesPage() {
       const order = await orderRes.json()
       if (!orderRes.ok) throw new Error(order.error || 'Order creation failed')
 
+      // Dev / demo mode — credits already added
       if (order._dev || order.success) {
         toast.success(`✅ ${pkg.leadCredits} credits added successfully!`)
         setPayingId(null)
-        // refresh credits
         window.dispatchEvent(new Event('creditsUpdated'))
         return
       }
 
+      // ── Razorpay ────────────────────────────────────────────────────────────
       if (gatewayId === 'razorpay') {
         const { clientPayload: cp } = order
         await new Promise<void>((resolve, reject) => {
-          const rzp = new window.Razorpay({ key: cp.key, amount: cp.amount, currency: cp.currency, order_id: cp.orderId, name: 'Thynk Schooling', description: `${pkg.name} — ${pkg.leadCredits} credits`, theme: { color: '#B8860B' },
+          const rzp = new window.Razorpay({
+            key: cp.key, amount: cp.amount, currency: cp.currency, order_id: cp.orderId,
+            name: 'Thynk Schooling', description: `${pkg.name} — ${pkg.leadCredits} credits`,
+            theme: { color: '#B8860B' },
             handler: async (resp: any) => {
-              await fetch('/api/lead-packages?action=verify-payment', { method:'POST', credentials:'include', headers: authHeaders, body: JSON.stringify({ gateway:'razorpay', ...resp }) })
+              await fetch('/api/lead-packages?action=verify-payment', {
+                method: 'POST', credentials: 'include', headers: authHeaders,
+                body: JSON.stringify({ gateway: 'razorpay', ...resp }),
+              })
               resolve()
-            }, modal: { ondismiss: () => reject(new Error('Payment cancelled')) }
+            },
+            modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
           })
           rzp.open()
         })
         toast.success('Payment successful! Credits added.')
+        window.dispatchEvent(new Event('creditsUpdated'))
+
+      // ── Cashfree ────────────────────────────────────────────────────────────
+      } else if (gatewayId === 'cashfree') {
+        const { sessionId, orderId, mode } = order.clientPayload
+        if (!sessionId) throw new Error('Cashfree session ID missing — check gateway config')
+        const cashfree = window.Cashfree({ mode: mode === 'live' ? 'production' : 'sandbox' })
+        cashfree.checkout({
+          paymentSessionId: sessionId,
+          returnUrl: `${window.location.origin}/dashboard/school/packages?order_id=${orderId}&gateway=cashfree`,
+        })
+        // page will redirect — no toast here, handled in useEffect on return
+
+      // ── Easebuzz ────────────────────────────────────────────────────────────
+      } else if (gatewayId === 'easebuzz') {
+        const { accessKey, baseUrl } = order.clientPayload
+        if (!accessKey) throw new Error('Easebuzz access key missing — check gateway config')
+        // Redirect to Easebuzz hosted checkout page
+        window.location.href = `${baseUrl}/pay/?access_key=${accessKey}`
+        // page will redirect — verification happens via surl POST callback
+
+      // ── PayPal ──────────────────────────────────────────────────────────────
       } else if (gatewayId === 'paypal') {
         if (order.clientPayload?.approveUrl) window.location.href = order.clientPayload.approveUrl
       }
+
     } catch (err: any) {
       if (err?.message !== 'Payment cancelled') toast.error(err?.message || 'Payment failed')
     }
@@ -129,7 +202,6 @@ export default function LeadPackagesPage() {
 
   if (!mounted) return null
 
-  // ─── Premium Pricing Table (matches design in image 2) ───────────────────────
   const S = {
     page:    { minHeight:'100vh', background:'linear-gradient(160deg,#FDFAF5 0%,#F5EDD8 60%,#EEE0C0 100%)', padding:'40px 20px', fontFamily:'Inter,sans-serif' },
     back:    { display:'inline-flex',alignItems:'center',gap:8,color:'#6B5744',textDecoration:'none',fontSize:13,fontWeight:600,marginBottom:32,padding:'8px 14px',borderRadius:9,background:'rgba(184,134,11,0.08)',border:'1px solid rgba(184,134,11,0.15)' },
@@ -168,7 +240,9 @@ export default function LeadPackagesPage() {
 
   return (
     <div style={S.page}>
+      {/* Payment SDK scripts */}
       {gateways.some(g => g.id === 'razorpay') && <script src="https://checkout.razorpay.com/v1/checkout.js" async />}
+      {gateways.some(g => g.id === 'cashfree') && <script src="https://sdk.cashfree.com/js/v3/cashfree.js" async />}
 
       <div style={{ maxWidth:1000,margin:'0 auto' }}>
         <Link href="/dashboard/school" style={S.back}><ArrowLeft style={{ width:14,height:14 }} /> Back to Dashboard</Link>
@@ -233,7 +307,7 @@ export default function LeadPackagesPage() {
                   <button
                     onClick={() => {
                       if (!accessToken) { toast.error('Please log in first'); router.push('/login'); return }
-                      if (gateways.length === 0) { handlePay(pkg, 'razorpay') } // dev mode - no gateway needed
+                      if (gateways.length === 0) { handlePay(pkg, 'razorpay') }
                       else if (gateways.length === 1) { handlePay(pkg, gateways[0].id as GatewayId) }
                       else { setSelectedPkg(pkg) }
                     }}
