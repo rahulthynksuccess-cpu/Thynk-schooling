@@ -77,12 +77,12 @@ function PlanModal({ plan, onClose, onSave, saving }: {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             <div>
-              <label style={lbl}>Price (₹/mo)</label>
+              <label style={lbl}>Price (in Paise) <span style={{ color: 'rgba(255,255,255,0.25)', textTransform: 'none', fontSize: '10px' }}>e.g. 135000 = ₹1,350</span></label>
               <input type="number" min="0" value={form.price}
                 onChange={e => set('price', Number(e.target.value))} style={inp} />
             </div>
             <div>
-              <label style={lbl}>Leads/month <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px' }}>(-1 = unlimited)</span></label>
+              <label style={lbl}>Credits/month <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px' }}>(-1 = unlimited)</span></label>
               <input type="number" min="-1" value={form.leadCredits}
                 onChange={e => set('leadCredits', Number(e.target.value))} style={inp} />
             </div>
