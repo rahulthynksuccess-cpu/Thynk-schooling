@@ -222,24 +222,29 @@ export function SchoolDashboardClient() {
 
   const enabled = !!accessToken && mounted
 
+  const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+  })
+
   const { data: stats, isLoading: statsLoading } = useQuery<any>({
     queryKey: ['school-dashboard-stats'],
-    queryFn: () => fetch('/api/schools?action=dashboard-stats', { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/schools?action=dashboard-stats', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
     enabled, staleTime: 2 * 60 * 1000,
   })
   const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({
     queryKey: ['school-leads'],
-    queryFn: () => fetch('/api/leads?limit=8', { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/leads?limit=8', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
     enabled, staleTime: 60 * 1000,
   })
   const { data: credits } = useQuery<LeadCredits>({
     queryKey: ['lead-credits'],
-    queryFn: () => fetch('/api/lead-credits', { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/lead-credits', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
     enabled, staleTime: 60 * 1000,
   })
   const { data: analyticsRaw } = useQuery<any>({
     queryKey: ['school-analytics'],
-    queryFn: () => fetch('/api/schools?action=analytics&days=30', { credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/schools?action=analytics&days=30', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
     enabled, staleTime: 5 * 60 * 1000,
   })
 
@@ -260,7 +265,7 @@ export function SchoolDashboardClient() {
   const buyMutation = useMutation({
     mutationFn: async (leadId: string) => {
       setBuyingId(leadId)
-      const r = await fetch(`/api/leads?id=${leadId}&action=purchase`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } })
+      const r = await fetch(`/api/leads?id=${leadId}&action=purchase`, { method: 'POST', credentials: 'include', headers: authHeaders() })
       return r.json()
     },
     onSuccess: () => {
