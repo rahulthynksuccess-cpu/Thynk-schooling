@@ -8,14 +8,13 @@ import {
   LayoutDashboard, Users, FileText, Star, Zap,
   ShoppingCart, Package, Settings, ChevronRight,
   BarChart3, GraduationCap, LogOut, Menu, X,
-  ArrowUpRight, CheckCircle2, Clock,
-  Loader2, MapPin, Sparkles, Phone, Flame,
-  ArrowUp, ArrowDown, LayoutGrid, TrendingUp
+  ArrowUpRight, CheckCircle2, Clock, Loader2,
+  MapPin, Sparkles, Phone, Flame, ArrowUp,
+  ArrowDown, LayoutGrid, TrendingUp, Bell
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  PieChart, Pie, Cell,
 } from 'recharts'
 import { useAuthStore } from '@/store/authStore'
 import { Lead, LeadCredits, SchoolDashboardStats } from '@/types'
@@ -33,203 +32,171 @@ const NAV = [
   { icon: Settings,        label: 'School Profile',    href: '/school/complete-profile',       badge: null },
 ]
 
-function AnimatedNumber({ value }: { value: number }) {
-  const [displayed, setDisplayed] = useState(0)
+// Animated counter
+function Counter({ value }: { value: number }) {
+  const [n, setN] = useState(0)
   useEffect(() => {
-    if (value === 0) { setDisplayed(0); return }
-    const start = 0; const end = value; const duration = 1200
-    const startTime = performance.now()
-    const step = (now: number) => {
-      const p = Math.min((now - startTime) / duration, 1)
-      const eased = 1 - Math.pow(1 - p, 3)
-      setDisplayed(Math.round(start + (end - start) * eased))
-      if (p < 1) requestAnimationFrame(step)
+    if (!value) { setN(0); return }
+    const dur = 1000, start = performance.now()
+    const tick = (now: number) => {
+      const p = Math.min((now - start) / dur, 1)
+      setN(Math.round(value * (1 - Math.pow(1 - p, 3))))
+      if (p < 1) requestAnimationFrame(tick)
     }
-    requestAnimationFrame(step)
+    requestAnimationFrame(tick)
   }, [value])
-  return <>{displayed.toLocaleString('en-IN')}</>
+  return <>{n.toLocaleString('en-IN')}</>
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+function Sidebar({ active, onClose, credits }: { active: string; onClose?: () => void; credits?: LeadCredits }) {
+  const { user, logout } = useAuthStore()
+  const router = useRouter()
+  const avail = Number(credits?.availableCredits) || Number((credits as any)?.credits) || 0
+  return (
+    <aside className="sd-sidebar">
+      <div className="sd-sb-top">
+        <Link href="/" className="sd-brand">
+          <div className="sd-brand-icon"><GraduationCap size={17} color="#fff" /></div>
+          <div>
+            <div className="sd-brand-name">Thynk<span>Schooling</span></div>
+            <div className="sd-brand-tag">School Portal</div>
+          </div>
+        </Link>
+        {onClose && <button onClick={onClose} className="sd-close-btn"><X size={14} /></button>}
+      </div>
+
+      <div className="sd-user">
+        <div className="sd-avatar">{(user?.fullName || 'S')[0].toUpperCase()}</div>
+        <div>
+          <div className="sd-uname">{user?.fullName || 'School Admin'}</div>
+          <div className="sd-urole"><span className="sd-dot" />Administrator</div>
+        </div>
+      </div>
+
+      <div className="sd-credit-pill">
+        <Zap size={12} color="#F59E0B" />
+        <span className="sd-cp-label">Lead Credits</span>
+        <span className="sd-cp-val">{avail}</span>
+      </div>
+
+      <nav className="sd-nav">
+        {NAV.map(({ icon: Icon, label, href, badge }) => {
+          const active_ = active === href
+          return (
+            <Link key={href} href={href} className={`sd-nav-item${active_ ? ' sd-nav-active' : ''}`}>
+              <div className="sd-nav-icon"><Icon size={14} /></div>
+              <span>{label}</span>
+              {badge === 'new' && <span className="sd-new-badge">New</span>}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <button onClick={() => { logout(); router.replace('/login') }} className="sd-logout">
+        <LogOut size={13} /><span>Sign Out</span>
+      </button>
+    </aside>
+  )
+}
+
+// Multicolour stat cards
+const STAT_THEMES = [
+  { gradient: 'linear-gradient(135deg,#667eea 0%,#764ba2 100%)', shadow: 'rgba(102,126,234,0.45)', light: 'rgba(255,255,255,0.18)' },
+  { gradient: 'linear-gradient(135deg,#f093fb 0%,#f5576c 100%)', shadow: 'rgba(245,87,108,0.45)', light: 'rgba(255,255,255,0.18)' },
+  { gradient: 'linear-gradient(135deg,#4facfe 0%,#00f2fe 100%)', shadow: 'rgba(79,172,254,0.45)', light: 'rgba(255,255,255,0.18)' },
+  { gradient: 'linear-gradient(135deg,#43e97b 0%,#38f9d7 100%)', shadow: 'rgba(67,233,123,0.45)', light: 'rgba(255,255,255,0.18)' },
+]
+
+function StatCard({ icon: Icon, label, value, sub, trend, trendVal, href, themeIdx, delay = 0, loading }: any) {
+  const t = STAT_THEMES[themeIdx % STAT_THEMES.length]
+  const card = (
+    <motion.div className="sd-stat"
+      style={{ background: t.gradient, boxShadow: `0 12px 40px ${t.shadow}` } as any}
+      initial={{ opacity: 0, y: 32, scale: 0.92 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.55, delay, ease: [0.22, 1, 0.36, 1] }}
+      whileHover={{ y: -6, boxShadow: `0 20px 56px ${t.shadow}` }}
+    >
+      {/* shine overlay */}
+      <div className="sd-stat-shine" />
+      <div className="sd-stat-row1">
+        <div className="sd-stat-icon" style={{ background: t.light }}><Icon size={17} color="#fff" /></div>
+        {trend && (
+          <div className={`sd-stat-trend ${trend === 'up' ? 'sd-trend-up' : 'sd-trend-dn'}`}>
+            {trend === 'up' ? <ArrowUp size={9} /> : <ArrowDown size={9} />} {trendVal}
+          </div>
+        )}
+      </div>
+      {loading
+        ? <div className="sd-stat-skel" />
+        : <div className="sd-stat-val">{typeof value === 'number' ? <Counter value={value} /> : value}</div>
+      }
+      <div className="sd-stat-label">{label}</div>
+      {sub && <div className="sd-stat-sub">{sub}</div>}
+    </motion.div>
+  )
+  return href ? <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>{card}</Link> : card
+}
+
+const TOOLTIP = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null
   return (
-    <div className="chart-tooltip">
-      <div className="tooltip-label">{label}</div>
+    <div className="sd-tooltip">
+      <div className="sd-tt-label">{label}</div>
       {payload.map((p: any) => (
-        <div key={p.dataKey} className="tooltip-row">
-          <span className="tooltip-dot" style={{ background: p.color }} />
-          <span className="tooltip-name">{p.name}</span>
-          <span className="tooltip-value">{p.value}</span>
+        <div key={p.dataKey} className="sd-tt-row">
+          <span className="sd-tt-dot" style={{ background: p.color }} />
+          <span className="sd-tt-name">{p.name}</span>
+          <span className="sd-tt-val">{p.value}</span>
         </div>
       ))}
     </div>
   )
 }
 
-function Sidebar({ active, onClose, credits }: { active: string; onClose?: () => void; credits?: LeadCredits }) {
-  const { user, logout } = useAuthStore()
-  const router = useRouter()
-  return (
-    <aside className="dash-sidebar">
-      <div className="sidebar-header">
-        <Link href="/" className="sidebar-brand">
-          <div className="brand-icon"><GraduationCap size={18} color="#fff" /></div>
-          <div>
-            <div className="brand-name">Thynk<span>Schooling</span></div>
-            <div className="brand-tag">School Portal</div>
-          </div>
-        </Link>
-        {onClose && <button onClick={onClose} className="sidebar-close"><X size={15} /></button>}
-      </div>
-
-      <div className="sidebar-user">
-        <div className="user-avatar-wrap">
-          <div className="user-avatar">{(user?.fullName || user?.phone || 'S')[0].toUpperCase()}</div>
-          <div className="user-avatar-ring" />
-        </div>
-        <div className="user-info">
-          <div className="user-name">{user?.fullName || 'School Admin'}</div>
-          <div className="user-role"><span className="role-dot" />Administrator</div>
-        </div>
-      </div>
-
-      {credits && (
-        <div className="sidebar-credits">
-          <div className="credits-left">
-            <Zap size={13} color="#F59E0B" />
-            <span className="credits-label">Lead Credits</span>
-          </div>
-          <span className="credits-badge">{Number(credits?.availableCredits) || 0}</span>
-        </div>
-      )}
-
-      <nav className="sidebar-nav">
-        {NAV.map(({ icon: Icon, label, href, badge }) => {
-          const isActive = active === href
-          return (
-            <Link key={href} href={href} className={`nav-item${isActive ? ' nav-active' : ''}`}>
-              <div className="nav-icon-wrap"><Icon size={15} /></div>
-              <span className="nav-label">{label}</span>
-              {badge === 'new' && <span className="nav-badge">New</span>}
-              {isActive && <ChevronRight size={12} className="nav-chevron" />}
-            </Link>
-          )
-        })}
-      </nav>
-
-      <div className="sidebar-footer">
-        <button onClick={() => { logout(); router.replace('/login') }} className="logout-btn">
-          <LogOut size={14} /><span>Sign Out</span>
-        </button>
-      </div>
-    </aside>
-  )
-}
-
-function StatCard({ icon: Icon, label, value, sub, color, href, trend, trendVal, delay = 0 }: any) {
-  const isUp = trend === 'up'
-  const inner = (
-    <motion.div className="stat-card" style={{ '--card-color': color } as any}
-      initial={{ opacity: 0, y: 28, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ y: -6, transition: { duration: 0.2 } }}
-    >
-      <div className="stat-noise" />
-      <div className="stat-glow" />
-      <div className="stat-top">
-        <div className="stat-icon-wrap" style={{ background: `${color}16`, border: `1px solid ${color}28` }}>
-          <Icon size={17} color={color} />
-        </div>
-        {trend && (
-          <div className={`stat-trend trend-${isUp ? 'up' : 'down'}`}>
-            {isUp ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-            {trendVal}
-          </div>
-        )}
-      </div>
-      <div className="stat-value">
-        {typeof value === 'number' ? <AnimatedNumber value={value} /> : value}
-      </div>
-      <div className="stat-label">{label}</div>
-      {sub && <div className="stat-sub">{sub}</div>}
-      <div className="stat-bar" style={{ background: color }} />
-    </motion.div>
-  )
-  if (href) return <Link href={href} style={{ textDecoration: 'none', display: 'block' }}>{inner}</Link>
-  return inner
-}
-
-function CreditRing({ credits }: { credits: LeadCredits }) {
-  const avail = Math.max(Number(credits?.availableCredits) || 0, 0)
-  const used = Number(credits?.usedCredits) || 0
-  const data = [
-    { name: 'Used',      value: used || (avail === 0 ? 1 : 0), fill: '#E5E7EB' },
-    { name: 'Available', value: avail,                          fill: '#F59E0B' },
-  ]
-  return (
-    <div className="credit-ring-wrap">
-      <ResponsiveContainer width={150} height={150}>
-        <PieChart>
-          <Pie data={data} cx={70} cy={70} innerRadius={50} outerRadius={65}
-            dataKey="value" startAngle={90} endAngle={-270} strokeWidth={0}>
-            {data.map((d, i) => <Cell key={i} fill={d.fill} />)}
-          </Pie>
-        </PieChart>
-      </ResponsiveContainer>
-      <div className="credit-ring-center">
-        <div className="credit-ring-val"><AnimatedNumber value={avail} /></div>
-        <div className="credit-ring-sub">credits left</div>
-      </div>
-    </div>
-  )
-}
-
 function LeadRow({ lead, onBuy, buying, index }: { lead: Lead; onBuy: (id: string) => void; buying: boolean; index: number }) {
-  const statusConfig: Record<string, { color: string; bg: string; label: string }> = {
-    new:            { color: '#10B981', bg: 'rgba(16,185,129,0.1)',  label: 'New' },
-    contacted:      { color: '#3B82F6', bg: 'rgba(59,130,246,0.1)', label: 'Contacted' },
-    interested:     { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', label: 'Interested' },
-    not_interested: { color: '#6B7280', bg: 'rgba(107,114,128,0.1)',label: 'Not Interested' },
-    admitted:       { color: '#8B5CF6', bg: 'rgba(139,92,246,0.1)', label: 'Admitted' },
-    lost:           { color: '#EF4444', bg: 'rgba(239,68,68,0.1)',  label: 'Lost' },
+  const STATUS: Record<string, [string, string]> = {
+    new:            ['#6366F1', 'rgba(99,102,241,0.1)'],
+    contacted:      ['#3B82F6', 'rgba(59,130,246,0.1)'],
+    interested:     ['#F59E0B', 'rgba(245,158,11,0.1)'],
+    not_interested: ['#94A3B8', 'rgba(148,163,184,0.1)'],
+    admitted:       ['#10B981', 'rgba(16,185,129,0.1)'],
+    lost:           ['#EF4444', 'rgba(239,68,68,0.1)'],
   }
-  const st = statusConfig[lead.status] || statusConfig.new
+  const [color, bg] = STATUS[lead.status] || STATUS.new
   return (
-    <motion.tr className="lead-row"
-      initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.04 }}
-    >
-      <td className="lead-td lead-td-first">
-        <div className="lead-avatar">{(lead.isPurchased ? lead.fullName : lead.maskedName || '?')[0]}</div>
+    <motion.tr className="sd-lead-row"
+      initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: index * 0.04 }}>
+      <td className="sd-td sd-td-first">
+        <div className="sd-lead-av">{(lead.isPurchased ? lead.fullName : lead.maskedName || '?')[0]}</div>
         <div>
-          <div className="lead-name">{lead.isPurchased ? lead.fullName : lead.maskedName}</div>
-          <div className="lead-meta">{lead.childName} · Class {lead.classApplyingFor}</div>
+          <div className="sd-lead-name">{lead.isPurchased ? lead.fullName : lead.maskedName}</div>
+          <div className="sd-lead-meta">{lead.childName}{lead.classApplyingFor ? ` · Class ${lead.classApplyingFor}` : ''}</div>
         </div>
       </td>
-      <td className="lead-td">
-        <div className="lead-phone" style={{ opacity: lead.isPurchased ? 1 : 0.4 }}>
-          <Phone size={11} color="#9CA3AF" />
-          {lead.isPurchased ? lead.fullPhone : lead.maskedPhone}
-        </div>
-      </td>
-      <td className="lead-td">
-        <div className="lead-city"><MapPin size={11} color="#F59E0B" />{lead.city}</div>
-      </td>
-      <td className="lead-td">
-        <span className="status-chip" style={{ color: st.color, background: st.bg }}>
-          <span className="status-dot" style={{ background: st.color }} />{st.label}
+      <td className="sd-td">
+        <span className="sd-lead-phone" style={{ opacity: lead.isPurchased ? 1 : 0.4 }}>
+          <Phone size={10} color="#94A3B8" /> {lead.isPurchased ? lead.fullPhone : lead.maskedPhone}
         </span>
       </td>
-      <td className="lead-td lead-td-action">
-        {lead.isPurchased ? (
-          <span className="unlocked-chip"><CheckCircle2 size={11} /> Unlocked</span>
-        ) : (
-          <motion.button onClick={() => onBuy(lead.id)} disabled={buying} className="buy-btn"
-            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
-            {buying ? <Loader2 size={12} className="spin" /> : <ShoppingCart size={12} />}
-            Unlock Lead
-          </motion.button>
-        )}
+      <td className="sd-td">
+        <span className="sd-lead-city"><MapPin size={10} color="#F59E0B" /> {lead.city || '—'}</span>
+      </td>
+      <td className="sd-td">
+        <span className="sd-chip" style={{ color, background: bg }}>
+          <span className="sd-chip-dot" style={{ background: color }} />
+          {(lead.status || 'new').replace(/_/g, ' ')}
+        </span>
+      </td>
+      <td className="sd-td sd-td-r">
+        {lead.isPurchased
+          ? <span className="sd-unlocked"><CheckCircle2 size={11} /> Unlocked</span>
+          : <motion.button onClick={() => onBuy(lead.id)} disabled={buying} className="sd-buy-btn"
+              whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+              {buying ? <Loader2 size={11} className="sd-spin" /> : <ShoppingCart size={11} />} Unlock
+            </motion.button>
+        }
       </td>
     </motion.tr>
   )
@@ -241,7 +208,7 @@ export function SchoolDashboardClient() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [activeChart, setActiveChart] = useState<'area' | 'bar'>('area')
-  const queryClient = useQueryClient()
+  const qc = useQueryClient()
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
@@ -255,313 +222,261 @@ export function SchoolDashboardClient() {
 
   const enabled = !!accessToken && mounted
 
-  const { data: stats, isLoading: statsLoading } = useQuery<SchoolDashboardStats>({
+  const { data: stats, isLoading: statsLoading } = useQuery<any>({
     queryKey: ['school-dashboard-stats'],
-    queryFn: () => fetch('/api/schools?action=dashboard-stats', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/schools?action=dashboard-stats', { credentials: 'include' }).then(r => r.json()),
     enabled, staleTime: 2 * 60 * 1000,
   })
   const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({
-    queryKey: ['school-leads', { limit: 8 }],
-    queryFn: () => fetch('/api/leads?limit=8', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    queryKey: ['school-leads'],
+    queryFn: () => fetch('/api/leads?limit=8', { credentials: 'include' }).then(r => r.json()),
     enabled, staleTime: 60 * 1000,
   })
   const { data: credits } = useQuery<LeadCredits>({
     queryKey: ['lead-credits'],
-    queryFn: () => fetch('/api/lead-credits', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/lead-credits', { credentials: 'include' }).then(r => r.json()),
     enabled, staleTime: 60 * 1000,
   })
-  const { data: analyticsRaw } = useQuery<{ leads: any[]; applications: any[] }>({
-    queryKey: ['school-analytics-30d'],
-    queryFn: () => fetch('/api/schools?action=analytics&days=30', { cache: 'no-store', credentials: 'include' }).then(r => r.json()),
+  const { data: analyticsRaw } = useQuery<any>({
+    queryKey: ['school-analytics'],
+    queryFn: () => fetch('/api/schools?action=analytics&days=30', { credentials: 'include' }).then(r => r.json()),
     enabled, staleTime: 5 * 60 * 1000,
   })
 
   const analyticsData: AnalyticsPoint[] = (() => {
     if (!analyticsRaw) return []
     const map: Record<string, AnalyticsPoint> = {}
-    ;(analyticsRaw.leads || []).forEach(({ day, count }: any) => {
-      map[day] = { date: day, leads: Number(count), applications: 0 }
-    })
+    ;(analyticsRaw.leads || []).forEach(({ day, count }: any) => { map[day] = { date: day, leads: Number(count), applications: 0 } })
     ;(analyticsRaw.applications || []).forEach(({ day, count }: any) => {
       if (map[day]) map[day].applications = Number(count)
       else map[day] = { date: day, leads: 0, applications: Number(count) }
     })
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date)).map(d => ({
-      ...d,
-      date: new Date(d.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+      ...d, date: new Date(d.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
     }))
   })()
 
   const [buyingId, setBuyingId] = useState<string | null>(null)
-  const buyLeadMutation = useMutation({
+  const buyMutation = useMutation({
     mutationFn: async (leadId: string) => {
       setBuyingId(leadId)
-      return fetch(`/api/leads?id=${leadId}&action=purchase`, {
-        method: 'POST', credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-      }).then(r => r.json())
+      const r = await fetch(`/api/leads?id=${leadId}&action=purchase`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' } })
+      return r.json()
     },
     onSuccess: () => {
       toast.success('Lead unlocked!')
-      queryClient.invalidateQueries({ queryKey: ['school-leads'] })
-      queryClient.invalidateQueries({ queryKey: ['lead-credits'] })
+      qc.invalidateQueries({ queryKey: ['school-leads'] })
+      qc.invalidateQueries({ queryKey: ['lead-credits'] })
       setBuyingId(null)
     },
-    onError: () => { toast.error('Failed to purchase lead.'); setBuyingId(null) },
+    onError: () => { toast.error('Failed to unlock lead.'); setBuyingId(null) },
   })
 
   if (!mounted || !accessToken || !user || user.role !== 'school_admin') {
     return (
-      <div className="dash-loading">
-        <motion.div className="loading-spinner"
-          animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}>
-          <GraduationCap size={22} color="#fff" />
-        </motion.div>
-        <div className="loading-text">Loading dashboard…</div>
+      <div className="sd-loading">
+        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+          className="sd-loading-icon"><GraduationCap size={22} color="#fff" /></motion.div>
+        <span className="sd-loading-text">Loading dashboard…</span>
       </div>
     )
   }
 
-  const profilePct = stats?.profileCompletion ?? 0
   const leads = leadsData?.data || []
+  const hour = new Date().getHours()
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+  const firstName = user?.fullName?.split(' ')[0] || 'Admin'
+  const profilePct = stats?.profileCompleteness ?? 0
+  const avail = Number(credits?.availableCredits) || Number((credits as any)?.credits) || 0
+  const used  = Number(credits?.usedCredits) || 0
 
   return (
     <>
       <style>{CSS}</style>
-      <div className="dash-root">
+      <div className="sd-root">
 
         {/* Mobile overlay */}
         <AnimatePresence>
           {sidebarOpen && (
-            <motion.div className="mobile-overlay"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <div className="mobile-sidebar-wrap">
-                <Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} />
-              </div>
-              <div className="overlay-backdrop" onClick={() => setSidebarOpen(false)} />
+            <motion.div className="sd-mob-overlay" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="sd-mob-sb"><Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} /></div>
+              <div className="sd-mob-backdrop" onClick={() => setSidebarOpen(false)} />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Desktop sidebar */}
-        <div className="dash-sidebar-wrap">
-          <Sidebar active="/dashboard/school" credits={credits} />
-        </div>
+        <div className="sd-sidebar-wrap"><Sidebar active="/dashboard/school" credits={credits} /></div>
 
-        {/* Main */}
-        <main className="dash-main">
+        <main className="sd-main">
           {/* Mobile topbar */}
-          <div className="mobile-topbar">
-            <button className="mobile-menu-btn" onClick={() => setSidebarOpen(true)}><Menu size={19} /></button>
-            <div className="mobile-brand">ThynkSchooling</div>
+          <div className="sd-topbar">
+            <button className="sd-ham" onClick={() => setSidebarOpen(true)}><Menu size={18} /></button>
+            <span className="sd-topbar-brand">ThynkSchooling</span>
+            <Bell size={16} color="rgba(255,255,255,0.5)" />
           </div>
 
-          <div className="dash-content">
+          <div className="sd-content">
 
-            {/* ── Page Header ── */}
-            <motion.div className="page-header"
-              initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}>
+            {/* ── Header ── */}
+            <motion.div className="sd-header" initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
               <div>
-                <h1 className="page-title">
-                  Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},
-                  <span className="page-title-name"> {user?.fullName?.split(' ')[0] || 'Admin'}</span> 👋
-                </h1>
-                <p className="page-sub">Here's what's happening with your school today</p>
+                <h1 className="sd-h1">{greeting}, <span className="sd-h1-name">{firstName}</span> 👋</h1>
+                <p className="sd-h1-sub">Here's what's happening with your school today</p>
               </div>
-              <div className="header-meta">
-                <div className="header-date">
-                  <Clock size={13} />
-                  {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}
-                </div>
+              <div className="sd-header-right">
+                <div className="sd-date-chip"><Clock size={12} />{new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}</div>
               </div>
             </motion.div>
 
-            {/* ── Profile Completion Banner ── */}
+            {/* ── Profile banner ── */}
             {profilePct < 100 && (
-              <motion.div className="profile-banner"
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}>
-                <div className="banner-shimmer" />
-                <div className="banner-left">
-                  <div className="banner-icon"><Sparkles size={18} color="#F59E0B" /></div>
+              <motion.div className="sd-banner" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+                <div className="sd-banner-shine" />
+                <div className="sd-banner-left">
+                  <div className="sd-banner-icon"><Sparkles size={17} color="#F59E0B" /></div>
                   <div>
-                    <div className="banner-title">Complete your school profile to attract more parents</div>
-                    <div className="banner-progress-wrap">
-                      <div className="banner-progress-bar">
-                        <motion.div className="banner-progress-fill"
-                          initial={{ width: 0 }} animate={{ width: `${profilePct}%` }}
-                          transition={{ delay: 0.4, duration: 0.8, ease: 'easeOut' }} />
+                    <div className="sd-banner-title">Complete your school profile to attract more parents</div>
+                    <div className="sd-banner-bar-row">
+                      <div className="sd-banner-track">
+                        <motion.div className="sd-banner-fill" initial={{ width: 0 }} animate={{ width: `${profilePct}%` }} transition={{ delay: 0.4, duration: 0.9, ease: 'easeOut' }} />
                       </div>
-                      <span className="banner-pct">{profilePct}% complete</span>
+                      <span className="sd-banner-pct">{profilePct}% complete</span>
                     </div>
                   </div>
                 </div>
-                <Link href="/school/complete-profile" className="banner-cta">
-                  Complete Profile <ArrowUpRight size={13} />
-                </Link>
+                <Link href="/school/complete-profile" className="sd-banner-cta">Complete Profile <ArrowUpRight size={12} /></Link>
               </motion.div>
             )}
 
-            {/* ── Stats Grid ── */}
-            <div className="stats-grid">
-              {statsLoading ? (
-                Array.from({ length: 4 }).map((_, i) => <div key={i} className="stat-skeleton" />)
-              ) : (
-                <>
-                  <StatCard icon={Users}      label="Total Leads"       value={stats?.totalLeads ?? 0}       color="#F59E0B" sub="All time"         trend="up"   trendVal="+12%" delay={0.05} href="/dashboard/school/leads" />
-                  <StatCard icon={Flame}      label="New This Month"    value={stats?.newLeadsThisMonth ?? 0} color="#EF4444" sub="Last 30 days"     trend="up"   trendVal="+8%"  delay={0.10} />
-                  <StatCard icon={FileText}   label="Applications"      value={stats?.totalApplications ?? 0} color="#8B5CF6" sub="Received"         trend="down" trendVal="-3%"  delay={0.15} href="/dashboard/school/applications" />
-                  <StatCard icon={Star}       label="Avg Rating"        value={stats?.avgRating ? `${Number(stats.avgRating).toFixed(1)}★` : '—'} color="#10B981" sub="From reviews" delay={0.20} href="/dashboard/school/reviews" />
-                </>
-              )}
+            {/* ── 4 Stat Cards ── */}
+            <div className="sd-stats">
+              <StatCard icon={Users}    label="Total Leads"      value={stats?.totalLeads ?? 0}          sub="All time"      trend="up"   trendVal="+12%" themeIdx={0} delay={0.05} href="/dashboard/school/leads"       loading={statsLoading} />
+              <StatCard icon={Flame}    label="New This Month"   value={stats?.newLeadsThisMonth ?? 0}   sub="Last 30 days"  trend="up"   trendVal="+8%"  themeIdx={1} delay={0.10}                                       loading={statsLoading} />
+              <StatCard icon={FileText} label="Applications"     value={stats?.totalApplications ?? 0}   sub="Received"      trend="down" trendVal="-3%"  themeIdx={2} delay={0.15} href="/dashboard/school/applications" loading={statsLoading} />
+              <StatCard icon={Star}     label="Avg Rating"       value={stats?.avgRating ? `${Number(stats.avgRating).toFixed(1)}★` : '—'} sub="From reviews" themeIdx={3} delay={0.20} href="/dashboard/school/reviews"  loading={statsLoading} />
             </div>
 
-            {/* ── Charts Row ── */}
-            <div className="charts-row">
-
-              {/* Area / Bar chart */}
-              <div className="chart-card">
-                <div className="chart-header">
+            {/* ── Middle row: Chart + Credits ── */}
+            <div className="sd-mid">
+              {/* Chart card */}
+              <div className="sd-chart-card">
+                <div className="sd-card-head">
                   <div>
-                    <div className="chart-title">Performance Overview</div>
-                    <div className="chart-sub">Leads & applications over 30 days</div>
+                    <div className="sd-card-title">Performance Overview</div>
+                    <div className="sd-card-sub">Leads & applications over 30 days</div>
                   </div>
-                  <div className="chart-controls">
-                    {(['area', 'bar'] as const).map(t => (
-                      <button key={t} className={`chart-toggle${activeChart === t ? ' toggle-active' : ''}`}
-                        onClick={() => setActiveChart(t)}>
-                        {t === 'area' ? 'Area' : 'Bar'}
-                      </button>
+                  <div className="sd-chart-tabs">
+                    {(['area','bar'] as const).map(t => (
+                      <button key={t} className={`sd-tab${activeChart===t?' sd-tab-on':''}`} onClick={() => setActiveChart(t)}>{t==='area'?'Area':'Bar'}</button>
                     ))}
                   </div>
                 </div>
-                <div className="chart-legend">
-                  <div className="legend-item"><div className="legend-dot" style={{ background: '#F59E0B' }} /> Leads</div>
-                  <div className="legend-item"><div className="legend-dot" style={{ background: '#8B5CF6' }} /> Applications</div>
+                <div className="sd-chart-legend">
+                  <span className="sd-leg"><span className="sd-leg-dot" style={{ background:'#818CF8' }} />Leads</span>
+                  <span className="sd-leg"><span className="sd-leg-dot" style={{ background:'#34D399' }} />Applications</span>
                 </div>
-                {analyticsData.length === 0 ? (
-                  <div className="chart-empty">
-                    <TrendingUp size={32} color="#E5E7EB" />
-                    <p>No data yet — once parents start enquiring, your chart will appear here.</p>
-                  </div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={220}>
-                    {activeChart === 'area' ? (
-                      <AreaChart data={analyticsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="gLeads" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#F59E0B" stopOpacity={0.25} />
-                            <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
-                          </linearGradient>
-                          <linearGradient id="gApps" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#8B5CF6" stopOpacity={0.25} />
-                            <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
-                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Area type="monotone" dataKey="leads" name="Leads" stroke="#F59E0B" strokeWidth={2.5} fill="url(#gLeads)" dot={false} />
-                        <Area type="monotone" dataKey="applications" name="Applications" stroke="#8B5CF6" strokeWidth={2.5} fill="url(#gApps)" dot={false} />
-                      </AreaChart>
-                    ) : (
-                      <BarChart data={analyticsData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
-                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
-                        <YAxis tick={{ fontSize: 10, fill: '#9CA3AF' }} tickLine={false} axisLine={false} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar dataKey="leads" name="Leads" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="applications" name="Applications" fill="#8B5CF6" radius={[4, 4, 0, 0]} />
-                      </BarChart>
-                    )}
-                  </ResponsiveContainer>
-                )}
+                {analyticsData.length === 0
+                  ? <div className="sd-chart-empty"><TrendingUp size={36} color="#E2E8F0" /><p>No data yet — once parents start enquiring, your chart will appear here.</p></div>
+                  : <ResponsiveContainer width="100%" height={210}>
+                      {activeChart === 'area'
+                        ? <AreaChart data={analyticsData} margin={{ top:4, right:4, left:-20, bottom:0 }}>
+                            <defs>
+                              <linearGradient id="gl" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#818CF8" stopOpacity={0.3} /><stop offset="95%" stopColor="#818CF8" stopOpacity={0} /></linearGradient>
+                              <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#34D399" stopOpacity={0.3} /><stop offset="95%" stopColor="#34D399" stopOpacity={0} /></linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
+                            <XAxis dataKey="date" tick={{ fontSize:10, fill:'#94A3B8' }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fontSize:10, fill:'#94A3B8' }} tickLine={false} axisLine={false} />
+                            <Tooltip content={<TOOLTIP />} />
+                            <Area type="monotone" dataKey="leads" name="Leads" stroke="#818CF8" strokeWidth={2.5} fill="url(#gl)" dot={false} />
+                            <Area type="monotone" dataKey="applications" name="Applications" stroke="#34D399" strokeWidth={2.5} fill="url(#ga)" dot={false} />
+                          </AreaChart>
+                        : <BarChart data={analyticsData} margin={{ top:4, right:4, left:-20, bottom:0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" />
+                            <XAxis dataKey="date" tick={{ fontSize:10, fill:'#94A3B8' }} tickLine={false} axisLine={false} />
+                            <YAxis tick={{ fontSize:10, fill:'#94A3B8' }} tickLine={false} axisLine={false} />
+                            <Tooltip content={<TOOLTIP />} />
+                            <Bar dataKey="leads" name="Leads" fill="#818CF8" radius={[4,4,0,0]} />
+                            <Bar dataKey="applications" name="Applications" fill="#34D399" radius={[4,4,0,0]} />
+                          </BarChart>
+                      }
+                    </ResponsiveContainer>
+                }
               </div>
 
-              {/* Credits donut */}
-              <div className="credits-card">
-                <div className="credits-card-top">
-                  <div className="chart-title">Lead Credits</div>
-                  <div className="chart-sub">Your current balance</div>
-                </div>
-                {credits ? (
-                  <>
-                    <CreditRing credits={credits} />
-                    <div className="credit-stats">
-                      <div className="credit-stat-row">
-                        <span className="cs-label">Available</span>
-                        <span className="cs-val" style={{ color: '#F59E0B' }}>{Number(credits.availableCredits) || 0}</span>
-                      </div>
-                      <div className="credit-stat-row">
-                        <span className="cs-label">Used</span>
-                        <span className="cs-val">{Number(credits.usedCredits) || 0}</span>
-                      </div>
-                      <div className="credit-stat-row">
-                        <span className="cs-label">Total</span>
-                        <span className="cs-val">{(Number(credits.availableCredits) || 0) + (Number(credits.usedCredits) || 0)}</span>
-                      </div>
-                    </div>
-                    {credits.expiryDate && (
-                      <div className="credit-expiry"><Clock size={11} /> Expires {new Date(credits.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
-                    )}
-                    <Link href="/dashboard/school/packages" className="credits-buy-btn">
-                      <Zap size={14} /> Buy More Credits
-                    </Link>
-                  </>
-                ) : (
-                  <div className="credits-empty">
-                    <Zap size={28} color="#E5E7EB" />
-                    <p>No credits yet</p>
-                    <Link href="/dashboard/school/packages" className="credits-buy-btn"><Zap size={13} /> Get Credits</Link>
+              {/* Credits card */}
+              <div className="sd-credits-card">
+                <div className="sd-card-title" style={{ marginBottom:4 }}>Lead Credits</div>
+                <div className="sd-card-sub" style={{ marginBottom:20 }}>Your current balance</div>
+
+                {/* Big donut visual */}
+                <div className="sd-donut-wrap">
+                  <svg viewBox="0 0 120 120" className="sd-donut-svg">
+                    <circle cx="60" cy="60" r="48" fill="none" stroke="#F1F5F9" strokeWidth="12" />
+                    <circle cx="60" cy="60" r="48" fill="none" stroke="url(#dg)" strokeWidth="12"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(avail / Math.max(avail + used, 1)) * 301.6} 301.6`}
+                      transform="rotate(-90 60 60)" />
+                    <defs>
+                      <linearGradient id="dg" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#F59E0B" />
+                        <stop offset="100%" stopColor="#FBBF24" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="sd-donut-center">
+                    <div className="sd-donut-val"><Counter value={avail} /></div>
+                    <div className="sd-donut-label">credits left</div>
                   </div>
-                )}
+                </div>
+
+                <div className="sd-credit-rows">
+                  {[['Available', avail, '#F59E0B'],['Used', used, '#94A3B8'],['Total', avail + used, '#0D1117']].map(([l,v,c]) => (
+                    <div key={l as string} className="sd-cr-row">
+                      <span className="sd-cr-label">{l}</span>
+                      <span className="sd-cr-val" style={{ color: c as string }}>{v as number}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <Link href="/dashboard/school/packages" className="sd-buy-credits">
+                  <Zap size={14} /> Buy More Credits
+                </Link>
               </div>
             </div>
 
-            {/* ── Leads Table ── */}
-            <motion.div className="leads-card"
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}>
-              <div className="leads-header">
+            {/* ── Leads table ── */}
+            <motion.div className="sd-leads-card" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <div className="sd-leads-head">
                 <div>
-                  <div className="chart-title">Recent Leads</div>
-                  <div className="chart-sub">Latest parent enquiries for your school</div>
+                  <div className="sd-card-title">Recent Leads</div>
+                  <div className="sd-card-sub">Latest parent enquiries for your school</div>
                 </div>
-                <Link href="/dashboard/school/leads" className="view-all-btn">
-                  View all <ArrowUpRight size={13} />
-                </Link>
+                <Link href="/dashboard/school/leads" className="sd-view-all">View all <ArrowUpRight size={12} /></Link>
               </div>
 
               {leadsLoading ? (
-                <div className="leads-skeleton">
-                  {Array.from({ length: 4 }).map((_, i) => <div key={i} className="lead-skel-row" />)}
-                </div>
+                <div className="sd-skel-wrap">{[1,2,3,4].map(i => <div key={i} className="sd-skel-row" />)}</div>
               ) : leads.length === 0 ? (
-                <div className="leads-empty">
-                  <div className="leads-empty-icon"><Users size={28} color="#D1D5DB" /></div>
-                  <div className="leads-empty-title">No leads yet</div>
-                  <div className="leads-empty-sub">Once parents start discovering your school, their enquiries will appear here.</div>
-                  <Link href="/school/complete-profile" className="leads-empty-cta">Complete your profile <ArrowUpRight size={13} /></Link>
+                <div className="sd-empty">
+                  <div className="sd-empty-icon"><Users size={28} color="#CBD5E1" /></div>
+                  <div className="sd-empty-title">No leads yet</div>
+                  <div className="sd-empty-sub">Once parents start discovering your school, their enquiries will appear here.</div>
+                  <Link href="/school/complete-profile" className="sd-empty-cta">Complete your profile <ArrowUpRight size={12} /></Link>
                 </div>
               ) : (
-                <div className="leads-table-wrap">
-                  <table className="leads-table">
+                <div className="sd-table-wrap">
+                  <table className="sd-table">
                     <thead>
-                      <tr>
-                        <th className="leads-th">Parent</th>
-                        <th className="leads-th">Phone</th>
-                        <th className="leads-th">City</th>
-                        <th className="leads-th">Status</th>
-                        <th className="leads-th" style={{ textAlign: 'right' }}>Action</th>
-                      </tr>
+                      <tr>{['Parent','Phone','City','Status','Action'].map((h,i) => (
+                        <th key={h} className="sd-th" style={{ textAlign: i === 4 ? 'right' : 'left' }}>{h}</th>
+                      ))}</tr>
                     </thead>
                     <tbody>
                       {leads.map((lead, i) => (
                         <LeadRow key={lead.id} lead={lead} index={i}
-                          onBuy={(id) => buyLeadMutation.mutate(id)}
-                          buying={buyingId === lead.id && buyLeadMutation.isPending} />
+                          onBuy={(id) => buyMutation.mutate(id)}
+                          buying={buyingId === lead.id && buyMutation.isPending} />
                       ))}
                     </tbody>
                   </table>
@@ -576,217 +491,205 @@ export function SchoolDashboardClient() {
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════════
-   STYLES
-═══════════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════
+   CSS
+═══════════════════════════════════════════════════════ */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Clash+Display:wght@600;700&family=Bricolage+Grotesque:wght@400;500;600;700;800&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root {
-  --bg: #F6F3EE;
-  --card: #FFFFFF;
-  --sidebar-bg: #0E0C09;
-  --sidebar-w: 248px;
-  --gold: #D97706;
-  --gold-2: #F59E0B;
-  --border: rgba(13,17,23,0.07);
-  --text: #0D1117;
-  --muted: #6B7280;
-  --font: 'DM Sans', sans-serif;
-  --serif: 'Syne', sans-serif;
-  --radius: 18px;
+  --bg:#F0EDE8;
+  --card:#FFFFFF;
+  --sb:#0A0A0F;
+  --sbw:252px;
+  --gold:#B8860B;
+  --amber:#F59E0B;
+  --border:rgba(13,17,23,0.07);
+  --text:#0D1117;
+  --muted:#64748B;
+  --faint:#94A3B8;
+  --display:'Clash Display','Bricolage Grotesque',sans-serif;
+  --body:'Bricolage Grotesque',system-ui,sans-serif;
+  --r:18px;
 }
 
-/* ── Root layout ── */
-.dash-root { display:flex; min-height:100vh; background:var(--bg); font-family:var(--font); }
-.dash-sidebar-wrap { width:var(--sidebar-w); flex-shrink:0; }
-@media(max-width:860px) { .dash-sidebar-wrap { display:none; } }
-.dash-main { flex:1; overflow:hidden; display:flex; flex-direction:column; }
-.dash-content { padding:32px 36px 48px; max-width:1140px; margin:0 auto; width:100%; }
-@media(max-width:680px) { .dash-content { padding:20px 16px 40px; } }
+/* ROOT */
+.sd-root{display:flex;min-height:100vh;background:var(--bg);font-family:var(--body)}
+.sd-sidebar-wrap{width:var(--sbw);flex-shrink:0;position:sticky;top:0;height:100vh}
+@media(max-width:880px){.sd-sidebar-wrap{display:none}}
+.sd-main{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
+.sd-content{flex:1;padding:32px 36px 52px;max-width:1180px;margin:0 auto;width:100%}
+@media(max-width:680px){.sd-content{padding:20px 16px 40px}}
 
-/* ── Sidebar ── */
-.dash-sidebar {
-  width:var(--sidebar-w); height:100vh; background:var(--sidebar-bg);
-  display:flex; flex-direction:column; position:sticky; top:0;
-  overflow:hidden;
+/* SIDEBAR */
+.sd-sidebar{
+  width:var(--sbw);height:100vh;background:var(--sb);
+  display:flex;flex-direction:column;position:relative;overflow:hidden
 }
-.dash-sidebar::before {
-  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+.sd-sidebar::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 80% 40% at 50% 0%,rgba(184,134,11,0.14),transparent)
 }
-.sidebar-header { position:relative; z-index:1; padding:22px 20px 18px; border-bottom:1px solid rgba(255,255,255,0.06); }
-.sidebar-brand { display:flex; align-items:center; gap:11px; text-decoration:none; }
-.brand-icon { width:36px; height:36px; border-radius:11px; background:linear-gradient(135deg,#D97706,#F59E0B); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 4px 14px rgba(217,119,6,.4); }
-.brand-name { font-family:var(--serif); font-size:17px; font-weight:800; color:#fff; letter-spacing:-.01em; }
-.brand-name span { color:var(--gold-2); }
-.brand-tag { font-size:10px; color:rgba(255,255,255,.28); font-weight:500; letter-spacing:.05em; margin-top:2px; }
+.sd-sb-top{position:relative;z-index:1;padding:22px 20px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between}
+.sd-brand{display:flex;align-items:center;gap:11px;text-decoration:none}
+.sd-brand-icon{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,#B8860B,#F59E0B);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(184,134,11,0.5);flex-shrink:0}
+.sd-brand-name{font-family:var(--display);font-size:17px;font-weight:700;color:#FAF7F2;letter-spacing:-0.02em}
+.sd-brand-name span{color:var(--amber)}
+.sd-brand-tag{font-size:9.5px;color:rgba(255,255,255,0.22);font-weight:600;letter-spacing:0.1em;text-transform:uppercase;margin-top:3px}
+.sd-close-btn{background:none;border:none;color:rgba(255,255,255,0.3);cursor:pointer;padding:4px;display:flex;z-index:2}
 
-.sidebar-close { background:none; border:none; color:rgba(255,255,255,.4); cursor:pointer; padding:4px; display:flex; position:absolute; right:16px; top:24px; z-index:2; }
+.sd-user{position:relative;z-index:1;display:flex;align-items:center;gap:11px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.05)}
+.sd-avatar{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,rgba(184,134,11,0.35),rgba(245,158,11,0.6));display:flex;align-items:center;justify-content:center;font-family:var(--display);font-weight:700;font-size:17px;color:#fff;flex-shrink:0;border:1.5px solid rgba(245,158,11,0.35)}
+.sd-uname{font-size:13px;font-weight:700;color:#FAF7F2}
+.sd-urole{display:flex;align-items:center;gap:5px;font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px}
+.sd-dot{width:5px;height:5px;border-radius:50%;background:#10B981;box-shadow:0 0 6px #10B981;flex-shrink:0}
 
-.sidebar-user { position:relative; z-index:1; display:flex; align-items:center; gap:11px; padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.06); }
-.user-avatar-wrap { position:relative; flex-shrink:0; }
-.user-avatar { width:36px; height:36px; border-radius:11px; background:linear-gradient(135deg,rgba(217,119,6,.3),rgba(245,158,11,.5)); display:flex; align-items:center; justify-content:center; font-family:var(--serif); font-weight:800; font-size:16px; color:#fff; }
-.user-avatar-ring { position:absolute; inset:-2px; border-radius:13px; border:1.5px solid rgba(245,158,11,.4); pointer-events:none; }
-.user-name { font-size:13px; font-weight:700; color:#fff; }
-.user-role { display:flex; align-items:center; gap:5px; font-size:11px; color:rgba(255,255,255,.3); margin-top:2px; }
-.role-dot { width:5px; height:5px; border-radius:50%; background:#10B981; flex-shrink:0; box-shadow:0 0 5px #10B981; }
+.sd-credit-pill{position:relative;z-index:1;display:flex;align-items:center;gap:7px;margin:12px 16px;padding:10px 14px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.22);border-radius:12px}
+.sd-cp-label{font-size:12px;font-weight:600;color:rgba(255,255,255,0.55);flex:1}
+.sd-cp-val{font-family:var(--display);font-size:13px;font-weight:700;color:var(--amber);background:rgba(245,158,11,0.15);padding:2px 10px;border-radius:99px}
 
-.sidebar-credits { position:relative; z-index:1; display:flex; align-items:center; justify-content:space-between; margin:12px 16px; padding:10px 14px; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.2); border-radius:12px; }
-.credits-left { display:flex; align-items:center; gap:6px; }
-.credits-label { font-size:12px; font-weight:600; color:rgba(255,255,255,.6); }
-.credits-badge { background:var(--gold-2); color:#fff; font-size:12px; font-weight:800; padding:2px 10px; border-radius:99px; font-family:var(--serif); }
+.sd-nav{flex:1;overflow-y:auto;padding:10px 12px;position:relative;z-index:1;scrollbar-width:none}
+.sd-nav::-webkit-scrollbar{display:none}
+.sd-nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:11px;text-decoration:none;color:rgba(255,255,255,0.36);font-size:13px;font-weight:600;margin-bottom:2px;transition:all .18s;position:relative}
+.sd-nav-item:hover{background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.7)}
+.sd-nav-active{background:rgba(184,134,11,0.16)!important;color:#fff!important}
+.sd-nav-active::before{content:'';position:absolute;left:0;top:8px;bottom:8px;width:3px;background:var(--amber);border-radius:0 3px 3px 0}
+.sd-nav-icon{width:28px;height:28px;border-radius:8px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sd-nav-active .sd-nav-icon{background:rgba(184,134,11,0.22)}
+.sd-new-badge{font-size:10px;font-weight:700;background:linear-gradient(135deg,#F97316,#EF4444);color:#fff;padding:2px 7px;border-radius:99px}
 
-.sidebar-nav { flex:1; overflow-y:auto; padding:10px 12px; position:relative; z-index:1; scrollbar-width:none; }
-.sidebar-nav::-webkit-scrollbar { display:none; }
-.nav-item { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px; text-decoration:none; color:rgba(255,255,255,.38); font-size:13px; font-weight:600; margin-bottom:2px; transition:all .18s; position:relative; }
-.nav-item:hover { background:rgba(255,255,255,.05); color:rgba(255,255,255,.7); }
-.nav-active { background:rgba(217,119,6,.18) !important; color:#fff !important; }
-.nav-active::before { content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; background:var(--gold-2); border-radius:0 3px 3px 0; }
-.nav-icon-wrap { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,.05); flex-shrink:0; }
-.nav-active .nav-icon-wrap { background:rgba(217,119,6,.22); }
-.nav-label { flex:1; }
-.nav-badge { font-size:10px; font-weight:700; background:linear-gradient(135deg,#EF4444,#F97316); color:#fff; padding:2px 7px; border-radius:99px; }
-.nav-chevron { color:rgba(255,255,255,.4); }
+.sd-logout{display:flex;align-items:center;gap:8px;width:calc(100% - 24px);margin:10px 12px 16px;padding:10px 14px;border-radius:10px;border:none;background:rgba(255,255,255,0.04);color:rgba(255,255,255,0.3);cursor:pointer;font-family:var(--body);font-size:13px;font-weight:600;transition:all .18s;position:relative;z-index:1}
+.sd-logout:hover{background:rgba(239,68,68,0.1);color:#EF4444}
 
-.sidebar-footer { position:relative; z-index:1; padding:14px 16px 20px; border-top:1px solid rgba(255,255,255,.06); }
-.logout-btn { display:flex; align-items:center; gap:8px; width:100%; padding:10px 14px; border-radius:10px; border:none; background:rgba(255,255,255,.04); color:rgba(255,255,255,.35); cursor:pointer; font-family:var(--font); font-size:13px; font-weight:600; transition:all .18s; }
-.logout-btn:hover { background:rgba(239,68,68,.1); color:#EF4444; }
+/* MOBILE TOPBAR */
+.sd-topbar{display:none;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--sb);border-bottom:1px solid rgba(255,255,255,0.07)}
+@media(max-width:880px){.sd-topbar{display:flex}}
+.sd-ham{background:none;border:none;color:rgba(255,255,255,0.65);cursor:pointer;display:flex;padding:4px}
+.sd-topbar-brand{font-family:var(--display);font-size:16px;font-weight:700;color:#FAF7F2}
 
-/* ── Mobile topbar ── */
-.mobile-topbar { display:none; align-items:center; gap:12px; padding:14px 16px; background:var(--sidebar-bg); border-bottom:1px solid rgba(255,255,255,.08); }
-@media(max-width:860px) { .mobile-topbar { display:flex; } }
-.mobile-menu-btn { background:none; border:none; color:rgba(255,255,255,.7); cursor:pointer; display:flex; padding:4px; }
-.mobile-brand { font-family:var(--serif); font-size:16px; font-weight:800; color:#fff; }
+/* PAGE HEADER */
+.sd-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:28px}
+.sd-h1{font-family:var(--display);font-size:28px;font-weight:700;color:var(--text);letter-spacing:-0.03em;line-height:1.15}
+.sd-h1-name{color:var(--gold)}
+.sd-h1-sub{font-size:13px;color:var(--muted);margin-top:5px;font-weight:500}
+.sd-header-right{flex-shrink:0}
+.sd-date-chip{display:flex;align-items:center;gap:6px;padding:8px 14px;background:white;border:1px solid var(--border);border-radius:99px;font-size:12px;color:var(--muted);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.04);white-space:nowrap}
 
-/* ── Page header ── */
-.page-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:28px; padding-top:4px; }
-.page-title { font-family:var(--serif); font-size:26px; font-weight:800; color:var(--text); letter-spacing:-.03em; line-height:1.2; }
-.page-title-name { color:var(--gold); }
-.page-sub { font-size:13px; color:var(--muted); margin-top:5px; }
-.header-meta { flex-shrink:0; }
-.header-date { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); font-weight:500; background:var(--card); border:1px solid var(--border); padding:7px 12px; border-radius:99px; white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,0.04); }
+/* PROFILE BANNER */
+.sd-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;background:linear-gradient(135deg,#FFFBEF,#FFF3D0);border:1px solid rgba(184,134,11,0.22);border-radius:var(--r);margin-bottom:24px;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(184,134,11,0.08)}
+.sd-banner-shine{position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,0.5) 50%,transparent 65%);background-size:200%;animation:sdShine 3s ease-in-out infinite;pointer-events:none}
+@keyframes sdShine{0%,100%{background-position:200%}50%{background-position:-200%}}
+.sd-banner-left{display:flex;align-items:center;gap:14px}
+.sd-banner-icon{width:40px;height:40px;border-radius:11px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sd-banner-title{font-weight:700;font-size:13.5px;color:var(--text);margin-bottom:8px}
+.sd-banner-bar-row{display:flex;align-items:center;gap:10px}
+.sd-banner-track{width:180px;height:6px;background:rgba(184,134,11,0.15);border-radius:99px;overflow:hidden}
+.sd-banner-fill{height:100%;background:linear-gradient(90deg,#B8860B,#F59E0B);border-radius:99px}
+.sd-banner-pct{font-size:12px;font-weight:700;color:var(--gold)}
+.sd-banner-cta{display:inline-flex;align-items:center;gap:5px;padding:10px 18px;border-radius:11px;background:var(--gold);color:#fff;text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap;flex-shrink:0;box-shadow:0 4px 16px rgba(184,134,11,0.4);transition:all .2s}
+.sd-banner-cta:hover{background:#9A7009;transform:translateY(-1px)}
 
-/* ── Profile Banner ── */
-.profile-banner { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 24px; background:linear-gradient(135deg,#FFFBF0,#FEF7E0); border:1px solid rgba(217,119,6,.22); border-radius:var(--radius); margin-bottom:24px; box-shadow:0 4px 24px rgba(217,119,6,.08); position:relative; overflow:hidden; }
-.banner-shimmer { position:absolute; inset:0; background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.4) 50%,transparent 60%); background-size:200%; animation:bannerShimmer 3s ease-in-out infinite; pointer-events:none; }
-@keyframes bannerShimmer { 0%,100%{background-position:200%} 50%{background-position:-200%} }
-.banner-left { display:flex; align-items:center; gap:14px; }
-.banner-icon { width:42px; height:42px; border-radius:12px; background:rgba(245,158,11,.14); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-.banner-title { font-weight:700; font-size:13.5px; color:var(--text); margin-bottom:9px; }
-.banner-progress-wrap { display:flex; align-items:center; gap:10px; }
-.banner-progress-bar { width:200px; height:6px; background:rgba(245,158,11,.15); border-radius:99px; overflow:hidden; }
-.banner-progress-fill { height:100%; background:linear-gradient(90deg,#D97706,#F59E0B); border-radius:99px; }
-.banner-pct { font-size:12px; font-weight:700; color:var(--gold); }
-.banner-cta { display:inline-flex; align-items:center; gap:5px; padding:10px 18px; border-radius:11px; background:var(--gold); color:#fff; text-decoration:none; font-weight:700; font-size:13px; white-space:nowrap; flex-shrink:0; transition:all .2s; box-shadow:0 4px 14px rgba(217,119,6,.35); }
-.banner-cta:hover { background:#B45309; transform:translateY(-1px); }
+/* ════ STAT CARDS — multicolour ════ */
+.sd-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:22px}
+.sd-stat{border-radius:var(--r);padding:24px 22px 20px;position:relative;overflow:hidden;cursor:default;transition:transform .28s,box-shadow .28s}
+.sd-stat-shine{position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.22) 0%,transparent 60%);pointer-events:none}
+.sd-stat-row1{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.sd-stat-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center}
+.sd-stat-trend{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,0.22);color:#fff}
+.sd-trend-up{}
+.sd-trend-dn{}
+.sd-stat-val{font-family:var(--display);font-size:40px;font-weight:700;color:#fff;line-height:1;letter-spacing:-2px;margin-bottom:7px}
+.sd-stat-label{font-size:13px;font-weight:700;color:rgba(255,255,255,0.9)}
+.sd-stat-sub{font-size:11px;color:rgba(255,255,255,0.55);margin-top:3px}
+.sd-stat-skel{height:40px;width:60%;border-radius:8px;background:rgba(255,255,255,0.25);animation:sdPulse 1.4s ease-in-out infinite}
+@keyframes sdPulse{0%,100%{opacity:1}50%{opacity:0.5}}
 
-/* ── Stats Grid ── */
-.stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:22px; }
-.stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 22px 20px; position:relative; overflow:hidden; cursor:default; transition:box-shadow .28s, transform .28s; box-shadow:0 2px 12px rgba(13,17,23,0.04); }
-.stat-noise { position:absolute; inset:0; pointer-events:none; opacity:.025; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E"); }
-.stat-glow { position:absolute; top:-40px; right:-40px; width:130px; height:130px; border-radius:50%; background:var(--card-color,#B8860B); opacity:.1; filter:blur(28px); pointer-events:none; }
-.stat-card:hover { box-shadow:0 16px 48px rgba(13,17,23,0.1), 0 0 0 1px rgba(217,119,6,.12) !important; }
-.stat-card:hover .stat-glow { opacity:.2; }
-.stat-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:18px; }
-.stat-icon-wrap { width:42px; height:42px; border-radius:12px; display:flex; align-items:center; justify-content:center; }
-.stat-trend { display:flex; align-items:center; gap:3px; font-size:11px; font-weight:700; padding:4px 9px; border-radius:99px; }
-.trend-up { color:#10B981; background:rgba(16,185,129,.1); }
-.trend-down { color:#EF4444; background:rgba(239,68,68,.1); }
-.stat-value { font-family:var(--serif); font-weight:800; font-size:38px; color:var(--text); line-height:1; letter-spacing:-2px; margin-bottom:6px; }
-.stat-label { font-size:12px; color:var(--muted); font-weight:600; }
-.stat-sub { font-size:11px; color:var(--muted); margin-top:4px; opacity:.7; }
-.stat-bar { position:absolute; bottom:0; left:0; right:0; height:3px; opacity:.5; border-radius:0 0 18px 18px; }
-.stat-skeleton { height:154px; border-radius:var(--radius); background:linear-gradient(90deg,#f0f0f0 25%,#f7f7f7 50%,#f0f0f0 75%); background-size:200% 100%; animation:shimmer 1.5s infinite; }
-@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
-@keyframes shimmerBg { 0%,100%{background-position:200% 0} 50%{background-position:-200% 0} }
+/* MIDDLE ROW */
+.sd-mid{display:grid;grid-template-columns:1fr 280px;gap:18px;margin-bottom:22px}
+@media(max-width:960px){.sd-mid{grid-template-columns:1fr}}
 
-/* ── Charts Row ── */
-.charts-row { display:grid; grid-template-columns:1fr 270px; gap:16px; margin-bottom:22px; }
-@media(max-width:920px) { .charts-row { grid-template-columns:1fr; } }
-.chart-card, .credits-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:24px 24px 20px; box-shadow:0 2px 12px rgba(13,17,23,0.04); }
-.credits-card { display:flex; flex-direction:column; align-items:center; text-align:center; }
-.credits-card-top { width:100%; margin-bottom:8px; }
-.chart-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:8px; }
-.chart-title { font-family:var(--serif); font-weight:800; font-size:17px; color:var(--text); letter-spacing:-.02em; }
-.chart-sub { font-size:12px; color:var(--muted); margin-top:3px; }
-.chart-controls { display:flex; gap:4px; background:#F3F4F6; border-radius:9px; padding:3px; }
-.chart-toggle { padding:5px 12px; border-radius:7px; border:none; font-family:var(--font); font-size:12px; font-weight:600; cursor:pointer; background:transparent; color:var(--muted); transition:all .15s; }
-.toggle-active { background:#fff !important; color:var(--text) !important; box-shadow:0 1px 4px rgba(0,0,0,.1) !important; }
-.chart-legend { display:flex; gap:18px; margin-bottom:16px; }
-.legend-item { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); font-weight:500; }
-.legend-dot { width:10px; height:10px; border-radius:3px; }
-.chart-empty { height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; }
-.chart-empty p { font-size:13px; color:var(--muted); text-align:center; max-width:220px; line-height:1.6; }
-.chart-tooltip { background:#fff; border:1px solid var(--border); border-radius:12px; padding:11px 15px; box-shadow:0 8px 24px rgba(0,0,0,.09); font-family:var(--font); }
-.tooltip-label { font-size:11px; color:var(--muted); margin-bottom:7px; font-weight:600; }
-.tooltip-row { display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:3px; }
-.tooltip-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
-.tooltip-name { color:var(--muted); flex:1; }
-.tooltip-value { font-weight:700; color:var(--text); }
+.sd-chart-card,.sd-credits-card,.sd-leads-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px;box-shadow:0 2px 16px rgba(13,17,23,0.05)}
+.sd-credits-card{display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 20px}
 
-/* ── Credits card ── */
-.credit-ring-wrap { position:relative; margin:8px 0 14px; }
-.credit-ring-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; text-align:center; }
-.credit-ring-val { font-family:var(--serif); font-weight:800; font-size:32px; color:var(--gold); line-height:1; }
-.credit-ring-sub { font-size:11px; color:var(--muted); margin-top:3px; }
-.credit-stats { width:100%; margin-bottom:12px; }
-.credit-stat-row { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid rgba(0,0,0,.04); font-size:12px; }
-.credit-stat-row:last-child { border-bottom:none; }
-.cs-label { color:var(--muted); }
-.cs-val { font-weight:700; }
-.credit-expiry { display:flex; align-items:center; gap:5px; font-size:11px; color:#9CA3AF; margin-bottom:14px; }
-.credits-buy-btn { display:flex; align-items:center; justify-content:center; gap:7px; width:100%; padding:12px 16px; background:var(--text); border-radius:12px; color:#fff; text-decoration:none; font-weight:700; font-size:13px; transition:all .2s; margin-top:auto; box-shadow:0 4px 16px rgba(13,17,23,.15); }
-.credits-buy-btn:hover { background:#1c2a3a; transform:translateY(-1px); }
-.credits-empty { display:flex; flex-direction:column; align-items:center; gap:12px; flex:1; justify-content:center; }
-.credits-empty p { font-size:13px; color:var(--muted); }
+.sd-card-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.sd-card-title{font-family:var(--display);font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.02em}
+.sd-card-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.sd-chart-tabs{display:flex;gap:4px;background:#F1F5F9;border-radius:9px;padding:3px}
+.sd-tab{padding:5px 13px;border-radius:7px;border:none;font-family:var(--body);font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s}
+.sd-tab-on{background:#fff!important;color:var(--text)!important;box-shadow:0 1px 4px rgba(0,0,0,.1)!important}
+.sd-chart-legend{display:flex;gap:18px;margin-bottom:16px}
+.sd-leg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);font-weight:500}
+.sd-leg-dot{width:10px;height:10px;border-radius:3px}
+.sd-chart-empty{height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.sd-chart-empty p{font-size:13px;color:var(--faint);text-align:center;max-width:220px;line-height:1.6}
 
-/* ── Leads Table ── */
-.leads-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:0 2px 12px rgba(13,17,23,0.04); }
-.leads-header { display:flex; align-items:center; justify-content:space-between; padding:20px 24px; border-bottom:1px solid var(--border); }
-.view-all-btn { display:inline-flex; align-items:center; gap:4px; font-size:13px; color:var(--gold); text-decoration:none; font-weight:700; transition:color .15s; }
-.view-all-btn:hover { color:#B45309; }
-.leads-table-wrap { overflow-x:auto; }
-.leads-table { width:100%; border-collapse:collapse; }
-.leads-th { padding:10px 20px; font-size:10px; font-weight:700; letter-spacing:1.2px; text-transform:uppercase; color:#9CA3AF; background:#FAFAFA; border-bottom:1px solid var(--border); text-align:left; }
-.lead-row { border-bottom:1px solid rgba(0,0,0,.04); transition:background .15s; }
-.lead-row:hover { background:rgba(245,158,11,.025); }
-.lead-row:last-child { border-bottom:none; }
-.lead-td { padding:14px 20px; vertical-align:middle; }
-.lead-td-first { display:flex; align-items:center; gap:11px; }
-.lead-td-action { text-align:right; }
-.lead-avatar { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg,rgba(245,158,11,.15),rgba(245,158,11,.3)); border:1px solid rgba(245,158,11,.2); display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; color:var(--gold); flex-shrink:0; font-family:var(--serif); }
-.lead-name { font-weight:700; font-size:13px; color:var(--text); }
-.lead-meta { font-size:11px; color:var(--muted); margin-top:2px; }
-.lead-phone { display:flex; align-items:center; gap:5px; font-size:12px; color:#4B5563; }
-.lead-city { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted); }
-.status-chip { display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:99px; font-size:11px; font-weight:700; }
-.status-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-.unlocked-chip { display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:99px; background:rgba(16,185,129,.1); color:#10B981; font-size:11px; font-weight:700; }
-.buy-btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:10px; background:var(--text); border:none; color:#fff; cursor:pointer; font-family:var(--font); font-size:12px; font-weight:700; transition:all .2s; }
-.buy-btn:disabled { opacity:.5; cursor:not-allowed; }
-.buy-btn:not(:disabled):hover { background:#1c2a3a; }
-.leads-skeleton { padding:18px 24px; }
-.lead-skel-row { height:56px; border-radius:10px; background:linear-gradient(90deg,#f5f5f5 25%,#fafafa 50%,#f5f5f5 75%); background-size:200% 100%; margin-bottom:10px; animation:shimmer 1.5s infinite; }
-.leads-empty { padding:56px 20px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; }
-.leads-empty-icon { width:64px; height:64px; border-radius:18px; background:#F3F4F6; display:flex; align-items:center; justify-content:center; }
-.leads-empty-title { font-weight:800; font-size:15px; color:var(--text); font-family:var(--serif); }
-.leads-empty-sub { font-size:13px; color:var(--muted); max-width:300px; line-height:1.6; }
-.leads-empty-cta { display:inline-flex; align-items:center; gap:5px; padding:10px 20px; border-radius:11px; background:var(--gold); color:#fff; text-decoration:none; font-weight:700; font-size:13px; margin-top:4px; }
+.sd-tooltip{background:#fff;border:1px solid var(--border);border-radius:12px;padding:11px 15px;box-shadow:0 8px 28px rgba(0,0,0,.09);font-family:var(--body)}
+.sd-tt-label{font-size:11px;color:var(--muted);margin-bottom:7px;font-weight:600}
+.sd-tt-row{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:3px}
+.sd-tt-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.sd-tt-name{color:var(--muted);flex:1}
+.sd-tt-val{font-weight:700;color:var(--text)}
 
-/* ── Mobile overlay ── */
-.mobile-overlay { position:fixed; inset:0; z-index:50; display:flex; }
-.mobile-sidebar-wrap { width:var(--sidebar-w); height:100%; flex-shrink:0; }
-.overlay-backdrop { flex:1; background:rgba(0,0,0,.45); }
+/* CREDITS CARD */
+.sd-donut-wrap{position:relative;width:140px;height:140px;margin:0 auto 20px}
+.sd-donut-svg{width:140px;height:140px}
+.sd-donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.sd-donut-val{font-family:var(--display);font-size:30px;font-weight:700;color:var(--amber);line-height:1}
+.sd-donut-label{font-size:11px;color:var(--muted);margin-top:3px}
+.sd-credit-rows{width:100%;margin-bottom:16px}
+.sd-cr-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(0,0,0,0.04);font-size:13px}
+.sd-cr-row:last-child{border-bottom:none}
+.sd-cr-label{color:var(--muted);font-weight:500}
+.sd-cr-val{font-weight:700}
+.sd-buy-credits{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px;background:linear-gradient(135deg,#0D1117,#1C2333);border-radius:12px;color:#fff;text-decoration:none;font-weight:700;font-size:13px;transition:all .2s;box-shadow:0 4px 16px rgba(13,17,23,0.18);margin-top:auto}
+.sd-buy-credits:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(13,17,23,0.25)}
 
-/* ── Loading ── */
-.dash-loading { min-height:100vh; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; font-family:var(--font); }
-.loading-spinner { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,#D97706,#F59E0B); display:flex; align-items:center; justify-content:center; box-shadow:0 6px 24px rgba(217,119,6,.4); }
-.loading-text { font-size:14px; color:var(--muted); font-weight:500; }
+/* LEADS TABLE */
+.sd-leads-card{padding:0;overflow:hidden}
+.sd-leads-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)}
+.sd-view-all{display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--gold);text-decoration:none;font-weight:700;transition:color .15s}
+.sd-view-all:hover{color:#9A7009}
+.sd-table-wrap{overflow-x:auto}
+.sd-table{width:100%;border-collapse:collapse}
+.sd-th{padding:10px 20px;font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#94A3B8;background:#FAFAFA;border-bottom:1px solid var(--border)}
+.sd-lead-row{border-bottom:1px solid rgba(0,0,0,0.04);transition:background .15s}
+.sd-lead-row:hover{background:rgba(245,158,11,0.025)}
+.sd-lead-row:last-child{border-bottom:none}
+.sd-td{padding:14px 20px;vertical-align:middle;font-size:13px}
+.sd-td-first{display:flex;align-items:center;gap:11px}
+.sd-td-r{text-align:right}
+.sd-lead-av{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,rgba(99,102,241,0.15),rgba(99,102,241,0.3));border:1px solid rgba(99,102,241,0.2);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:#6366F1;flex-shrink:0;font-family:var(--display)}
+.sd-lead-name{font-weight:700;font-size:13px;color:var(--text)}
+.sd-lead-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.sd-lead-phone{display:flex;align-items:center;gap:5px;font-size:12px;color:#4B5563}
+.sd-lead-city{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.sd-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:99px;font-size:11px;font-weight:700;text-transform:capitalize}
+.sd-chip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.sd-unlocked{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;background:rgba(16,185,129,0.1);color:#10B981;font-size:11px;font-weight:700}
+.sd-buy-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;background:linear-gradient(135deg,#6366F1,#818CF8);border:none;color:#fff;cursor:pointer;font-family:var(--body);font-size:12px;font-weight:700;transition:all .2s;box-shadow:0 3px 12px rgba(99,102,241,0.35)}
+.sd-buy-btn:disabled{opacity:0.5;cursor:not-allowed}
+.sd-buy-btn:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(99,102,241,0.45)}
+.sd-skel-wrap{padding:18px 24px;display:flex;flex-direction:column;gap:10px}
+.sd-skel-row{height:52px;border-radius:10px;background:linear-gradient(90deg,#f5f5f5 25%,#fafafa 50%,#f5f5f5 75%);background-size:200% 100%;animation:sdShimmer 1.5s infinite}
+@keyframes sdShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.sd-empty{padding:56px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px}
+.sd-empty-icon{width:64px;height:64px;border-radius:18px;background:#F8FAFC;border:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.sd-empty-title{font-family:var(--display);font-weight:700;font-size:16px;color:var(--text)}
+.sd-empty-sub{font-size:13px;color:var(--muted);max-width:300px;line-height:1.6}
+.sd-empty-cta{display:inline-flex;align-items:center;gap:5px;padding:10px 20px;border-radius:11px;background:var(--gold);color:#fff;text-decoration:none;font-weight:700;font-size:13px}
 
-/* ── Utils ── */
-.spin { animation:spin-kf 1s linear infinite; }
-@keyframes spin-kf { to { transform:rotate(360deg); } }
+/* MOBILE OVERLAY */
+.sd-mob-overlay{position:fixed;inset:0;z-index:50;display:flex}
+.sd-mob-sb{width:var(--sbw);height:100%;flex-shrink:0}
+.sd-mob-backdrop{flex:1;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px)}
+
+/* LOADING */
+.sd-loading{min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:var(--body)}
+.sd-loading-icon{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#B8860B,#F59E0B);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 24px rgba(184,134,11,0.45)}
+.sd-loading-text{font-size:14px;color:var(--muted);font-weight:500}
+
+.sd-spin{animation:sdSpin 1s linear infinite}
+@keyframes sdSpin{to{transform:rotate(360deg)}}
 `

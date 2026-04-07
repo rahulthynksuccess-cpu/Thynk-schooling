@@ -394,13 +394,15 @@ async function getDashboardStats(req: NextRequest) {
   ).catch(() => ({ rows: [] }))
   if (!school.rows.length) return NextResponse.json({ totalLeads: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0 })
   const { id: sid, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard } = school.rows[0]
-  const [leads, apps, credits] = await Promise.all([
+  const [leads, newLeads, apps, credits] = await Promise.all([
     db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
+    db.query(`SELECT COUNT(*) FROM leads WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '30 days'`, [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
   ])
   return NextResponse.json({
     totalLeads: Number(leads.rows[0].count),
+    newLeadsThisMonth: Number(newLeads.rows[0].count),
     totalApplications: Number(apps.rows[0].count),
     profileViews: 0,
     credits: credits.rows[0]?.credits ?? 0,
