@@ -98,9 +98,9 @@ function SubscriptionPlanCards() {
   })
 
   if (isLoading) return (
-    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16 }}>
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:16 }}>
       {Array.from({length:4}).map((_,i) => (
-        <div key={i} style={{ height:220, borderRadius:14, background:'#F3F4F6', animation:'pulse 1.5s infinite' }} />
+        <div key={i} style={{ height:220, borderRadius:16, background:'#F3F4F6', animation:'pulse 1.5s infinite' }} />
       ))}
     </div>
   )
@@ -109,54 +109,75 @@ function SubscriptionPlanCards() {
   if (!activePlans.length) return null
 
   return (
-    <div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16 }}>
-        {activePlans.map((plan, i) => (
-          <Link key={plan.id} href={`/dashboard/school/packages`} style={{ textDecoration:'none' }}>
-            <div style={{
-              background:'#fff',
-              border: plan.isHot ? '2px solid #F59E0B' : '1px solid rgba(0,0,0,0.08)',
-              borderRadius:14, padding:'20px 18px', position:'relative', cursor:'pointer',
-              transition:'transform 0.15s,box-shadow 0.15s',
-              boxShadow: plan.isHot ? '0 4px 24px rgba(245,158,11,0.18)' : '0 1px 4px rgba(0,0,0,0.06)',
-              overflow: 'hidden',
-            }}>
-              {/* Vertical Most Popular strip */}
-              {plan.isHot && (
-                <div style={{
-                  position:'absolute', top:0, right:0, width:22, height:'100%',
-                  background:'linear-gradient(180deg,#B8860B,#F59E0B)',
-                  display:'flex', alignItems:'center', justifyContent:'center', zIndex:2,
+    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))', gap:16 }}>
+      {activePlans.map((plan) => (
+        <Link key={plan.id} href="/dashboard/school/packages" style={{ textDecoration:'none' }}>
+          <div style={{
+            background:'#fff',
+            border: plan.isHot ? '2px solid #F59E0B' : '1px solid rgba(0,0,0,0.09)',
+            borderRadius:16,
+            padding:'20px 18px',
+            position:'relative',
+            cursor:'pointer',
+            overflow:'hidden',
+            boxShadow: plan.isHot ? '0 6px 28px rgba(245,158,11,0.18)' : '0 1px 6px rgba(0,0,0,0.06)',
+            transition:'transform 0.15s,box-shadow 0.15s',
+            height:'100%',
+            boxSizing:'border-box' as const,
+          }}>
+            {/* Vertical "Most Popular" strip — right edge, matches Image 1 */}
+            {plan.isHot && (
+              <div style={{
+                position:'absolute', top:0, right:0, width:24, height:'100%',
+                background:'linear-gradient(180deg,#B8860B 0%,#F59E0B 100%)',
+                display:'flex', alignItems:'center', justifyContent:'center', zIndex:2,
+              }}>
+                <span style={{
+                  writingMode:'vertical-rl', textOrientation:'mixed', transform:'rotate(180deg)',
+                  fontSize:7, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase',
+                  color:'#fff', whiteSpace:'nowrap', userSelect:'none' as const,
                 }}>
-                  <span style={{
-                    writingMode:'vertical-rl', textOrientation:'mixed', transform:'rotate(180deg)',
-                    fontSize:8, fontWeight:800, letterSpacing:'.12em', textTransform:'uppercase',
-                    color:'#fff', whiteSpace:'nowrap', userSelect:'none',
-                  }}>
-                    ⭐ Most Popular
-                  </span>
-                </div>
+                  ⭐ Most Popular
+                </span>
+              </div>
+            )}
+
+            <div style={{ paddingRight: plan.isHot ? 30 : 0 }}>
+              {/* Icon */}
+              <div style={{
+                width:38, height:38, borderRadius:10,
+                background:'rgba(245,158,11,0.10)',
+                display:'flex', alignItems:'center', justifyContent:'center', marginBottom:14,
+              }}>
+                <LayoutGrid size={19} color="#F59E0B" />
+              </div>
+
+              {/* Plan name */}
+              <div style={{ fontWeight:700, fontSize:15, color:'#111827', marginBottom:4 }}>{plan.name}</div>
+
+              {/* Description */}
+              {plan.description && (
+                <div style={{ fontSize:11, color:'#6B7280', lineHeight:1.55, marginBottom:10 }}>{plan.description}</div>
               )}
-              <div style={{ paddingRight: plan.isHot ? 28 : 0 }}>
-                <div style={{ width:36, height:36, borderRadius:9, background:'rgba(245,158,11,0.1)', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:12 }}>
-                  <LayoutGrid size={18} color="#F59E0B" />
-                </div>
-                <div style={{ fontWeight:700, fontSize:15, color:'#111827', marginBottom:3 }}>{plan.name}</div>
-                {plan.description && <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>{plan.description}</div>}
-                <div style={{ fontWeight:800, fontSize:22, color:'#111827' }}>
-                  {plan.price === 0 ? 'Free' : `₹${Math.round(plan.price / 100).toLocaleString('en-IN')}`}
-                </div>
-                <div style={{ fontSize:11, color:'#6B7280', marginBottom:10 }}>
-                  {plan.price === 0 ? 'forever' : '/month'} · {plan.leadsPerMonth === -1 ? 'Unlimited' : plan.leadsPerMonth} leads/mo
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:5, fontSize:12, color:'#F59E0B', fontWeight:600 }}>
-                  {plan.cta} <ChevronRight size={12} />
-                </div>
+
+              {/* Price */}
+              <div style={{ fontWeight:800, fontSize:24, color:'#111827', letterSpacing:'-0.5px', marginBottom:2 }}>
+                {plan.price === 0 ? 'Free' : `₹${Math.round(plan.price / 100).toLocaleString('en-IN')}`}
+              </div>
+
+              {/* Period · leads */}
+              <div style={{ fontSize:11, color:'#6B7280', marginBottom:14 }}>
+                {plan.price === 0 ? 'forever' : '/month'} · {plan.leadsPerMonth === -1 ? 'Unlimited' : plan.leadsPerMonth} leads/mo
+              </div>
+
+              {/* CTA link */}
+              <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:12, fontWeight:700, color:'#F59E0B' }}>
+                {plan.cta} <ChevronRight size={12} />
               </div>
             </div>
-          </Link>
-        ))}
-      </div>
+          </div>
+        </Link>
+      ))}
     </div>
   )
 }
