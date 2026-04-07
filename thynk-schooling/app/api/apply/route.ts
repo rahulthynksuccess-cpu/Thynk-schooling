@@ -10,7 +10,6 @@ import jwt from 'jsonwebtoken'
 
 function getUserId(req: NextRequest): string | null {
   try {
-    // FIX (Bug 3): removed the dead duplicate line that discarded its result
     const token =
       req.headers.get('authorization')?.replace('Bearer ', '') ||
       req.cookies.get('ts_access_token')?.value ||
@@ -85,34 +84,6 @@ async function ensureTables() {
   await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()').catch(()=>{})
 }
 
-// FIX (Bug 1 & 2): extracted helper so we can call it from both the
-// normal path AND the duplicate-lead early-return path.
-async function insertApplication(
-  userId: string | null,
-  schoolId: string,
-  leadId: string,
-  childName: string,
-  classApplyingFor: string,
-  parentName: string,
-  phone: string,
-  email: string | null,
-  message: string | null,
-) {
-  try {
-    await db.query(
-      `INSERT INTO applications
-         (parent_id, school_id, lead_id, status,
-          child_name, class_applying_for, parent_name, phone, email, message)
-       VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,$8,$9)`,
-      [userId || null, schoolId, leadId, childName, classApplyingFor, parentName, phone, email, message],
-    )
-  } catch (err) {
-    // FIX (Bug 1): log the real error instead of silently swallowing it
-    console.error('[apply] Failed to insert application row:', err)
-    throw err // re-throw so the caller knows it failed
-  }
-}
-
 export async function POST(req: NextRequest) {
   try {
     await ensureTables()
@@ -130,8 +101,10 @@ export async function POST(req: NextRequest) {
     if (!classApplyingFor) return NextResponse.json({ error: 'Class is required' }, { status: 400 })
 
     // Verify school exists — fetch by id (could be UUID or slug)
+    // Use explicit UUID cast to avoid "operator does not exist: character varying = uuid"
     const schoolRes = await db.query(
-      `SELECT id, city FROM schools WHERE slug=$1 OR (id::text = $1)`,
+      `SELECT id, city FROM schools WHERE slug=$1
+       OR (id::text = $1)`,
       [schoolId]
     )
     if (!schoolRes.rows.length) {
@@ -139,41 +112,19 @@ export async function POST(req: NextRequest) {
     }
     const school = schoolRes.rows[0]
 
+    // Optionally link to logged-in parent user
     const userId = getUserId(req)
-
-    // Normalize values once
-    const cleanPhone    = phone.trim()
-    const cleanName     = parentName.trim()
-    const cleanChild    = childName.trim()
-    const cleanEmail    = email?.trim() || null
-    const cleanMessage  = message?.trim() || null
 
     // Prevent duplicate lead submission from same phone to same school within 7 days
     const existing = await db.query(
       `SELECT id FROM leads
        WHERE school_id=$1 AND phone=$2
        AND created_at > NOW() - INTERVAL '7 days'`,
-      [school.id, cleanPhone]
+      [school.id, phone.trim()]
     )
     if (existing.rows.length > 0) {
-      const existingLeadId = existing.rows[0].id
-
-      // FIX (Bug 2): duplicate lead found, but still ensure an application row exists
-      // so the parent can see it in their dashboard.
-      // Check first to avoid duplicate application rows too.
-      const existingApp = await db.query(
-        `SELECT id FROM applications WHERE lead_id=$1`,
-        [existingLeadId]
-      ).catch(() => ({ rows: [] }))
-
-      if (existingApp.rows.length === 0) {
-        await insertApplication(
-          userId, school.id, existingLeadId,
-          cleanChild, classApplyingFor, cleanName, cleanPhone, cleanEmail, cleanMessage,
-        ).catch(() => {}) // best-effort on duplicate path
-      }
-
-      return NextResponse.json({ success: true, leadId: existingLeadId })
+      // Return success silently (don't tell user to prevent spam detection)
+      return NextResponse.json({ success: true, leadId: existing.rows[0].id })
     }
 
     // Insert lead
@@ -188,23 +139,24 @@ export async function POST(req: NextRequest) {
       [
         userId || null,
         school.id,
-        cleanName,
-        cleanPhone,
-        cleanEmail,
-        cleanChild,
+        parentName.trim(),
+        phone.trim(),
+        email?.trim() || null,
+        childName.trim(),
         classApplyingFor,
         school.city || null,
-        cleanMessage,
+        message?.trim() || null,
         howDidYouHear || null,
       ]
     )
     const leadId = leadRes.rows[0].id
 
-    // FIX (Bug 1): insert application with real error logging — no more silent .catch(()=>{})
-    await insertApplication(
-      userId, school.id, leadId,
-      cleanChild, classApplyingFor, cleanName, cleanPhone, cleanEmail, cleanMessage,
-    )
+    // Also create an application record so the school sees it in applications tab
+    await db.query(
+      `INSERT INTO applications (parent_id, school_id, lead_id, status, child_name, class_applying_for, parent_name, phone, email, message)
+       VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,$8,$9)`,
+      [userId || null, school.id, leadId, childName.trim(), classApplyingFor, parentName.trim(), phone.trim(), email?.trim()||null, message?.trim() || null]
+    ).catch(() => {}) // Non-fatal
 
     return NextResponse.json({ success: true, leadId })
   } catch (e: any) {

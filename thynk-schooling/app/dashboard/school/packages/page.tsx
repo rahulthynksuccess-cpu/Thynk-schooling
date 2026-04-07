@@ -89,8 +89,11 @@ export default function LeadPackagesPage() {
     setSelectedPkg(null)
     setPayingId(pkg.id)
     try {
+      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (accessToken) authHeaders['Authorization'] = `Bearer ${accessToken}`
+
       const orderRes = await fetch(`/api/lead-packages?id=${pkg.id}&action=buy&gateway=${gatewayId}`, {
-        method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', credentials: 'include', headers: authHeaders,
       })
       const order = await orderRes.json()
       if (!orderRes.ok) throw new Error(order.error || 'Order creation failed')
@@ -108,7 +111,7 @@ export default function LeadPackagesPage() {
         await new Promise<void>((resolve, reject) => {
           const rzp = new window.Razorpay({ key: cp.key, amount: cp.amount, currency: cp.currency, order_id: cp.orderId, name: 'Thynk Schooling', description: `${pkg.name} — ${pkg.leadCredits} credits`, theme: { color: '#B8860B' },
             handler: async (resp: any) => {
-              await fetch('/api/lead-packages?action=verify-payment', { method:'POST', credentials:'include', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ gateway:'razorpay', ...resp }) })
+              await fetch('/api/lead-packages?action=verify-payment', { method:'POST', credentials:'include', headers: authHeaders, body: JSON.stringify({ gateway:'razorpay', ...resp }) })
               resolve()
             }, modal: { ondismiss: () => reject(new Error('Payment cancelled')) }
           })
