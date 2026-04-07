@@ -161,7 +161,8 @@ export async function POST(req: NextRequest) {
 
       const p        = pkg.rows[0]
       const schoolId = school.rows[0].id
-      const receipt  = `pkg_${packageId}_${Date.now()}`
+      const receipt = `lp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
+// e.g. lp_lxyz123_ab3f9  → ~20 chars, unique enough
 
       // Get buyer info for gateways that need it (Cashfree, Easebuzz)
       const userInfo = await db.query(
