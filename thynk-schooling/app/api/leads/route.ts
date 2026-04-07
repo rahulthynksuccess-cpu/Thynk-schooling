@@ -104,15 +104,25 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, Number(url.searchParams.get('page') || 1))
     const offset = (page - 1) * limit
 
-    const school = await db.query('SELECT id, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
+    const school = await db.query('SELECT id, name, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
     if (!school.rows.length) return NextResponse.json({ data: [], total: 0, page, limit })
-    if (!school.rows[0].profile_completed) {
+
+    const { id: schoolId, name: schoolName, profile_completed, is_active } = school.rows[0]
+
+    // Self-heal: if school has a real name but profile_completed is still false, fix it now
+    // (mirrors the same logic in getDashboardStats so both stay in sync)
+    let isComplete = profile_completed === true
+    if (!isComplete && schoolName && schoolName !== 'School') {
+      await db.query('UPDATE schools SET profile_completed=true WHERE id=$1', [schoolId]).catch(() => {})
+      isComplete = true
+    }
+
+    if (!isComplete) {
       return NextResponse.json({ error: 'PROFILE_INCOMPLETE', message: 'Complete your school profile to access leads.' }, { status: 403 })
     }
-    if (school.rows[0].is_active === false) {
+    if (is_active === false) {
       return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Your account is suspended. Contact support.' }, { status: 403 })
     }
-    const schoolId = school.rows[0].id
 
     // Also fetch credit balance to include in response
     const creditRow = await db.query('SELECT credits, total_credits, used_credits FROM lead_credits WHERE school_id=$1', [schoolId])
@@ -244,9 +254,16 @@ export async function POST(req: NextRequest) {
       const leadId = queryLeadId || body.id
       if (!leadId) return NextResponse.json({ error: 'Lead id required' }, { status: 400 })
 
-      const school = await db.query('SELECT id, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
+      const school = await db.query('SELECT id, name, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId])
       if (!school.rows.length) return NextResponse.json({ error: 'School not found' }, { status: 403 })
-      if (!school.rows[0].profile_completed) {
+
+      // Self-heal: auto-fix profile_completed if school has a real name
+      let isComplete = school.rows[0].profile_completed === true
+      if (!isComplete && school.rows[0].name && school.rows[0].name !== 'School') {
+        await db.query('UPDATE schools SET profile_completed=true WHERE id=$1', [school.rows[0].id]).catch(() => {})
+        isComplete = true
+      }
+      if (!isComplete) {
         return NextResponse.json({ error: 'PROFILE_INCOMPLETE', message: 'Complete your school profile to purchase leads.' }, { status: 403 })
       }
       if (school.rows[0].is_active === false) {
