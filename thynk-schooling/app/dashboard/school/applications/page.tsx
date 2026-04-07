@@ -50,25 +50,106 @@ export default function SchoolApplicationsPage() {
 
       {/* Sidebar */}
       <aside style={{
-        width:252,
-        background:'linear-gradient(180deg,#0A0A0F,#111827)',
-        boxShadow:'4px 0 30px rgba(0,0,0,0.25)',
+  width:252,
+  background:'linear-gradient(180deg,#020617 0%, #0F172A 100%)',
+  boxShadow:'4px 0 40px rgba(0,0,0,0.5)',
+  color:'#fff',
+  display:'flex',
+  flexDirection:'column'
+}}>
+
+  {/* Logo */}
+  <div style={{
+    padding:'22px 20px',
+    borderBottom:'1px solid rgba(255,255,255,0.08)'
+  }}>
+    <Link href="/" style={{
+      display:'flex',
+      alignItems:'center',
+      gap:12,
+      textDecoration:'none'
+    }}>
+      <div style={{
+        width:38,
+        height:38,
+        borderRadius:12,
+        background:'linear-gradient(135deg,#F59E0B,#D97706)',
         display:'flex',
-        flexDirection:'column'
+        alignItems:'center',
+        justifyContent:'center',
+        boxShadow:'0 6px 20px rgba(245,158,11,0.5)'
       }}>
-        <div style={{ padding:'22px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
-          <Link href="/" style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
-            <div style={{
-              width:36, height:36, borderRadius:11,
-              background:'linear-gradient(135deg,#B8860B,#F59E0B)',
-              display:'flex', alignItems:'center', justifyContent:'center'
-            }}>
-              <GraduationCap size={17} color="#fff" />
-            </div>
-            <div style={{ color:'#fff', fontWeight:700 }}>ThynkSchooling</div>
-          </Link>
+        <GraduationCap size={18} color="#fff" />
+      </div>
+
+      <div>
+        <div style={{
+          fontSize:16,
+          fontWeight:700,
+          color:'#FFFFFF'
+        }}>
+          Thynk<span style={{ color:'#F59E0B' }}>Schooling</span>
         </div>
-      </aside>
+
+        <div style={{
+          fontSize:10,
+          color:'rgba(255,255,255,0.5)',
+          marginTop:2,
+          letterSpacing:'0.08em'
+        }}>
+          SCHOOL PANEL
+        </div>
+      </div>
+    </Link>
+  </div>
+
+  {/* Menu */}
+  <nav style={{ flex:1, padding:'12px' }}>
+    {[
+      { href:'/dashboard/school', label:'Dashboard', icon:'📊' },
+      { href:'/dashboard/school/leads', label:'Leads', icon:'👥' },
+      { href:'/dashboard/school/applications', label:'Applications', icon:'📝' },
+      { href:'/dashboard/school/reviews', label:'Reviews', icon:'⭐' },
+      { href:'/dashboard/school/packages', label:'Subscription', icon:'💳' },
+      { href:'/dashboard/school/analytics', label:'Analytics', icon:'📈' },
+    ].map(item => {
+      const active = item.href.includes('applications')
+
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          style={{
+            display:'flex',
+            alignItems:'center',
+            gap:12,
+            padding:'12px 14px',
+            borderRadius:12,
+            textDecoration:'none',
+            fontSize:13,
+            fontWeight:600,
+            marginBottom:6,
+
+            color: active ? '#fff' : 'rgba(255,255,255,0.75)',
+
+            background: active
+              ? 'linear-gradient(135deg,#F59E0B,#D97706)'
+              : 'transparent',
+
+            boxShadow: active
+              ? '0 8px 20px rgba(245,158,11,0.35)'
+              : 'none',
+
+            transition:'all 0.2s ease'
+          }}
+        >
+          <span style={{ fontSize:16 }}>{item.icon}</span>
+          {item.label}
+        </Link>
+      )
+    })}
+  </nav>
+</aside>
 
       {/* Main */}
       <main style={{ flex:1, padding:'40px' }}>
