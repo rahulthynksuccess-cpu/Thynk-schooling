@@ -85,22 +85,39 @@ async function ensurePaymentsTable() {
       order_id        VARCHAR(300),
       payment_id      VARCHAR(300),
       amount_paise    INTEGER NOT NULL,
-      credits_added   INTEGER NOT NULL,
+      credits_added   INTEGER NOT NULL DEFAULT 0,
       status          VARCHAR(50) DEFAULT 'pending',
       meta            JSONB DEFAULT '{}',
       created_at      TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
-  // Migrate old column names if they exist
   await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS gateway VARCHAR(20) NOT NULL DEFAULT 'razorpay'`).catch(() => {})
   await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS order_id VARCHAR(300)`).catch(() => {})
   await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS payment_id VARCHAR(300)`).catch(() => {})
   await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS meta JSONB DEFAULT '{}'`).catch(() => {})
-  // Copy razorpay_order_id → order_id if migration needed
+  await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS credits_added INTEGER NOT NULL DEFAULT 0`).catch(() => {})
   await db.query(`
     UPDATE lead_package_payments SET order_id = razorpay_order_id
     WHERE order_id IS NULL AND razorpay_order_id IS NOT NULL
   `).catch(() => {})
+}
+
+/**
+ * Parse request body — handles both JSON and application/x-www-form-urlencoded.
+ * Easebuzz POSTs back as form-urlencoded (browser redirect), not JSON.
+ */
+async function parseBody(req: NextRequest): Promise<Record<string, any>> {
+  const contentType = req.headers.get('content-type') || ''
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    const text = await req.text()
+    const params = new URLSearchParams(text)
+    return Object.fromEntries(params.entries())
+  }
+  try {
+    return await req.json()
+  } catch {
+    return {}
+  }
 }
 
 /* ── GET ─────────────────────────────────────────────────────────────────────── */
@@ -115,7 +132,6 @@ export async function GET(req: NextRequest) {
       `SELECT * FROM lead_packages WHERE ${all ? '1=1' : 'is_active=true'} ORDER BY price_paise ASC`
     )
 
-    // Also return enabled gateways (so frontend knows which to show)
     const gateways = await getEnabledGateways()
     const gatewayList = gateways.map(g => ({
       id:       g.id,
@@ -148,8 +164,8 @@ export async function POST(req: NextRequest) {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      const packageId  = searchParams.get('id')
-      const gatewayId  = (searchParams.get('gateway') || 'razorpay') as GatewayId
+      const packageId = searchParams.get('id')
+      const gatewayId = (searchParams.get('gateway') || 'razorpay') as GatewayId
 
       if (!packageId) return NextResponse.json({ error: 'Package id required' }, { status: 400 })
 
@@ -161,25 +177,26 @@ export async function POST(req: NextRequest) {
 
       const p        = pkg.rows[0]
       const schoolId = school.rows[0].id
-      const receipt = `lp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`
-// e.g. lp_lxyz123_ab3f9  → ~20 chars, unique enough
 
-      // Get buyer info for gateways that need it (Cashfree, Easebuzz)
+      // ── FIX: receipt must be ≤ 40 chars for Razorpay ──────────────────────
+      // pkg_<8 hex chars>_<base36 timestamp> ≈ 4+1+8+1+8 = 22 chars max
+      const shortId  = packageId.replace(/-/g, '').slice(0, 8)
+      const receipt  = `pkg_${shortId}_${Date.now().toString(36)}`
+      // ──────────────────────────────────────────────────────────────────────
+
       const userInfo = await db.query(
         `SELECT COALESCE(full_name, name) AS name, email, COALESCE(phone, mobile) AS phone FROM users WHERE id=$1`,
         [userId]
       ).catch(() => ({ rows: [] }))
       const buyer = userInfo.rows[0] || {}
 
-      // ── Dev/fallback mode: if no gateway keys configured, auto-approve ──
       const gwConfig = await db.query(
-        "SELECT key_id, key_secret FROM payment_gateways WHERE id=$1 AND enabled=true",
+        'SELECT key_id, key_secret FROM payment_gateways WHERE id=$1 AND enabled=true',
         [gatewayId]
       ).catch(() => ({ rows: [] }))
       const hasKeys = gwConfig.rows.length > 0 && gwConfig.rows[0].key_id && gwConfig.rows[0].key_secret
 
       if (!hasKeys) {
-        // No gateway configured — credit directly (dev/demo mode)
         await db.query(
           `INSERT INTO lead_credits (school_id, credits, total_credits, updated_at)
            VALUES ($1, $2, $2, NOW())
@@ -190,9 +207,9 @@ export async function POST(req: NextRequest) {
           [schoolId, p.leads_count]
         )
         await db.query(
-          `INSERT INTO lead_package_payments (school_id, package_id, gateway, amount_paise, status, created_at)
-           VALUES ($1, $2, 'demo', $3, 'completed', NOW())`,
-          [schoolId, packageId, p.price_paise]
+          `INSERT INTO lead_package_payments (school_id, package_id, gateway, amount_paise, credits_added, status, created_at)
+           VALUES ($1, $2, 'demo', $3, $4, 'completed', NOW())`,
+          [schoolId, packageId, p.price_paise, p.leads_count]
         ).catch(() => {})
         return NextResponse.json({ success: true, _dev: true, orderId: 'demo_' + Date.now(), message: 'Credits added (demo mode — configure payment gateway in Admin > Integrations)' })
       }
@@ -206,7 +223,6 @@ export async function POST(req: NextRequest) {
           { buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone }
         )
 
-        // Store pending payment record
         await db.query(
           `INSERT INTO lead_package_payments
              (school_id, package_id, gateway, order_id, amount_paise, credits_added, status, meta)
@@ -223,7 +239,6 @@ export async function POST(req: NextRequest) {
         })
 
       } catch (gwErr: any) {
-        // If selected gateway fails, try fallback to mock for dev
         if (process.env.NODE_ENV !== 'production') {
           const mockOrderId = `order_dev_${Date.now()}`
           await db.query(
@@ -248,35 +263,33 @@ export async function POST(req: NextRequest) {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      const body = await req.json()
+      // ── FIX: parse both JSON (Razorpay/PayPal) and form-urlencoded (Easebuzz) ──
+      const body = await parseBody(req)
+
       const {
         gateway = 'razorpay',
         orderId,
-        // Razorpay fields
+        // Razorpay
         razorpay_order_id, razorpay_payment_id, razorpay_signature,
-        // Cashfree fields
+        // Cashfree
         cfOrderId,
-        // Easebuzz fields
+        // Easebuzz
         txnid, status: txnStatus, hash: ebHash,
-        // PayPal fields
+        // PayPal
         paypalOrderId,
       } = body
 
-      // Normalise orderId across gateways
       const resolvedOrderId = orderId || razorpay_order_id || cfOrderId || txnid || paypalOrderId
 
       if (!resolvedOrderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 })
 
-      // Find the pending payment record
       const payment = await db.query(
         `SELECT * FROM lead_package_payments WHERE order_id=$1 AND status='pending'`,
         [resolvedOrderId]
       )
 
       if (!payment.rows.length) {
-        // Dev mode: allow without a real gateway record
         if (process.env.NODE_ENV !== 'production' && resolvedOrderId.startsWith('order_dev_')) {
-          // find by order_id without status restriction
           const devPayment = await db.query(
             `SELECT * FROM lead_package_payments WHERE order_id=$1 LIMIT 1`,
             [resolvedOrderId]
@@ -294,16 +307,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Payment record not found' }, { status: 404 })
       }
 
-      const rec     = payment.rows[0]
-      const gwId    = (gateway || rec.gateway) as GatewayId
+      const rec  = payment.rows[0]
+      const gwId = (gateway || rec.gateway) as GatewayId
 
-      // Verify with the appropriate gateway
       const result = await verifyPayment({
-        gateway:    gwId,
-        orderId:    resolvedOrderId,
-        paymentId:  razorpay_payment_id || cfOrderId || paypalOrderId,
-        signature:  razorpay_signature  || ebHash,
-        status:     txnStatus,
+        gateway:   gwId,
+        orderId:   resolvedOrderId,
+        paymentId: razorpay_payment_id || cfOrderId || paypalOrderId,
+        signature: razorpay_signature  || ebHash,
+        status:    txnStatus,
       })
 
       if (!result.success) {
@@ -312,7 +324,6 @@ export async function POST(req: NextRequest) {
 
       const { school_id, credits_added } = rec
 
-      // Credit the school
       await db.query(`
         INSERT INTO lead_credits (school_id, credits, total_credits, used_credits) VALUES ($1,$2,$2,0)
         ON CONFLICT (school_id) DO UPDATE SET
@@ -321,11 +332,18 @@ export async function POST(req: NextRequest) {
           updated_at    = NOW()
       `, [school_id, credits_added])
 
-      // Mark payment completed
       await db.query(
         `UPDATE lead_package_payments SET status='completed', payment_id=$1 WHERE order_id=$2`,
         [result.paymentId, resolvedOrderId]
       )
+
+      // ── For Easebuzz: redirect browser back to packages page ───────────────
+      // Easebuzz hits surl as a browser POST, so we redirect after verifying
+      const contentType = req.headers.get('content-type') || ''
+      if (contentType.includes('application/x-www-form-urlencoded')) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+        return NextResponse.redirect(`${appUrl}/dashboard/school/packages?status=success&credits=${credits_added}`, 303)
+      }
 
       return NextResponse.json({ success: true, creditsAdded: credits_added })
     } catch (e: any) {
