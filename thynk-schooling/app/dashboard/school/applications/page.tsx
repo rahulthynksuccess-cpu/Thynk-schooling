@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { GraduationCap, FileText, Clock, CheckCircle2, XCircle, Users } from 'lucide-react'
+   import { authHeaders } from '@/utils/authHeaders'
 
 const STATUS_STYLE: Record<string, [string,string]> = {
   submitted:    ['#3B82F6','rgba(59,130,246,0.1)'],
@@ -25,8 +26,7 @@ export default function SchoolApplicationsPage() {
   useEffect(() => {
     if (!mounted) return
     if (!accessToken || !user) { router.replace('/login'); return }
-    import { authHeaders } from '@/utils/authHeaders'
-    fetch('/api/schools?action=applications', {
+     fetch('/api/schools?action=applications', {
   credentials: 'include',
    headers: authHeaders(),
  })
