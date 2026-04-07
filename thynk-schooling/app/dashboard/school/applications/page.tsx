@@ -39,7 +39,15 @@ export default function SchoolApplicationsPage() {
   if (!mounted) return null
 
   return (
-    <div style={{ display:'flex', minHeight:'100vh', background:'#F0EDE8', fontFamily:"'Bricolage Grotesque',system-ui,sans-serif" }}>
+   <div style={{ display:'flex', minHeight:'100vh', background:'#F0EDE8' }}>
+
+  <style>
+    {`
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `}
+  </style>
       {/* Sidebar */}
       <aside style={{ width:252, background:'#0A0A0F', display:'flex', flexDirection:'column', flexShrink:0, position:'sticky', top:0, height:'100vh' }}>
         <div style={{ padding:'22px 20px', borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
@@ -73,14 +81,36 @@ export default function SchoolApplicationsPage() {
       <main style={{ flex:1, padding:'36px 40px', overflowY:'auto' }}>
         <h1 style={{ fontFamily:"'Clash Display',sans-serif", fontSize:28, fontWeight:700, color:'#0D1117', marginBottom:24, letterSpacing:'-0.03em' }}>Applications</h1>
 
-        <div style={{ background:'#fff', borderRadius:18, border:'1px solid rgba(13,17,23,0.07)', overflow:'hidden', boxShadow:'0 2px 16px rgba(13,17,23,0.05)' }}>
+        <div
+  style={{
+    background:'#fff',
+    borderRadius:18,
+    border:'1px solid rgba(13,17,23,0.07)',
+    overflow:'hidden',
+    boxShadow:'0 10px 30px rgba(13,17,23,0.08)',
+    transition:'all 0.3s ease'
+  }}
+>
           <div style={{ padding:'18px 24px', borderBottom:'1px solid rgba(13,17,23,0.07)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <span style={{ fontFamily:"'Clash Display',sans-serif", fontSize:16, fontWeight:700, color:'#0D1117' }}>Admission Applications</span>
             <span style={{ fontSize:12, color:'#64748B', fontWeight:600 }}>{apps.length} total</span>
           </div>
 
           {loading ? (
-            <div style={{ padding:'48px', textAlign:'center', color:'#64748B' }}>Loading…</div>
+            <div style={{ padding:'48px', textAlign:'center' }}>
+    <div style={{
+      width:30,
+      height:30,
+      border:'3px solid #E5E7EB',
+      borderTop:'3px solid #F59E0B',
+      borderRadius:'50%',
+      margin:'0 auto 10px',
+      animation:'spin 0.8s linear infinite'
+    }} />
+    <div style={{ fontSize:12, color:'#64748B' }}>
+      Loading applications...
+    </div>
+  </div>
           ) : apps.length === 0 ? (
             <div style={{ padding:'64px 20px', textAlign:'center', display:'flex', flexDirection:'column', alignItems:'center', gap:12 }}>
               <div style={{ width:64, height:64, borderRadius:18, background:'#F8FAFC', border:'1px solid rgba(13,17,23,0.07)', display:'flex', alignItems:'center', justifyContent:'center' }}>
