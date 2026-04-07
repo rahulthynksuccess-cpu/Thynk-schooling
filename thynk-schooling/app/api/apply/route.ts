@@ -92,8 +92,10 @@ export async function POST(req: NextRequest) {
     if (!classApplyingFor) return NextResponse.json({ error: 'Class is required' }, { status: 400 })
 
     // Verify school exists — fetch by id (could be UUID or slug)
+    // Use explicit UUID cast to avoid "operator does not exist: character varying = uuid"
     const schoolRes = await db.query(
-      'SELECT id, city FROM schools WHERE id=$1 OR slug=$1',
+      `SELECT id, city FROM schools WHERE slug=$1
+       OR (id::text = $1)`,
       [schoolId]
     )
     if (!schoolRes.rows.length) {

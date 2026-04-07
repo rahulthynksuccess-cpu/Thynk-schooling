@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer'
 import { Check, ArrowRight, Star, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { useContent } from '@/hooks/useContent'
+import { useAuthStore } from '@/store/authStore'
 
 const DEFAULT_FAQ=[
   {q:'What is a lead credit?',a:'One lead credit = one parent enquiry. When a parent fills an admission form for your school, you use a credit to unlock their full contact details.'},
@@ -27,6 +28,8 @@ const ease = [0.22, 1, 0.36, 1] as const
 
 export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState<number|null>(null)
+  const { user, isAuthenticated } = useAuthStore()
+  const isSchoolUser = isAuthenticated && user?.role === 'school_admin'
   const pricingContent = useContent('pricing')
   const { data: subPlans, isLoading: plansLoading } = useQuery<SubPlan[]>({
     queryKey: ['subscription-plans'],
@@ -358,11 +361,11 @@ export default function PricingPage() {
 
                         {/* CTA */}
                         <Link
-                          href={`/register?role=school&plan=${plan.planKey}`}
+                          href={isSchoolUser ? `/dashboard/school/packages` : `/register?role=school&plan=${plan.planKey}`}
                           className={plan.isHot ? 'btn btn-gold' : 'btn btn-dark'}
                           style={{ textAlign: 'center', justifyContent: 'center', display: 'flex', fontSize: 13 }}
                         >
-                          {plan.cta} <ArrowRight style={{ width: 13, height: 13 }} />
+                          {isSchoolUser ? 'Go to Packages' : plan.cta} <ArrowRight style={{ width: 13, height: 13 }} />
                         </Link>
                       </div>
                     </motion.div>
@@ -453,7 +456,7 @@ export default function PricingPage() {
             <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 14, color: '#718096', fontWeight: 300, lineHeight: 1.7, marginBottom: 24 }}>
               Start free — no credit card needed. Upgrade when you're ready.
             </p>
-            <Link href="/register?role=school" className="btn btn-gold" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+            <Link href={isSchoolUser ? "/dashboard/school/packages" : "/register?role=school"} className="btn btn-gold" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
               List Your School Free <ArrowRight style={{ width: 14, height: 14 }} />
             </Link>
           </motion.div>

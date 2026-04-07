@@ -1,34 +1,97 @@
 'use client'
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
+import { useParams } from 'next/navigation'
 import { useAuthStore } from '@/store/authStore'
 import { useDropdown } from '@/hooks/useDropdown'
 import Link from 'next/link'
 import {
   GraduationCap, ArrowLeft, CheckCircle2, Loader2,
-  Phone, Mail, User, BookOpen, MapPin, AlertCircle,
+  Phone, Mail, User, BookOpen, MapPin, AlertCircle, ChevronDown,
 } from 'lucide-react'
 
 interface SchoolInfo {
   id: string; name: string; city: string; state: string
   logo_url?: string; school_type?: string; board?: string[]
-  monthly_fee_min?: number; monthly_fee_max?: number
 }
 
+// ─── Custom Dropdown (replaces native <select> — fixes invisible options bug) ──
+function CustomSelect({
+  value, onChange, options, placeholder, icon: Icon,
+}: {
+  value: string
+  onChange: (v: string) => void
+  options: { value: string; label: string }[]
+  placeholder: string
+  icon?: React.ElementType
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = options.find(o => o.value === value)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 bg-white border border-[#D4B483] rounded-xl px-4 py-3 text-left text-sm focus:outline-none focus:ring-2 focus:ring-[#B8860B]/40 hover:border-[#B8860B] transition-colors"
+      >
+        {Icon && <Icon className="w-4 h-4 text-[#B8860B] flex-shrink-0" />}
+        <span className={`flex-1 ${selected ? 'text-[#2C1810]' : 'text-[#9B8860]'}`}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <ChevronDown className={`w-4 h-4 text-[#B8860B] transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-[#D4B483] rounded-xl shadow-lg overflow-hidden">
+          <div className="max-h-52 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => { onChange(''); setOpen(false) }}
+              className="w-full px-4 py-2.5 text-left text-sm text-[#9B8860] hover:bg-[#FDF6E9] transition-colors"
+            >
+              {placeholder}
+            </button>
+            {options.map(o => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => { onChange(o.value); setOpen(false) }}
+                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#FDF6E9] ${value === o.value ? 'bg-[#FFF3D4] text-[#B8860B] font-semibold' : 'text-[#2C1810]'}`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const inp = "w-full bg-white border border-[#D4B483] rounded-xl px-4 py-3 text-[#2C1810] placeholder-[#9B8860] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/40 focus:border-[#B8860B] text-sm transition-colors"
+
 export default function ApplyPage() {
-  const router   = useRouter()
   const params   = useParams()
   const schoolId = params.schoolId as string
 
   const { user, accessToken } = useAuthStore()
-  const [mounted, setMounted] = useState(false)
-  const [school, setSchool]   = useState<SchoolInfo | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [mounted, setMounted]       = useState(false)
+  const [school, setSchool]         = useState<SchoolInfo | null>(null)
+  const [loading, setLoading]       = useState(true)
   const [submitting, setSubmitting] = useState(false)
-  const [done, setDone]       = useState(false)
-  const [error, setError]     = useState('')
+  const [done, setDone]             = useState(false)
+  const [error, setError]           = useState('')
 
   const { options: classOptions } = useDropdown('class_level')
   const { options: howOptions }   = useDropdown('how_did_you_hear')
@@ -39,22 +102,24 @@ export default function ApplyPage() {
     message: '', howDidYouHear: '',
   })
 
+  // Pre-fill from logged-in parent profile
   useEffect(() => {
     setMounted(true)
-    // Pre-fill from user profile
-    if (user) setForm(f => ({ ...f, parentName: user.fullName || '', email: (user as any).email || '' }))
+    if (user) {
+      setForm(f => ({
+        ...f,
+        parentName: user.fullName || '',
+        email:      (user as any).email || '',
+        phone:      user.phone || '',
+      }))
+    }
   }, [user])
 
   useEffect(() => {
     if (!schoolId) return
-    // Fetch school info by ID via listing route
     fetch(`/api/schools?schoolId=${schoolId}`)
       .then(r => r.json())
-      .then(d => {
-        // Try direct data or first result
-        const s = d.school || (d.data && d.data[0]) || null
-        setSchool(s)
-      })
+      .then(d => setSchool(d.school || (d.data && d.data[0]) || null))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [schoolId])
@@ -68,28 +133,14 @@ export default function ApplyPage() {
     if (!form.classApplyingFor)  { setError('Please select the class applying for'); return }
     setError('')
     setSubmitting(true)
-
     try {
       const token = accessToken || (typeof localStorage !== 'undefined' ? localStorage.getItem('ts_access_token') : '') || ''
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
-
       const res = await fetch('/api/apply', {
-        method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({
-          schoolId,
-          parentName: form.parentName,
-          phone: form.phone,
-          email: form.email,
-          childName: form.childName,
-          classApplyingFor: form.classApplyingFor,
-          message: form.message,
-          howDidYouHear: form.howDidYouHear,
-        }),
+        method: 'POST', headers, credentials: 'include',
+        body: JSON.stringify({ schoolId, ...form }),
       })
-
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to submit application')
       setDone(true)
@@ -102,30 +153,32 @@ export default function ApplyPage() {
 
   if (!mounted) return null
 
+  const pageBg = { background: 'linear-gradient(160deg,#FDFAF5 0%,#F5EDD8 60%,#EEE0C0 100%)', minHeight: '100vh' }
+
   if (loading) return (
-    <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center">
-      <Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
+    <div style={pageBg} className="flex items-center justify-center">
+      <Loader2 className="w-8 h-8 text-[#B8860B] animate-spin" />
     </div>
   )
 
   if (done) return (
-    <div className="min-h-screen bg-[#0A0F1A] flex items-center justify-center p-4">
+    <div style={pageBg} className="flex items-center justify-center p-4">
       <div className="text-center max-w-md">
-        <div className="w-20 h-20 rounded-full bg-green-500/15 border border-green-500/30 flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-green-400" />
+        <div className="w-20 h-20 rounded-full bg-green-100 border-2 border-green-300 flex items-center justify-center mx-auto mb-6">
+          <CheckCircle2 className="w-10 h-10 text-green-600" />
         </div>
-        <h1 className="text-2xl font-bold text-white mb-3">Application Submitted!</h1>
-        <p className="text-slate-400 mb-2">
-          Your enquiry has been sent to <span className="text-orange-400 font-semibold">{school?.name || 'the school'}</span>.
+        <h1 className="text-2xl font-bold text-[#2C1810] mb-3">Application Submitted!</h1>
+        <p className="text-[#6B5744] mb-2">
+          Your enquiry has been sent to <span className="text-[#B8860B] font-semibold">{school?.name || 'the school'}</span>.
         </p>
-        <p className="text-slate-500 text-sm mb-8">
-          The school team will contact you on <span className="text-white font-medium">{form.phone}</span> within 1–2 business days.
+        <p className="text-[#9B8860] text-sm mb-8">
+          The school team will contact you on <span className="text-[#2C1810] font-medium">{form.phone}</span> within 1–2 business days.
         </p>
         <div className="flex gap-3 justify-center">
-          <Link href="/schools" className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-semibold text-sm transition-colors">
+          <Link href="/schools" className="px-5 py-2.5 bg-[#B8860B] hover:bg-[#9A7009] text-white rounded-xl font-semibold text-sm transition-colors">
             Browse More Schools
           </Link>
-          <Link href="/dashboard/parent" className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-semibold text-sm transition-colors border border-white/10">
+          <Link href="/dashboard/parent" className="px-5 py-2.5 bg-white hover:bg-[#FDF6E9] text-[#2C1810] rounded-xl font-semibold text-sm transition-colors border border-[#D4B483]">
             My Dashboard
           </Link>
         </div>
@@ -133,132 +186,149 @@ export default function ApplyPage() {
     </div>
   )
 
-  const inp = "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:border-orange-400/50 text-sm font-sans"
-
   return (
-    <div className="min-h-screen bg-[#0A0F1A] text-white">
+    <div style={pageBg}>
       {/* Header */}
-      <div className="border-b border-white/5 px-4 py-4">
+      <div className="border-b border-[#D4B483]/60 bg-white/60 backdrop-blur-sm px-4 py-4">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          <Link href={`/schools`} className="p-2 rounded-lg hover:bg-white/5 transition-colors text-slate-400 hover:text-white">
+          <Link href="/schools" className="p-2 rounded-lg hover:bg-[#FDF6E9] transition-colors text-[#9B8860] hover:text-[#B8860B]">
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-orange-500/15 border border-orange-500/20 flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-orange-400" />
+            <div className="w-8 h-8 rounded-lg bg-[#B8860B]/15 border border-[#B8860B]/30 flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-[#B8860B]" />
             </div>
-            <span className="font-semibold text-sm text-white">Thynk Schooling</span>
+            <span className="font-bold text-sm text-[#2C1810]">Thynk Schooling</span>
           </div>
         </div>
       </div>
 
       <div className="max-w-xl mx-auto px-4 py-8">
-        {/* School info banner */}
+
+        {/* School banner */}
         {school && (
-          <div className="bg-white/4 border border-white/8 rounded-2xl p-4 mb-6 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <div className="bg-white/80 border border-[#D4B483] rounded-2xl p-4 mb-6 flex items-center gap-4 shadow-sm">
+            <div className="w-14 h-14 rounded-xl bg-[#FDF6E9] border border-[#D4B483] flex items-center justify-center flex-shrink-0 overflow-hidden">
               {school.logo_url
                 ? <img src={school.logo_url} alt={school.name} className="w-full h-full object-contain p-1" />
-                : <GraduationCap className="w-7 h-7 text-orange-400" />}
+                : <GraduationCap className="w-7 h-7 text-[#B8860B]" />}
             </div>
             <div>
-              <h2 className="font-bold text-white text-base leading-tight">{school.name}</h2>
-              <p className="text-slate-400 text-sm mt-0.5 flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> {school.city}{school.state ? `, ${school.state}` : ''}
+              <h2 className="font-bold text-[#2C1810] text-base leading-tight">{school.name}</h2>
+              <p className="text-[#9B8860] text-sm mt-0.5 flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {school.city}{school.state ? `, ${school.state}` : ''}
               </p>
             </div>
           </div>
         )}
 
-        <h1 className="text-xl font-bold text-white mb-1">Enquire &amp; Apply</h1>
-        <p className="text-slate-400 text-sm mb-6">Fill in your details and the school will contact you directly.</p>
+        {/* Form card */}
+        <div className="bg-white/80 border border-[#D4B483] rounded-2xl shadow-sm p-6">
+          <h1 className="text-xl font-bold text-[#2C1810] mb-1">Enquire &amp; Apply</h1>
+          <p className="text-[#9B8860] text-sm mb-6">Fill in your details and the school will contact you directly.</p>
 
-        {/* Form */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Your Name <span className="text-orange-400">*</span></label>
-            <div className="relative">
-              <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-              <input className={`${inp} pl-10`} placeholder="e.g. Rahul Sharma" value={form.parentName} onChange={e => set('parentName', e.target.value)} />
-            </div>
-          </div>
+          <div className="space-y-5">
 
-          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Phone <span className="text-orange-400">*</span></label>
+              <label className="block text-xs font-semibold text-[#6B5744] uppercase tracking-wider mb-1.5">
+                Your Name <span className="text-[#B8860B]">*</span>
+              </label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input className={`${inp} pl-10`} placeholder="+91 98765 43210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
+                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8860B] pointer-events-none" />
+                <input className={`${inp} pl-10`} placeholder="e.g. Rahul Sharma" value={form.parentName} onChange={e => set('parentName', e.target.value)} />
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Email</label>
-              <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input className={`${inp} pl-10`} placeholder="you@example.com" type="email" value={form.email} onChange={e => set('email', e.target.value)} />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#6B5744] uppercase tracking-wider mb-1.5">
+                  Phone <span className="text-[#B8860B]">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8860B] pointer-events-none" />
+                  <input className={`${inp} pl-10`} placeholder="+91 98765 43210" type="tel" value={form.phone} onChange={e => set('phone', e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#6B5744] uppercase tracking-wider mb-1.5">Email</label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8860B] pointer-events-none" />
+                  <input className={`${inp} pl-10`} placeholder="you@example.com" type="email" value={form.email} onChange={e => set('email', e.target.value)} />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Child's Name <span className="text-orange-400">*</span></label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input className={`${inp} pl-10`} placeholder="e.g. Aanya Sharma" value={form.childName} onChange={e => set('childName', e.target.value)} />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#6B5744] uppercase tracking-wider mb-1.5">
+                  Child's Name <span className="text-[#B8860B]">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#B8860B] pointer-events-none" />
+                  <input className={`${inp} pl-10`} placeholder="e.g. Aanya Sharma" value={form.childName} onChange={e => set('childName', e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[#6B5744] uppercase tracking-wider mb-1.5">
+                  Class Applying For <span className="text-[#B8860B]">*</span>
+                </label>
+                <CustomSelect
+                  value={form.classApplyingFor}
+                  onChange={v => set('classApplyingFor', v)}
+                  options={classOptions}
+                  placeholder="Select class"
+                  icon={BookOpen}
+                />
               </div>
             </div>
+
             <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Class Applying For <span className="text-orange-400">*</span></label>
-              <div className="relative">
-                <BookOpen className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                <select className={`${inp} pl-10 appearance-none`} value={form.classApplyingFor} onChange={e => set('classApplyingFor', e.target.value)}>
-                  <option value="">Select class</option>
-                  {classOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
+              <label className="block text-xs font-semibold text-[#6B5744] uppercase tracking-wider mb-1.5">
+                Message <span className="text-[#9B8860] font-normal normal-case">(optional)</span>
+              </label>
+              <textarea
+                className={inp}
+                rows={3}
+                placeholder="Any specific questions or requirements for the school…"
+                value={form.message}
+                onChange={e => set('message', e.target.value)}
+              />
+            </div>
+
+            {howOptions.length > 0 && (
+              <div>
+                <label className="block text-xs font-semibold text-[#6B5744] uppercase tracking-wider mb-1.5">
+                  How did you hear about us?
+                </label>
+                <CustomSelect
+                  value={form.howDidYouHear}
+                  onChange={v => set('howDidYouHear', v)}
+                  options={howOptions}
+                  placeholder="Select option"
+                />
               </div>
-            </div>
+            )}
+
+            {error && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="w-full py-3.5 bg-[#B8860B] hover:bg-[#9A7009] disabled:opacity-60 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
+            >
+              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</> : 'Submit Enquiry'}
+            </button>
+
+            <p className="text-center text-[#9B8860] text-xs">
+              By submitting, you agree to be contacted by the school. Your details are shared only with this school.
+            </p>
           </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Message (optional)</label>
-            <textarea
-              className={inp}
-              rows={3}
-              placeholder="Any specific questions or requirements for the school…"
-              value={form.message}
-              onChange={e => set('message', e.target.value)}
-            />
-          </div>
-
-          {howOptions.length > 0 && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">How did you hear about us?</label>
-              <select className={`${inp} appearance-none`} value={form.howDidYouHear} onChange={e => set('howDidYouHear', e.target.value)}>
-                <option value="">Select option</option>
-                {howOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              {error}
-            </div>
-          )}
-
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full py-3.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Submitting…</> : 'Submit Enquiry'}
-          </button>
-
-          <p className="text-center text-slate-500 text-xs">
-            By submitting, you agree to be contacted by the school. Your details are shared only with this school.
-          </p>
         </div>
       </div>
     </div>

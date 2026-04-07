@@ -28,7 +28,7 @@ const NAV = [
   { icon: Users,           label: 'Leads',             href: '/dashboard/school/leads',        badge: 'new' },
   { icon: FileText,        label: 'Applications',      href: '/dashboard/school/applications', badge: null },
   { icon: Star,            label: 'Reviews',           href: '/dashboard/school/reviews',      badge: null },
-  { icon: LayoutGrid,      label: 'Subscription Plan', href: '/pricing',                       badge: null },
+  { icon: LayoutGrid,      label: 'Subscription Plan', href: '/dashboard/school/packages',     badge: null },
   { icon: BarChart3,       label: 'Analytics',         href: '/dashboard/school/analytics',    badge: null },
   { icon: Settings,        label: 'School Profile',    href: '/school/complete-profile',       badge: null },
 ]
@@ -506,7 +506,7 @@ export function SchoolDashboardClient() {
                     {credits.expiryDate && (
                       <div className="credit-expiry"><Clock size={11} /> Expires {new Date(credits.expiryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                     )}
-                    <Link href="/pricing" className="credits-buy-btn">
+                    <Link href="/dashboard/school/packages" className="credits-buy-btn">
                       <Zap size={14} /> Buy More Credits
                     </Link>
                   </>
@@ -514,7 +514,7 @@ export function SchoolDashboardClient() {
                   <div className="credits-empty">
                     <Zap size={28} color="#E5E7EB" />
                     <p>No credits yet</p>
-                    <Link href="/pricing" className="credits-buy-btn"><Zap size={13} /> Get Credits</Link>
+                    <Link href="/dashboard/school/packages" className="credits-buy-btn"><Zap size={13} /> Get Credits</Link>
                   </div>
                 )}
               </div>

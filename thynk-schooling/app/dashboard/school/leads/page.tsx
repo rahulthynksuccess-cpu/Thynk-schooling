@@ -73,7 +73,7 @@ function SchoolLayout({ children, title, credits }: { children: React.ReactNode;
       <main style={{ flex:1, overflowY:'auto', padding:'clamp(20px,3vw,40px)' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24, gap:16, flexWrap:'wrap' }}>
           <h1 style={{ fontFamily:'serif', fontWeight:700, fontSize:'clamp(1.6rem,3vw,2.4rem)', color:'#111827', letterSpacing:'-1px', margin:0 }}>{title}</h1>
-          <Link href="/pricing" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, boxShadow:'0 4px 12px rgba(245,158,11,0.3)' }}>
+          <Link href="/dashboard/school/packages" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, boxShadow:'0 4px 12px rgba(245,158,11,0.3)' }}>
             <LayoutGrid size={14} /> Upgrade Plan
           </Link>
         </div>
@@ -112,7 +112,7 @@ function SubscriptionPlanCards() {
     <div>
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))', gap:16 }}>
         {activePlans.map((plan, i) => (
-          <Link key={plan.id} href={`/pricing`} style={{ textDecoration:'none' }}>
+          <Link key={plan.id} href={`/dashboard/school/packages`} style={{ textDecoration:'none' }}>
             <div style={{
               background:'#fff',
               border: plan.isHot ? '2px solid #F59E0B' : '1px solid rgba(0,0,0,0.08)',
@@ -261,7 +261,7 @@ function LeadsContent() {
               <div style={{ fontWeight:700, fontSize:14, color:'#111827', marginBottom:3 }}>You have 0 lead credits</div>
               <div style={{ fontSize:13, color:'#6B7280' }}>Upgrade your subscription plan to get lead credits included every month and start unlocking parent contacts.</div>
             </div>
-            <Link href="/pricing" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, flexShrink:0 }}>
+            <Link href="/dashboard/school/packages" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:9, background:'#F59E0B', color:'#fff', textDecoration:'none', fontSize:13, fontWeight:600, flexShrink:0 }}>
               View Plans <ChevronRight size={13} />
             </Link>
           </div>
