@@ -149,6 +149,7 @@ export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
     if (action === 'leads') return await getLeads(req)
+if (action === 'applications') return await getApplications(req)
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }
