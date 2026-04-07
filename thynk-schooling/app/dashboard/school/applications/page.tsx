@@ -103,7 +103,25 @@ export default function SchoolApplicationsPage() {
                   const st = a.status || 'submitted'
                   const [color, bg] = STATUS_STYLE[st] || STATUS_STYLE.submitted
                   return (
-                    <tr key={a.id || i} style={{ borderBottom:'1px solid rgba(13,17,23,0.04)' }}>
+                   <tr
+  key={a.id || i}
+  style={{
+    borderBottom:'1px solid rgba(13,17,23,0.04)',
+    transition:'all 0.2s ease',
+    cursor:'pointer',
+    background: i % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+  }}
+  onMouseEnter={(e)=>{
+    e.currentTarget.style.background='#F8FAFC'
+    e.currentTarget.style.transform='scale(1.01)'
+    e.currentTarget.style.boxShadow='0 4px 20px rgba(0,0,0,0.06)'
+  }}
+  onMouseLeave={(e)=>{
+    e.currentTarget.style.background= i % 2 === 0 ? '#FFFFFF' : '#FAFAFA'
+    e.currentTarget.style.transform='scale(1)'
+    e.currentTarget.style.boxShadow='none'
+  }}
+>
                       <td style={{ padding:'14px 20px', fontSize:13, fontWeight:700, color:'#0D1117' }}>{a.parent_name || a.parentName || '—'}</td>
                       <td style={{ padding:'14px 20px', fontSize:13, color:'#475569' }}>{a.child_name || a.childName || '—'}</td>
                       <td style={{ padding:'14px 20px', fontSize:13, color:'#475569' }}>{a.class_applying_for || a.classApplyingFor || '—'}</td>
