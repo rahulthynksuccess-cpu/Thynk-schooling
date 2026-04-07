@@ -229,7 +229,7 @@ export function SchoolDashboardClient() {
 
   const { data: stats, isLoading: statsLoading } = useQuery<any>({
     queryKey: ['school-dashboard-stats'],
-    queryFn: () => fetch('/api/schools?action=dashboard-stats', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
+    queryFn: () => fetch('/api/schools/me/dashboard-stats', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
     enabled, staleTime: 2 * 60 * 1000,
   })
   const { data: leadsData, isLoading: leadsLoading } = useQuery<{ data: Lead[]; total: number }>({
@@ -356,7 +356,7 @@ export function SchoolDashboardClient() {
             {/* ── 4 Stat Cards ── */}
             <div className="sd-stats">
               <StatCard icon={Users}    label="Total Leads"      value={stats?.totalLeads ?? 0}          sub="All time"      trend="up"   trendVal="+12%" themeIdx={0} delay={0.05} href="/dashboard/school/leads"       loading={statsLoading} />
-              <StatCard icon={Flame}    label="New This Month"   value={stats?.newLeadsThisMonth ?? 0}   sub="Last 30 days"  trend="up"   trendVal="+8%"  themeIdx={1} delay={0.10}                                       loading={statsLoading} />
+              <StatCard icon={Flame}    label="New This Month"   value={stats?.newLeadsThisMonth ?? stats?.newLeadsToday ?? 0}   sub="Last 30 days"  trend="up"   trendVal="+8%"  themeIdx={1} delay={0.10}                                       loading={statsLoading} />
               <StatCard icon={FileText} label="Applications"     value={stats?.totalApplications ?? 0}   sub="Received"      trend="down" trendVal="-3%"  themeIdx={2} delay={0.15} href="/dashboard/school/applications" loading={statsLoading} />
               <StatCard icon={Star}     label="Avg Rating"       value={stats?.avgRating ? `${Number(stats.avgRating).toFixed(1)}★` : '—'} sub="From reviews" themeIdx={3} delay={0.20} href="/dashboard/school/reviews"  loading={statsLoading} />
             </div>
