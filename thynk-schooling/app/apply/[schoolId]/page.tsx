@@ -16,7 +16,7 @@ interface SchoolInfo {
   logo_url?: string; school_type?: string; board?: string[]
 }
 
-// ─── Custom Dropdown (replaces native <select> — fixes invisible options bug) ──
+// ─── Custom Dropdown — escapes parent overflow:hidden via fixed positioning ──
 function CustomSelect({
   value, onChange, options, placeholder, icon: Icon,
 }: {
@@ -27,12 +27,34 @@ function CustomSelect({
   icon?: React.ElementType
 }) {
   const [open, setOpen] = useState(false)
+  const [dropStyle, setDropStyle] = useState<React.CSSProperties>({})
+  const btnRef = useRef<HTMLButtonElement>(null)
   const ref = useRef<HTMLDivElement>(null)
   const selected = options.find(o => o.value === value)
 
+  const handleOpen = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      const dropH = Math.min(options.length * 40 + 16, 280)
+      const openUp = spaceBelow < dropH && rect.top > dropH
+      setDropStyle({
+        position: 'fixed',
+        top: openUp ? rect.top - dropH - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    }
+    setOpen(o => !o)
+  }
+
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node) &&
+          btnRef.current && !btnRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
     }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
@@ -41,24 +63,25 @@ function CustomSelect({
   return (
     <div ref={ref} className="relative">
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={handleOpen}
         className="w-full flex items-center gap-2 bg-white border border-[#D4B483] rounded-xl px-4 py-3 text-left text-sm focus:outline-none focus:ring-2 focus:ring-[#B8860B]/40 hover:border-[#B8860B] transition-colors"
       >
         {Icon && <Icon className="w-4 h-4 text-[#B8860B] flex-shrink-0" />}
-        <span className={`flex-1 ${selected ? 'text-[#2C1810]' : 'text-[#9B8860]'}`}>
+        <span className={`flex-1 ${selected ? "text-[#2C1810]" : "text-[#9B8860]"}`}>
           {selected ? selected.label : placeholder}
         </span>
-        <ChevronDown className={`w-4 h-4 text-[#B8860B] transition-transform flex-shrink-0 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-[#B8860B] transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
       </button>
 
       {open && (
-        <div className="absolute z-50 w-full mt-1 bg-white border border-[#D4B483] rounded-xl shadow-lg overflow-hidden">
-          <div className="max-h-52 overflow-y-auto">
+        <div style={{ ...dropStyle, background: "#fff", border: "1px solid #D4B483", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.12)", overflow: "hidden" }}>
+          <div style={{ maxHeight: 280, overflowY: "auto" }}>
             <button
               type="button"
-              onClick={() => { onChange(''); setOpen(false) }}
-              className="w-full px-4 py-2.5 text-left text-sm text-[#9B8860] hover:bg-[#FDF6E9] transition-colors"
+              onClick={() => { onChange(""); setOpen(false) }}
+              style={{ width: "100%", padding: "10px 16px", textAlign: "left", fontSize: 13, color: "#9B8860", background: "none", border: "none", cursor: "pointer", display: "block" }}
             >
               {placeholder}
             </button>
@@ -67,7 +90,13 @@ function CustomSelect({
                 key={o.value}
                 type="button"
                 onClick={() => { onChange(o.value); setOpen(false) }}
-                className={`w-full px-4 py-2.5 text-left text-sm transition-colors hover:bg-[#FDF6E9] ${value === o.value ? 'bg-[#FFF3D4] text-[#B8860B] font-semibold' : 'text-[#2C1810]'}`}
+                style={{
+                  width: "100%", padding: "10px 16px", textAlign: "left", fontSize: 13,
+                  background: value === o.value ? "#FFF3D4" : "none",
+                  color: value === o.value ? "#B8860B" : "#2C1810",
+                  fontWeight: value === o.value ? 600 : 400,
+                  border: "none", cursor: "pointer", display: "block",
+                }}
               >
                 {o.label}
               </button>
@@ -78,6 +107,7 @@ function CustomSelect({
     </div>
   )
 }
+
 
 const inp = "w-full bg-white border border-[#D4B483] rounded-xl px-4 py-3 text-[#2C1810] placeholder-[#9B8860] focus:outline-none focus:ring-2 focus:ring-[#B8860B]/40 focus:border-[#B8860B] text-sm transition-colors"
 
