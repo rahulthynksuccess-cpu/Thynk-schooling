@@ -49,8 +49,8 @@ async function ensureSchoolsTable() {
       facilities TEXT[], sports TEXT[], languages TEXT[], extracurriculars TEXT[],
       address_line1 TEXT, state VARCHAR(100), city VARCHAR(100), locality VARCHAR(100),
       pincode VARCHAR(10), latitude NUMERIC(10,7), longitude NUMERIC(10,7),
-      phone VARCHAR(20), email VARCHAR(200), website_url VARCHAR(300),
-      principal_name VARCHAR(200), logo_url VARCHAR(500), cover_url VARCHAR(500),
+      phone VARCHAR(20), email VARCHAR(200), website_url TEXT,
+      principal_name VARCHAR(200), logo_url TEXT, cover_url TEXT,
       rating NUMERIC(3,1) DEFAULT 0, is_verified BOOLEAN DEFAULT false,
       is_featured BOOLEAN DEFAULT false, is_active BOOLEAN DEFAULT true,
       profile_completed BOOLEAN DEFAULT false, created_at TIMESTAMPTZ DEFAULT NOW()
@@ -70,10 +70,18 @@ async function ensureSchoolsTable() {
     'ADD COLUMN IF NOT EXISTS state VARCHAR(100)', 'ADD COLUMN IF NOT EXISTS locality VARCHAR(100)',
     'ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)', 'ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)',
     'ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)', 'ADD COLUMN IF NOT EXISTS website_url VARCHAR(300)',
-    'ADD COLUMN IF NOT EXISTS principal_name VARCHAR(200)', 'ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)',
-    'ADD COLUMN IF NOT EXISTS cover_url VARCHAR(500)',
+    'ADD COLUMN IF NOT EXISTS principal_name VARCHAR(200)', 'ADD COLUMN IF NOT EXISTS logo_url TEXT',
+    'ADD COLUMN IF NOT EXISTS cover_url TEXT',
+    'ADD COLUMN IF NOT EXISTS avg_rating NUMERIC(3,1) DEFAULT 0',
+    'ADD COLUMN IF NOT EXISTS total_reviews INTEGER DEFAULT 0',
   ]
   for (const m of migrations) await db.query(`ALTER TABLE schools ${m}`).catch(() => {})
+  // Widen URL columns that may already exist as VARCHAR(500)
+  await db.query(`ALTER TABLE schools ALTER COLUMN logo_url TYPE TEXT`).catch(() => {})
+  await db.query(`ALTER TABLE schools ALTER COLUMN cover_url TYPE TEXT`).catch(() => {})
+  await db.query(`ALTER TABLE schools ALTER COLUMN website_url TYPE TEXT`).catch(() => {})
+  await db.query(`ALTER TABLE schools ALTER COLUMN name TYPE VARCHAR(500)`).catch(() => {})
+  await db.query(`ALTER TABLE schools ALTER COLUMN slug TYPE VARCHAR(500)`).catch(() => {})
 }
 
 // FormData helpers
@@ -402,12 +410,9 @@ async function getDashboardStats(req: NextRequest) {
     db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
     db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
   ])
-  // Compute profile completeness from actual school row
-  const fullRow = await db.query('SELECT * FROM schools WHERE id=$1', [sid]).catch(() => ({ rows: [{}] }))
-  const row = fullRow.rows[0] || {}
-  const fields = ['name','description','school_type','board','city','state','phone','email','address_line1','logo_url','principal_name','monthly_fee_min','classes_from','classes_to']
-  const filled = fields.filter(f => { const v = row[f]; if (Array.isArray(v)) return v.length > 0; return v !== null && v !== undefined && v !== '' }).length
-  const profileCompleteness = Math.round((filled / fields.length) * 100)
+  // Use profile_completed boolean as source of truth (set to true when school saves profile)
+  const pcRow = await db.query('SELECT profile_completed FROM schools WHERE id=$1', [sid]).catch(() => ({ rows: [{}] }))
+  const profileCompleteness = pcRow.rows[0]?.profile_completed === true ? 100 : 0
 
   return NextResponse.json({
     totalLeads: Number(leads.rows[0].count),
@@ -432,10 +437,15 @@ async function getSchoolApplications(req: NextRequest) {
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
   if (!school.rows.length) return NextResponse.json([])
   const sid = school.rows[0].id
+  // Ensure columns exist before querying
+  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS parent_name VARCHAR(200)').catch(()=>{})
+  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS phone VARCHAR(30)').catch(()=>{})
   const rows = await db.query(
-    `SELECT a.*, 
-            COALESCE(u.full_name, a.child_name) AS parent_name,
-            a.child_name, a.class_applying_for, a.status, a.created_at
+    `SELECT a.id, a.status, a.created_at,
+            a.child_name    AS "childName",
+            a.class_applying_for AS "classApplyingFor",
+            COALESCE(u.full_name, a.parent_name) AS "parentName",
+            COALESCE(u.phone, a.phone) AS "phone"
      FROM applications a
      LEFT JOIN users u ON u.id = a.parent_id
      WHERE a.school_id = $1 ORDER BY a.created_at DESC`,

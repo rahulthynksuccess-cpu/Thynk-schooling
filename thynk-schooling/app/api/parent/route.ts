@@ -19,7 +19,8 @@ import jwt from 'jsonwebtoken'
 function getUserId(req: NextRequest): string | null {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || req.cookies.get('ts_access_token')?.value || ''
-    return (jwt.verify(token, process.env.JWT_SECRET!, { ignoreExpiration: true }) as any)?.userId || null
+    const p = jwt.verify(token, process.env.JWT_SECRET!, { ignoreExpiration: true }) as any
+    return p?.userId || p?.id || null
   } catch { return null }
 }
 

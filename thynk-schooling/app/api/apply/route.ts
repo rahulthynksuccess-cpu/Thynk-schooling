@@ -63,17 +63,25 @@ async function ensureTables() {
   // applications table
   await db.query(`
     CREATE TABLE IF NOT EXISTS applications (
-      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      parent_id   UUID,
-      school_id   UUID NOT NULL,
-      lead_id     UUID,
-      status      VARCHAR(50) DEFAULT 'submitted',
-      child_name  VARCHAR(200),
-      class_applying_for VARCHAR(50),
-      message     TEXT,
-      created_at  TIMESTAMPTZ DEFAULT NOW()
+      id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      parent_id           UUID,
+      school_id           UUID NOT NULL,
+      lead_id             UUID,
+      status              VARCHAR(50) DEFAULT 'submitted',
+      child_name          VARCHAR(200),
+      class_applying_for  VARCHAR(50),
+      parent_name         VARCHAR(200),
+      phone               VARCHAR(30),
+      email               VARCHAR(200),
+      message             TEXT,
+      created_at          TIMESTAMPTZ DEFAULT NOW(),
+      updated_at          TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS parent_name VARCHAR(200)').catch(()=>{})
+  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS phone VARCHAR(30)').catch(()=>{})
+  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS email VARCHAR(200)').catch(()=>{})
+  await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()').catch(()=>{})
 }
 
 export async function POST(req: NextRequest) {
@@ -145,9 +153,9 @@ export async function POST(req: NextRequest) {
 
     // Also create an application record so the school sees it in applications tab
     await db.query(
-      `INSERT INTO applications (parent_id, school_id, lead_id, status, child_name, class_applying_for, message)
-       VALUES ($1,$2,$3,'submitted',$4,$5,$6)`,
-      [userId || null, school.id, leadId, childName.trim(), classApplyingFor, message?.trim() || null]
+      `INSERT INTO applications (parent_id, school_id, lead_id, status, child_name, class_applying_for, parent_name, phone, email, message)
+       VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,$8,$9)`,
+      [userId || null, school.id, leadId, childName.trim(), classApplyingFor, parentName.trim(), phone.trim(), email?.trim()||null, message?.trim() || null]
     ).catch(() => {}) // Non-fatal
 
     return NextResponse.json({ success: true, leadId })

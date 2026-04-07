@@ -130,15 +130,15 @@ async function ensureSchoolsTable() {
     'ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT false',
     'ADD COLUMN IF NOT EXISTS phone VARCHAR(20)',
     'ADD COLUMN IF NOT EXISTS email VARCHAR(200)',
-    'ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)',
-    'ADD COLUMN IF NOT EXISTS cover_url VARCHAR(500)',
+    'ADD COLUMN IF NOT EXISTS logo_url TEXT',
+    'ADD COLUMN IF NOT EXISTS cover_url TEXT',
     'ADD COLUMN IF NOT EXISTS description TEXT',
     'ADD COLUMN IF NOT EXISTS address_line1 TEXT',
     'ADD COLUMN IF NOT EXISTS locality VARCHAR(100)',
     'ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)',
     'ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)',
     'ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)',
-    'ADD COLUMN IF NOT EXISTS website_url VARCHAR(300)',
+    'ADD COLUMN IF NOT EXISTS website_url TEXT',
     'ADD COLUMN IF NOT EXISTS principal_name VARCHAR(200)',
     'ADD COLUMN IF NOT EXISTS tagline VARCHAR(300)',
     'ADD COLUMN IF NOT EXISTS affiliation_no VARCHAR(100)',
@@ -416,9 +416,9 @@ async function saveContent(req: NextRequest) {
 
 // ─── subscription plans ───────────────────────────────────────────────────────
 const DEFAULT_SUB_PLANS = [
-  { name:'Free',    price_paise:0,     description:'Get listed and start receiving leads.',          features:['5 lead credits included','Basic school profile','Up to 5 photos','Standard listing placement','Email support'],                                                                                  leads_per_month:5,   is_hot:false, cta:'Get Started Free', plan_key:'free' },
-  { name:'Silver',  price_paise:299900,description:'For schools serious about admissions.',          features:['25 lead credits included','Verified school badge','Unlimited photos & video','Enhanced listing placement','Analytics dashboard','Priority email support'],                                    leads_per_month:25,  is_hot:false, cta:'Start Silver',     plan_key:'silver' },
-  { name:'Gold',    price_paise:599900,description:'Most popular — best ROI for growing schools.',   features:['75 lead credits included','Featured school badge','Top placement in search','Full analytics & reports','School profile video','Dedicated account manager','WhatsApp support'],                leads_per_month:75,  is_hot:true,  cta:'Start Gold',       plan_key:'gold' },
+  { name:'Free',    price_paise:0,     description:'Get listed and start receiving leads.',          features:['5 lead credits per month','Basic school profile','Up to 5 photos','Standard listing placement','Email support'],                                                                                  leads_per_month:5,   is_hot:false, cta:'Get Started Free', plan_key:'free' },
+  { name:'Silver',  price_paise:299900,description:'For schools serious about admissions.',          features:['25 lead credits per month','Verified school badge','Unlimited photos & video','Enhanced listing placement','Analytics dashboard','Priority email support'],                                    leads_per_month:25,  is_hot:false, cta:'Start Silver',     plan_key:'silver' },
+  { name:'Gold',    price_paise:599900,description:'Most popular — best ROI for growing schools.',   features:['75 lead credits per month','Featured school badge','Top placement in search','Full analytics & reports','School profile video','Dedicated account manager','WhatsApp support'],                leads_per_month:75,  is_hot:true,  cta:'Start Gold',       plan_key:'gold' },
   { name:'Platinum',price_paise:999900,description:'For chains and premium institutions.',           features:['Unlimited lead credits','Top-of-search placement','Homepage featured listing','AI-optimised profile','Multi-branch management','SLA-backed account manager'],                                  leads_per_month:-1,  is_hot:false, cta:'Start Platinum',   plan_key:'platinum' },
 ]
 
@@ -457,7 +457,7 @@ function toSubPlan(row: any) {
   try { features = JSON.parse(row.features) } catch { features = [] }
   return {
     id: row.id, planKey: row.plan_key, name: row.name, description: row.description || '',
-    price: row.price_paise, leadCredits: row.leads_per_month,
+    price: row.price_paise, leadsPerMonth: row.leads_per_month,
     features, isHot: row.is_hot, cta: row.cta, sortOrder: row.sort_order, isActive: row.is_active,
   }
 }
@@ -980,7 +980,7 @@ async function ensureBlogTable() {
       read_time     VARCHAR(50) DEFAULT '5 min',
       published_at  DATE DEFAULT CURRENT_DATE,
       status        VARCHAR(20) DEFAULT 'draft',
-      cover_image   VARCHAR(500) DEFAULT '',
+      cover_image   TEXT DEFAULT '',
       meta_title    TEXT DEFAULT '',
       meta_desc     TEXT DEFAULT '',
       author        VARCHAR(200) DEFAULT 'Thynk Schooling Team',
@@ -989,7 +989,7 @@ async function ensureBlogTable() {
     )
   `).catch(() => {})
   const cols = [
-    "ADD COLUMN IF NOT EXISTS cover_image VARCHAR(500) DEFAULT ''",
+    "ADD COLUMN IF NOT EXISTS cover_image TEXT DEFAULT ''",
     "ADD COLUMN IF NOT EXISTS meta_title TEXT DEFAULT ''",
     "ADD COLUMN IF NOT EXISTS meta_desc TEXT DEFAULT ''",
     "ADD COLUMN IF NOT EXISTS author VARCHAR(200) DEFAULT 'Thynk Schooling Team'",

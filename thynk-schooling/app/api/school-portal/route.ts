@@ -12,7 +12,8 @@ import jwt from 'jsonwebtoken'
 function getUserId(req: NextRequest): string | null {
   try {
     const token = req.headers.get('authorization')?.replace('Bearer ', '') || req.cookies.get('ts_access_token')?.value || ''
-    return (jwt.verify(token, process.env.JWT_SECRET!, { ignoreExpiration: true }) as any)?.userId || null
+    const p = jwt.verify(token, process.env.JWT_SECRET!, { ignoreExpiration: true }) as any
+    return p?.userId || p?.id || null
   } catch { return null }
 }
 
@@ -83,7 +84,7 @@ async function getLeads(req: NextRequest) {
     return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Account suspended.' }, { status: 403 })
   }
   const schoolId = school.rows[0].id
-  const [rows, countRes] = await Promise.all([
+  const [rows, countRes, credRow] = await Promise.all([
     db.query(
       `SELECT l.id, l.status, l.is_purchased AS "isPurchased",
               l.child_name AS "childName", l.class_applying_for AS "classApplyingFor",
@@ -100,6 +101,7 @@ async function getLeads(req: NextRequest) {
       [schoolId, limit]
     ),
     db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [schoolId]),
+    db.query('SELECT credits, COALESCE(used_credits,0) as used_credits FROM lead_credits WHERE school_id=$1', [schoolId]),
   ])
   const data = rows.rows.map((row: any) => ({
     ...row,
@@ -108,7 +110,12 @@ async function getLeads(req: NextRequest) {
     fullName:    row.isPurchased ? row.fullName  : undefined,
     fullPhone:   row.isPurchased ? row.fullPhone : undefined,
   }))
-  return NextResponse.json({ data, total: Number(countRes.rows[0].count) })
+  const cr = credRow.rows[0] || { credits: 0, used_credits: 0 }
+  return NextResponse.json({
+    data,
+    total:   Number(countRes.rows[0].count),
+    credits: { credits: cr.credits, availableCredits: cr.credits, usedCredits: cr.used_credits },
+  })
 }
 
 // ─── PATCH lead status ────────────────────────────────────────────────────────
