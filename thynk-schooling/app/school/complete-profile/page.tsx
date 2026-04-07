@@ -512,8 +512,9 @@ function MultiChip({ label, fieldKey, options, isLoading, formData, toggle }: {
   )
 }
 
-function ImageUpload({ label, hint, file, onChange }: {
-  label: string; hint: string; file: File | null; onChange: (f: File | null) => void
+function ImageUpload({ label, hint, file, existingUrl, onChange, onClearExisting }: {
+  label: string; hint: string; file: File | null; existingUrl?: string | null
+  onChange: (f: File | null) => void; onClearExisting?: () => void
 }) {
   const handle = (f: File | null) => {
     if (!f) { onChange(null); return }
@@ -521,16 +522,22 @@ function ImageUpload({ label, hint, file, onChange }: {
     if (f.size > MAX_BYTES) { toast.error(`${label} too large — max 1 MB`); return }
     onChange(f)
   }
+
+  // Show newly selected file first, then fall back to existing saved URL
+  const previewSrc = file ? URL.createObjectURL(file) : existingUrl || null
+  const previewName = file ? file.name : 'Current saved image'
+  const previewSize = file ? `${(file.size / 1024).toFixed(0)} KB` : 'Saved — upload new to replace'
+
   return (
     <Field label={label}>
-      {file ? (
+      {previewSrc ? (
         <div className="sp-file-prev">
-          <img className="sp-f-thumb" src={URL.createObjectURL(file)} alt="" />
+          <img className="sp-f-thumb" src={previewSrc} alt="" />
           <div style={{ flex: 1, overflow: 'hidden' }}>
-            <div className="sp-f-name">{file.name}</div>
-            <div className="sp-f-size">{(file.size / 1024).toFixed(0)} KB</div>
+            <div className="sp-f-name">{previewName}</div>
+            <div className="sp-f-size">{previewSize}</div>
           </div>
-          <button type="button" onClick={() => onChange(null)}
+          <button type="button" onClick={() => { onChange(null); onClearExisting?.() }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ghost)', padding: 4, display: 'flex' }}>
             <X size={15} />
           </button>
@@ -638,6 +645,8 @@ export default function SchoolCompleteProfilePage() {
   })
   const [logoFile,  setLogoFile]  = useState<File | null>(null)
   const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [existingLogoUrl,  setExistingLogoUrl]  = useState<string | null>(null)
+  const [existingCoverUrl, setExistingCoverUrl] = useState<string | null>(null)
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -655,26 +664,46 @@ export default function SchoolCompleteProfilePage() {
         const s = d?.school
         if (s && s.id) {
           setExistingSchool(s)
+          // FIX 1: board — DB returns a native TEXT[] which pg driver gives as JS array.
+          // Guard both array and legacy string formats.
+          const parseArr = (v: any): string[] => {
+            if (Array.isArray(v)) return v.filter(Boolean)
+            if (typeof v === 'string' && v.startsWith('{')) {
+              return v.replace(/[{}"]/g, '').split(',').map(s => s.trim()).filter(Boolean)
+            }
+            if (typeof v === 'string' && v.startsWith('[')) {
+              try { return JSON.parse(v).filter(Boolean) } catch { return [] }
+            }
+            return []
+          }
           setFormData({
             name: s.name||'', tagline: s.tagline||'', affiliationNo: s.affiliation_no||'',
             description: s.description||'', foundingYear: s.founding_year||'',
             totalStudents: s.total_students||'', studentTeacherRatio: s.student_teacher_ratio||'',
-            schoolType: s.school_type||'', board: Array.isArray(s.board)?s.board:[],
+            schoolType: s.school_type||'', board: parseArr(s.board),
             genderPolicy: s.gender_policy||'', mediumOfInstruction: s.medium_of_instruction||'',
             recognition: s.recognition||'', classesFrom: s.classes_from||'',
             classesTo: s.classes_to||'', monthlyFeeMin: s.monthly_fee_min||'',
             monthlyFeeMax: s.monthly_fee_max||'', annualFee: s.annual_fee||'',
             admissionAcademicYear: s.admission_academic_year||'', admissionOpen: s.admission_open||false,
-            facilities: Array.isArray(s.facilities)?s.facilities:[],
-            sports: Array.isArray(s.sports)?s.sports:[],
-            languages: Array.isArray(s.languages)?s.languages:[],
-            extracurriculars: Array.isArray(s.extra_curricular)?s.extra_curricular:[],
-            addressLine1: s.address_line1||'', addressLine2: s.address_line2||'',
+            facilities: parseArr(s.facilities),
+            sports: parseArr(s.sports),
+            languages: parseArr(s.languages),
+            // FIX 2: DB column is extracurriculars, not extra_curricular
+            extracurriculars: parseArr(s.extracurriculars),
+            addressLine1: s.address_line1||'',
+            // FIX 3: locality is its own DB column
+            locality: s.locality||'',
             city: s.city||'', state: s.state||'', pincode: s.pincode||'',
             latitude: s.latitude||'', longitude: s.longitude||'',
             phone: s.phone||'', email: s.email||'',
             websiteUrl: s.website_url||'', principalName: s.principal_name||'',
           })
+          // FIX 4: Restore existing logo and cover so they aren't wiped on save
+          setExistingLogoUrl(s.logo_url || null)
+          setExistingCoverUrl(s.cover_url || null)
+          setLogoFile(null)
+          setCoverFile(null)
           setMode('existing')
         } else {
           setMode('new')
@@ -712,6 +741,9 @@ export default function SchoolCompleteProfilePage() {
       })
       if (logoFile)  fd.append('logo',  logoFile)
       if (coverFile) fd.append('cover', coverFile)
+      // Pass existing URLs so the API's COALESCE(newUpload, existingUrl) works correctly
+      if (!logoFile  && existingLogoUrl)  fd.append('logo_url',  existingLogoUrl)
+      if (!coverFile && existingCoverUrl) fd.append('cover_url', existingCoverUrl)
 
       const token = accessToken || localStorage.getItem('ts_access_token') || ''
       const headers: Record<string, string> = {}
@@ -921,8 +953,8 @@ export default function SchoolCompleteProfilePage() {
         </Field>
         <div className="sp-divider">School Photos</div>
         <div className="sp-g2">
-          <ImageUpload label="School Logo"  hint="Square · JPG, PNG, WEBP · Max 1 MB"  file={logoFile}  onChange={setLogoFile} />
-          <ImageUpload label="Cover Photo"  hint="1200×400px recommended · Max 1 MB"    file={coverFile} onChange={setCoverFile} />
+          <ImageUpload label="School Logo"  hint="Square · JPG, PNG, WEBP · Max 1 MB"  file={logoFile}  existingUrl={existingLogoUrl}  onChange={setLogoFile}  onClearExisting={() => setExistingLogoUrl(null)} />
+          <ImageUpload label="Cover Photo"  hint="1200×400px recommended · Max 1 MB"    file={coverFile} existingUrl={existingCoverUrl} onChange={setCoverFile} onClearExisting={() => setExistingCoverUrl(null)} />
         </div>
         <div className="sp-info" style={{ marginTop: 22 }}>
           <strong style={{ color: 'var(--brand)' }}>You&apos;re almost done!</strong> After saving, upload gallery photos and manage all settings from your school dashboard.
@@ -1001,7 +1033,46 @@ export default function SchoolCompleteProfilePage() {
 
               {/* Actions */}
               <div className="sp-school-actions">
-                <button onClick={() => setMode('new')} className="sp-btn-edit">
+                <button onClick={() => {
+                  // Re-populate form with existing data before entering edit mode
+                  const s = existingSchool
+                  const parseArr = (v: any): string[] => {
+                    if (Array.isArray(v)) return v.filter(Boolean)
+                    if (typeof v === 'string' && v.startsWith('{')) {
+                      return v.replace(/[{}"]/g, '').split(',').map((x: string) => x.trim()).filter(Boolean)
+                    }
+                    if (typeof v === 'string' && v.startsWith('[')) {
+                      try { return JSON.parse(v).filter(Boolean) } catch { return [] }
+                    }
+                    return []
+                  }
+                  setFormData({
+                    name: s.name||'', tagline: s.tagline||'', affiliationNo: s.affiliation_no||'',
+                    description: s.description||'', foundingYear: s.founding_year||'',
+                    totalStudents: s.total_students||'', studentTeacherRatio: s.student_teacher_ratio||'',
+                    schoolType: s.school_type||'', board: parseArr(s.board),
+                    genderPolicy: s.gender_policy||'', mediumOfInstruction: s.medium_of_instruction||'',
+                    recognition: s.recognition||'', classesFrom: s.classes_from||'',
+                    classesTo: s.classes_to||'', monthlyFeeMin: s.monthly_fee_min||'',
+                    monthlyFeeMax: s.monthly_fee_max||'', annualFee: s.annual_fee||'',
+                    admissionAcademicYear: s.admission_academic_year||'', admissionOpen: s.admission_open||false,
+                    facilities: parseArr(s.facilities),
+                    sports: parseArr(s.sports),
+                    languages: parseArr(s.languages),
+                    extracurriculars: parseArr(s.extracurriculars),
+                    addressLine1: s.address_line1||'', locality: s.locality||'',
+                    city: s.city||'', state: s.state||'', pincode: s.pincode||'',
+                    latitude: s.latitude||'', longitude: s.longitude||'',
+                    phone: s.phone||'', email: s.email||'',
+                    websiteUrl: s.website_url||'', principalName: s.principal_name||'',
+                  })
+                  setExistingLogoUrl(s.logo_url || null)
+                  setExistingCoverUrl(s.cover_url || null)
+                  setLogoFile(null)
+                  setCoverFile(null)
+                  setStep(0)
+                  setMode('new')
+                }} className="sp-btn-edit">
                   ✏️ Edit School Profile
                 </button>
                 {existingSchool.slug && (
@@ -1019,7 +1090,7 @@ export default function SchoolCompleteProfilePage() {
           {/* Add another */}
           <motion.button
             className="sp-add-school-btn"
-            onClick={() => { setExistingSchool(null); setFormData({ board:[], admissionOpen:false, facilities:[], sports:[], languages:[], extracurriculars:[] }); setStep(0); setMode('new') }}
+            onClick={() => { setExistingSchool(null); setFormData({ board:[], admissionOpen:false, facilities:[], sports:[], languages:[], extracurriculars:[] }); setLogoFile(null); setCoverFile(null); setExistingLogoUrl(null); setExistingCoverUrl(null); setStep(0); setMode('new') }}
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
             + Add Another School
           </motion.button>
