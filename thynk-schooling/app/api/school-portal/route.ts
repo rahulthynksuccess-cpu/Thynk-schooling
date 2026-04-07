@@ -78,7 +78,14 @@ async function getLeads(req: NextRequest) {
   const userId = getUserId(req)
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const limit = Number(new URL(req.url).searchParams.get('limit') || 10)
-  const school = await db.query('SELECT id, is_active FROM schools WHERE admin_user_id=$1', [userId])
+  let school = await db.query('SELECT id, is_active FROM schools WHERE admin_user_id=$1', [userId])
+  if (!school.rows.length) {
+    const uRow = await db.query('SELECT email FROM users WHERE id=$1', [userId]).catch(() => ({ rows: [] as any[] }))
+    if (uRow.rows[0]?.email) {
+      school = await db.query('SELECT id, is_active FROM schools WHERE email=$1', [uRow.rows[0].email])
+      if (school.rows.length) await db.query('UPDATE schools SET admin_user_id=$1 WHERE id=$2', [userId, school.rows[0].id]).catch(() => {})
+    }
+  }
   if (!school.rows.length) return NextResponse.json({ data: [], total: 0, credits: { credits:0, availableCredits:0, usedCredits:0 } })
   if (school.rows[0].is_active === false) {
     return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Account suspended.' }, { status: 403 })

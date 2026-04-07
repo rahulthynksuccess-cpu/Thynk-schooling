@@ -171,7 +171,19 @@ export async function GET(req: NextRequest) {
     await ensureSchoolsTable()
     const userId = getUserId(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const res = await db.query('SELECT * FROM schools WHERE admin_user_id=$1', [userId])
+    let res = await db.query('SELECT * FROM schools WHERE admin_user_id=$1', [userId])
+    // Fallback: if no school found by admin_user_id, try matching by user email
+    // This fixes schools created before admin_user_id was linked
+    if (!res.rows.length) {
+      const userRow = await db.query('SELECT email FROM users WHERE id=$1', [userId]).catch(() => ({ rows: [] }))
+      if (userRow.rows[0]?.email) {
+        res = await db.query('SELECT * FROM schools WHERE email=$1', [userRow.rows[0].email])
+        // If found, link it permanently
+        if (res.rows.length) {
+          await db.query('UPDATE schools SET admin_user_id=$1 WHERE id=$2', [userId, res.rows[0].id]).catch(() => {})
+        }
+      }
+    }
     return NextResponse.json({ school: res.rows[0] || null })
   } catch (e: any) {
     console.error('[schools/profile GET]', e)
@@ -184,6 +196,11 @@ export async function POST(req: NextRequest) {
     await ensureSchoolsTable()
     const userId = getUserId(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized — token missing or invalid. Please log out and log in again.' }, { status: 401 })
+    // Fix orphaned schools: link by email if admin_user_id is null
+    const userEmail = await db.query('SELECT email FROM users WHERE id=$1', [userId]).catch(() => ({ rows: [] }))
+    if (userEmail.rows[0]?.email) {
+      await db.query('UPDATE schools SET admin_user_id=$1 WHERE email=$2 AND (admin_user_id IS NULL OR admin_user_id=$1)', [userId, userEmail.rows[0].email]).catch(() => {})
+    }
 
     const fd = await req.formData()
     const name = getStr(fd, 'name') || 'School'

@@ -76,6 +76,17 @@ async function ensureSchoolsTable() {
     'ADD COLUMN IF NOT EXISTS total_reviews INTEGER DEFAULT 0',
   ]
   for (const m of migrations) await db.query(`ALTER TABLE schools ${m}`).catch(() => {})
+  // Link schools to users by email if admin_user_id is null
+  await db.query(`
+    UPDATE schools s SET admin_user_id = u.id
+    FROM users u
+    WHERE s.admin_user_id IS NULL
+      AND s.email IS NOT NULL AND s.email != ''
+      AND u.email = s.email AND u.role = 'school_admin'
+  `).catch(() => {})
+  await db.query('ALTER TABLE schools ALTER COLUMN logo_url TYPE TEXT').catch(() => {})
+  await db.query('ALTER TABLE schools ALTER COLUMN cover_url TYPE TEXT').catch(() => {})
+  await db.query('ALTER TABLE schools ALTER COLUMN website_url TYPE TEXT').catch(() => {})
   // Widen URL columns that may already exist as VARCHAR(500)
   await db.query(`ALTER TABLE schools ALTER COLUMN logo_url TYPE TEXT`).catch(() => {})
   await db.query(`ALTER TABLE schools ALTER COLUMN cover_url TYPE TEXT`).catch(() => {})
@@ -398,10 +409,18 @@ async function getAnalytics(req: NextRequest) {
 async function getDashboardStats(req: NextRequest) {
   const userId = getUserId(req)
   if (!userId) return NextResponse.json({ totalLeads: 0, newLeadsThisMonth: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0, avgRating: 0, totalReviews: 0 })
-  const school = await db.query(
+  let school = await db.query(
     'SELECT id, name, logo_url, city, state, board FROM schools WHERE admin_user_id=$1',
     [userId]
-  ).catch(() => ({ rows: [] }))
+  ).catch(() => ({ rows: [] as any[] }))
+  // Fallback: link orphaned school by user email
+  if (!school.rows.length) {
+    const uRow = await db.query('SELECT email FROM users WHERE id=$1', [userId]).catch(() => ({ rows: [] as any[] }))
+    if (uRow.rows[0]?.email) {
+      school = await db.query('SELECT id, name, logo_url, city, state, board FROM schools WHERE email=$1', [uRow.rows[0].email]).catch(() => ({ rows: [] as any[] }))
+      if (school.rows.length) await db.query('UPDATE schools SET admin_user_id=$1 WHERE id=$2', [userId, school.rows[0].id]).catch(() => {})
+    }
+  }
   if (!school.rows.length) return NextResponse.json({ totalLeads: 0, newLeadsThisMonth: 0, totalApplications: 0, profileViews: 0, credits: 0, profileCompleteness: 0, avgRating: 0, totalReviews: 0 })
   const { id: sid, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard } = school.rows[0]
   const [leads, newLeads, apps, credits] = await Promise.all([
