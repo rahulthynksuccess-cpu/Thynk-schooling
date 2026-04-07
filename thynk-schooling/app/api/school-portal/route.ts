@@ -18,12 +18,48 @@ function getUserId(req: NextRequest): string | null {
 
 const VALID_STATUSES = ['new','contacted','interested','not_interested','admitted','lost']
 
+// ─── CANONICAL leads table definition — all columns used across ALL routes ────
 async function ensureLeads() {
-  await db.query(`CREATE TABLE IF NOT EXISTS leads (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), parent_id UUID, school_id UUID, status VARCHAR(50) DEFAULT 'new', created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      parent_id           UUID,
+      school_id           UUID,
+      status              VARCHAR(50)  DEFAULT 'new',
+      is_purchased        BOOLEAN      DEFAULT false,
+      child_name          VARCHAR(200),
+      class_applying_for  VARCHAR(50),
+      city                VARCHAR(100),
+      parent_name         VARCHAR(200),
+      phone               VARCHAR(30),
+      email               VARCHAR(200),
+      message             TEXT,
+      source              VARCHAR(100),
+      how_did_you_hear    VARCHAR(200),
+      created_at          TIMESTAMPTZ  DEFAULT NOW(),
+      updated_at          TIMESTAMPTZ  DEFAULT NOW()
+    )
+  `).catch(() => {})
+
+  // Ensure every column exists on already-created tables (safe on re-run)
+  const cols = [
+    "ADD COLUMN IF NOT EXISTS status             VARCHAR(50)  DEFAULT 'new'",
+    'ADD COLUMN IF NOT EXISTS is_purchased        BOOLEAN      DEFAULT false',
+    'ADD COLUMN IF NOT EXISTS child_name          VARCHAR(200)',
+    'ADD COLUMN IF NOT EXISTS class_applying_for  VARCHAR(50)',
+    'ADD COLUMN IF NOT EXISTS city                VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS parent_name         VARCHAR(200)',
+    'ADD COLUMN IF NOT EXISTS phone               VARCHAR(30)',
+    'ADD COLUMN IF NOT EXISTS email               VARCHAR(200)',
+    'ADD COLUMN IF NOT EXISTS message             TEXT',
+    'ADD COLUMN IF NOT EXISTS source              VARCHAR(100)',
+    'ADD COLUMN IF NOT EXISTS how_did_you_hear    VARCHAR(200)',
+    'ADD COLUMN IF NOT EXISTS updated_at          TIMESTAMPTZ  DEFAULT NOW()',
+  ]
+  for (const c of cols) await db.query(`ALTER TABLE leads ${c}`).catch(() => {})
 }
 
-// ─── leads ────────────────────────────────────────────────────────────────────
-
+// ─── GET leads ────────────────────────────────────────────────────────────────
 async function getLeads(req: NextRequest) {
   await ensureLeads()
   const userId = getUserId(req)
@@ -50,6 +86,7 @@ async function getLeads(req: NextRequest) {
   return NextResponse.json(rows.rows)
 }
 
+// ─── PATCH lead status ────────────────────────────────────────────────────────
 async function patchLead(req: NextRequest) {
   await ensureLeads()
   const userId = getUserId(req)
@@ -60,13 +97,15 @@ async function patchLead(req: NextRequest) {
     return NextResponse.json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` }, { status: 400 })
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId])
   if (!school.rows.length) return NextResponse.json({ error: 'School not found' }, { status: 403 })
-  const result = await db.query(`UPDATE leads SET status=$1, updated_at=NOW() WHERE id=$2 AND school_id=$3 RETURNING id, status`, [status, id, school.rows[0].id])
+  const result = await db.query(
+    `UPDATE leads SET status=$1, updated_at=NOW() WHERE id=$2 AND school_id=$3 RETURNING id, status`,
+    [status, id, school.rows[0].id]
+  )
   if (!result.rows.length) return NextResponse.json({ error: 'Lead not found or does not belong to your school' }, { status: 404 })
   return NextResponse.json({ success: true, lead: result.rows[0] })
 }
 
 // ─── router ───────────────────────────────────────────────────────────────────
-
 export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
