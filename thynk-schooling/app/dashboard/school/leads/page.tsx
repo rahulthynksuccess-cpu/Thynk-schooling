@@ -7,6 +7,7 @@ import { Phone, MapPin, CheckCircle2, ShoppingCart, LayoutGrid, Zap, ChevronRigh
 import { useAuthStore } from '@/store/authStore'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
+import { authHeaders } from '@/utils/authHeaders'
 
 const NAV = [
   {href:'/dashboard/school',label:'Overview',icon:'📊'},
@@ -189,7 +190,11 @@ function LeadsContent() {
 
   const { data: creditsData } = useQuery<any>({
     queryKey: ['lead-credits'],
-    queryFn: () => fetch('/api/lead-credits', { cache:'no-store', credentials:'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/lead-credits', {
+  cache:'no-store',
+  credentials:'include',
+  headers: authHeaders(),
+}).then(r => r.json()),
   })
   const credits = creditsData?.availableCredits ?? 0
 
@@ -210,9 +215,9 @@ function LeadsContent() {
     mutationFn: (leadId: string) => {
       setBuyingId(leadId)
       return fetch(`/api/leads?id=${leadId}&action=purchase`, {
-        method:'POST', credentials:'include',
-        headers:{'Content-Type':'application/json'},
-      }).then(r => r.json())
+  method:'POST', credentials:'include',
+  headers:{'Content-Type':'application/json'},
+}).then(r => r.json())
     },
     onSuccess: (res) => {
       if (res.error) { toast.error(res.error); return }
