@@ -195,7 +195,11 @@ function LeadsContent() {
 
   const { data, isLoading } = useQuery<{ data?: any[]; total?: number; error?: string; message?: string }>({
     queryKey: ['school-leads-full'],
-    queryFn: () => fetch('/api/leads?limit=50', { cache:'no-store', credentials:'include' }).then(r => r.json()),
+    queryFn: () => fetch('/api/leads?limit=50', {
+  cache:'no-store',
+  credentials:'include',
+  headers: authHeaders(),
+}).then(r => r.json()),
     staleTime: 30 * 1000,
   })
   const leads = data?.data ?? []
