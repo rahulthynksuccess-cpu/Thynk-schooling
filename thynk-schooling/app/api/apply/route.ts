@@ -45,6 +45,7 @@ async function ensureTables() {
 
   // Safe column additions for existing tables
   const cols = [
+    "ADD COLUMN IF NOT EXISTS status            VARCHAR(50)  DEFAULT 'new'",
     'ADD COLUMN IF NOT EXISTS phone VARCHAR(20)',
     'ADD COLUMN IF NOT EXISTS email VARCHAR(200)',
     'ADD COLUMN IF NOT EXISTS parent_name VARCHAR(200)',
