@@ -3,10 +3,10 @@ export const dynamic = 'force-dynamic'
  * /api/lead-packages
  *
  * GET    — list active packages
- * POST   ?action=buy&id=X&gateway=razorpay&coupon=CODE  — create order (coupon optional)
- * POST   ?action=verify-payment                          — verify & credit school
- * PUT    ?id=X                                          — update package (admin)
- * DELETE ?id=X                                          — delete package (admin)
+ * POST   ?action=buy&id=X&gateway=razorpay&coupon_id=UUID  — create order (coupon optional)
+ * POST   ?action=verify-payment                             — verify & credit school
+ * PUT    ?id=X                                             — update package (admin)
+ * DELETE ?id=X                                             — delete package (admin)
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
@@ -30,6 +30,7 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null }
 }
 
+// FIX: include is_hot in returned package object
 function toPackage(row: any) {
   return {
     id:           row.id,
@@ -39,6 +40,8 @@ function toPackage(row: any) {
     price:        row.price_paise,
     validityDays: row.validity_days ?? 365,
     isActive:     row.is_active,
+    isHot:        row.is_hot ?? false,     // ← was missing; caused all cards to show as non-hot
+    sortOrder:    row.sort_order ?? 0,
   }
 }
 
@@ -62,7 +65,12 @@ async function ensureTable() {
       created_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+
+  // Run all migrations idempotently
   await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS validity_days INTEGER NOT NULL DEFAULT 365`).catch(() => {})
+  // FIX: add is_hot and sort_order columns if they don't exist
+  await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS is_hot BOOLEAN DEFAULT false`).catch(() => {})
+  await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`).catch(() => {})
 
   const count = await db.query('SELECT COUNT(*) FROM lead_packages').catch(() => ({ rows: [{ count: '0' }] }))
   if (parseInt(count.rows[0].count) === 0) {
@@ -96,6 +104,9 @@ async function ensurePaymentsTable() {
   await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS payment_id VARCHAR(300)`).catch(() => {})
   await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS meta JSONB DEFAULT '{}'`).catch(() => {})
   await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS credits_added INTEGER NOT NULL DEFAULT 0`).catch(() => {})
+  await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS discount_paise INTEGER NOT NULL DEFAULT 0`).catch(() => {})
+  await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS original_amount_paise INTEGER`).catch(() => {})
+  await db.query(`ALTER TABLE lead_package_payments ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(100)`).catch(() => {})
   await db.query(`
     UPDATE lead_package_payments SET order_id = razorpay_order_id
     WHERE order_id IS NULL AND razorpay_order_id IS NOT NULL
@@ -128,8 +139,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const all = searchParams.get('all') === 'true'
 
+    // FIX: ORDER BY sort_order then price so admin-configured order is respected
     const rows = await db.query(
-      `SELECT * FROM lead_packages WHERE ${all ? '1=1' : 'is_active=true'} ORDER BY price_paise ASC`
+      `SELECT * FROM lead_packages WHERE ${all ? '1=1' : 'is_active=true'} ORDER BY sort_order ASC, price_paise ASC`
     )
 
     const gateways = await getEnabledGateways()
@@ -164,9 +176,12 @@ export async function POST(req: NextRequest) {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      const packageId  = searchParams.get('id')
-      const gatewayId  = (searchParams.get('gateway') || 'razorpay') as GatewayId
-      const couponCode = searchParams.get('coupon') || null
+      const packageId = searchParams.get('id')
+      const gatewayId = (searchParams.get('gateway') || 'razorpay') as GatewayId
+
+      // FIX: accept coupon_id (UUID from pre-validated coupon) OR legacy coupon code param
+      const couponIdParam   = searchParams.get('coupon_id')   || null
+      const couponCodeParam = searchParams.get('coupon')      || null
 
       if (!packageId) return NextResponse.json({ error: 'Package id required' }, { status: 400 })
 
@@ -179,20 +194,30 @@ export async function POST(req: NextRequest) {
       const p        = pkg.rows[0]
       const schoolId = school.rows[0].id
 
-      // ── Apply coupon if provided ──────────────────────────────────────────
+      // ── Apply coupon ──────────────────────────────────────────────────────
       let finalPricePaise = p.price_paise
       let discountPaise   = 0
-      let couponId: number | null = null
+      let couponId: string | number | null = null
+      let couponCodeStr: string | null = null
 
-      if (couponCode) {
-        const couponRow = await db.query(
-          `SELECT * FROM discount_coupons WHERE code=$1`,
-          [couponCode.trim().toUpperCase()]
+      // Resolve coupon: prefer coupon_id (pre-validated UUID), fall back to code lookup
+      let couponRow: any = null
+      if (couponIdParam) {
+        const res = await db.query(
+          `SELECT * FROM discount_coupons WHERE id=$1`, [couponIdParam]
         ).catch(() => ({ rows: [] }))
+        couponRow = res.rows[0] || null
+      } else if (couponCodeParam) {
+        const res = await db.query(
+          `SELECT * FROM discount_coupons WHERE code=$1`,
+          [couponCodeParam.trim().toUpperCase()]
+        ).catch(() => ({ rows: [] }))
+        couponRow = res.rows[0] || null
+      }
 
-        const c = couponRow.rows[0]
+      if (couponRow) {
+        const c = couponRow
         const isValid =
-          c &&
           c.active &&
           (!c.valid_until || new Date(c.valid_until) >= new Date()) &&
           (!c.valid_from  || new Date(c.valid_from)  <= new Date()) &&
@@ -204,12 +229,12 @@ export async function POST(req: NextRequest) {
           if (c.type === 'percent') {
             discountPaise = Math.round((p.price_paise * Number(c.value)) / 100)
           } else {
-            // flat — c.value is in ₹
             discountPaise = Math.round(Number(c.value) * 100)
           }
           discountPaise   = Math.min(discountPaise, p.price_paise)
           finalPricePaise = p.price_paise - discountPaise
           couponId        = c.id
+          couponCodeStr   = c.code
         }
       }
 
@@ -255,11 +280,6 @@ export async function POST(req: NextRequest) {
           receipt,
           { buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone }
         )
-
-        // Store pending payment record (coupon columns + meta)
-        const couponCodeStr = couponId
-          ? (await db.query('SELECT code FROM discount_coupons WHERE id=$1', [couponId]).catch(() => ({rows:[]}))).rows[0]?.code || null
-          : null
 
         await db.query(
           `INSERT INTO lead_package_payments
@@ -315,19 +335,14 @@ export async function POST(req: NextRequest) {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      // Parse both JSON (Razorpay/PayPal) and form-urlencoded (Easebuzz)
       const body = await parseBody(req)
 
       const {
         gateway = 'razorpay',
         orderId,
-        // Razorpay
         razorpay_order_id, razorpay_payment_id, razorpay_signature,
-        // Cashfree
         cfOrderId,
-        // Easebuzz
         txnid, status: txnStatus, hash: ebHash,
-        // PayPal
         paypalOrderId,
       } = body
 
@@ -389,8 +404,6 @@ export async function POST(req: NextRequest) {
         [result.paymentId, resolvedOrderId]
       )
 
-      // For Easebuzz: redirect browser back to packages page
-      // Easebuzz hits surl as a browser POST, so we redirect after verifying
       const contentType = req.headers.get('content-type') || ''
       if (contentType.includes('application/x-www-form-urlencoded')) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
@@ -400,6 +413,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, creditsAdded: credits_added })
     } catch (e: any) {
       console.error('[lead-packages verify-payment]', e)
+      return NextResponse.json({ error: e.message }, { status: 500 })
+    }
+  }
+
+  /* ── admin: create new package ────────────────────────────────────────────── */
+  // Called with no action param from the admin packages page
+  if (!action) {
+    try {
+      await ensureTable()
+      const body = await req.json()
+      const { name, leadCredits, price, description, isActive, isHot, sortOrder } = body
+      if (!name || !leadCredits) return NextResponse.json({ error: 'name and leadCredits required' }, { status: 400 })
+
+      const res = await db.query(
+        `INSERT INTO lead_packages (name, description, leads_count, price_paise, is_active, is_hot, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [name, description || null, leadCredits, price ?? 0, isActive ?? true, isHot ?? false, sortOrder ?? 0]
+      )
+      return NextResponse.json(toPackage(res.rows[0]))
+    } catch (e: any) {
       return NextResponse.json({ error: e.message }, { status: 500 })
     }
   }
@@ -422,6 +455,9 @@ export async function PUT(req: NextRequest) {
     if (body.price       !== undefined) { params.push(body.price);       sets.push(`price_paise=$${params.length}`) }
     if (body.validityDays!== undefined) { params.push(body.validityDays);sets.push(`validity_days=$${params.length}`) }
     if (body.isActive    !== undefined) { params.push(body.isActive);    sets.push(`is_active=$${params.length}`) }
+    // FIX: persist isHot and sortOrder changes from admin page
+    if (body.isHot       !== undefined) { params.push(body.isHot);       sets.push(`is_hot=$${params.length}`) }
+    if (body.sortOrder   !== undefined) { params.push(body.sortOrder);   sets.push(`sort_order=$${params.length}`) }
     if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 
     params.push(id)
