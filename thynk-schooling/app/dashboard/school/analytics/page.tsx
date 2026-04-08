@@ -1,26 +1,23 @@
 'use client'
-// FIXES applied:
-// 1. Removed invalid `export const dynamic` — only valid in Server Components / route handlers
-// 2. Now calls the correct analytics endpoint: /api/schools/me/analytics?days=N
-// 3. The dashboard-stats call remains separate for KPI cards that need different data
-// 4. Full chart rendering implemented (was placeholder text before)
+// File: app/dashboard/school/analytics/page.tsx
+// API route must be at: app/api/schools/me/analytics/route.ts
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '@/store/authStore'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   GraduationCap, Eye, Users, FileText, Star,
   MessageSquare, TrendingUp, BarChart2, LayoutDashboard,
-  CreditCard, ChevronDown,
+  CreditCard,
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
   ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell,
 } from 'recharts'
 
-// ─── Design tokens ─────────────────────────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const BG   = '#F5F3EF'
 const CARD = '#FFFFFF'
 const DARK = '#0A0A0F'
@@ -33,15 +30,15 @@ const EMERALD = '#10B981'
 const ROSE    = '#F43F5E'
 const BLUE    = '#3B82F6'
 
-const CLASS_COLORS   = [VIOLET, '#8B5CF6', '#A78BFA', '#6D28D9', '#DDD6FE', '#C4B5FD']
-const STATUS_COLORS  = { pending: AMBER, shortlisted: VIOLET, admitted: EMERALD, rejected: ROSE }
-const SOURCE_COLORS  = [VIOLET, AMBER, EMERALD, BLUE, ROSE, '#64748B']
-const DOW_LABELS     = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const RANGE_OPTIONS  = [7, 14, 30, 90] as const
+const CLASS_COLORS  = [VIOLET, '#8B5CF6', '#A78BFA', '#6D28D9', '#DDD6FE', '#C4B5FD']
+const STATUS_COLORS: Record<string, string> = { pending: AMBER, shortlisted: VIOLET, admitted: EMERALD, rejected: ROSE }
+const SOURCE_COLORS = [VIOLET, AMBER, EMERALD, BLUE, ROSE, '#64748B']
+const DOW_LABELS    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const RANGE_OPTIONS = [7, 14, 30, 90] as const
 type Range = typeof RANGE_OPTIONS[number]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function card(extra?: React.CSSProperties): React.CSSProperties {
+function cardStyle(extra?: React.CSSProperties): React.CSSProperties {
   return {
     background: CARD, borderRadius: 16,
     border: '1px solid rgba(13,17,23,0.07)',
@@ -82,11 +79,12 @@ function Skel({ h = 40 }: { h?: number }) {
   return <div style={{ height: h, background: '#F1EDE8', borderRadius: 8, animation: 'pulse 1.4s ease-in-out infinite' }} />
 }
 
-function KpiCard({
-  icon: Icon, label, value, color, trend, trendUp,
-}: { icon: React.ElementType; label: string; value: string | number; color: string; trend?: string; trendUp?: boolean }) {
+function KpiCard({ icon: Icon, label, value, color, trend, trendUp }: {
+  icon: React.ElementType; label: string; value: string | number
+  color: string; trend?: string; trendUp?: boolean
+}) {
   return (
-    <div style={{ ...card({ padding: '16px 15px', display: 'flex', flexDirection: 'column' }) }}>
+    <div style={cardStyle({ padding: '16px 15px', display: 'flex', flexDirection: 'column' })}>
       <div style={{ width: 34, height: 34, borderRadius: 9, background: `${color}18`, border: `1px solid ${color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, flexShrink: 0 }}>
         <Icon size={16} color={color} />
       </div>
@@ -129,6 +127,10 @@ const NAV = [
 ]
 
 function Sidebar() {
+  // BUG FIX 8: was `href.includes('analytics')` — hardcoded, always wrong.
+  // Now uses usePathname() to correctly highlight the active nav item.
+  const pathname = usePathname()
+
   return (
     <aside style={{ width: 248, background: DARK, display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
       <div style={{ padding: '20px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -147,7 +149,7 @@ function Sidebar() {
 
       <nav style={{ flex: 1, padding: '10px 10px', overflowY: 'auto' }}>
         {NAV.map(({ href, label, Icon }) => {
-          const active = href.includes('analytics')
+          const active = pathname === href || (href !== '/dashboard/school' && pathname.startsWith(href))
           return (
             <Link key={href} href={href} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px',
@@ -166,19 +168,19 @@ function Sidebar() {
   )
 }
 
-// ─── Main page ─────────────────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function AnalyticsPage() {
   const { accessToken, user } = useAuthStore()
   const router    = useRouter()
-  const [mounted, setMounted] = useState(false)
-  const [range, setRange]     = useState<Range>(30)
+  const [mounted, setMounted]     = useState(false)
+  const [range, setRange]         = useState<Range>(30)
   const [dashStats, setDashStats] = useState<any>({})
   const [analytics, setAnalytics] = useState<any>(null)
   const [loading, setLoading]     = useState(true)
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Fetch dashboard KPI stats (rating, reviews, etc.)
+  // Fetch dashboard KPI stats (rating, reviews)
   useEffect(() => {
     if (!mounted) return
     if (!accessToken || !user) { router.replace('/login'); return }
@@ -186,17 +188,16 @@ export default function AnalyticsPage() {
       .then(r => r.json())
       .then(d => setDashStats(d))
       .catch(() => {})
-  }, [mounted, accessToken])
+  }, [mounted, accessToken, user, router])
 
   // Fetch analytics data whenever range changes
   const fetchAnalytics = useCallback(async (d: number) => {
     setLoading(true)
     try {
-      // This calls the route.ts file: /api/schools/me/analytics?days=N
       const res  = await fetch(`/api/schools/me/analytics?days=${d}`, { credentials: 'include' })
       const data = await res.json()
       setAnalytics(data)
-    } catch { /* silent — Empty state handles this */ }
+    } catch { /* Empty state handles this */ }
     finally { setLoading(false) }
   }, [])
 
@@ -207,20 +208,22 @@ export default function AnalyticsPage() {
 
   if (!mounted) return null
 
-  // ── Derived data ──
-  const leads       = analytics?.leads       || []
-  const apps        = analytics?.applications || []
-  const classWise   = analytics?.classWise    || []
-  const monthly     = analytics?.monthly      || []
-  const dowData     = analytics?.dayOfWeek    || Array(7).fill(0)
-  const sources     = analytics?.sourceBreakdown || []
-  const statuses    = analytics?.statusBreakdown || []
-  const totals      = analytics?.totals || {}
+  // ── Derived data ──────────────────────────────────────────────────────────
+  const leads     = analytics?.leads            || []
+  const apps      = analytics?.applications     || []
+  const classWise = analytics?.classWise        || []
+  const monthly   = analytics?.monthly          || []
+  const dowData   = analytics?.dayOfWeek        || Array(7).fill(0)
+  const sources   = analytics?.sourceBreakdown  || []
+  const statuses  = analytics?.statusBreakdown  || []
+  const totals    = analytics?.totals           || {}
 
-  // Merge leads + apps onto a shared day-label axis for the timeline
+  // Merge leads + apps onto shared day-label axis for the timeline.
+  // Both arrays are now gap-filled by the API, so every day has a row.
+  // We still merge by key to produce a single unified dataset for the chart.
   const timelineMap: Record<string, { day: string; leads: number; applications: number }> = {}
   leads.forEach((r: any) => {
-    const label = r.day.slice(5) // MM-DD
+    const label = r.day.slice(5) // "YYYY-MM-DD" → "MM-DD"
     timelineMap[label] = { day: label, leads: r.count, applications: 0 }
   })
   apps.forEach((r: any) => {
@@ -230,16 +233,22 @@ export default function AnalyticsPage() {
   })
   const timelineData = Object.values(timelineMap).sort((a, b) => a.day.localeCompare(b.day))
 
-  // DOW for bar chart
   const dowChartData = DOW_LABELS.map((d, i) => ({ day: d, leads: dowData[i] || 0 }))
   const dowMax       = Math.max(1, ...dowData)
 
-  // Status map for donut
   const statusData = statuses.map((s: any) => ({
-    name: s.status.charAt(0).toUpperCase() + s.status.slice(1),
+    name:  s.status.charAt(0).toUpperCase() + s.status.slice(1),
     value: s.count,
-    color: (STATUS_COLORS as any)[s.status.toLowerCase()] || '#94A3B8',
+    color: STATUS_COLORS[s.status.toLowerCase()] || '#94A3B8',
   }))
+
+  // profileViews: show '—' when zero (means table likely doesn't exist yet)
+  const profileViewsDisplay = loading ? '…'
+    : totals.profileViews > 0
+      ? totals.profileViews > 999
+        ? `${(totals.profileViews / 1000).toFixed(1)}K`
+        : totals.profileViews
+      : '—'
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: BG, fontFamily: ff }}>
@@ -248,10 +257,9 @@ export default function AnalyticsPage() {
 
       <main style={{ flex: 1, padding: '32px 36px 56px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 18 }}>
 
-        {/* Header */}
+        {/* Header + Range selector */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h1 style={{ fontFamily: cdff, fontSize: 26, fontWeight: 700, color: '#0D1117', margin: 0, letterSpacing: '-.03em' }}>Analytics</h1>
-          {/* Range selector */}
           <div style={{ display: 'flex', gap: 3, background: '#E8E4DE', borderRadius: 10, padding: 3 }}>
             {RANGE_OPTIONS.map(r => (
               <button key={r} onClick={() => setRange(r)} style={{
@@ -270,16 +278,16 @@ export default function AnalyticsPage() {
 
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: 10 }}>
-          <KpiCard icon={TrendingUp}    label="Total Leads"        value={loading ? '…' : (totals.leads ?? 0).toLocaleString()}                          color={VIOLET}  trend="12% vs prior" trendUp />
-          <KpiCard icon={FileText}      label="Applications"       value={loading ? '…' : (totals.applications ?? 0).toLocaleString()}                   color={AMBER}   trend="8% vs prior"  trendUp />
-          <KpiCard icon={BarChart2}     label="Conversion"         value={loading ? '…' : `${totals.conversion ?? 0}%`}                                  color={EMERALD} />
-          <KpiCard icon={Eye}           label="Profile Views"      value={loading ? '…' : (totals.profileViews ?? 0) > 999 ? `${((totals.profileViews ?? 0)/1000).toFixed(1)}K` : (totals.profileViews ?? 0)} color={BLUE} trend="22%" trendUp />
-          <KpiCard icon={Star}          label="Avg Rating"         value={dashStats.avgRating ? Number(dashStats.avgRating).toFixed(1) : '—'}             color={AMBER}   />
-          <KpiCard icon={MessageSquare} label="Reviews"            value={dashStats.totalReviews ?? '—'}                                                  color={ROSE}    />
+          <KpiCard icon={TrendingUp}    label="Total Leads"   value={loading ? '…' : (totals.leads        ?? 0).toLocaleString()} color={VIOLET}  trend="12% vs prior" trendUp />
+          <KpiCard icon={FileText}      label="Applications"  value={loading ? '…' : (totals.applications ?? 0).toLocaleString()} color={AMBER}   trend="8% vs prior"  trendUp />
+          <KpiCard icon={BarChart2}     label="Conversion"    value={loading ? '…' : `${totals.conversion ?? 0}%`}                color={EMERALD} />
+          <KpiCard icon={Eye}           label="Profile Views" value={loading ? '…' : profileViewsDisplay}                         color={BLUE}    trend="22%" trendUp />
+          <KpiCard icon={Star}          label="Avg Rating"    value={dashStats.avgRating ? Number(dashStats.avgRating).toFixed(1) : '—'} color={AMBER} />
+          <KpiCard icon={MessageSquare} label="Reviews"       value={dashStats.totalReviews ?? '—'}                               color={ROSE}    />
         </div>
 
         {/* Timeline — leads + applications */}
-        <div style={card({ padding: '22px 24px' })}>
+        <div style={cardStyle({ padding: '22px 24px' })}>
           <SH title="Leads & Applications over time" sub={`Daily counts — last ${range} days`} />
           <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
             <LegendDot color={VIOLET} label="Leads" />
@@ -290,11 +298,11 @@ export default function AnalyticsPage() {
               <AreaChart data={timelineData} margin={{ top: 5, right: 5, left: -18, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gL" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={VIOLET} stopOpacity={0.2} />
+                    <stop offset="0%"   stopColor={VIOLET} stopOpacity={0.2} />
                     <stop offset="100%" stopColor={VIOLET} stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={AMBER} stopOpacity={0.2} />
+                    <stop offset="0%"   stopColor={AMBER} stopOpacity={0.2} />
                     <stop offset="100%" stopColor={AMBER} stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -311,10 +319,11 @@ export default function AnalyticsPage() {
 
         {/* Class-wise + Application status */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18 }}>
-          {/* Class-wise bar chart */}
-          <div style={card({ padding: '22px 24px' })}>
+          <div style={cardStyle({ padding: '22px 24px' })}>
             <SH title="Leads by class group" sub="Inquiries per grade band" />
-            {loading ? <Skel h={220} /> : classWise.length === 0 ? <Empty h={220} msg="No class data yet — add a class_grade field to your leads table" /> : (
+            {loading ? <Skel h={220} /> : classWise.length === 0 ? (
+              <Empty h={220} msg="No class data yet — check that class_grade column exists in leads table" />
+            ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={classWise} margin={{ top: 5, right: 5, left: -18, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
@@ -331,8 +340,7 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          {/* Application status donut */}
-          <div style={card({ padding: '22px 24px' })}>
+          <div style={cardStyle({ padding: '22px 24px' })}>
             <SH title="Application status" sub="Current pipeline breakdown" />
             {loading ? <Skel h={220} /> : statusData.length === 0 ? <Empty h={220} /> : (
               <>
@@ -360,8 +368,7 @@ export default function AnalyticsPage() {
 
         {/* Day-of-week + Source */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-          {/* DOW bar */}
-          <div style={card({ padding: '22px 24px' })}>
+          <div style={cardStyle({ padding: '22px 24px' })}>
             <SH title="Leads by day of week" sub="Which days get the most enquiries" />
             {loading ? <Skel h={180} /> : (
               <ResponsiveContainer width="100%" height={180}>
@@ -380,10 +387,11 @@ export default function AnalyticsPage() {
             )}
           </div>
 
-          {/* Source horizontal bar */}
-          <div style={card({ padding: '22px 24px' })}>
+          <div style={cardStyle({ padding: '22px 24px' })}>
             <SH title="Leads by source" sub="How parents find your school" />
-            {loading ? <Skel h={180} /> : sources.length === 0 ? <Empty h={180} msg="No source data yet — add a source field to your leads table" /> : (
+            {loading ? <Skel h={180} /> : sources.length === 0 ? (
+              <Empty h={180} msg="No source data yet — check that source column exists in leads table" />
+            ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={sources} layout="vertical" margin={{ top: 0, right: 10, left: 8, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" horizontal={false} />
@@ -400,7 +408,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Monthly bar — last 6 months */}
-        <div style={card({ padding: '22px 24px' })}>
+        <div style={cardStyle({ padding: '22px 24px' })}>
           <SH
             title="Monthly lead volume — last 6 months"
             sub="Grouped by calendar month"
