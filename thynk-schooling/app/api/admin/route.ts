@@ -17,61 +17,149 @@ import bcrypt from 'bcryptjs'
 
 async function getOverview() {
   await ensureSchoolsTable()
-  const [users, schools, apps, leads, pendingSchoolsCt, newUsersToday, leadsToday,
-         revenue, pendingApps, pendingReviews, reviews,
-         weeklyLeads, monthlyGrowth, boardDist, appStatus,
-         recentLeadsRows, recentUsersRows, pendingSchoolsRows] = await Promise.all([
-    db.query("SELECT COUNT(*) FROM users WHERE role!='super_admin'").catch(() => ({ rows: [{ count: 0 }] })),
+  const [
+    users, schools, apps, leads, pendingSchoolsCt, newUsersToday, leadsToday,
+    revenue, pendingApps, pendingReviews, reviews,
+    weeklyLeads, monthlyGrowth, boardDist, appStatus,
+    recentLeadsRows, recentUsersRows, pendingSchoolsRows,
+  ] = await Promise.all([
+    db.query("SELECT COUNT(*) FROM users WHERE role != 'super_admin'").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM schools").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM applications").catch(() => ({ rows: [{ count: 0 }] })),
-    db.query("SELECT COUNT(*) FROM lead_purchases").catch(() => ({ rows: [{ count: 0 }] })),
-    db.query("SELECT COUNT(*) FROM schools WHERE (is_verified=false OR is_verified IS NULL)").catch(() => ({ rows: [{ count: 0 }] })),
-    db.query("SELECT COUNT(*) FROM users WHERE role!='super_admin' AND created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
-    db.query("SELECT COUNT(*) FROM lead_purchases WHERE created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
-    db.query("SELECT COALESCE(SUM(amount),0) AS total FROM lead_purchases").catch(() => ({ rows: [{ total: 0 }] })),
-    db.query("SELECT COUNT(*) FROM applications WHERE status='pending' OR status IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
-    db.query("SELECT COUNT(*) FROM reviews WHERE is_approved=false OR is_approved IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM leads").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM schools WHERE (is_verified = false OR is_verified IS NULL)").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM users WHERE role != 'super_admin' AND created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM leads WHERE created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
+    // Real revenue from paid package payments — amount_paise, divide by 100 for rupees in UI
+    db.query("SELECT COALESCE(SUM(amount_paise), 0) AS total FROM lead_package_payments WHERE status = 'paid'").catch(() => ({ rows: [{ total: 0 }] })),
+    db.query("SELECT COUNT(*) FROM applications WHERE status = 'pending' OR status IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
+    db.query("SELECT COUNT(*) FROM reviews WHERE is_approved = false OR is_approved IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM reviews").catch(() => ({ rows: [{ count: 0 }] })),
-    db.query("SELECT to_char(DATE(created_at),'Dy') AS day, COUNT(*) AS leads, COUNT(*)*300 AS revenue FROM lead_purchases WHERE created_at >= NOW()-INTERVAL '7 days' GROUP BY DATE(created_at), to_char(DATE(created_at),'Dy') ORDER BY DATE(created_at)").catch(() => ({ rows: [] })),
-    db.query("SELECT to_char(DATE_TRUNC('month',created_at),'Mon') AS month, COUNT(*) AS users, COUNT(*) AS schools, COUNT(*) AS leads FROM users WHERE created_at >= NOW()-INTERVAL '6 months' GROUP BY DATE_TRUNC('month',created_at), to_char(DATE_TRUNC('month',created_at),'Mon') ORDER BY DATE_TRUNC('month',created_at)").catch(() => ({ rows: [] })),
-    db.query("SELECT UNNEST(board) AS name, COUNT(*) AS value FROM schools WHERE board IS NOT NULL GROUP BY name ORDER BY value DESC LIMIT 5").catch(() => ({ rows: [] })),
-    db.query("SELECT COALESCE(status,'pending') AS name, COUNT(*) AS value FROM applications GROUP BY status").catch(() => ({ rows: [] })),
-    db.query(`SELECT lp.id, s.name AS school_name, COALESCE(u.full_name,u.name) AS parent_name,
-              lp.class_applied, lp.amount AS price, lp.is_purchased, lp.created_at
-              FROM lead_purchases lp
-              LEFT JOIN schools s ON s.id=lp.school_id
-              LEFT JOIN users u ON u.id=lp.user_id
-              ORDER BY lp.created_at DESC LIMIT 8`).catch(() => ({ rows: [] })),
-    db.query(`SELECT id, COALESCE(full_name,name) AS full_name, COALESCE(phone,mobile) AS phone, role
-              FROM users WHERE role!='super_admin' ORDER BY created_at DESC LIMIT 5`).catch(() => ({ rows: [] })),
-    db.query(`SELECT id, name, city FROM schools WHERE (is_verified=false OR is_verified IS NULL)
-              ORDER BY created_at DESC LIMIT 5`).catch(() => ({ rows: [] })),
+    // Weekly leads + real revenue joined from lead_package_payments
+    db.query(`
+      SELECT
+        to_char(DATE(l.created_at), 'Dy')          AS day,
+        COUNT(l.id)                                 AS leads,
+        COALESCE(SUM(lpp.amount_paise), 0)          AS revenue_paise
+      FROM leads l
+      LEFT JOIN lead_package_payments lpp
+        ON DATE(lpp.created_at) = DATE(l.created_at) AND lpp.status = 'paid'
+      WHERE l.created_at >= NOW() - INTERVAL '7 days'
+      GROUP BY DATE(l.created_at), to_char(DATE(l.created_at), 'Dy')
+      ORDER BY DATE(l.created_at)
+    `).catch(() => ({ rows: [] })),
+    // Monthly growth
+    db.query(`
+      SELECT
+        to_char(DATE_TRUNC('month', created_at), 'Mon') AS month,
+        COUNT(*) AS users,
+        0        AS schools,
+        0        AS leads
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '6 months'
+      GROUP BY DATE_TRUNC('month', created_at), to_char(DATE_TRUNC('month', created_at), 'Mon')
+      ORDER BY DATE_TRUNC('month', created_at)
+    `).catch(() => ({ rows: [] })),
+    // Board — single varchar column, NOT an array
+    db.query(`
+      SELECT board AS name, COUNT(*) AS value
+      FROM schools
+      WHERE board IS NOT NULL AND board <> ''
+      GROUP BY board
+      ORDER BY value DESC
+      LIMIT 5
+    `).catch(() => ({ rows: [] })),
+    db.query("SELECT COALESCE(status, 'pending') AS name, COUNT(*) AS value FROM applications GROUP BY status").catch(() => ({ rows: [] })),
+    // Recent leads — parent_name stored directly on leads table
+    db.query(`
+      SELECT
+        l.id,
+        s.name                AS school_name,
+        l.parent_name,
+        l.class_applying_for,
+        l.is_purchased,
+        l.created_at,
+        lpp.amount_paise      AS price
+      FROM leads l
+      LEFT JOIN schools s ON s.id = l.school_id
+      LEFT JOIN LATERAL (
+        SELECT amount_paise FROM lead_package_payments
+        WHERE school_id = l.school_id AND status = 'paid'
+        ORDER BY created_at DESC LIMIT 1
+      ) lpp ON true
+      ORDER BY l.created_at DESC
+      LIMIT 8
+    `).catch(() => ({ rows: [] })),
+    db.query(`
+      SELECT id, COALESCE(full_name, name) AS full_name, COALESCE(phone, mobile) AS phone, role
+      FROM users WHERE role != 'super_admin' ORDER BY created_at DESC LIMIT 5
+    `).catch(() => ({ rows: [] })),
+    db.query(`
+      SELECT id, name, city FROM schools
+      WHERE (is_verified = false OR is_verified IS NULL)
+      ORDER BY created_at DESC LIMIT 5
+    `).catch(() => ({ rows: [] })),
   ])
-  const BOARD_COLORS: Record<string,string> = { CBSE:'#F5A623', ICSE:'#4F8EF7', State:'#00E5A0', IB:'#9B72FF' }
-  const STATUS_COLORS: Record<string,string> = { pending:'#FBBF24', shortlisted:'#00E5A0', admitted:'#4F8EF7', rejected:'#FF5757' }
+
+  const BOARD_COLORS: Record<string, string> = {
+    CBSE: '#F5A623', ICSE: '#4F8EF7', 'State Board': '#00E5A0', IB: '#9B72FF',
+  }
+  const STATUS_COLORS: Record<string, string> = {
+    pending: '#FBBF24', shortlisted: '#00E5A0', admitted: '#4F8EF7', rejected: '#FF5757',
+  }
+
+  // Board totals → percentages for the donut chart
+  const boardTotal = boardDist.rows.reduce((s: number, r: any) => s + Number(r.value), 0) || 1
+
   return NextResponse.json({
-    totalUsers: Number(users.rows[0].count),
-    totalSchools: Number(schools.rows[0].count),
-    totalApps: Number(apps.rows[0].count),
-    totalLeads: Number(leads.rows[0].count),
-    totalReviews: Number(reviews.rows[0].count),
+    totalUsers:          Number(users.rows[0].count),
+    totalSchools:        Number(schools.rows[0].count),
+    totalApps:           Number(apps.rows[0].count),
+    totalLeads:          Number(leads.rows[0].count),
+    totalReviews:        Number(reviews.rows[0].count),
     pendingVerification: Number(pendingSchoolsCt.rows[0].count),
-    newUsersToday: Number(newUsersToday.rows[0].count),
-    leadsToday: Number(leadsToday.rows[0].count),
-    totalRevenue: Number(revenue.rows[0].total) * 100,
-    pendingApps: Number(pendingApps.rows[0].count),
-    pendingReviews: Number(pendingReviews.rows[0].count),
-    leadsWeekly: weeklyLeads.rows.map((r:any) => ({ day: r.day, leads: Number(r.leads), revenue: Number(r.revenue) })),
-    monthlyGrowth: monthlyGrowth.rows.map((r:any) => ({ month: r.month, users: Number(r.users), schools: Number(r.schools), leads: Number(r.leads) })),
-    schoolsByBoard: boardDist.rows.map((r:any,i:number) => ({ name: r.name, value: Number(r.value), color: BOARD_COLORS[r.name] || ['#F5A623','#4F8EF7','#00E5A0','#9B72FF','#FF7A2E'][i] || '#888' })),
-    appStatus: appStatus.rows.map((r:any) => ({ name: r.name, value: Number(r.value), fill: STATUS_COLORS[r.name] || '#888' })),
-    recentLeads: recentLeadsRows.rows.map((r:any) => ({
-      id: r.id, schoolName: r.school_name||'—', parentName: r.parent_name||'—',
-      classApplied: r.class_applied||'—', price: Number(r.price)||0,
-      isPurchased: r.is_purchased||false, createdAt: r.created_at,
+    newUsersToday:       Number(newUsersToday.rows[0].count),
+    leadsToday:          Number(leadsToday.rows[0].count),
+    // Stored as paise — dashboard KPI card divides by 100 to show rupees
+    totalRevenue:        Number(revenue.rows[0].total),
+    pendingApps:         Number(pendingApps.rows[0].count),
+    pendingReviews:      Number(pendingReviews.rows[0].count),
+    leadsWeekly: weeklyLeads.rows.map((r: any) => ({
+      day:     r.day,
+      leads:   Number(r.leads),
+      revenue: Math.round(Number(r.revenue_paise) / 100), // paise → rupees
     })),
-    recentUsers: recentUsersRows.rows.map((r:any) => ({
-      id: r.id, fullName: r.full_name||'—', phone: r.phone||'—', role: r.role,
+    monthlyGrowth: monthlyGrowth.rows.map((r: any) => ({
+      month:   r.month,
+      users:   Number(r.users),
+      schools: Number(r.schools),
+      leads:   Number(r.leads),
+    })),
+    // Percentages for the donut label
+    schoolsByBoard: boardDist.rows.map((r: any, i: number) => ({
+      name:  r.name,
+      value: Math.round(Number(r.value) / boardTotal * 100),
+      color: BOARD_COLORS[r.name] || ['#F5A623', '#4F8EF7', '#00E5A0', '#9B72FF', '#FF7A2E'][i] || '#888',
+    })),
+    appStatus: appStatus.rows.map((r: any) => ({
+      name:  r.name,
+      value: Number(r.value),
+      fill:  STATUS_COLORS[r.name] || '#888',
+    })),
+    recentLeads: recentLeadsRows.rows.map((r: any) => ({
+      id:           r.id,
+      schoolName:   r.school_name          || '—',
+      parentName:   r.parent_name          || '—',
+      classApplied: r.class_applying_for   || '—',
+      price:        Math.round(Number(r.price || 0) / 100), // paise → rupees
+      isPurchased:  r.is_purchased         || false,
+      createdAt:    r.created_at,
+    })),
+    recentUsers: recentUsersRows.rows.map((r: any) => ({
+      id:       r.id,
+      fullName: r.full_name || '—',
+      phone:    r.phone     || '—',
+      role:     r.role,
     })),
     pendingSchools: pendingSchoolsRows.rows,
   })
@@ -80,31 +168,83 @@ async function getOverview() {
 // ─── analytics ────────────────────────────────────────────────────────────────
 
 async function getAnalytics() {
-  const [signups30, schools30, leads30, topCities, boardDist, funnel] = await Promise.all([
-    db.query("SELECT DATE(created_at) AS day, COUNT(*) AS count FROM users WHERE created_at >= NOW()-INTERVAL '30 days' GROUP BY day ORDER BY day").catch(() => ({ rows: [] })),
-    db.query("SELECT DATE(created_at) AS day, COUNT(*) AS count FROM schools WHERE created_at >= NOW()-INTERVAL '30 days' GROUP BY day ORDER BY day").catch(() => ({ rows: [] })),
-    db.query("SELECT DATE(created_at) AS day, COUNT(*) AS count, COUNT(*)*300 AS revenue FROM lead_purchases WHERE created_at >= NOW()-INTERVAL '30 days' GROUP BY day ORDER BY day").catch(() => ({ rows: [] })),
-    db.query("SELECT s.city, COUNT(DISTINCT s.id) AS schools, COUNT(lp.id) AS leads FROM schools s LEFT JOIN lead_purchases lp ON lp.school_id=s.id WHERE s.city IS NOT NULL GROUP BY s.city ORDER BY leads DESC LIMIT 6").catch(() => ({ rows: [] })),
-    db.query("SELECT UNNEST(board) AS name, COUNT(*) AS value FROM schools WHERE board IS NOT NULL GROUP BY name ORDER BY value DESC LIMIT 5").catch(() => ({ rows: [] })),
-    db.query(`SELECT
-      (SELECT COUNT(*) FROM users WHERE role!='super_admin') AS visitors,
-      (SELECT COUNT(*) FROM schools) AS school_views,
-      (SELECT COUNT(*) FROM lead_purchases) AS leads_purchased,
-      (SELECT COUNT(*) FROM applications) AS applications`).catch(() => ({ rows: [{}] })),
+  const [signups30, schools30, leads30, revenue30, topCities, boardDist, funnel] = await Promise.all([
+    db.query(`
+      SELECT DATE(created_at) AS day, COUNT(*) AS count
+      FROM users
+      WHERE created_at >= NOW() - INTERVAL '30 days' AND role = 'parent'
+      GROUP BY day ORDER BY day
+    `).catch(() => ({ rows: [] })),
+    db.query(`
+      SELECT DATE(created_at) AS day, COUNT(*) AS count
+      FROM schools
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY day ORDER BY day
+    `).catch(() => ({ rows: [] })),
+    db.query(`
+      SELECT DATE(created_at) AS day, COUNT(*) AS count
+      FROM leads
+      WHERE created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY day ORDER BY day
+    `).catch(() => ({ rows: [] })),
+    // Real revenue from paid payments
+    db.query(`
+      SELECT DATE(created_at) AS day, COALESCE(SUM(amount_paise), 0) AS revenue_paise
+      FROM lead_package_payments
+      WHERE status = 'paid' AND created_at >= NOW() - INTERVAL '30 days'
+      GROUP BY day ORDER BY day
+    `).catch(() => ({ rows: [] })),
+    db.query(`
+      SELECT s.city, COUNT(DISTINCT s.id) AS schools, COUNT(l.id) AS leads
+      FROM schools s
+      LEFT JOIN leads l ON l.school_id = s.id
+      WHERE s.city IS NOT NULL AND s.city <> ''
+      GROUP BY s.city ORDER BY leads DESC LIMIT 6
+    `).catch(() => ({ rows: [] })),
+    // board is a single varchar column, not an array
+    db.query(`
+      SELECT board AS name, COUNT(*) AS value
+      FROM schools
+      WHERE board IS NOT NULL AND board <> ''
+      GROUP BY board ORDER BY value DESC LIMIT 5
+    `).catch(() => ({ rows: [] })),
+    db.query(`
+      SELECT
+        (SELECT COUNT(*) FROM users WHERE role = 'parent')        AS registered_parents,
+        (SELECT COUNT(*) FROM schools)                            AS registered_schools,
+        (SELECT COUNT(*) FROM leads WHERE is_purchased = true)    AS leads_purchased,
+        (SELECT COUNT(*) FROM applications)                       AS applications
+    `).catch(() => ({ rows: [{}] })),
   ])
-  const BOARD_COLORS = ['#F5A623','#4F8EF7','#00E5A0','#9B72FF','#FF7A2E']
+
+  const BOARD_COLORS = ['#F5A623', '#4F8EF7', '#00E5A0', '#9B72FF', '#FF7A2E']
   const f = funnel.rows[0] || {}
+
+  // Build a revenue map keyed by day string for merging with leads
+  const revMap: Record<string, number> = {}
+  revenue30.rows.forEach((r: any) => {
+    revMap[String(r.day).slice(0, 10)] = Math.round(Number(r.revenue_paise) / 100)
+  })
+
   return NextResponse.json({
-    signups: signups30.rows,
-    schools: schools30.rows,
-    dailyLeads30: leads30.rows.map((r:any) => ({ day: String(r.day).slice(5), leads: Number(r.count), revenue: Number(r.revenue) })),
-    topCities: topCities.rows.map((r:any) => ({ city: r.city, leads: Number(r.leads), schools: Number(r.schools) })),
-    boardData: boardDist.rows.map((r:any, i:number) => ({ name: r.name, value: Number(r.value), color: BOARD_COLORS[i] || '#888' })),
+    signups:  signups30.rows.map((r: any) => ({ day: String(r.day).slice(5), count: Number(r.count) })),
+    schools:  schools30.rows.map((r: any) => ({ day: String(r.day).slice(5), count: Number(r.count) })),
+    dailyLeads30: leads30.rows.map((r: any) => ({
+      day:     String(r.day).slice(5),
+      leads:   Number(r.count),
+      revenue: revMap[String(r.day).slice(0, 10)] || 0, // paise → rupees already
+    })),
+    topCities: topCities.rows.map((r: any) => ({
+      city: r.city, leads: Number(r.leads), schools: Number(r.schools),
+    })),
+    boardData: boardDist.rows.map((r: any, i: number) => ({
+      name: r.name, value: Number(r.value), color: BOARD_COLORS[i] || '#888',
+    })),
     funnelData: [
-      { name:'Registered Users', value: Number(f.visitors||0) },
-      { name:'School Views',     value: Number(f.school_views||0) },
-      { name:'Leads Purchased',  value: Number(f.leads_purchased||0) },
-      { name:'Applications',     value: Number(f.applications||0) },
+      { name: 'Registered parents', value: Number(f.registered_parents || 0) },
+      { name: 'Registered schools', value: Number(f.registered_schools || 0) },
+      { name: 'Leads purchased',    value: Number(f.leads_purchased    || 0) },
+      { name: 'Applications',       value: Number(f.applications       || 0) },
     ],
   })
 }
@@ -122,7 +262,7 @@ async function ensureSchoolsTable() {
     'ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT false',
     'ADD COLUMN IF NOT EXISTS is_featured BOOLEAN DEFAULT false',
     'ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true',
-    'ADD COLUMN IF NOT EXISTS board TEXT[]',
+    'ADD COLUMN IF NOT EXISTS board TEXT',
     'ADD COLUMN IF NOT EXISTS rating NUMERIC(3,1) DEFAULT 0',
     'ADD COLUMN IF NOT EXISTS slug VARCHAR(300)',
     'ADD COLUMN IF NOT EXISTS state VARCHAR(100)',
@@ -184,7 +324,7 @@ async function getAdminSchools(req: NextRequest) {
     ])
     const data = rows.rows.map((s:any) => ({
       id: s.id, name: s.name || '—', slug: s.slug || '',
-      city: s.city || '—', board: Array.isArray(s.board) ? s.board : [],
+      city: s.city || '—', board: s.board ? [s.board] : [],
       isVerified: s.is_verified || false, isFeatured: s.is_featured || false, isActive: s.is_active !== false,
       avgRating: Number(s.rating) || 0, totalLeads: 0,
       ownerPhone: s.owner_phone || '—', createdAt: s.created_at,
@@ -338,14 +478,24 @@ async function deleteAdminReview(req: NextRequest) {
 
 async function getAdminLeads(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const page = Math.max(1,Number(searchParams.get('page')||1)), limit = Math.min(50,Number(searchParams.get('limit')||20))
-  const offset = (page-1)*limit, status = searchParams.get('status')
+  const page = Math.max(1, Number(searchParams.get('page') || 1))
+  const limit = Math.min(50, Number(searchParams.get('limit') || 20))
+  const offset = (page - 1) * limit
+  const status = searchParams.get('status')
   const conds = ['1=1']; const params: any[] = []
-  if (status) { params.push(status); conds.push(`lp.status=$${params.length}`) }
-  const where = conds.join(' AND '); params.push(limit, offset)
+  if (status) { params.push(status); conds.push(`l.status=$${params.length}`) }
+  const where = conds.join(' AND ')
+  params.push(limit, offset)
   const [rows, ct] = await Promise.all([
-    db.query(`SELECT lp.*, s.name AS school_name, u.full_name AS parent_name FROM lead_purchases lp LEFT JOIN schools s ON s.id=lp.school_id LEFT JOIN users u ON u.id=lp.parent_id WHERE ${where} ORDER BY lp.created_at DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params),
-    db.query(`SELECT COUNT(*) FROM lead_purchases lp WHERE ${where}`, params.slice(0,-2)),
+    db.query(`
+      SELECT l.*, s.name AS school_name
+      FROM leads l
+      LEFT JOIN schools s ON s.id = l.school_id
+      WHERE ${where}
+      ORDER BY l.created_at DESC
+      LIMIT $${params.length - 1} OFFSET $${params.length}
+    `, params),
+    db.query(`SELECT COUNT(*) FROM leads l WHERE ${where}`, params.slice(0, -2)),
   ])
   return NextResponse.json({ data: rows.rows, total: Number(ct.rows[0].count), page, limit })
 }
@@ -354,10 +504,18 @@ async function getAdminLeads(req: NextRequest) {
 
 async function getAdminPayments(req: NextRequest) {
   const { searchParams } = new URL(req.url)
-  const page = Math.max(1,Number(searchParams.get('page')||1)), limit = Math.min(50,Number(searchParams.get('limit')||20))
-  const offset = (page-1)*limit
-  const rows = await db.query('SELECT lp.*, s.name AS school_name FROM lead_purchases lp LEFT JOIN schools s ON s.id=lp.school_id ORDER BY lp.created_at DESC LIMIT $1 OFFSET $2', [limit, offset]).catch(() => ({ rows: [] }))
-  const ct = await db.query('SELECT COUNT(*) FROM lead_purchases').catch(() => ({ rows: [{ count: 0 }] }))
+  const page = Math.max(1, Number(searchParams.get('page') || 1))
+  const limit = Math.min(50, Number(searchParams.get('limit') || 20))
+  const offset = (page - 1) * limit
+  const rows = await db.query(`
+    SELECT lpp.*, s.name AS school_name, lp.name AS package_name
+    FROM lead_package_payments lpp
+    LEFT JOIN schools s ON s.id = lpp.school_id
+    LEFT JOIN lead_packages lp ON lp.id = lpp.package_id
+    ORDER BY lpp.created_at DESC
+    LIMIT $1 OFFSET $2
+  `, [limit, offset]).catch(() => ({ rows: [] }))
+  const ct = await db.query('SELECT COUNT(*) FROM lead_package_payments').catch(() => ({ rows: [{ count: 0 }] }))
   return NextResponse.json({ data: rows.rows, total: Number(ct.rows[0].count), page, limit })
 }
 
@@ -672,7 +830,7 @@ async function sendNotification(req: NextRequest) {
   return NextResponse.json({ success: true, message: 'Notification logged' })
 }
 
-// ─── message triggers (email + whatsapp) ─────────────────────────────────────
+// ─── message triggers ─────────────────────────────────────────────────────────
 
 const DEFAULT_TRIGGERS = [
   { trigger_key:'welcome_school',              category:'Onboarding',   event:'School Registration',        description:'Sent when a school admin creates an account',               recipients:['school'], variables:['{{school_name}}','{{admin_name}}','{{login_url}}','{{profile_url}}'],
@@ -689,12 +847,6 @@ const DEFAULT_TRIGGERS = [
     wa_school_body:'', wa_school_enabled:false,
     wa_parent_body:`Hi {{parent_name}} 👋\n\nWelcome to *Thynk Schooling*! 🎓\n\nSearch 12,000+ verified schools across India 👉 {{search_url}}`,
     wa_parent_enabled:true, sort_order:1 },
-  { trigger_key:'profile_complete_school',     category:'Onboarding',   event:'School Profile Completed',   description:'Sent when a school fills all profile fields',               recipients:['school'], variables:['{{school_name}}','{{admin_name}}','{{profile_url}}','{{dashboard_url}}'],
-    email_school_subject:`{{school_name}} — Profile complete! You're ready to get leads`,
-    email_school_body:`Hi {{admin_name}},\n\nGreat news — {{school_name}}'s profile is 100% complete!\n\nComplete profiles get 3x more parent views.\n\nView profile: {{profile_url}}\n\nThe Thynk Schooling Team`,
-    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
-    wa_school_body:`✅ *Profile complete!*\n\n{{school_name}}'s listing is fully set up. Complete profiles get 3x more views.\n\nDashboard: {{dashboard_url}}`,
-    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:2 },
   { trigger_key:'new_lead_school',             category:'Leads',        event:'New Lead Received',          description:'School notified when a parent submits an enquiry',          recipients:['school'], variables:['{{school_name}}','{{admin_name}}','{{child_name}}','{{class_applying}}','{{city}}','{{lead_count}}','{{dashboard_url}}'],
     email_school_subject:'New admission enquiry for {{school_name}} — {{child_name}}',
     email_school_body:`Hi {{admin_name}},\n\nNew admission enquiry!\nChild: {{child_name}} | Class: {{class_applying}} | City: {{city}}\n\nYou have {{lead_count}} unread leads. Unlock to see full contact details.\n\nDashboard: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
@@ -709,66 +861,12 @@ const DEFAULT_TRIGGERS = [
     wa_school_body:'', wa_school_enabled:false,
     wa_parent_body:`✅ *Application submitted!*\n\nHi {{parent_name}}, your enquiry for *{{school_name}}* ({{child_name}}, Class {{class_applying}}) is received.\n\nTrack it here 👉 {{applications_url}}`,
     wa_parent_enabled:true, sort_order:4 },
-  { trigger_key:'lead_credit_used',            category:'Leads',        event:'Lead Credit Used',           description:'School unlocked a lead — credit deducted',                 recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{credits_remaining}}','{{parent_name}}','{{parent_phone}}','{{child_name}}','{{upgrade_url}}'],
-    email_school_subject:'Lead unlocked — {{credits_remaining}} credits remaining',
-    email_school_body:`Hi {{admin_name}},\n\nYou've unlocked a lead for {{school_name}}.\n\nParent: {{parent_name}} | Phone: {{parent_phone}}\nChild: {{child_name}}\nCredits remaining: {{credits_remaining}}\n\nThe Thynk Schooling Team`,
-    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
-    wa_school_body:`🔓 *Lead unlocked!*\n\nParent: {{parent_name}}\nPhone: {{parent_phone}} | Child: {{child_name}}\n\nCredits remaining: *{{credits_remaining}}*`,
-    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:5 },
-  { trigger_key:'lead_expiry_warning',         category:'Leads',        event:'Lead Expiry Warning',        description:'School warned 7 days before leads expire',                  recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{expiring_count}}','{{expiry_date}}','{{dashboard_url}}'],
-    email_school_subject:'⚠️ {{expiring_count}} leads expiring in 7 days — {{school_name}}',
-    email_school_body:`Hi {{admin_name}},\n\nYou have {{expiring_count}} unread leads expiring on {{expiry_date}}.\n\nUnlock them now: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
-    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
-    wa_school_body:`⚠️ *{{expiring_count}} leads expire on {{expiry_date}}!*\n\nDon't lose these parent enquiries for {{school_name}}.\n\nUnlock now 👉 {{dashboard_url}}`,
-    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:6 },
   { trigger_key:'subscription_activated',      category:'Subscription', event:'Plan Activated',             description:'School upgrades to a paid plan',                            recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{plan_name}}','{{credits_added}}','{{amount_paid}}','{{next_billing}}','{{dashboard_url}}'],
     email_school_subject:'{{plan_name}} plan activated for {{school_name}} 🎉',
     email_school_body:`Hi {{admin_name}},\n\nYour {{plan_name}} plan is now active for {{school_name}}!\n\nCredits added: {{credits_added}}\nAmount: ₹{{amount_paid}} | Next billing: {{next_billing}}\n\nDashboard: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
     email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
     wa_school_body:`🎉 *{{plan_name}} plan activated!*\n\n{{school_name}} is now on {{plan_name}}.\nCredits added: *{{credits_added}}* | Next billing: {{next_billing}}\n\nDashboard: {{dashboard_url}}`,
     wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:7 },
-  { trigger_key:'subscription_expiry_warning', category:'Subscription', event:'Plan Expiry Warning',        description:'School notified 5 days before subscription renews/expires',  recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{plan_name}}','{{expiry_date}}','{{renewal_url}}'],
-    email_school_subject:'Your {{plan_name}} plan renews in 5 days — {{school_name}}',
-    email_school_body:`Hi {{admin_name}},\n\nYour {{plan_name}} plan for {{school_name}} renews on {{expiry_date}}.\n\nUpdate billing if needed: {{renewal_url}}\n\nThe Thynk Schooling Team`,
-    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
-    wa_school_body:`⏰ *Plan renews in 5 days*\n\n{{school_name}}'s {{plan_name}} plan renews on {{expiry_date}}.\n\nManage subscription: {{renewal_url}}`,
-    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:8 },
-  { trigger_key:'subscription_cancelled',      category:'Subscription', event:'Plan Cancelled / Expired',   description:'School plan lapses or is cancelled',                        recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{plan_name}}','{{upgrade_url}}'],
-    email_school_subject:'Your {{plan_name}} plan has ended — {{school_name}}',
-    email_school_body:`Hi {{admin_name}},\n\nYour {{plan_name}} subscription for {{school_name}} has ended.\n\nYou're now on the Free plan (5 credits/month).\n\nReactivate: {{upgrade_url}}\n\nThe Thynk Schooling Team`,
-    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
-    wa_school_body:`📋 *{{plan_name}} plan ended*\n\n{{school_name}} is now on the Free plan (5 credits/month).\n\nReactivate: {{upgrade_url}}`,
-    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:9 },
-  { trigger_key:'application_status_update',   category:'Applications', event:'Application Status Changed', description:'Parent notified when school updates application status',     recipients:['parent'], variables:['{{parent_name}}','{{child_name}}','{{school_name}}','{{new_status}}','{{message}}','{{applications_url}}'],
-    email_school_subject:'', email_school_body:'', email_school_enabled:false,
-    email_parent_subject:`Update on {{child_name}}'s application — {{school_name}}`,
-    email_parent_body:`Hi {{parent_name}},\n\nThere's an update on {{child_name}}'s application at {{school_name}}.\n\nStatus: {{new_status}}\n\nView details: {{applications_url}}\n\nThe Thynk Schooling Team`,
-    email_parent_enabled:true,
-    wa_school_body:'', wa_school_enabled:false,
-    wa_parent_body:`📬 *Application update*\n\n{{child_name}}'s application at *{{school_name}}* is now: *{{new_status}}*\n\nView details 👉 {{applications_url}}`,
-    wa_parent_enabled:true, sort_order:10 },
-  { trigger_key:'review_approved',             category:'Reviews',      event:'Review Published',           description:'Parent notified when their review goes live',               recipients:['parent'], variables:['{{parent_name}}','{{school_name}}','{{review_url}}'],
-    email_school_subject:'', email_school_body:'', email_school_enabled:false,
-    email_parent_subject:'Your review for {{school_name}} is now live',
-    email_parent_body:`Hi {{parent_name}},\n\nYour review for {{school_name}} has been approved and is now visible to other parents.\n\nView it: {{review_url}}\n\nThe Thynk Schooling Team`,
-    email_parent_enabled:false,
-    wa_school_body:'', wa_school_enabled:false,
-    wa_parent_body:`⭐ *Your review is live!*\n\nYour review for *{{school_name}}* is now helping other parents.\n\nView it 👉 {{review_url}}`,
-    wa_parent_enabled:false, sort_order:11 },
-  { trigger_key:'new_review_school',           category:'Reviews',      event:'New Review Received',        description:'School notified when a new review is submitted',            recipients:['school'], variables:['{{admin_name}}','{{school_name}}','{{rating}}','{{review_snippet}}','{{dashboard_url}}'],
-    email_school_subject:'New {{rating}}★ review for {{school_name}}',
-    email_school_body:`Hi {{admin_name}},\n\n{{school_name}} has received a new review.\n\nRating: {{rating}}/5\n"{{review_snippet}}"\n\nView and respond: {{dashboard_url}}\n\nThe Thynk Schooling Team`,
-    email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
-    wa_school_body:`⭐ *New {{rating}}★ review!*\n\n"{{review_snippet}}"\n\nRespond on your dashboard 👉 {{dashboard_url}}`,
-    wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:12 },
-  { trigger_key:'counselling_booked',          category:'Counselling',  event:'Counselling Session Booked', description:'Confirmation sent to parent after booking counselling',      recipients:['parent'], variables:['{{parent_name}}','{{counsellor_name}}','{{session_date}}','{{session_time}}','{{meeting_url}}'],
-    email_school_subject:'', email_school_body:'', email_school_enabled:false,
-    email_parent_subject:'Counselling session confirmed — {{session_date}}',
-    email_parent_body:`Hi {{parent_name}},\n\nYour counselling session is confirmed!\n\nCounsellor: {{counsellor_name}}\nDate: {{session_date}} | Time: {{session_time}}\nJoin: {{meeting_url}}\n\nThe Thynk Schooling Team`,
-    email_parent_enabled:true,
-    wa_school_body:'', wa_school_enabled:false,
-    wa_parent_body:`📅 *Counselling confirmed!*\n\nHi {{parent_name}},\nYour session with *{{counsellor_name}}* is on {{session_date}} at {{session_time}}.\n\nJoin here 👉 {{meeting_url}}`,
-    wa_parent_enabled:true, sort_order:13 },
 ]
 
 async function ensureTriggersTable() {
@@ -847,10 +945,7 @@ async function getTriggers() {
 async function saveTrigger(req: NextRequest) {
   await ensureTriggersTable()
   const body = await req.json()
-  const {
-    triggerKey, category, event, description, recipients, variables,
-    email, whatsapp, sortOrder,
-  } = body
+  const { triggerKey, category, event, description, recipients, variables, email, whatsapp, sortOrder } = body
   if (!triggerKey || !event) return NextResponse.json({ error: 'triggerKey and event required' }, { status: 400 })
   const res = await db.query(
     `INSERT INTO message_triggers
@@ -955,17 +1050,9 @@ async function saveMarqueeItems(req: NextRequest) {
 
 const SEED_BLOG_POSTS = [
   { slug:'cbse-vs-icse-vs-ib', title:'CBSE vs ICSE vs IB: Which Board is Right for Your Child?', excerpt:"A comprehensive breakdown of India's three major education boards — curriculum, assessment style, career impact and which suits different types of learners.", tag:'Board Guide', read_time:'8 min', published_at:'2026-01-15', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
-    body:`<h2>Choosing the Right Board for Your Child</h2><p>Choosing the right education board is one of the most important decisions a parent makes. Each board has a distinct philosophy, curriculum depth, and career alignment.</p><h2>CBSE — Central Board of Secondary Education</h2><p>India's most popular board with over 25,000 schools. CBSE is strong in science and mathematics and its syllabus aligns perfectly with competitive exams like JEE and NEET. The structured approach suits students with clear engineering or medical aspirations.</p><h2>ICSE — Indian Certificate of Secondary Education</h2><p>ICSE has a broader curriculum with strong emphasis on English, arts and social sciences. More application-based than CBSE. Ideal for students considering humanities or studying abroad.</p><h2>IB — International Baccalaureate</h2><p>The IB Diploma Programme is accepted by universities worldwide and develops critical thinking, research and communication skills. Best suited for families considering global higher education.</p><h2>Our Recommendation</h2><ul><li><strong>Engineering/Medicine ambitions</strong> → CBSE</li><li><strong>Holistic development, humanities</strong> → ICSE</li><li><strong>Studying abroad, international mindset</strong> → IB</li></ul>` },
+    body:`<h2>Choosing the Right Board for Your Child</h2><p>Choosing the right education board is one of the most important decisions a parent makes. Each board has a distinct philosophy, curriculum depth, and career alignment.</p><h2>CBSE — Central Board of Secondary Education</h2><p>India's most popular board with over 25,000 schools. CBSE is strong in science and mathematics and its syllabus aligns perfectly with competitive exams like JEE and NEET.</p><h2>ICSE — Indian Certificate of Secondary Education</h2><p>ICSE has a broader curriculum with strong emphasis on English, arts and social sciences. Ideal for students considering humanities or studying abroad.</p><h2>IB — International Baccalaureate</h2><p>The IB Diploma Programme is accepted by universities worldwide and develops critical thinking, research and communication skills.</p>` },
   { slug:'how-to-choose-school', title:'How to Choose the Right School: 10 Questions to Ask', excerpt:'Visiting a school? Here are the 10 most important questions to ask the principal or admission coordinator before you commit.', tag:'Admission Tips', read_time:'6 min', published_at:'2026-02-10', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
-    body:`<h2>10 Questions Every Parent Must Ask</h2><p>Visiting a school can be overwhelming. Here are 10 questions that cut through the noise and reveal what a school is truly like.</p><h3>1. What is the student-teacher ratio?</h3><p>Anything above 30:1 means your child gets less individual attention. The ideal is 20:1 or below.</p><h3>2. What percentage of students pass board exams?</h3><p>Ask for the last 3 years' data. Consistent results above 95% indicate academic strength.</p><h3>3. How are discipline issues handled?</h3><p>The answer reveals the school's culture more than any brochure. Look for structured, fair processes — not punitive ones.</p><h3>4. What extra-curriculars are genuinely funded?</h3><p>Many schools list activities that have no proper budget or qualified coaches.</p><h3>5. What is the homework policy?</h3><p>Hours of homework daily can be a red flag for child wellbeing, especially in primary years.</p><h3>6. How do you communicate with parents?</h3><p>Modern schools use apps and portals. Schools relying only on physical diaries may be behind the curve.</p><h3>7. What is the fee escalation policy?</h3><p>Ask specifically: by what percentage have fees increased each year over the last 5 years?</p><h3>8. How is the transport system managed?</h3><p>Safety, GPS tracking, and timely arrival are non-negotiables.</p><h3>9. What is the school's vision for the next 5 years?</h3><p>Growing institutions invest in infrastructure and teachers. Stagnant ones coast on reputation.</p><h3>10. Can I speak to current parents?</h3><p>Any school confident in its quality will connect you with existing parent communities.</p>` },
-  { slug:'top-boarding-schools-india', title:'Top 10 Boarding Schools in India 2026', excerpt:"From The Doon School to Scindia School — a ranked guide to India's finest residential schools, admission criteria and fees.", tag:'Rankings', read_time:'10 min', published_at:'2026-01-28', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
-    body:`<h2>India's Finest Residential Schools</h2><p>India has some of the finest residential schools in Asia, with traditions going back over a century. Here are the top 10.</p><h3>1. The Doon School, Dehradun</h3><p>Founded in 1935, consistently ranked India's #1 boys' boarding school. Alumni include Rajiv Gandhi and Vikram Seth. Annual fees: ₹8–10 lakh.</p><h3>2. Welham Girls' School, Dehradun</h3><p>India's most prestigious girls' boarding school. Known for producing exceptional leaders and academics.</p><h3>3. The Scindia School, Gwalior</h3><p>Located in the historic Gwalior Fort, known for strong values, academics and leadership development.</p><h3>4. Mayo College, Ajmer</h3><p>One of India's oldest schools for boys, founded in 1875. The 'Eton of the East' with immaculate heritage architecture.</p><h3>5. Woodstock School, Mussoorie</h3><p>A co-educational international school with an IB programme, situated in the Himalayan foothills.</p><h3>6. Bishop Cotton School, Shimla</h3><p>Founded in 1859, one of Asia's oldest boarding schools. Strong sports and academic tradition.</p><h3>7. Lawrence School, Sanawar</h3><p>Co-educational, founded 1847. Beautiful campus with exceptional outdoor and adventure programmes.</p><h3>8. Rishi Valley School, Andhra Pradesh</h3><p>Founded on J. Krishnamurti's philosophy, emphasising holistic development over rote learning.</p><h3>9. Rajkumar College, Rajkot</h3><p>Gujarat's most prestigious boys' boarding school with over 140 years of history.</p><h3>10. Kodaikanal International School</h3><p>IB school in Tamil Nadu's hill station, known for its progressive values and global community.</p>` },
-  { slug:'admission-timeline-guide', title:'School Admission Timeline: When to Start and What to Do', excerpt:'Most parents start too late. Here is your month-by-month guide to school admissions — from nursery to senior secondary.', tag:'Admission Tips', read_time:'5 min', published_at:'2026-02-20', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
-    body:`<h2>The Admission Calendar Parents Must Follow</h2><p>Most parents start their school search too late. Here is your month-by-month guide for admissions in India.</p><h2>12–18 Months Before</h2><p>Start your school research. Visit shortlisted schools, attend open days, speak to current parents. Begin compiling documents.</p><h2>October–December</h2><p>Registrations open for most schools. Submit forms early — popular schools fill fast. Many charge a non-refundable registration fee of ₹500–₹2,000.</p><h2>January–February</h2><p>Schools conduct informal assessments, interaction sessions, and parent interviews. Keep your child relaxed — these are observations, not exams.</p><h2>March–April</h2><p>Results and offer letters are announced. You typically have 7–14 days to confirm your seat.</p><h2>May–June</h2><p>Fee payment and enrolment confirmation deadlines. School uniform and stationery procurement.</p><blockquote>The Golden Rule: Start your school search at least 12–18 months before the desired admission year, especially for nursery and class 1 where demand far exceeds supply.</blockquote>` },
-  { slug:'ib-schools-india', title:'Best IB Schools in India: City-Wise Complete List 2026', excerpt:"A city-wise guide to all IB World Schools in India, covering fees, authorisation status and admission contacts.", tag:'School Lists', read_time:'12 min', published_at:'2026-01-05', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
-    body:`<h2>IB Schools Across India — City by City</h2><p>There are over 200 IB World Schools in India. Here is a city-wise guide to the best ones.</p><h2>Mumbai</h2><ul><li><strong>Dhirubhai Ambani International School</strong> — Mumbai's most prestigious IB school. Annual fees: ₹5–7 lakh.</li><li><strong>BD Somani International School</strong> — Marine Lines, strong academics and arts.</li><li><strong>Ecole Mondiale World School</strong> — Juhu, known for its global community.</li></ul><h2>Delhi NCR</h2><ul><li><strong>The Shri Ram School, Vasant Vihar</strong> — One of Delhi's top IB schools.</li><li><strong>Pathways School Noida</strong> — Excellent IB results and campus facilities.</li><li><strong>Amity Global School, Noida</strong> — Affordable IB option in NCR.</li></ul><h2>Bangalore</h2><ul><li><strong>Inventure Academy</strong> — Progressive IB school in Whitefield.</li><li><strong>Canadian International School</strong> — Strong expat community, excellent results.</li><li><strong>Stonehill International School</strong> — Near the airport, stunning campus.</li></ul><h2>Pune</h2><ul><li><strong>Mahindra United World College</strong> — One of India's most prestigious IB schools.</li><li><strong>The Orchid School</strong> — Baner, strong IBDP results.</li></ul><p><em>Note: Always verify IB authorisation status directly with the IBO website before admission.</em></p>` },
-  { slug:'school-fees-guide', title:'Understanding School Fees: What Parents Must Know', excerpt:'Admission fees, development charges, annual charges — decode the real cost of schooling and how to plan your budget.', tag:'Finance', read_time:'7 min', published_at:'2026-03-01', status:'published', cover_image:'', meta_title:'', meta_desc:'', author:'Thynk Schooling Team',
-    body:`<h2>The Real Cost of School Admissions in India</h2><p>School fees in India go far beyond monthly tuition. Here is a complete breakdown of every charge you may encounter.</p><h2>One-Time Fees at Admission</h2><ul><li><strong>Registration fee:</strong> ₹1,000–₹25,000 (usually non-refundable)</li><li><strong>Admission/enrolment fee:</strong> ₹10,000–₹2,00,000</li><li><strong>Security deposit (refundable):</strong> ₹10,000–₹50,000</li><li><strong>Development fee:</strong> ₹20,000–₹5,00,000 (one-time infrastructure contribution)</li></ul><h2>Annual Recurring Charges</h2><ul><li><strong>Annual charges:</strong> ₹20,000–₹2,00,000</li><li><strong>School diary, uniform, stationery:</strong> ₹5,000–₹20,000</li><li><strong>Technology/device fee:</strong> ₹5,000–₹25,000</li></ul><h2>Monthly Fees</h2><ul><li><strong>Tuition:</strong> ₹2,000–₹30,000+ per month</li><li><strong>Transport:</strong> ₹1,500–₹5,000</li><li><strong>Meals:</strong> ₹1,000–₹3,000</li></ul><h2>Key Questions to Ask Before Admission</h2><ul><li>What is the annual fee escalation percentage?</li><li>Are there compulsory purchases (devices, uniforms from school shop)?</li><li>Is the security deposit truly refundable, and under what conditions?</li><li>Are there any hidden charges not listed in the fee structure?</li></ul><blockquote>Pro tip: Always get the complete fee structure in writing before paying the registration fee. Schools cannot change the fee structure mid-year for existing students per the RTE Act.</blockquote>` },
+    body:`<h2>10 Questions Every Parent Must Ask</h2><p>Visiting a school can be overwhelming. Here are 10 questions that cut through the noise.</p><h3>1. What is the student-teacher ratio?</h3><p>Anything above 30:1 means your child gets less individual attention.</p><h3>2. What percentage of students pass board exams?</h3><p>Ask for the last 3 years data.</p>` },
 ]
 
 async function ensureBlogTable() {
@@ -995,7 +1082,6 @@ async function ensureBlogTable() {
     "ADD COLUMN IF NOT EXISTS author VARCHAR(200) DEFAULT 'Thynk Schooling Team'",
   ]
   for (const col of cols) await db.query(`ALTER TABLE blog_posts ${col}`).catch(() => {})
-  // Seed hardcoded posts if table is empty
   const ct = await db.query('SELECT COUNT(*) FROM blog_posts').catch(() => ({ rows:[{ count:'0' }] }))
   if (parseInt(ct.rows[0].count) === 0) {
     for (const p of SEED_BLOG_POSTS) {
@@ -1010,21 +1096,13 @@ async function ensureBlogTable() {
 
 function toBlogPost(row: any) {
   return {
-    id: row.id,
-    slug: row.slug || '',
-    title: row.title || '',
-    excerpt: row.excerpt || '',
-    body: row.body || '',
-    tag: row.tag || 'Admission Tips',
-    readTime: row.read_time || '5 min',
+    id: row.id, slug: row.slug || '', title: row.title || '', excerpt: row.excerpt || '',
+    body: row.body || '', tag: row.tag || 'Admission Tips', readTime: row.read_time || '5 min',
     publishedAt: row.published_at ? String(row.published_at).slice(0, 10) : '',
-    status: row.status || 'draft',
-    coverImage: row.cover_image || '',
-    metaTitle: row.meta_title || '',
-    metaDesc: row.meta_desc || '',
+    status: row.status || 'draft', coverImage: row.cover_image || '',
+    metaTitle: row.meta_title || '', metaDesc: row.meta_desc || '',
     author: row.author || 'Thynk Schooling Team',
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.created_at, updatedAt: row.updated_at,
   }
 }
 
@@ -1034,26 +1112,15 @@ async function getBlogPosts(req: NextRequest) {
   const slug = searchParams.get('slug')
   const status = searchParams.get('status')
   const isAdmin = searchParams.get('admin') === '1'
-
   if (slug) {
-    const res = await db.query(
-      `SELECT * FROM blog_posts WHERE slug=$1${isAdmin ? '' : " AND status='published'"}`,
-      [slug]
-    )
+    const res = await db.query(`SELECT * FROM blog_posts WHERE slug=$1${isAdmin ? '' : " AND status='published'"}`, [slug])
     if (!res.rows.length) return NextResponse.json({ post: null }, { status: 404 })
     return NextResponse.json({ post: toBlogPost(res.rows[0]) })
   }
-
-  const conds: string[] = ['1=1']
-  const params: any[] = []
+  const conds: string[] = ['1=1']; const params: any[] = []
   if (status) { params.push(status); conds.push(`status=$${params.length}`) }
   if (!isAdmin) conds.push("status='published'")
-
-  const where = conds.join(' AND ')
-  const rows = await db.query(
-    `SELECT * FROM blog_posts WHERE ${where} ORDER BY published_at DESC, created_at DESC`,
-    params
-  )
+  const rows = await db.query(`SELECT * FROM blog_posts WHERE ${conds.join(' AND ')} ORDER BY published_at DESC, created_at DESC`, params)
   return NextResponse.json({ posts: rows.rows.map(toBlogPost) })
 }
 
@@ -1064,8 +1131,7 @@ async function createBlogPost(req: NextRequest) {
   if (!slug) return NextResponse.json({ error: 'slug is required' }, { status: 400 })
   const res = await db.query(
     `INSERT INTO blog_posts (slug,title,excerpt,body,tag,read_time,published_at,status,cover_image,meta_title,meta_desc,author)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
-     RETURNING *`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
     [slug, title||'', excerpt||'', content||'', tag||'Admission Tips', readTime||'5 min',
      publishedAt||new Date().toISOString().slice(0,10), status||'draft',
      coverImage||'', metaTitle||'', metaDesc||'', author||'Thynk Schooling Team']
@@ -1078,24 +1144,19 @@ async function updateBlogPost(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const body = await req.json()
-  const sets: string[] = []
-  const params: any[] = []
+  const sets: string[] = []; const params: any[] = []
   const map: Record<string, string> = {
-    slug: 'slug', title: 'title', excerpt: 'excerpt', body: 'body',
-    tag: 'tag', readTime: 'read_time', publishedAt: 'published_at',
-    status: 'status', coverImage: 'cover_image', metaTitle: 'meta_title',
-    metaDesc: 'meta_desc', author: 'author',
+    slug:'slug', title:'title', excerpt:'excerpt', body:'body', tag:'tag',
+    readTime:'read_time', publishedAt:'published_at', status:'status',
+    coverImage:'cover_image', metaTitle:'meta_title', metaDesc:'meta_desc', author:'author',
   }
   for (const [k, col] of Object.entries(map)) {
     if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
   }
   if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
-  params.push(id)
   sets.push(`updated_at=NOW()`)
-  const res = await db.query(
-    `UPDATE blog_posts SET ${sets.join(',')} WHERE id=$${params.length} RETURNING *`,
-    params
-  )
+  params.push(id)
+  const res = await db.query(`UPDATE blog_posts SET ${sets.join(',')} WHERE id=$${params.length} RETURNING *`, params)
   if (!res.rows.length) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
   return NextResponse.json({ post: toBlogPost(res.rows[0]) })
 }
@@ -1106,7 +1167,6 @@ async function deleteBlogPost(req: NextRequest) {
   await db.query('DELETE FROM blog_posts WHERE id=$1', [id])
   return NextResponse.json({ success: true })
 }
-
 
 // ─── menu management ──────────────────────────────────────────────────────────
 
@@ -1160,22 +1220,17 @@ async function saveMenus(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+// ─── payment gateways ─────────────────────────────────────────────────────────
 
-// ─── payment gateways (admin) ─────────────────────────────────────────────────
 async function getPaymentGateways() {
   const { ensureGatewayTable, getGatewayConfigs } = await import('@/lib/payment-gateway')
   await ensureGatewayTable()
   const configs = await getGatewayConfigs()
-  // Never expose keySecret in GET response — mask it
   const safe = configs.map(g => ({
-    id:       g.id,
-    name:     g.name,
-    enabled:  g.enabled,
-    priority: g.priority,
-    keyId:    g.keyId,
+    id: g.id, name: g.name, enabled: g.enabled, priority: g.priority,
+    keyId: g.keyId,
     keySecret: g.keySecret ? '••••••••' + g.keySecret.slice(-4) : '',
-    extra:    g.extra,
-    mode:     g.mode,
+    extra: g.extra, mode: g.mode,
   }))
   return NextResponse.json({ gateways: safe })
 }
@@ -1186,20 +1241,15 @@ async function savePaymentGateways(req: NextRequest) {
   const { gateways } = await req.json()
   if (!Array.isArray(gateways)) return NextResponse.json({ error: 'gateways array required' }, { status: 400 })
   for (const g of gateways) {
-    // Only update keySecret if it was actually changed (not the masked value)
-    const secretUpdate = g.keySecret && !g.keySecret.startsWith('••')
-      ? `key_secret=$${6}`
-      : ''
-    const params = [g.enabled, g.priority, g.keyId, JSON.stringify(g.extra || {}), g.mode, g.id]
-    if (secretUpdate) {
+    if (g.keySecret && !g.keySecret.startsWith('••')) {
       await db.query(
         `UPDATE payment_gateways SET enabled=$1, priority=$2, key_id=$3, extra=$4, mode=$5, key_secret=$6, updated_at=NOW() WHERE id=$7`,
-        [...params.slice(0,5), g.keySecret, g.id]
+        [g.enabled, g.priority, g.keyId, JSON.stringify(g.extra || {}), g.mode, g.keySecret, g.id]
       ).catch(() => {})
     } else {
       await db.query(
         `UPDATE payment_gateways SET enabled=$1, priority=$2, key_id=$3, extra=$4, mode=$5, updated_at=NOW() WHERE id=$6`,
-        params
+        [g.enabled, g.priority, g.keyId, JSON.stringify(g.extra || {}), g.mode, g.id]
       ).catch(() => {})
     }
   }
@@ -1241,21 +1291,11 @@ async function createCoupon(req: NextRequest) {
   if (!b.code) return NextResponse.json({ error: 'code required' }, { status: 400 })
   const code = b.code.trim().toUpperCase()
   const res = await db.query(
-    `INSERT INTO discount_coupons
-       (code, type, value, min_amount, max_uses, valid_from, valid_until, applicable_gateways, active, description)
+    `INSERT INTO discount_coupons (code,type,value,min_amount,max_uses,valid_from,valid_until,applicable_gateways,active,description)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-    [
-      code,
-      b.type || 'percent',
-      Number(b.value) || 0,
-      Number(b.min_amount) || 0,
-      b.max_uses ? Number(b.max_uses) : null,
-      b.valid_from || null,
-      b.valid_until || null,
-      b.applicable_gateways || [],
-      b.active !== false,
-      b.description || '',
-    ]
+    [code, b.type||'percent', Number(b.value)||0, Number(b.min_amount)||0,
+     b.max_uses?Number(b.max_uses):null, b.valid_from||null, b.valid_until||null,
+     b.applicable_gateways||[], b.active!==false, b.description||'']
   )
   return NextResponse.json({ coupon: res.rows[0] })
 }
@@ -1267,24 +1307,11 @@ async function updateCoupon(req: NextRequest) {
   const b = await req.json()
   const code = b.code?.trim().toUpperCase()
   await db.query(
-    `UPDATE discount_coupons SET
-       code=$1, type=$2, value=$3, min_amount=$4, max_uses=$5,
-       valid_from=$6, valid_until=$7, applicable_gateways=$8, active=$9,
-       description=$10, updated_at=NOW()
-     WHERE id=$11`,
-    [
-      code,
-      b.type || 'percent',
-      Number(b.value) || 0,
-      Number(b.min_amount) || 0,
-      b.max_uses ? Number(b.max_uses) : null,
-      b.valid_from || null,
-      b.valid_until || null,
-      b.applicable_gateways || [],
-      b.active !== false,
-      b.description || '',
-      id,
-    ]
+    `UPDATE discount_coupons SET code=$1,type=$2,value=$3,min_amount=$4,max_uses=$5,
+     valid_from=$6,valid_until=$7,applicable_gateways=$8,active=$9,description=$10,updated_at=NOW() WHERE id=$11`,
+    [code, b.type||'percent', Number(b.value)||0, Number(b.min_amount)||0,
+     b.max_uses?Number(b.max_uses):null, b.valid_from||null, b.valid_until||null,
+     b.applicable_gateways||[], b.active!==false, b.description||'', id]
   )
   return NextResponse.json({ success: true })
 }
@@ -1333,8 +1360,8 @@ export async function GET(req: NextRequest) {
       case 'marquee-items':         return await getMarqueeItems()
       case 'blog':                  return await getBlogPosts(req)
       case 'menus':                 return await getMenus()
-      case 'payment-gateways':        return await getPaymentGateways()
-      case 'coupons':                  return await getCoupons()
+      case 'payment-gateways':      return await getPaymentGateways()
+      case 'coupons':               return await getCoupons()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
@@ -1358,9 +1385,9 @@ export async function POST(req: NextRequest) {
       case 'subscription-plans': return await saveSubPlan(req)
       case 'message-triggers':   return await saveTrigger(req)
       case 'blog':               return await createBlogPost(req)
-      case 'menus':            return await saveMenus(req)
-      case 'payment-gateways': return await savePaymentGateways(req)
-      case 'coupons':          return await createCoupon(req)
+      case 'menus':              return await saveMenus(req)
+      case 'payment-gateways':   return await savePaymentGateways(req)
+      case 'coupons':            return await createCoupon(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
