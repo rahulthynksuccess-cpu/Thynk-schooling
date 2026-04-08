@@ -1,63 +1,121 @@
 'use client'
 // File: app/admin/analytics/page.tsx
-// API route must be at: app/api/admin/analytics/route.ts
+// API route: app/api/admin/analytics/route.ts
 
 import { useQuery } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import { useState, useEffect, useRef } from 'react'
-import { Users, TrendingUp, Phone, MapPin, School, BarChart2 } from 'lucide-react'
+import { Users, TrendingUp, DollarSign, MapPin, School, FileText, Download, FileSpreadsheet } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   PieChart, Pie, Cell,
   ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
+import toast from 'react-hot-toast'
 
-// ─── Design tokens ─────────────────────────────────────────────────────────────
-// BUG FIX (THEME): Was using `var(--admin-card-bg)` which is different from
-// `var(--admin-packages-card-bg)` used in the packages page. Standardized to
-// `--admin-card-bg` across both pages. Update your theme controller to set
-// `--admin-card-bg` (not --admin-packages-card-bg) and it will work site-wide.
-const C = {
-  card:    'var(--admin-card-bg, #111820)',   // ← unified variable name
-  border:  'var(--admin-border, rgba(255,255,255,0.07))',
-  t1:      'rgba(255,255,255,0.95)',
-  t2:      'rgba(255,255,255,0.72)',
-  t3:      'rgba(255,255,255,0.45)',
-  amber:   '#F59E0B',
-  teal:    '#14B8A6',
-  violet:  '#8B5CF6',
-  sky:     '#38BDF8',
-  emerald: '#10B981',
-  rose:    '#F43F5E',
-  blue:    '#3B82F6',
+// ─── Design system ────────────────────────────────────────────────────────────
+const S = {
+  bg:       '#F7F8FC',
+  card:     '#FFFFFF',
+  border:   'rgba(0,0,0,0.07)',
+  t1:       '#111827',
+  t2:       '#6B7280',
+  t3:       '#9CA3AF',
+  amber:    '#E5A50A',
+  amberBg:  'rgba(229,165,10,0.08)',
+  blue:     '#2563EB',
+  blueBg:   'rgba(37,99,235,0.07)',
+  teal:     '#0D9488',
+  tealBg:   'rgba(13,148,136,0.08)',
+  violet:   '#7C3AED',
+  violetBg: 'rgba(124,58,237,0.08)',
+  green:    '#059669',
+  greenBg:  'rgba(5,150,105,0.08)',
+  rose:     '#DC2626',
+  roseBg:   'rgba(220,38,38,0.07)',
+  sky:      '#0284C7',
+  skyBg:    'rgba(2,132,199,0.07)',
+  ff:       "-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif",
 }
-const BOARD_COLORS  = ['#378ADD', '#3B6D11', '#BA7517', '#534AB7', '#888780']
-const FUNNEL_COLORS = [C.sky, C.violet, C.teal, C.emerald]
-const CITY_COLORS   = ['#378ADD', '#185FA5', '#3B6D11', '#639922', '#BA7517', '#534AB7']
+
+const BOARD_COLORS  = [S.blue, S.green, S.amber, S.violet, S.t3]
+const FUNNEL_COLORS = [S.blue, S.violet, S.teal, S.green]
+const CITY_COLORS   = [S.blue, '#1D4ED8', S.teal, '#0F766E', S.violet, '#6D28D9']
 
 const card: React.CSSProperties = {
-  background: C.card,
-  border:     `1px solid ${C.border}`,
-  borderRadius: 16,
+  background:   S.card,
+  border:       `0.5px solid ${S.border}`,
+  borderRadius: 10,
 }
-const ff = "DM Sans,sans-serif"
 
-// ─── Range options ─────────────────────────────────────────────────────────────
-const RANGES = ['7 days', '14 days', '30 days'] as const
+// ─── Range ────────────────────────────────────────────────────────────────────
+const RANGES  = ['7d', '14d', '30d'] as const
+const RANGE_LABELS: Record<string, string> = { '7d': '7 days', '14d': '14 days', '30d': '30 days' }
+const RANGE_DAYS:  Record<string, number>  = { '7d': 7, '14d': 14, '30d': 30 }
 type Range = typeof RANGES[number]
-const rangeDays: Record<Range, number> = { '7 days': 7, '14 days': 14, '30 days': 30 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
-function ChartTooltip({ active, payload, label }: any) {
+// ─── Lazy export helpers ──────────────────────────────────────────────────────
+async function exportXLSX(data: any) {
+  const XLSX = await import('xlsx')
+  const wb   = XLSX.utils.book_new()
+
+  const leadsRows = (data.dailyLeads30 || []).map((r: any) => ({
+    Date: r.day, Leads: r.leads, Revenue: r.revenue,
+  }))
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(leadsRows), 'Daily Leads')
+
+  const signupRows = (data.signups || []).map((r: any) => ({ Date: r.day, 'New Parents': r.count }))
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(signupRows), 'Signups')
+
+  const schoolRows = (data.schools || []).map((r: any) => ({ Date: r.day, 'New Schools': r.count }))
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(schoolRows), 'Schools')
+
+  const cityRows = (data.topCities || []).map((r: any) => ({
+    City: r.city, Leads: r.leads, Schools: r.schools,
+  }))
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(cityRows), 'Cities')
+
+  XLSX.writeFile(wb, `analytics-${new Date().toISOString().slice(0, 10)}.xlsx`)
+}
+
+async function exportPDF(data: any, range: string) {
+  const { jsPDF } = await import('jspdf')
+  const autoTable = (await import('jspdf-autotable')).default
+  const doc = new jsPDF({ orientation: 'landscape' })
+  doc.setFontSize(14)
+  doc.text('ThynkSchooling Analytics Report', 14, 16)
+  doc.setFontSize(9); doc.setTextColor(120)
+  doc.text(`Period: ${RANGE_LABELS[range]}  |  Exported ${new Date().toLocaleDateString('en-IN')}`, 14, 22)
+
+  autoTable(doc, {
+    startY: 28,
+    head: [['Date', 'Leads', 'Revenue (₹)', 'New Parents', 'New Schools']],
+    body: (data.dailyLeads30 || []).map((r: any, i: number) => [
+      r.day,
+      r.leads,
+      Number(r.revenue).toLocaleString('en-IN'),
+      data.signups?.[i]?.count ?? '',
+      data.schools?.[i]?.count ?? '',
+    ]),
+    styles: { fontSize: 8, cellPadding: 3 },
+    headStyles: { fillColor: [17, 17, 17], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [248, 249, 250] },
+  })
+
+  doc.save(`analytics-${new Date().toISOString().slice(0, 10)}.pdf`)
+}
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+function ChartTip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: '#111927', border: `1px solid ${C.border}`, borderRadius: 10, padding: '10px 14px', fontSize: 12, fontFamily: ff, boxShadow: '0 8px 32px rgba(0,0,0,.6)' }}>
-      {label && <div style={{ color: C.t2, marginBottom: 6, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.08em' }}>{label}</div>}
+    <div style={{ background: '#fff', border: `0.5px solid ${S.border}`, borderRadius: 8, padding: '9px 13px', fontSize: 12, fontFamily: S.ff, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+      {label && <div style={{ color: S.t3, marginBottom: 5, fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>}
       {payload.map((p: any, i: number) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: i < payload.length - 1 ? 4 : 0 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color || p.fill }} />
-          <span style={{ color: C.t2 }}>{p.name}:</span>
-          <span style={{ color: C.t1, fontWeight: 700 }}>
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: i < payload.length - 1 ? 3 : 0 }}>
+          <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color || p.fill, flexShrink: 0 }} />
+          <span style={{ color: S.t2 }}>{p.name}:</span>
+          <span style={{ color: S.t1, fontWeight: 600 }}>
             {p.name === 'revenue' ? `₹${Number(p.value).toLocaleString('en-IN')}` : Number(p.value).toLocaleString()}
           </span>
         </div>
@@ -66,80 +124,90 @@ function ChartTooltip({ active, payload, label }: any) {
   )
 }
 
-function SectionHeader({ title, sub }: { title: string; sub: string }) {
+function Shimmer({ h = 40 }: { h?: number }) {
+  return (
+    <div style={{ height: h, borderRadius: 7, background: 'linear-gradient(90deg,#F3F4F6 25%,#EAECEE 50%,#F3F4F6 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.4s infinite' }} />
+  )
+}
+
+function StatCard({ icon: Icon, label, value, color, colorBg, delta }: any) {
+  const isUp   = delta?.startsWith('↑')
+  const isDown = delta?.startsWith('↓')
+  return (
+    <div style={{ ...card, padding: '16px 18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 8, background: colorBg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon size={16} color={color} />
+        </div>
+        {delta && (
+          <span style={{ fontSize: 11, fontWeight: 500, color: isUp ? S.green : isDown ? S.rose : S.t3, background: isUp ? S.greenBg : isDown ? S.roseBg : 'transparent', padding: '2px 6px', borderRadius: 4 }}>
+            {delta}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: S.t1, lineHeight: 1, letterSpacing: '-0.5px' }}>{value}</div>
+      <div style={{ fontSize: 11, color: S.t3, marginTop: 4, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div>
+    </div>
+  )
+}
+
+function TabRow({ tabs, active, onChange }: { tabs: { key: string; label: string }[]; active: string; onChange: (k: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 2, background: 'rgba(0,0,0,0.04)', borderRadius: 7, padding: 3 }}>
+      {tabs.map(t => (
+        <button key={t.key} onClick={() => onChange(t.key)}
+          style={{ padding: '5px 12px', borderRadius: 5, border: 'none', cursor: 'pointer', fontFamily: S.ff, fontSize: 12, fontWeight: active === t.key ? 600 : 400, background: active === t.key ? '#fff' : 'transparent', color: active === t.key ? S.t1 : S.t2, transition: 'all .12s', boxShadow: active === t.key ? `0 0 0 0.5px ${S.border}` : 'none' }}>
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function CardHeader({ title, sub }: { title: string; sub?: string }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <h3 style={{ margin: 0, fontFamily: ff, fontWeight: 700, fontSize: 15, color: C.t1 }}>{title}</h3>
-      <p style={{ margin: '4px 0 0', fontFamily: ff, fontSize: 12, color: C.t2 }}>{sub}</p>
+      <div style={{ fontSize: 13, fontWeight: 600, color: S.t1 }}>{title}</div>
+      {sub && <div style={{ fontSize: 12, color: S.t3, marginTop: 2 }}>{sub}</div>}
     </div>
   )
 }
 
-function Skeleton({ h = 40 }: { h?: number }) {
-  return <div style={{ height: h, background: 'rgba(255,255,255,0.04)', borderRadius: 8, animation: 'skelpulse 1.4s ease-in-out infinite' }} />
-}
-
-function StatPill({ icon: Icon, label, value, color, sub }: any) {
+function HBar({ label, pct, color, value }: { label: string; pct: number; color: string; value: number }) {
   return (
-    <div style={{ ...card, padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-      <div style={{ width: 42, height: 42, borderRadius: 11, background: `${color}18`, border: `1px solid ${color}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-        <Icon size={18} color={color} />
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+      <div style={{ width: 80, fontSize: 12, color: S.t2, textAlign: 'right', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+      <div style={{ flex: 1, height: 6, background: 'rgba(0,0,0,0.05)', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${Math.max(2, pct)}%`, background: color, borderRadius: 99 }} />
       </div>
-      <div>
-        <div style={{ fontFamily: ff, fontWeight: 800, fontSize: 26, color, lineHeight: 1 }}>{value}</div>
-        <div style={{ fontFamily: ff, fontSize: 11, color: C.t2, marginTop: 3, textTransform: 'uppercase', letterSpacing: '.07em' }}>{label}</div>
-        {sub && <div style={{ fontFamily: ff, fontSize: 11, color: C.emerald, marginTop: 2 }}>{sub}</div>}
-      </div>
-    </div>
-  )
-}
-
-function TabBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} style={{ padding: '5px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontFamily: ff, fontSize: 12, fontWeight: active ? 700 : 500, background: active ? C.amber : 'transparent', color: active ? '#000' : C.t2, transition: 'all .15s', textTransform: 'capitalize' }}>
-      {label}
-    </button>
-  )
-}
-
-function HBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
-  const pct = Math.max(4, Math.round((value / Math.max(max, 1)) * 100))
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-      <div style={{ width: 76, fontFamily: ff, fontSize: 12, color: C.t2, textAlign: 'right', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
-      <div style={{ flex: 1, height: 7, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99 }} />
-      </div>
-      <div style={{ fontFamily: ff, fontSize: 11, color: C.t3, minWidth: 28, textAlign: 'right' }}>{value}</div>
+      <div style={{ fontSize: 11, color: S.t3, minWidth: 36, textAlign: 'right' }}>{value.toLocaleString()} <span style={{ color: S.t3 }}>({pct}%)</span></div>
     </div>
   )
 }
 
 function FunnelBar({ name, value, max, color, prevValue }: { name: string; value: number; max: number; color: string; prevValue?: number }) {
-  const pct  = Math.max(4, Math.round((value / Math.max(max, 1)) * 100))
+  const pct  = Math.max(3, Math.round((value / Math.max(max, 1)) * 100))
   const drop = prevValue && prevValue > 0 ? Math.round((1 - value / prevValue) * 100) : null
   return (
-    <div style={{ marginBottom: 13 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
-        <span style={{ fontFamily: ff, fontSize: 13, color: C.t1, fontWeight: 600 }}>{name}</span>
-        <span style={{ fontFamily: ff, fontSize: 13, color, fontWeight: 700 }}>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, alignItems: 'baseline' }}>
+        <span style={{ fontSize: 12, color: S.t1, fontWeight: 500 }}>{name}</span>
+        <span style={{ fontSize: 13, color, fontWeight: 700 }}>
           {value.toLocaleString()}
-          {drop !== null && <span style={{ fontSize: 10, color: C.t3, marginLeft: 4 }}>↓{drop}%</span>}
+          {drop !== null && <span style={{ fontSize: 10, color: S.t3, marginLeft: 5 }}>↓{drop}%</span>}
         </span>
       </div>
-      <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+      <div style={{ height: 7, background: 'rgba(0,0,0,0.05)', borderRadius: 99, overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 99 }} />
       </div>
     </div>
   )
 }
 
-// BUG FIX (HEATMAP DISPLAY): WEEKS array is ordered oldest→newest so index 3 = "This week".
-// The route now stores week_ago=0 at matrix index 3, matching this order.
 function WeeklyHeatmap({ data }: { data: number[][] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const DAYS  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const WEEKS = ['Week 4', 'Week 3', 'Week 2', 'This week']  // index 0..3, 3=current
+  const WEEKS = ['Week 4', 'Week 3', 'Week 2', 'This week']
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -148,28 +216,30 @@ function WeeklyHeatmap({ data }: { data: number[][] }) {
     if (!ctx) return
     const W = canvas.offsetWidth || 600
     canvas.width  = W
-    canvas.height = 130
-    const cellW = (W - 68) / 7
+    canvas.height = 120
+    const cellW = (W - 72) / 7
     const cellH = 22
-    const offX  = 60
-    const offY  = 22
+    const offX  = 64
+    const offY  = 20
     const maxV  = Math.max(1, ...data.flat())
 
-    ctx.clearRect(0, 0, W, 130)
-    ctx.font      = `10px ${ff}`
-    ctx.fillStyle = 'rgba(255,255,255,0.4)'
-    DAYS.forEach((d, i)  => ctx.fillText(d, offX + i * cellW + cellW / 2 - 10, 13))
+    ctx.clearRect(0, 0, W, 120)
+    ctx.font      = `10px ${S.ff}`
+    ctx.fillStyle = S.t3
+    DAYS.forEach((d, i)  => ctx.fillText(d, offX + i * cellW + cellW / 2 - 10, 12))
     WEEKS.forEach((w, j) => ctx.fillText(w, 2, offY + j * cellH + cellH / 2 + 4))
 
     data.forEach((row, j) => {
       row.forEach((v, i) => {
-        const alpha = 0.08 + 0.82 * (v / maxV)
-        ctx.fillStyle = `rgba(56,189,248,${alpha})`
+        const alpha = 0.07 + 0.78 * (v / maxV)
+        ctx.fillStyle = `rgba(37,99,235,${alpha})`
         ctx.beginPath()
-        ctx.roundRect(offX + i * cellW + 2, offY + j * cellH + 2, cellW - 4, cellH - 4, 3)
+        ctx.roundRect(offX + i * cellW + 2, offY + j * cellH + 2, cellW - 4, cellH - 4, 4)
         ctx.fill()
-        ctx.fillStyle = alpha > 0.45 ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.45)'
-        ctx.fillText(String(v), offX + i * cellW + cellW / 2 - 7, offY + j * cellH + cellH / 2 + 4)
+        if (v > 0) {
+          ctx.fillStyle = alpha > 0.5 ? '#fff' : S.t2
+          ctx.fillText(String(v), offX + i * cellW + cellW / 2 - 5, offY + j * cellH + cellH / 2 + 4)
+        }
       })
     })
   }, [data])
@@ -177,128 +247,184 @@ function WeeklyHeatmap({ data }: { data: number[][] }) {
   return <canvas ref={canvasRef} style={{ width: '100%', display: 'block' }} />
 }
 
-// ─── Parent segment breakdown ─────────────────────────────────────────────────
-const PARENT_SEGMENT_OPTIONS = ['By budget range', 'By class seeking', 'By location'] as const
+// ─── Export button ────────────────────────────────────────────────────────────
+function ExportMenu({ data, range }: { data: any; range: string }) {
+  const [open, setOpen]       = useState(false)
+  const [loading, setLoading] = useState<'xlsx'|'pdf'|null>(null)
 
-function parentSegmentData(stats: any, mode: string) {
-  if (mode === 'By budget range') {
-    const total = (stats.budgetLow || 0) + (stats.budgetMid || 0) + (stats.budgetHigh || 0) || 1
-    return [
-      { name: '< ₹50K',      value: stats.budgetLow  || 0, pct: Math.round((stats.budgetLow  || 0) / total * 100), color: C.blue   },
-      { name: '₹50K – 1.5L', value: stats.budgetMid  || 0, pct: Math.round((stats.budgetMid  || 0) / total * 100), color: C.amber  },
-      { name: '> ₹1.5L',     value: stats.budgetHigh || 0, pct: Math.round((stats.budgetHigh || 0) / total * 100), color: C.violet },
-    ]
+  const handle = async (type: 'xlsx'|'pdf') => {
+    setOpen(false); setLoading(type)
+    try {
+      if (type === 'xlsx') await exportXLSX(data)
+      else                 await exportPDF(data, range)
+      toast.success(`Exported as ${type.toUpperCase()}`)
+    } catch { toast.error('Export failed') }
+    finally { setLoading(null) }
   }
-  if (mode === 'By class seeking') return [
-    { name: 'Nursery–KG',  value: 0, pct: 22, color: C.sky    },
-    { name: 'Grade 1–5',   value: 0, pct: 38, color: C.teal   },
-    { name: 'Grade 6–10',  value: 0, pct: 29, color: C.violet },
-    { name: 'Grade 11–12', value: 0, pct: 11, color: C.amber  },
-  ]
-  return [
-    { name: 'Mumbai',    value: 0, pct: 28, color: C.blue   },
-    { name: 'Delhi',     value: 0, pct: 24, color: C.violet },
-    { name: 'Bangalore', value: 0, pct: 18, color: C.teal   },
-    { name: 'Others',    value: 0, pct: 30, color: C.t3     },
-  ]
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(o => !o)} disabled={!!loading}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6, background: '#fff', border: `0.5px solid ${S.border}`, fontSize: 12, fontWeight: 500, color: S.t2, cursor: 'pointer', fontFamily: S.ff }}>
+        <Download size={11} /> Export
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#fff', border: `0.5px solid ${S.border}`, borderRadius: 8, overflow: 'hidden', zIndex: 50, minWidth: 160, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
+          <button onClick={() => handle('xlsx')} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', fontSize: 13, color: S.t1, cursor: 'pointer', fontFamily: S.ff, textAlign: 'left' }}>
+            <FileSpreadsheet size={13} color="#059669" /> Excel (.xlsx)
+          </button>
+          <div style={{ height: '0.5px', background: S.border }} />
+          <button onClick={() => handle('pdf')} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '9px 14px', border: 'none', background: 'transparent', fontSize: 13, color: S.t1, cursor: 'pointer', fontFamily: S.ff, textAlign: 'left' }}>
+            <FileText size={13} color="#DC2626" /> PDF (.pdf)
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function AdminAnalyticsPage() {
-  const [leadsTab,    setLeadsTab]    = useState<'leads' | 'revenue' | 'signups'>('leads')
-  const [range,       setRange]       = useState<Range>('30 days')
-  const [parentMode,  setParentMode]  = useState(PARENT_SEGMENT_OPTIONS[0])
-  const [schoolMode,  setSchoolMode]  = useState<'type' | 'city'>('type')
+  const [activityTab, setActivityTab] = useState<'leads'|'revenue'|'signups'|'schools'|'parents'>('leads')
+  const [range,       setRange]       = useState<Range>('30d')
+  const [parentMode,  setParentMode]  = useState<'budget'|'class'|'city'>('budget')
+  const [schoolMode,  setSchoolMode]  = useState<'type'|'city'>('type')
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-analytics'],
     queryFn:  () => fetch('/api/admin/analytics').then(r => r.json()),
-    staleTime: 3 * 60 * 1000,
+    staleTime:           3 * 60_000,
+    refetchOnWindowFocus: false,
   })
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const allDaily:   any[] = data?.dailyLeads30 || []
-  const allSignups: any[] = data?.signups       || []
-  const days = rangeDays[range]
+  const days    = RANGE_DAYS[range]
+  const daily   = (data?.dailyLeads30 || []).slice(-days)
+  const signups = (data?.signups      || []).slice(-days)
+  const schools = (data?.schools      || []).slice(-days)
 
-  // BUG FIX (RANGE SLICE): API now gap-fills every day so slice(-days) is safe.
-  const daily   = allDaily.slice(-days)
-  const signups = allSignups.slice(-days)
+  const totalLeads   = daily.reduce((s: number, d: any) => s + (d.leads   || 0), 0)
+  const totalRev     = daily.reduce((s: number, d: any) => s + (d.revenue || 0), 0)
+  const totalSignups = signups.reduce((s: number, d: any) => s + Number(d.count || 0), 0)
+  const totalSchools = schools.reduce((s: number, d: any) => s + Number(d.count || 0), 0)
 
-  const cities:      any[]   = data?.topCities   || []
-  const boards:      any[]   = data?.boardData    || []
-  const funnel:      any[]   = data?.funnelData   || []
-  const parentStats: any     = data?.parentStats  || {}
-  const schoolStats: any[]   = data?.schoolStats  || []
-  const heatmap:     number[][] = data?.weeklyHeatmap || Array.from({ length: 4 }, () => Array(7).fill(0))
+  const pp = data?.priorPeriod || {}
 
-  const totalLeads30   = daily.reduce((s: number, d: any) => s + (d.leads   || 0), 0)
-  const totalRev30     = daily.reduce((s: number, d: any) => s + (d.revenue || 0), 0)
-  const totalSignups30 = signups.reduce((s: number, d: any) => s + Number(d.count || 0), 0)
+  const cities  = data?.topCities      || []
+  const boards  = data?.boardData      || []
+  const funnel  = data?.funnelData     || []
+  const pstats  = data?.parentStats    || {}
+  const heatmap = data?.weeklyHeatmap  || Array.from({ length: 4 }, () => Array(7).fill(0))
 
-  const funnelMax  = funnel[0]?.value || 1
+  const funnelMax = funnel[0]?.value || 1
 
-  const areaKey   = leadsTab === 'signups' ? 'count' : leadsTab
-  const areaColor = leadsTab === 'leads' ? C.amber : leadsTab === 'revenue' ? C.teal : C.sky
-  const areaData  = leadsTab === 'signups'
-    ? signups.map((r: any) => ({ day: String(r.day).slice(5), count: Number(r.count) }))
-    : daily
+  // Activity tab config
+  const ACTIVITY_TABS = [
+    { key: 'leads',    label: 'Leads'    },
+    { key: 'revenue',  label: 'Revenue'  },
+    { key: 'signups',  label: 'Parents'  },
+    { key: 'schools',  label: 'Schools'  },
+    { key: 'parents',  label: 'Parent activity' },
+  ]
 
-  const parentSegs = parentSegmentData(parentStats, parentMode)
+  const activityConfig: Record<string, { key: string; color: string; data: any[]; fmt?: (v: number) => string }> = {
+    leads:   { key: 'leads',   color: S.amber, data: daily,   fmt: (v) => v.toLocaleString() },
+    revenue: { key: 'revenue', color: S.teal,  data: daily,   fmt: (v) => `₹${v.toLocaleString('en-IN')}` },
+    signups: { key: 'count',   color: S.blue,  data: signups, fmt: (v) => v.toLocaleString() },
+    schools: { key: 'count',   color: S.violet,data: schools, fmt: (v) => v.toLocaleString() },
+    parents: { key: 'count',   color: S.green, data: signups, fmt: (v) => v.toLocaleString() },
+  }
+  const act = activityConfig[activityTab]
+
+  // Parent segment data — all from real API
+  function parentSegRows() {
+    if (parentMode === 'budget') {
+      const total = (pstats.budgetLow || 0) + (pstats.budgetMid || 0) + (pstats.budgetHigh || 0) || 1
+      return [
+        { name: '< ₹50K',     value: pstats.budgetLow  || 0, pct: Math.round((pstats.budgetLow  || 0) / total * 100), color: S.blue   },
+        { name: '₹50K – 1.5L',value: pstats.budgetMid  || 0, pct: Math.round((pstats.budgetMid  || 0) / total * 100), color: S.amber  },
+        { name: '> ₹1.5L',    value: pstats.budgetHigh || 0, pct: Math.round((pstats.budgetHigh || 0) / total * 100), color: S.violet },
+      ]
+    }
+    if (parentMode === 'class') {
+      const colors = [S.sky, S.teal, S.violet, S.amber, S.t3]
+      return (pstats.classPcts || []).map((r: any, i: number) => ({ ...r, color: colors[i] || S.t3 }))
+    }
+    // city
+    const colors = [S.blue, S.teal, S.violet, S.amber, S.green, S.t3]
+    return (pstats.cityPcts || []).map((r: any, i: number) => ({ ...r, color: colors[i] || S.t3 }))
+  }
+  const parentRows = parentSegRows()
+
+  const schoolStats = schoolMode === 'type' ? (data?.schoolStatsByType || []) : (data?.schoolStatsByCity || [])
 
   return (
     <AdminLayout pageClass="admin-page-analytics" title="Analytics" subtitle="Real-time platform data">
       <style>{`
-        @keyframes skelpulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-        .tab-pill { display:flex; gap:4px; background:rgba(255,255,255,0.04); border-radius:8px; padding:3px; border:1px solid ${C.border}; }
-        select.admin-sel { background:rgba(255,255,255,0.04); color:${C.t2}; border:1px solid ${C.border}; border-radius:8px; font-family:${ff}; font-size:12px; padding:5px 10px; cursor:pointer; }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        select.asel { background:#fff; color:${S.t1}; border:0.5px solid ${S.border}; border-radius:6px; font-family:${S.ff}; font-size:12px; padding:5px 10px; cursor:pointer; outline:none; }
+        select.asel:focus { border-color:rgba(0,0,0,0.2); }
       `}</style>
 
-      {/* ── Stat pills ───────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10, marginBottom: 18 }}>
-        <StatPill icon={TrendingUp} label={`Leads (${range})`}  value={isLoading ? '…' : totalLeads30.toLocaleString()}                color={C.amber}   sub="↑ 12% vs prior" />
-        <StatPill icon={Users}      label={`Signups (${range})`} value={isLoading ? '…' : totalSignups30.toLocaleString()}               color={C.sky}     sub="↑ 8% vs prior"  />
-        <StatPill icon={Phone}      label={`Revenue (${range})`} value={isLoading ? '…' : `₹${totalRev30.toLocaleString('en-IN')}`}     color={C.teal}    sub="↑ 18% vs prior" />
-        <StatPill icon={MapPin}     label="Active Cities"         value={isLoading ? '…' : cities.length}                                 color={C.violet}  />
-        <StatPill icon={School}     label="Total Schools"         value={isLoading ? '…' : (data?.funnelData?.[1]?.value || 0).toLocaleString()} color={C.blue} />
-        <StatPill icon={BarChart2}  label="Applications"          value={isLoading ? '…' : (data?.funnelData?.[3]?.value || 0).toLocaleString()} color={C.rose} />
+      {/* ── Top action bar ──────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <select className="asel" value={range} onChange={e => setRange(e.target.value as Range)}>
+            {RANGES.map(r => <option key={r} value={r}>{RANGE_LABELS[r]}</option>)}
+          </select>
+        </div>
+        {!isLoading && data && <ExportMenu data={data} range={range} />}
       </div>
 
-      {/* ── Main timeline ─────────────────────────────────────────────────── */}
-      <div style={{ ...card, padding: '22px 24px', marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-          <SectionHeader title="Daily Activity" sub={`Trends over last ${range}`} />
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <select className="admin-sel" value={range} onChange={e => setRange(e.target.value as Range)}>
-              {RANGES.map(r => <option key={r}>{r}</option>)}
-            </select>
-            <div className="tab-pill">
-              {(['leads', 'revenue', 'signups'] as const).map(t => (
-                <TabBtn key={t} label={t} active={leadsTab === t} onClick={() => setLeadsTab(t)} />
-              ))}
-            </div>
-          </div>
+      {/* ── Stat cards ───────────────────────────────────────────────────── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: 10, marginBottom: 16 }}>
+        <StatCard icon={TrendingUp}  label={`Leads (${RANGE_LABELS[range]})`}   value={isLoading ? '…' : totalLeads.toLocaleString()}                              color={S.amber}  colorBg={S.amberBg}  delta={pp.leadsChange} />
+        <StatCard icon={DollarSign}  label={`Revenue (${RANGE_LABELS[range]})`} value={isLoading ? '…' : `₹${Math.round(totalRev/1000)}K`}                         color={S.teal}   colorBg={S.tealBg}   delta={pp.revenueChange} />
+        <StatCard icon={Users}       label={`New parents (${RANGE_LABELS[range]})`} value={isLoading ? '…' : totalSignups.toLocaleString()}                         color={S.blue}   colorBg={S.blueBg}   delta={pp.signupsChange} />
+        <StatCard icon={School}      label={`New schools (${RANGE_LABELS[range]})`} value={isLoading ? '…' : totalSchools.toLocaleString()}                         color={S.violet} colorBg={S.violetBg} delta={pp.schoolsChange} />
+        <StatCard icon={MapPin}      label="Active cities"                       value={isLoading ? '…' : cities.length}                                            color={S.sky}    colorBg={S.skyBg} />
+        <StatCard icon={FileText}    label="Total schools"                       value={isLoading ? '…' : (data?.totalSchools || 0).toLocaleString()}               color={S.rose}   colorBg={S.roseBg} />
+      </div>
+
+      {/* ── Daily activity chart ─────────────────────────────────────────── */}
+      <div style={{ ...card, padding: '20px 22px', marginBottom: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+          <CardHeader title="Daily activity" sub={`Trends over the last ${RANGE_LABELS[range]}`} />
+          <TabRow tabs={ACTIVITY_TABS} active={activityTab} onChange={k => setActivityTab(k as any)} />
         </div>
-        {isLoading ? <Skeleton h={240} /> : areaData.length === 0 ? (
-          <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.t3, fontFamily: ff, fontSize: 13 }}>
-            No data yet — activity will appear here once recorded
-          </div>
+
+        {/* Summary chips for current tab */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Total', val: activityTab === 'revenue' ? `₹${Math.round(totalRev/1000)}K` : activityTab === 'leads' ? totalLeads : activityTab === 'schools' ? totalSchools : totalSignups },
+            { label: 'Avg / day', val: activityTab === 'revenue' ? `₹${Math.round(totalRev / Math.max(days,1) / 1000)}K` : Math.round((activityTab === 'leads' ? totalLeads : activityTab === 'schools' ? totalSchools : totalSignups) / Math.max(days,1)) },
+            { label: 'Peak', val: act.data.length ? Math.max(...act.data.map((d: any) => Number(d[act.key] || 0))) : 0 },
+          ].map(m => (
+            <div key={m.label} style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 7, padding: '7px 12px', display: 'flex', gap: 6, alignItems: 'baseline' }}>
+              <span style={{ fontSize: 11, color: S.t3, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '.05em' }}>{m.label}</span>
+              <span style={{ fontSize: 15, fontWeight: 700, color: S.t1 }}>{String(m.val)}</span>
+            </div>
+          ))}
+        </div>
+
+        {isLoading ? <Shimmer h={220} /> : act.data.length === 0 ? (
+          <div style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.t3, fontFamily: S.ff, fontSize: 13 }}>No data yet</div>
         ) : (
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={areaData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={act.data} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
               <defs>
-                <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%"   stopColor={areaColor} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={areaColor} stopOpacity={0} />
+                <linearGradient id="gradA" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%"   stopColor={act.color} stopOpacity={0.15} />
+                  <stop offset="100%" stopColor={act.color} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis dataKey="day" tick={{ fill: C.t3, fontSize: 11, fontFamily: ff }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: C.t3, fontSize: 11, fontFamily: ff }} axisLine={false} tickLine={false}
-                tickFormatter={v => leadsTab === 'revenue' ? `₹${Math.round(v / 1000)}K` : String(v)} />
-              <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
-              <Area type="monotone" dataKey={areaKey} stroke={areaColor} strokeWidth={2.5} fill="url(#gA)" dot={false}
-                activeDot={{ r: 5, fill: areaColor, stroke: '#111820', strokeWidth: 2 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
+              <XAxis dataKey="day" tick={{ fill: S.t3, fontSize: 11, fontFamily: S.ff }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: S.t3, fontSize: 11, fontFamily: S.ff }} axisLine={false} tickLine={false}
+                tickFormatter={v => activityTab === 'revenue' ? `₹${Math.round(v/1000)}K` : String(v)} />
+              <Tooltip content={<ChartTip />} cursor={{ stroke: 'rgba(0,0,0,0.06)', strokeWidth: 1 }} />
+              <Area type="monotone" dataKey={act.key} stroke={act.color} strokeWidth={2} fill="url(#gradA)" dot={false}
+                activeDot={{ r: 4, fill: act.color, stroke: '#fff', strokeWidth: 2 }} />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -306,18 +432,18 @@ export default function AdminAnalyticsPage() {
 
       {/* ── Cities + Funnel ───────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
-        <div style={{ ...card, padding: '22px 24px' }}>
-          <SectionHeader title="Top Cities by Leads" sub="Geographic distribution" />
-          {isLoading ? <Skeleton h={200} /> : cities.length === 0 ? (
-            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.t3, fontFamily: ff, fontSize: 13 }}>No city data yet</div>
+        <div style={{ ...card, padding: '20px 22px' }}>
+          <CardHeader title="Top cities by leads" sub="Geographic distribution" />
+          {isLoading ? <Shimmer h={200} /> : cities.length === 0 ? (
+            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.t3, fontSize: 13 }}>No city data yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={cities} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: C.t3, fontSize: 11, fontFamily: ff }} axisLine={false} tickLine={false} />
-                <YAxis type="category" dataKey="city" tick={{ fill: C.t2, fontSize: 12, fontFamily: ff }} axisLine={false} tickLine={false} width={70} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                <Bar dataKey="leads" name="leads" radius={[0, 4, 4, 0]} maxBarSize={14}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" horizontal={false} />
+                <XAxis type="number" tick={{ fill: S.t3, fontSize: 11, fontFamily: S.ff }} axisLine={false} tickLine={false} />
+                <YAxis type="category" dataKey="city" tick={{ fill: S.t2, fontSize: 12, fontFamily: S.ff }} axisLine={false} tickLine={false} width={68} />
+                <Tooltip content={<ChartTip />} cursor={{ fill: 'rgba(0,0,0,0.02)' }} />
+                <Bar dataKey="leads" name="leads" radius={[0, 4, 4, 0]} maxBarSize={12}>
                   {cities.map((_: any, i: number) => <Cell key={i} fill={CITY_COLORS[i % CITY_COLORS.length]} />)}
                 </Bar>
               </BarChart>
@@ -325,42 +451,41 @@ export default function AdminAnalyticsPage() {
           )}
         </div>
 
-        <div style={{ ...card, padding: '22px 24px' }}>
-          <SectionHeader title="Conversion Funnel" sub="Platform-wide user journey with drop-off" />
-          {isLoading ? <Skeleton h={200} /> : (
+        <div style={{ ...card, padding: '20px 22px' }}>
+          <CardHeader title="Conversion funnel" sub="Platform-wide user journey with drop-off" />
+          {isLoading ? <Shimmer h={200} /> : (
             <div style={{ marginTop: 8 }}>
               {funnel.map((f: any, i: number) => (
                 <FunnelBar key={f.name} name={f.name} value={f.value} max={funnelMax}
-                  color={FUNNEL_COLORS[i] || C.t2} prevValue={i > 0 ? funnel[i - 1].value : undefined} />
+                  color={FUNNEL_COLORS[i] || S.t2} prevValue={i > 0 ? funnel[i - 1].value : undefined} />
               ))}
             </div>
           )}
         </div>
       </div>
 
-      {/* ── Board pie + New signups ───────────────────────────────────────── */}
+      {/* ── Boards + Signup trend ─────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 14, marginBottom: 14 }}>
-        <div style={{ ...card, padding: '22px 24px' }}>
-          <SectionHeader title="Schools by Board" sub="Curriculum breakdown" />
-          {isLoading ? <Skeleton h={200} /> : boards.length === 0 ? (
-            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.t3, fontFamily: ff, fontSize: 13 }}>No board data yet</div>
+        <div style={{ ...card, padding: '20px 22px' }}>
+          <CardHeader title="Schools by board" sub="Curriculum breakdown" />
+          {isLoading ? <Shimmer h={180} /> : boards.length === 0 ? (
+            <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.t3, fontSize: 13 }}>No board data yet</div>
           ) : (
             <>
-              <ResponsiveContainer width="100%" height={150}>
+              <ResponsiveContainer width="100%" height={140}>
                 <PieChart>
-                  <Pie data={boards} cx="50%" cy="50%" innerRadius={38} outerRadius={62} paddingAngle={3} dataKey="value"
-                    label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`} labelLine={false}>
+                  <Pie data={boards} cx="50%" cy="50%" innerRadius={34} outerRadius={58} paddingAngle={3} dataKey="value">
                     {boards.map((e: any, i: number) => <Cell key={i} fill={e.color || BOARD_COLORS[i]} stroke="transparent" />)}
                   </Pie>
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip content={<ChartTip />} />
                 </PieChart>
               </ResponsiveContainer>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', marginTop: 8 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px 12px', marginTop: 8 }}>
                 {boards.map((b: any) => (
-                  <div key={b.name} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: 2, background: b.color }} />
-                    <span style={{ fontSize: 12, color: C.t2, fontFamily: ff }}>{b.name}</span>
-                    <span style={{ fontSize: 12, color: C.t1, fontWeight: 700, fontFamily: ff }}>{b.value}</span>
+                  <div key={b.name} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: 2, background: b.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: S.t2 }}>{b.name}</span>
+                    <span style={{ fontSize: 11, color: S.t1, fontWeight: 600 }}>{b.value}</span>
                   </div>
                 ))}
               </div>
@@ -368,48 +493,52 @@ export default function AdminAnalyticsPage() {
           )}
         </div>
 
-        <div style={{ ...card, padding: '22px 24px' }}>
-          <SectionHeader title="New User Signups" sub={`Daily registrations — last ${range}`} />
-          {isLoading ? <Skeleton h={200} /> : signups.length === 0 ? (
-            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.t3, fontFamily: ff, fontSize: 13 }}>No signups yet</div>
+        <div style={{ ...card, padding: '20px 22px' }}>
+          <CardHeader title="New user signups" sub={`Daily parent registrations — last ${RANGE_LABELS[range]}`} />
+          {isLoading ? <Shimmer h={200} /> : signups.length === 0 ? (
+            <div style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.t3, fontSize: 13 }}>No signups yet</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={signups.map((r: any) => ({ day: String(r.day).slice(5), count: Number(r.count) }))} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="day" tick={{ fill: C.t3, fontSize: 11, fontFamily: ff }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: C.t3, fontSize: 11, fontFamily: ff }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.06)', strokeWidth: 1 }} />
-                <Line type="monotone" dataKey="count" name="signups" stroke={C.sky} strokeWidth={2.5} dot={false}
-                  activeDot={{ r: 5, fill: C.sky, stroke: '#111820', strokeWidth: 2 }} />
+              <LineChart data={signups} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fill: S.t3, fontSize: 11, fontFamily: S.ff }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: S.t3, fontSize: 11, fontFamily: S.ff }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<ChartTip />} />
+                <Line type="monotone" dataKey="count" name="new parents" stroke={S.blue} strokeWidth={2} dot={false}
+                  activeDot={{ r: 4, fill: S.blue, stroke: '#fff', strokeWidth: 2 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
         </div>
       </div>
 
-      {/* ── Parent & School segments ──────────────────────────────────────── */}
+      {/* ── Parent segments + School performance ─────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: 14, marginBottom: 14 }}>
-        <div style={{ ...card, padding: '22px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <SectionHeader title="Parent Segments" sub="Who is buying leads" />
-            <select className="admin-sel" value={parentMode} onChange={e => setParentMode(e.target.value as any)}>
-              {PARENT_SEGMENT_OPTIONS.map(o => <option key={o}>{o}</option>)}
+        <div style={{ ...card, padding: '20px 22px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
+            <CardHeader title="Parent segments" sub="Who is searching for schools" />
+            <select className="asel" value={parentMode} onChange={e => setParentMode(e.target.value as any)}>
+              <option value="budget">By budget</option>
+              <option value="class">By class seeking</option>
+              <option value="city">By city</option>
             </select>
           </div>
-          {isLoading ? <Skeleton h={140} /> : (
+          {isLoading ? <Shimmer h={140} /> : parentRows.length === 0 ? (
+            <div style={{ height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.t3, fontSize: 13 }}>No data yet</div>
+          ) : (
             <>
-              {parentSegs.map(s => (
-                <HBar key={s.name} label={s.name} value={s.pct} max={100} color={s.color} />
+              {parentRows.map((s: any) => (
+                <HBar key={s.name} label={s.name} pct={s.pct} value={s.value} color={s.color} />
               ))}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 16 }}>
                 {[
-                  { label: 'Repeat buyers',  val: `${parentStats.repeatBuyerPct ?? '—'}%`, color: C.teal  },
-                  { label: 'Avg leads bought', val: parentStats.avgLeads ?? '—',            color: C.sky   },
-                  { label: 'Avg spend',        val: parentStats.avgSpend ? `₹${Number(parentStats.avgSpend).toLocaleString('en-IN')}` : '—', color: C.amber },
+                  { label: 'Repeat buyers', val: `${pstats.repeatBuyerPct ?? 0}%`, color: S.teal   },
+                  { label: 'Avg leads',     val: pstats.avgLeads ?? 0,             color: S.blue   },
+                  { label: 'Avg spend',     val: pstats.avgSpend ? `₹${Number(pstats.avgSpend).toLocaleString('en-IN')}` : '₹0', color: S.amber },
                 ].map(m => (
-                  <div key={m.label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontFamily: ff, fontSize: 18, fontWeight: 700, color: m.color }}>{m.val}</div>
-                    <div style={{ fontFamily: ff, fontSize: 10, color: C.t3, marginTop: 2, textTransform: 'uppercase', letterSpacing: '.05em' }}>{m.label}</div>
+                  <div key={m.label} style={{ background: 'rgba(0,0,0,0.03)', borderRadius: 8, padding: '9px 11px' }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: m.color }}>{String(m.val)}</div>
+                    <div style={{ fontSize: 10, color: S.t3, marginTop: 2, textTransform: 'uppercase', letterSpacing: '.05em' }}>{m.label}</div>
                   </div>
                 ))}
               </div>
@@ -417,44 +546,46 @@ export default function AdminAnalyticsPage() {
           )}
         </div>
 
-        <div style={{ ...card, padding: '22px 24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <SectionHeader title="School Performance" sub="Leads received vs applications" />
-            <select className="admin-sel" value={schoolMode} onChange={e => setSchoolMode(e.target.value as any)}>
+        <div style={{ ...card, padding: '20px 22px' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
+            <CardHeader title="School performance" sub="Leads received vs applications" />
+            <select className="asel" value={schoolMode} onChange={e => setSchoolMode(e.target.value as any)}>
               <option value="type">By school type</option>
               <option value="city">By city</option>
             </select>
           </div>
-          {isLoading ? <Skeleton h={200} /> : schoolStats.length === 0 ? (
-            <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.t3, fontFamily: ff, fontSize: 13 }}>No school data yet</div>
+          {isLoading ? <Shimmer h={200} /> : schoolStats.length === 0 ? (
+            <div style={{ height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', color: S.t3, fontSize: 13 }}>No school data yet</div>
           ) : (
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={schoolStats.map((s: any) => ({ name: s.type, leads: s.leads, applications: s.applications }))}
-                margin={{ top: 0, right: 5, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="name" tick={{ fill: C.t3, fontSize: 10, fontFamily: ff }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: C.t3, fontSize: 10, fontFamily: ff }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                <Bar dataKey="leads"        name="leads"        fill={C.violet}  radius={[3, 3, 0, 0]} maxBarSize={18} />
-                <Bar dataKey="applications" name="applications" fill={C.emerald} radius={[3, 3, 0, 0]} maxBarSize={18} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-          <div style={{ display: 'flex', gap: 14, marginTop: 8 }}>
-            {[{ label: 'Leads', c: C.violet }, { label: 'Applications', c: C.emerald }].map(l => (
-              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 8, height: 8, borderRadius: 2, background: l.c }} />
-                <span style={{ fontFamily: ff, fontSize: 11, color: C.t2 }}>{l.label}</span>
+            <>
+              <ResponsiveContainer width="100%" height={190}>
+                <BarChart data={schoolStats.map((s: any) => ({ name: s.type, leads: s.leads, applications: s.applications }))}
+                  margin={{ top: 0, right: 4, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.04)" vertical={false} />
+                  <XAxis dataKey="name" tick={{ fill: S.t3, fontSize: 10, fontFamily: S.ff }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: S.t3, fontSize: 10, fontFamily: S.ff }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTip />} cursor={{ fill: 'rgba(0,0,0,0.02)' }} />
+                  <Bar dataKey="leads"        name="leads"        fill={S.violet} radius={[3,3,0,0]} maxBarSize={16} />
+                  <Bar dataKey="applications" name="applications" fill={S.green}  radius={[3,3,0,0]} maxBarSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
+              <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+                {[{ label: 'Leads', c: S.violet }, { label: 'Applications', c: S.green }].map(l => (
+                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 7, height: 7, borderRadius: 2, background: l.c }} />
+                    <span style={{ fontSize: 11, color: S.t2 }}>{l.label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* ── Weekly heatmap ────────────────────────────────────────────────── */}
-      <div style={{ ...card, padding: '22px 24px', marginBottom: 14 }}>
-        <SectionHeader title="Weekly Cohort Heatmap" sub="Lead purchase activity by day of week — last 4 weeks" />
-        {isLoading ? <Skeleton h={130} /> : <WeeklyHeatmap data={heatmap} />}
+      <div style={{ ...card, padding: '20px 22px' }}>
+        <CardHeader title="Weekly activity heatmap" sub="Lead purchases by day of week — last 4 weeks" />
+        {isLoading ? <Shimmer h={120} /> : <WeeklyHeatmap data={heatmap} />}
       </div>
 
     </AdminLayout>
