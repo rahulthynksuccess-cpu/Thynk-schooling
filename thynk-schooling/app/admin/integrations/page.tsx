@@ -1,11 +1,12 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import {
   Mail, MessageCircle, Save, Loader2, Eye, EyeOff,
   CreditCard, GripVertical, ChevronUp, ChevronDown,
   CheckCircle, AlertCircle, TestTube, Globe, Lock,
+  Tag, Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, Check,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -20,17 +21,20 @@ function apiSave(key: string, value: any) {
   }).then(r => { if (!r.ok) throw new Error('Save failed') })
 }
 
-/* ── Gateway metadata ─────────────────────────────────────────────────────── */
+function authHdr() {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') || '' : ''
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+}
+
 const GATEWAY_META: Record<string, {
   name: string; logo: string; color: string; bg: string;
   description: string; domestic: boolean; international: boolean;
   fields: Array<{ key: string; label: string; hint: string; secret?: boolean }>
-  extraFields?: Array<{ key: string; label: string; hint: string; secret?: boolean }>
   docs: string
 }> = {
   razorpay: {
     name: 'Razorpay', logo: '💙', color: '#3395FF', bg: 'rgba(51,149,255,0.08)',
-    description: 'India\'s leading payment gateway. Supports cards, UPI, netbanking, wallets.',
+    description: "India's leading payment gateway. Supports cards, UPI, netbanking, wallets.",
     domestic: true, international: false,
     fields: [
       { key: 'keyId',     label: 'Key ID',     hint: 'Starts with rzp_live_ or rzp_test_' },
@@ -53,11 +57,8 @@ const GATEWAY_META: Record<string, {
     description: 'Cost-effective gateway with low MDR. Popular with EdTech platforms.',
     domestic: true, international: false,
     fields: [
-      { key: 'keyId',     label: 'Merchant Key', hint: 'From Easebuzz Dashboard → API' },
+      { key: 'keyId',     label: 'Merchant Key', hint: 'From Easebuzz Dashboard → Settings → API Keys' },
       { key: 'keySecret', label: 'Salt',          hint: 'Your Easebuzz salt for hash generation', secret: true },
-    ],
-    extraFields: [
-      { key: 'salt', label: 'Salt (duplicate entry for hash)', hint: 'Same as Secret Key above', secret: true },
     ],
     docs: 'https://docs.easebuzz.in/payments',
   },
@@ -78,7 +79,20 @@ interface GatewayState {
   keyId: string; keySecret: string; extra: Record<string, string>; mode: 'live' | 'test'
 }
 
-/* ── Secret field component ──────────────────────────────────────────────── */
+interface Coupon {
+  id: number; code: string; type: 'percent' | 'flat'; value: number
+  min_amount: number; max_uses: number | null; used_count: number
+  valid_from: string | null; valid_until: string | null
+  applicable_gateways: string[]; active: boolean; description: string; created_at: string
+}
+
+const BLANK_COUPON = (): Partial<Coupon> => ({
+  code: '', type: 'percent', value: 10, min_amount: 0,
+  max_uses: undefined, valid_from: '', valid_until: '',
+  applicable_gateways: [], active: true, description: '',
+})
+
+/* ── Secret field ───────────────────────────────────────────────────────────── */
 function SecretField({ label, hint, value, onChange }: { label: string; hint: string; value: string; onChange: (v: string) => void }) {
   const [show, setShow] = useState(false)
   return (
@@ -97,9 +111,10 @@ function SecretField({ label, hint, value, onChange }: { label: string; hint: st
   )
 }
 
-/* ── Gateway card ─────────────────────────────────────────────────────────── */
+/* ── Gateway card ───────────────────────────────────────────────────────────── */
 function GatewayCard({ gw, onUpdate, onMoveUp, onMoveDown, isFirst, isLast, saving }:
-  { gw: GatewayState; onUpdate: (id: string, patch: Partial<GatewayState>) => void; onMoveUp: () => void; onMoveDown: () => void; isFirst: boolean; isLast: boolean; saving: boolean }) {
+  { gw: GatewayState; onUpdate: (id: string, patch: Partial<GatewayState>) => void
+    onMoveUp: () => void; onMoveDown: () => void; isFirst: boolean; isLast: boolean; saving: boolean }) {
   const [expanded, setExpanded] = useState(false)
   const meta = GATEWAY_META[gw.id]
   if (!meta) return null
@@ -107,24 +122,22 @@ function GatewayCard({ gw, onUpdate, onMoveUp, onMoveDown, isFirst, isLast, savi
 
   return (
     <div style={{ background: '#fff', border: `1.5px solid ${gw.enabled ? meta.color + '40' : 'rgba(13,17,23,0.09)'}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color .2s' }}>
-      {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: gw.enabled ? meta.bg : '#FAFAFA', cursor: 'pointer' }}
         onClick={() => setExpanded(!expanded)}>
-        {/* Drag/reorder */}
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 1, flexShrink: 0 }}>
           <button onClick={e => { e.stopPropagation(); onMoveUp() }} disabled={isFirst}
-            style={{ padding: '1px 3px', border: 'none', background: 'transparent', cursor: isFirst ? 'default' : 'pointer', opacity: isFirst ? 0.2 : 0.5 }}>
+            style={{ padding: '1px 3px', border: 'none', background: 'transparent', cursor: isFirst ? 'default' : 'pointer', opacity: isFirst ? 0.2 : 0.6 }}>
             <ChevronUp style={{ width: 10, height: 10 }} />
           </button>
           <button onClick={e => { e.stopPropagation(); onMoveDown() }} disabled={isLast}
-            style={{ padding: '1px 3px', border: 'none', background: 'transparent', cursor: isLast ? 'default' : 'pointer', opacity: isLast ? 0.2 : 0.5 }}>
+            style={{ padding: '1px 3px', border: 'none', background: 'transparent', cursor: isLast ? 'default' : 'pointer', opacity: isLast ? 0.2 : 0.6 }}>
             <ChevronDown style={{ width: 10, height: 10 }} />
           </button>
         </div>
 
-        <GripVertical style={{ width: 14, height: 14, color: '#D4D4D4', flexShrink: 0 }} />
+        <GripVertical style={{ width: 14, height: 14, color: '#C4C9D4', flexShrink: 0, cursor: 'grab' }} title="Drag to reorder" />
 
-        {/* Priority badge */}
         <div style={{ width: 22, height: 22, borderRadius: '50%', background: gw.enabled ? meta.color : '#E5E7EB', color: gw.enabled ? '#fff' : '#9CA3AF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, fontFamily: 'Inter,sans-serif', flexShrink: 0 }}>
           {gw.priority}
         </div>
@@ -132,7 +145,7 @@ function GatewayCard({ gw, onUpdate, onMoveUp, onMoveDown, isFirst, isLast, savi
         <span style={{ fontSize: 20, flexShrink: 0 }}>{meta.logo}</span>
 
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 14, color: '#0D1117' }}>{meta.name}</span>
             {meta.domestic && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: 'rgba(34,197,94,0.1)', color: '#15803d', fontFamily: 'Inter,sans-serif' }}>Domestic</span>}
             {meta.international && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 100, background: 'rgba(59,130,246,0.1)', color: '#1d4ed8', fontFamily: 'Inter,sans-serif' }}>International</span>}
@@ -144,11 +157,8 @@ function GatewayCard({ gw, onUpdate, onMoveUp, onMoveDown, isFirst, isLast, savi
           <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096', marginTop: 2 }}>{meta.description}</div>
         </div>
 
-        {/* Enable toggle */}
         <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: gw.enabled ? meta.color : '#9CA3AF', fontWeight: 600 }}>
-            {gw.enabled ? 'Active' : 'Off'}
-          </span>
+          <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: gw.enabled ? meta.color : '#9CA3AF', fontWeight: 600 }}>{gw.enabled ? 'Active' : 'Off'}</span>
           <div onClick={() => onUpdate(gw.id, { enabled: !gw.enabled })}
             style={{ width: 40, height: 22, borderRadius: 11, background: gw.enabled ? meta.color : '#E5E7EB', position: 'relative', cursor: 'pointer', transition: 'background .2s', flexShrink: 0 }}>
             <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: gw.enabled ? 21 : 3, transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
@@ -158,10 +168,8 @@ function GatewayCard({ gw, onUpdate, onMoveUp, onMoveDown, isFirst, isLast, savi
         <ChevronDown style={{ width: 14, height: 14, color: '#A0ADB8', transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s', flexShrink: 0 }} />
       </div>
 
-      {/* Expanded config area */}
       {expanded && (
         <div style={{ padding: '20px', borderTop: '1px solid rgba(13,17,23,0.07)' }}>
-          {/* Live / Test toggle */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, padding: '10px 14px', background: '#FAF7F2', borderRadius: 10, border: '1px solid #EDE5D8' }}>
             <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 700, color: '#718096' }}>Mode:</span>
             {(['test', 'live'] as const).map(m => (
@@ -186,17 +194,15 @@ function GatewayCard({ gw, onUpdate, onMoveUp, onMoveDown, isFirst, isLast, savi
               : (
                 <div key={f.key}>
                   <label style={lbl}>{f.label}</label>
-                  <input type="text" value={(gw as any)[f.key] || ''} onChange={e => onUpdate(gw.id, { [f.key]: e.target.value } as any)}
-                    placeholder={f.hint} style={inp} />
+                  <input type="text" value={(gw as any)[f.key] || ''} onChange={e => onUpdate(gw.id, { [f.key]: e.target.value } as any)} placeholder={f.hint} style={inp} />
                   <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: '#A0ADB8', margin: '4px 0 0' }}>{f.hint}</p>
                 </div>
               )
             )}
           </div>
 
-          <div style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <a href={meta.docs} target="_blank" rel="noreferrer"
-              style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: meta.color, textDecoration: 'none', fontWeight: 600 }}>
+          <div style={{ marginTop: 14 }}>
+            <a href={meta.docs} target="_blank" rel="noreferrer" style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: meta.color, textDecoration: 'none', fontWeight: 600 }}>
               📖 {meta.name} API docs →
             </a>
           </div>
@@ -207,10 +213,335 @@ function GatewayCard({ gw, onUpdate, onMoveUp, onMoveDown, isFirst, isLast, savi
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   COUPON MODAL
+══════════════════════════════════════════════════════════════════════════════ */
+function CouponModal({ coupon, onSave, onClose, saving }: {
+  coupon: Partial<Coupon>
+  onSave: (c: Partial<Coupon>) => void
+  onClose: () => void
+  saving: boolean
+}) {
+  const [form, setForm] = useState<Partial<Coupon>>(coupon)
+  const set = (k: keyof Coupon, v: any) => setForm(p => ({ ...p, [k]: v }))
+  const gwIds = Object.keys(GATEWAY_META)
+  const isEdit = !!coupon.id
+
+  const toggleGw = (id: string) => {
+    const cur = form.applicable_gateways || []
+    set('applicable_gateways', cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id])
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(13,17,23,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#fff', borderRadius: 18, width: '100%', maxWidth: 580, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid rgba(13,17,23,0.08)', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: '#FEF7E0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Tag style={{ width: 17, height: 17, color: '#B8860B' }} />
+            </div>
+            <div>
+              <div style={{ fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 16, color: '#0D1117' }}>{isEdit ? 'Edit Coupon' : 'Create Coupon'}</div>
+              <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096' }}>Works across all enabled payment gateways</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#718096', padding: 4, borderRadius: 6 }}>
+            <X style={{ width: 18, height: 18 }} />
+          </button>
+        </div>
+
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {/* Code */}
+          <div>
+            <label style={lbl}>Coupon Code *</label>
+            <input value={form.code || ''} onChange={e => set('code', e.target.value.toUpperCase().replace(/\s/g,''))}
+              placeholder="e.g. BACK2SCHOOL20"
+              style={{ ...inp, fontFamily: 'monospace', fontWeight: 700, fontSize: 15, letterSpacing: 2 }} />
+            <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: '#A0ADB8', margin: '4px 0 0' }}>Uppercase, no spaces. Parents enter this at checkout.</p>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label style={lbl}>Internal Description</label>
+            <input value={form.description || ''} onChange={e => set('description', e.target.value)}
+              placeholder="e.g. 20% off for back-to-school season" style={inp} />
+          </div>
+
+          {/* Type + Value */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={lbl}>Discount Type</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[{ k: 'percent', l: '% Percent' }, { k: 'flat', l: '₹ Flat Amount' }].map(t => (
+                  <button key={t.k} onClick={() => set('type', t.k)}
+                    style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: `1.5px solid ${form.type === t.k ? '#B8860B' : 'rgba(13,17,23,0.12)'}`, background: form.type === t.k ? '#FEF7E0' : '#fff', color: form.type === t.k ? '#B8860B' : '#4A5568', fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={lbl}>{form.type === 'percent' ? 'Discount %' : 'Flat Amount (₹)'}</label>
+              <input type="number" value={form.value ?? ''} onChange={e => set('value', Number(e.target.value))}
+                min={0} max={form.type === 'percent' ? 100 : undefined}
+                placeholder={form.type === 'percent' ? '10' : '500'} style={inp} />
+            </div>
+          </div>
+
+          {/* Min order + Max uses */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={lbl}>Minimum Order Amount (₹)</label>
+              <input type="number" value={form.min_amount ?? 0} onChange={e => set('min_amount', Number(e.target.value))}
+                min={0} placeholder="0 = no minimum" style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Max Uses (blank = unlimited)</label>
+              <input type="number" value={form.max_uses ?? ''} onChange={e => set('max_uses', e.target.value === '' ? null : Number(e.target.value))}
+                min={1} placeholder="Unlimited" style={inp} />
+            </div>
+          </div>
+
+          {/* Validity dates */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <label style={lbl}>Valid From (optional)</label>
+              <input type="date" value={(form.valid_from || '').slice(0,10)} onChange={e => set('valid_from', e.target.value || null)} style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Valid Until (optional)</label>
+              <input type="date" value={(form.valid_until || '').slice(0,10)} onChange={e => set('valid_until', e.target.value || null)} style={inp} />
+            </div>
+          </div>
+
+          {/* Gateway filter */}
+          <div>
+            <label style={lbl}>Applicable Gateways</label>
+            <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096', margin: '0 0 10px' }}>
+              Leave all unselected → applies on <strong>all active gateways</strong>. Select specific ones to restrict.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {gwIds.map(id => {
+                const m = GATEWAY_META[id]
+                const sel = (form.applicable_gateways || []).includes(id)
+                return (
+                  <button key={id} onClick={() => toggleGw(id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8,
+                      border: `1.5px solid ${sel ? m.color : 'rgba(13,17,23,0.12)'}`,
+                      background: sel ? m.bg : '#fff', cursor: 'pointer',
+                      fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 600, color: sel ? m.color : '#4A5568' }}>
+                    {sel && <Check style={{ width: 10, height: 10 }} />}
+                    {m.logo} {m.name}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Active toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#F9F9F9', borderRadius: 10, border: '1px solid rgba(13,17,23,0.07)' }}>
+            <div>
+              <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 700, color: '#0D1117' }}>Coupon Active</div>
+              <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096' }}>Inactive coupons are silently rejected at checkout</div>
+            </div>
+            <div onClick={() => set('active', !form.active)}
+              style={{ width: 44, height: 24, borderRadius: 12, background: form.active ? '#22C55E' : '#E5E7EB', position: 'relative', cursor: 'pointer', transition: 'background .2s', flexShrink: 0 }}>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: form.active ? 23 : 3, transition: 'left .2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(13,17,23,0.08)', display: 'flex', justifyContent: 'flex-end', gap: 10, position: 'sticky', bottom: 0, background: '#fff' }}>
+          <button onClick={onClose} style={{ padding: '9px 20px', borderRadius: 9, border: '1.5px solid rgba(13,17,23,0.12)', background: '#fff', fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 700, cursor: 'pointer', color: '#4A5568' }}>
+            Cancel
+          </button>
+          <button onClick={() => onSave(form)} disabled={saving || !form.code}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 22px', borderRadius: 9, background: '#B8860B', border: 'none', color: '#fff', cursor: saving || !form.code ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Inter,sans-serif', opacity: saving || !form.code ? 0.6 : 1 }}>
+            {saving ? <Loader2 style={{ width: 13, height: 13, animation: 'spin 1s linear infinite' }} /> : <Save style={{ width: 13, height: 13 }} />}
+            {isEdit ? 'Update Coupon' : 'Create Coupon'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   COUPONS TAB
+══════════════════════════════════════════════════════════════════════════════ */
+function CouponsTab() {
+  const [coupons, setCoupons] = useState<Coupon[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [modal, setModal] = useState<Partial<Coupon> | false>(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await fetch('/api/admin?action=coupons')
+      const d = await r.json()
+      setCoupons(d.coupons || [])
+    } catch { toast.error('Failed to load coupons') }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const saveCoupon = async (form: Partial<Coupon>) => {
+    if (!form.code) return
+    setSaving(true)
+    try {
+      const isEdit = !!form.id
+      const url  = isEdit ? `/api/admin?action=coupons&id=${form.id}` : '/api/admin?action=coupons'
+      const r = await fetch(url, { method: isEdit ? 'PUT' : 'POST', headers: authHdr(), body: JSON.stringify(form) })
+      if (!r.ok) throw new Error('Save failed')
+      toast.success(isEdit ? 'Coupon updated!' : 'Coupon created!')
+      setModal(false)
+      await load()
+    } catch (e: any) { toast.error(e.message || 'Save failed') }
+    setSaving(false)
+  }
+
+  const toggleActive = async (c: Coupon) => {
+    try {
+      await fetch(`/api/admin?action=coupons&id=${c.id}`, {
+        method: 'PUT', headers: authHdr(), body: JSON.stringify({ ...c, active: !c.active })
+      })
+      setCoupons(p => p.map(x => x.id === c.id ? { ...x, active: !x.active } : x))
+    } catch { toast.error('Update failed') }
+  }
+
+  const deleteCoupon = async (id: number) => {
+    if (!confirm('Delete this coupon? This cannot be undone.')) return
+    try {
+      await fetch(`/api/admin?action=coupons&id=${id}`, { method: 'DELETE', headers: authHdr() })
+      toast.success('Coupon deleted')
+      setCoupons(p => p.filter(x => x.id !== id))
+    } catch { toast.error('Delete failed') }
+  }
+
+  const isExpired  = (c: Coupon) => !!c.valid_until && new Date(c.valid_until) < new Date()
+  const isExhausted = (c: Coupon) => c.max_uses !== null && c.used_count >= c.max_uses
+
+  const statusOf = (c: Coupon) => {
+    if (!c.active)    return { label: '○ Inactive',   bg: 'rgba(113,128,150,0.1)', color: '#718096' }
+    if (isExpired(c)) return { label: '⚠ Expired',    bg: 'rgba(239,68,68,0.1)',   color: '#dc2626' }
+    if (isExhausted(c)) return { label: '⚠ Exhausted', bg: 'rgba(245,158,11,0.1)', color: '#B45309' }
+    return              { label: '● Active',           bg: 'rgba(34,197,94,0.1)',   color: '#15803d' }
+  }
+
+  const gwNames = (c: Coupon) =>
+    c.applicable_gateways?.length
+      ? c.applicable_gateways.map(id => GATEWAY_META[id]?.name || id).join(', ')
+      : 'All gateways'
+
+  return (
+    <div>
+      {/* Header bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, padding: '12px 16px', background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Tag style={{ width: 16, height: 16, color: '#B8860B', flexShrink: 0 }} />
+          <div>
+            <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 700, color: '#0D1117' }}>
+              {loading ? 'Loading…' : coupons.length === 0 ? 'No coupons yet' : `${coupons.filter(c => c.active && !isExpired(c) && !isExhausted(c)).length} active · ${coupons.length} total`}
+            </div>
+            <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096', marginTop: 2 }}>
+              Discount coupons work across all payment gateways. Parents enter the code at checkout.
+            </div>
+          </div>
+        </div>
+        <button onClick={() => setModal(BLANK_COUPON())}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 9, background: '#B8860B', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Inter,sans-serif' }}>
+          <Plus style={{ width: 14, height: 14 }} /> New Coupon
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 48, color: '#A0ADB8', fontFamily: 'Inter,sans-serif' }}>
+          <Loader2 style={{ width: 24, height: 24, animation: 'spin 1s linear infinite', display: 'block', margin: '0 auto 12px' }} />
+          Loading coupons…
+        </div>
+      ) : coupons.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 64, background: '#fff', borderRadius: 16, border: '1.5px dashed rgba(13,17,23,0.13)' }}>
+          <Tag style={{ width: 36, height: 36, color: '#D4D4D4', display: 'block', margin: '0 auto 14px' }} />
+          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 15, fontWeight: 700, color: '#0D1117', marginBottom: 6 }}>No coupons yet</div>
+          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#A0ADB8', marginBottom: 22 }}>Create a discount coupon to offer deals at checkout.</div>
+          <button onClick={() => setModal(BLANK_COUPON())}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '10px 22px', borderRadius: 9, background: '#B8860B', border: 'none', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Inter,sans-serif' }}>
+            <Plus style={{ width: 14, height: 14 }} /> Create First Coupon
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Column headers */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', padding: '0 20px 4px', gap: 12 }}>
+            <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: '#A0ADB8' }}>Coupon</span>
+            <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: '#A0ADB8' }}>Actions</span>
+          </div>
+
+          {coupons.map(c => {
+            const st = statusOf(c)
+            return (
+              <div key={c.id} style={{ background: '#fff', border: '1.5px solid rgba(13,17,23,0.09)', borderRadius: 14, padding: '15px 20px', display: 'flex', alignItems: 'center', gap: 14, transition: 'opacity .2s', opacity: !c.active ? 0.72 : 1 }}>
+                {/* Code + details */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 5 }}>
+                    <span style={{ fontFamily: 'monospace', fontWeight: 800, fontSize: 15, color: '#0D1117', letterSpacing: 1.5 }}>{c.code}</span>
+                    <span style={{ padding: '3px 10px', borderRadius: 100, background: 'rgba(184,134,11,0.12)', color: '#B8860B', fontSize: 12, fontWeight: 700, fontFamily: 'Inter,sans-serif' }}>
+                      {c.type === 'percent' ? `${c.value}% off` : `₹${c.value} off`}
+                    </span>
+                    <span style={{ padding: '3px 10px', borderRadius: 100, background: st.bg, color: st.color, fontSize: 11, fontWeight: 700, fontFamily: 'Inter,sans-serif' }}>{st.label}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
+                    {c.description && <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096' }}>{c.description}</span>}
+                    {c.min_amount > 0 && <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#A0ADB8' }}>Min ₹{c.min_amount}</span>}
+                    <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#A0ADB8' }}>
+                      Used: {c.used_count}{c.max_uses ? `/${c.max_uses}` : ''}
+                    </span>
+                    {c.valid_until && (
+                      <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: isExpired(c) ? '#dc2626' : '#A0ADB8' }}>
+                        Expires {new Date(c.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
+                    <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#A0ADB8' }}>{gwNames(c)}</span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <button onClick={() => toggleActive(c)} title={c.active ? 'Deactivate' : 'Activate'}
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${c.active ? 'rgba(34,197,94,0.3)' : 'rgba(13,17,23,0.12)'}`, background: c.active ? 'rgba(34,197,94,0.07)' : '#fff', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: 11, fontWeight: 700, color: c.active ? '#15803d' : '#718096' }}>
+                    {c.active ? <ToggleRight style={{ width: 14, height: 14 }} /> : <ToggleLeft style={{ width: 14, height: 14 }} />}
+                    {c.active ? 'Active' : 'Off'}
+                  </button>
+                  <button onClick={() => setModal({ ...c })} title="Edit"
+                    style={{ padding: 7, borderRadius: 8, border: '1.5px solid rgba(13,17,23,0.12)', background: '#fff', cursor: 'pointer', color: '#4A5568', display: 'flex' }}>
+                    <Pencil style={{ width: 13, height: 13 }} />
+                  </button>
+                  <button onClick={() => deleteCoupon(c.id)} title="Delete"
+                    style={{ padding: 7, borderRadius: 8, border: '1.5px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.04)', cursor: 'pointer', color: '#dc2626', display: 'flex' }}>
+                    <Trash2 style={{ width: 13, height: 13 }} />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {modal !== false && (
+        <CouponModal coupon={modal} onSave={saveCoupon} onClose={() => setModal(false)} saving={saving} />
+      )}
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    MAIN PAGE
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function IntegrationsPage() {
-  const [tab, setTab] = useState<'payments' | 'email' | 'whatsapp'>('payments')
+  const [tab, setTab] = useState<'payments' | 'coupons' | 'email' | 'whatsapp'>('payments')
   const [saving, setSaving] = useState(false)
   const [gateways, setGateways] = useState<GatewayState[]>([])
   const [loadingGW, setLoadingGW] = useState(true)
@@ -218,52 +549,60 @@ export default function IntegrationsPage() {
   const [email, setEmail] = useState({ fromName: 'Thynk Schooling', fromEmail: '', smtpHost: 'smtp.gmail.com', smtpPort: '587', smtpUser: '', smtpPass: '', enabled: false })
   const [wa, setWa] = useState({ provider: 'twilio', accountSid: '', authToken: '', fromNumber: '', metaToken: '', metaPhoneId: '', enabled: false })
 
-  /* ── Load gateways from DB ── */
+  // Drag-and-drop refs
+  const dragIdx     = useRef<number | null>(null)
+  const dragOverIdx = useRef<number | null>(null)
+  const [dragActive, setDragActive] = useState<number | null>(null)
+
   useEffect(() => {
     fetch('/api/admin?action=payment-gateways', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d?.gateways) setGateways(d.gateways)
-        else {
-          // Fallback: show all gateways as unconfigured
-          setGateways(Object.keys(GATEWAY_META).map((id, i) => ({
-            id, name: GATEWAY_META[id].name, enabled: false, priority: i + 1,
-            keyId: '', keySecret: '', extra: {}, mode: 'test' as const,
-          })))
-        }
+        else setGateways(Object.keys(GATEWAY_META).map((id, i) => ({
+          id, name: GATEWAY_META[id].name, enabled: false, priority: i + 1,
+          keyId: '', keySecret: '', extra: {}, mode: 'test' as const,
+        })))
         setLoadingGW(false)
       })
       .catch(() => setLoadingGW(false))
 
     fetch('/api/admin/settings', { cache: 'no-store' }).then(r => r.json()).then(d => {
-      if (d.email_settings) setEmail(p => ({ ...p, ...d.email_settings }))
+      if (d.email_settings)    setEmail(p => ({ ...p, ...d.email_settings }))
       if (d.whatsapp_settings) setWa(p => ({ ...p, ...d.whatsapp_settings }))
     }).catch(() => {})
   }, [])
 
-  /* ── Gateway helpers ── */
-  const updateGateway = (id: string, patch: Partial<GatewayState>) => {
+  const updateGateway = (id: string, patch: Partial<GatewayState>) =>
     setGateways(p => p.map(g => g.id === id ? { ...g, ...patch } : g))
-  }
 
   const moveGateway = (idx: number, dir: -1 | 1) => {
     setGateways(p => {
-      const arr = [...p]; const s = idx + dir
+      const arr = [...p], s = idx + dir
       if (s < 0 || s >= arr.length) return arr
       ;[arr[idx], arr[s]] = [arr[s], arr[idx]]
       return arr.map((g, i) => ({ ...g, priority: i + 1 }))
     })
   }
 
-  /* ── Save gateways ── */
+  const onDragStart = (idx: number) => { dragIdx.current = idx; setDragActive(idx) }
+  const onDragOver  = (e: React.DragEvent, idx: number) => { e.preventDefault(); dragOverIdx.current = idx }
+  const onDrop      = () => {
+    const from = dragIdx.current, to = dragOverIdx.current
+    if (from !== null && to !== null && from !== to) {
+      setGateways(p => {
+        const arr = [...p]; const [moved] = arr.splice(from, 1); arr.splice(to, 0, moved)
+        return arr.map((g, i) => ({ ...g, priority: i + 1 }))
+      })
+    }
+    dragIdx.current = null; dragOverIdx.current = null; setDragActive(null)
+  }
+
   const saveGateways = async () => {
     setSaving(true)
     try {
-      const token = localStorage.getItem('ts_access_token') || ''
       await fetch('/api/admin?action=payment-gateways', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ gateways }),
+        method: 'POST', headers: authHdr(), body: JSON.stringify({ gateways }),
       })
       toast.success('Payment gateways saved!')
     } catch { toast.error('Save failed') }
@@ -280,14 +619,15 @@ export default function IntegrationsPage() {
   const enabledCount = gateways.filter(g => g.enabled && g.keyId).length
 
   return (
-    <AdminLayout pageClass="admin-page-settings" title="Integrations" subtitle="Payment gateways, email & WhatsApp — configure all external services here">
+    <AdminLayout pageClass="admin-page-settings" title="Integrations" subtitle="Payment gateways, discount coupons, email & WhatsApp — all external services">
 
       {/* Tab bar */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24, flexWrap: 'wrap' }}>
         {[
-          { k: 'payments', icon: '💳', l: 'Payment Gateways' },
-          { k: 'email',    icon: '📧', l: 'Email / SMTP' },
-          { k: 'whatsapp', icon: '💬', l: 'WhatsApp' },
+          { k: 'payments', icon: '💳', l: 'Payment Gateways', badge: enabledCount > 0 ? String(enabledCount) : null },
+          { k: 'coupons',  icon: '🏷️', l: 'Discount Coupons', badge: null },
+          { k: 'email',    icon: '📧', l: 'Email / SMTP',      badge: null },
+          { k: 'whatsapp', icon: '💬', l: 'WhatsApp',          badge: null },
         ].map(t => (
           <button key={t.k} onClick={() => setTab(t.k as any)}
             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10,
@@ -295,9 +635,7 @@ export default function IntegrationsPage() {
               background: tab === t.k ? '#FEF7E0' : '#fff', color: tab === t.k ? '#B8860B' : '#4A5568',
               fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
             {t.icon} {t.l}
-            {t.k === 'payments' && enabledCount > 0 && (
-              <span style={{ padding: '1px 7px', borderRadius: 100, background: '#B8860B', color: '#fff', fontSize: 10, fontWeight: 700 }}>{enabledCount}</span>
-            )}
+            {t.badge && <span style={{ padding: '1px 7px', borderRadius: 100, background: '#B8860B', color: '#fff', fontSize: 10, fontWeight: 700 }}>{t.badge}</span>}
           </button>
         ))}
       </div>
@@ -305,7 +643,6 @@ export default function IntegrationsPage() {
       {/* ══════════ PAYMENTS TAB ══════════ */}
       {tab === 'payments' && (
         <div>
-          {/* Info bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, padding: '12px 16px', background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 12 }}>
             <CreditCard style={{ width: 16, height: 16, color: '#B8860B', flexShrink: 0 }} />
             <div style={{ flex: 1 }}>
@@ -313,44 +650,40 @@ export default function IntegrationsPage() {
                 {enabledCount === 0 ? 'No gateways active — schools cannot make payments' : `${enabledCount} gateway${enabledCount > 1 ? 's' : ''} active`}
               </div>
               <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096', marginTop: 2 }}>
-                Enable multiple gateways — parents see them in priority order (drag to reorder). They choose one at checkout.
+                Drag ⠿ or use ▲▼ arrows to reorder. Priority 1 = shown first at checkout.
               </div>
             </div>
             <button onClick={saveGateways} disabled={saving}
               style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 22px', borderRadius: 9, background: '#B8860B', border: 'none', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'Inter,sans-serif', opacity: saving ? 0.6 : 1 }}>
-              {saving ? <><Loader2 style={{ width: 13, height: 13, animation: 'spin 1s linear infinite' }} />Saving...</> : <><Save style={{ width: 13, height: 13 }} />Save Gateways</>}
+              {saving ? <><Loader2 style={{ width: 13, height: 13, animation: 'spin 1s linear infinite' }} />Saving...</> : <><Save style={{ width: 13, height: 13 }} />Save Order & Config</>}
             </button>
           </div>
 
-          {/* Priority legend */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, padding: '8px 14px', background: 'rgba(184,134,11,0.04)', borderRadius: 8, border: '1px solid rgba(184,134,11,0.12)' }}>
-            <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#B8860B', fontWeight: 700 }}>ℹ️ How it works:</span>
-            <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096' }}>
-              Priority 1 = shown first at checkout. Schools can pick any enabled gateway. Use arrows to reorder.
-            </span>
-          </div>
-
-          {/* Gateway cards */}
           {loadingGW ? (
             <div style={{ textAlign: 'center', padding: 40, color: '#A0ADB8', fontFamily: 'Inter,sans-serif' }}>Loading gateway configuration...</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {gateways.map((gw, i) => (
-                <GatewayCard key={gw.id} gw={gw}
-                  onUpdate={updateGateway}
-                  onMoveUp={() => moveGateway(i, -1)}
-                  onMoveDown={() => moveGateway(i, 1)}
-                  isFirst={i === 0} isLast={i === gateways.length - 1}
-                  saving={saving} />
+                <div key={gw.id}
+                  draggable
+                  onDragStart={() => onDragStart(i)}
+                  onDragOver={e => onDragOver(e, i)}
+                  onDrop={onDrop}
+                  onDragEnd={() => { dragIdx.current = null; setDragActive(null) }}
+                  style={{ opacity: dragActive === i ? 0.45 : 1, transition: 'opacity .15s', outline: dragOverIdx.current === i && dragActive !== i ? '2px dashed #B8860B' : 'none', borderRadius: 14 }}>
+                  <GatewayCard
+                    gw={gw} onUpdate={updateGateway}
+                    onMoveUp={() => moveGateway(i, -1)} onMoveDown={() => moveGateway(i, 1)}
+                    isFirst={i === 0} isLast={i === gateways.length - 1} saving={saving} />
+                </div>
               ))}
             </div>
           )}
 
-          {/* Checkout preview */}
           {enabledCount > 1 && (
             <div style={{ marginTop: 20, padding: '16px 20px', background: '#fff', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 12 }}>
               <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: '#A0ADB8', marginBottom: 12 }}>
-                What schools will see at checkout (in this order)
+                Checkout preview — what schools see in this order
               </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {gateways.filter(g => g.enabled && g.keyId).map((gw, i) => {
@@ -370,6 +703,9 @@ export default function IntegrationsPage() {
         </div>
       )}
 
+      {/* ══════════ COUPONS TAB ══════════ */}
+      {tab === 'coupons' && <CouponsTab />}
+
       {/* ══════════ EMAIL TAB ══════════ */}
       {tab === 'email' && (
         <div style={{ background: '#fff', borderRadius: 16, border: '1px solid rgba(13,17,23,0.09)', padding: 28 }}>
@@ -385,11 +721,11 @@ export default function IntegrationsPage() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             {[
-              { k: 'fromName', l: 'Sender Name', ph: 'Thynk Schooling' },
-              { k: 'fromEmail', l: 'From Email', ph: 'noreply@yourdomain.com' },
-              { k: 'smtpHost', l: 'SMTP Host', ph: 'smtp.gmail.com' },
-              { k: 'smtpPort', l: 'SMTP Port', ph: '587' },
-              { k: 'smtpUser', l: 'Gmail Address', ph: 'your@gmail.com' },
+              { k: 'fromName',  l: 'Sender Name',   ph: 'Thynk Schooling' },
+              { k: 'fromEmail', l: 'From Email',     ph: 'noreply@yourdomain.com' },
+              { k: 'smtpHost',  l: 'SMTP Host',      ph: 'smtp.gmail.com' },
+              { k: 'smtpPort',  l: 'SMTP Port',      ph: '587' },
+              { k: 'smtpUser',  l: 'Gmail Address',  ph: 'your@gmail.com' },
             ].map(f => (
               <div key={f.k}>
                 <label style={lbl}>{f.l}</label>
