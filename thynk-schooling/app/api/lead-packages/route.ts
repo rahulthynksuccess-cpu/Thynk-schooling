@@ -3,10 +3,10 @@ export const dynamic = 'force-dynamic'
  * /api/lead-packages
  *
  * GET    — list active packages
- * POST   ?action=buy&id=X&gateway=razorpay   — create order via chosen gateway
- * POST   ?action=verify-payment               — verify & credit school
- * PUT    ?id=X                                — update package (admin)
- * DELETE ?id=X                                — delete package (admin)
+ * POST   ?action=buy&id=X&gateway=razorpay&coupon=CODE  — create order (coupon optional)
+ * POST   ?action=verify-payment                          — verify & credit school
+ * PUT    ?id=X                                          — update package (admin)
+ * DELETE ?id=X                                          — delete package (admin)
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
@@ -164,8 +164,9 @@ export async function POST(req: NextRequest) {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      const packageId = searchParams.get('id')
-      const gatewayId = (searchParams.get('gateway') || 'razorpay') as GatewayId
+      const packageId  = searchParams.get('id')
+      const gatewayId  = (searchParams.get('gateway') || 'razorpay') as GatewayId
+      const couponCode = searchParams.get('coupon') || null
 
       if (!packageId) return NextResponse.json({ error: 'Package id required' }, { status: 400 })
 
@@ -178,11 +179,43 @@ export async function POST(req: NextRequest) {
       const p        = pkg.rows[0]
       const schoolId = school.rows[0].id
 
-      // ── FIX: receipt must be ≤ 40 chars for Razorpay ──────────────────────
-      // pkg_<8 hex chars>_<base36 timestamp> ≈ 4+1+8+1+8 = 22 chars max
-      const shortId  = packageId.replace(/-/g, '').slice(0, 8)
-      const receipt  = `pkg_${shortId}_${Date.now().toString(36)}`
-      // ──────────────────────────────────────────────────────────────────────
+      // ── Apply coupon if provided ──────────────────────────────────────────
+      let finalPricePaise = p.price_paise
+      let discountPaise   = 0
+      let couponId: number | null = null
+
+      if (couponCode) {
+        const couponRow = await db.query(
+          `SELECT * FROM discount_coupons WHERE code=$1`,
+          [couponCode.trim().toUpperCase()]
+        ).catch(() => ({ rows: [] }))
+
+        const c = couponRow.rows[0]
+        const isValid =
+          c &&
+          c.active &&
+          (!c.valid_until || new Date(c.valid_until) >= new Date()) &&
+          (!c.valid_from  || new Date(c.valid_from)  <= new Date()) &&
+          (c.max_uses === null || c.used_count < c.max_uses) &&
+          (p.price_paise / 100 >= Number(c.min_amount)) &&
+          (!c.applicable_gateways?.length || c.applicable_gateways.includes(gatewayId))
+
+        if (isValid) {
+          if (c.type === 'percent') {
+            discountPaise = Math.round((p.price_paise * Number(c.value)) / 100)
+          } else {
+            // flat — c.value is in ₹
+            discountPaise = Math.round(Number(c.value) * 100)
+          }
+          discountPaise   = Math.min(discountPaise, p.price_paise)
+          finalPricePaise = p.price_paise - discountPaise
+          couponId        = c.id
+        }
+      }
+
+      // ── receipt must be ≤ 40 chars for Razorpay ───────────────────────────
+      const shortId = packageId.replace(/-/g, '').slice(0, 8)
+      const receipt = `pkg_${shortId}_${Date.now().toString(36)}`
 
       const userInfo = await db.query(
         `SELECT COALESCE(full_name, name) AS name, email, COALESCE(phone, mobile) AS phone FROM users WHERE id=$1`,
@@ -217,25 +250,38 @@ export async function POST(req: NextRequest) {
       try {
         const order = await createOrder(
           gatewayId,
-          p.price_paise,
+          finalPricePaise,
           'INR',
           receipt,
           { buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone }
         )
 
+        // Store pending payment record (with coupon info in meta)
         await db.query(
           `INSERT INTO lead_package_payments
              (school_id, package_id, gateway, order_id, amount_paise, credits_added, status, meta)
            VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)`,
-          [schoolId, packageId, order.gateway, order.orderId, p.price_paise, p.leads_count, JSON.stringify(order.clientPayload)]
+          [schoolId, packageId, order.gateway, order.orderId, finalPricePaise, p.leads_count,
+           JSON.stringify({ ...order.clientPayload, coupon_id: couponId, discount_paise: discountPaise, original_price_paise: p.price_paise })]
         )
 
+        // Increment coupon used_count if applied
+        if (couponId) {
+          await db.query(
+            'UPDATE discount_coupons SET used_count = used_count + 1, updated_at=NOW() WHERE id=$1',
+            [couponId]
+          ).catch(() => {})
+        }
+
         return NextResponse.json({
-          gateway:       order.gateway,
-          orderId:       order.orderId,
-          amount:        order.amount,
-          currency:      order.currency,
-          clientPayload: order.clientPayload,
+          gateway:             order.gateway,
+          orderId:             order.orderId,
+          amount:              order.amount,
+          currency:            order.currency,
+          clientPayload:       order.clientPayload,
+          discount_paise:      discountPaise,
+          original_amount:     p.price_paise,
+          coupon_applied:      !!couponId,
         })
 
       } catch (gwErr: any) {
@@ -243,9 +289,9 @@ export async function POST(req: NextRequest) {
           const mockOrderId = `order_dev_${Date.now()}`
           await db.query(
             `INSERT INTO lead_package_payments (school_id, package_id, gateway, order_id, amount_paise, credits_added, status) VALUES ($1,$2,$3,$4,$5,$6,'pending')`,
-            [schoolId, packageId, gatewayId, mockOrderId, p.price_paise, p.leads_count]
+            [schoolId, packageId, gatewayId, mockOrderId, finalPricePaise, p.leads_count]
           )
-          return NextResponse.json({ gateway: gatewayId, orderId: mockOrderId, amount: p.price_paise, currency: 'INR', _dev: true })
+          return NextResponse.json({ gateway: gatewayId, orderId: mockOrderId, amount: finalPricePaise, currency: 'INR', _dev: true })
         }
         throw gwErr
       }
@@ -263,7 +309,7 @@ export async function POST(req: NextRequest) {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-      // ── FIX: parse both JSON (Razorpay/PayPal) and form-urlencoded (Easebuzz) ──
+      // Parse both JSON (Razorpay/PayPal) and form-urlencoded (Easebuzz)
       const body = await parseBody(req)
 
       const {
@@ -337,7 +383,7 @@ export async function POST(req: NextRequest) {
         [result.paymentId, resolvedOrderId]
       )
 
-      // ── For Easebuzz: redirect browser back to packages page ───────────────
+      // For Easebuzz: redirect browser back to packages page
       // Easebuzz hits surl as a browser POST, so we redirect after verifying
       const contentType = req.headers.get('content-type') || ''
       if (contentType.includes('application/x-www-form-urlencoded')) {
