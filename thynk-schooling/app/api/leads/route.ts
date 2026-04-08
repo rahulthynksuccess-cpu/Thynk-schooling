@@ -4,13 +4,15 @@ export const dynamic = 'force-dynamic'
  * POST /api/leads?action=purchase&id=X  — school admin: unlock a lead
  * POST /api/leads (body)                — public: create_lead | request_call | record_search
  *
- * Single-lead price and discovery settings always come from /api/admin/lead-pricing
- * (stored in admin_settings key='lead_pricing_defaults'). Nothing is hardcoded.
+ * Discovery branches (pincode / geo / search) are each individually guarded —
+ * if their tables or columns don't exist yet they silently return 0 rows,
+ * so direct leads ALWAYS show regardless of schema state.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import jwt from 'jsonwebtoken'
 
+// ─── auth ─────────────────────────────────────────────────────────────────────
 function getUserId(req: NextRequest): string | null {
   try {
     const token =
@@ -23,7 +25,9 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null }
 }
 
+// ─── table / column setup ─────────────────────────────────────────────────────
 async function ensureTables() {
+  // leads
   await db.query(`
     CREATE TABLE IF NOT EXISTS leads (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -59,6 +63,7 @@ async function ensureTables() {
     'ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
   ]) await db.query(`ALTER TABLE leads ${c}`).catch(() => {})
 
+  // lead_credits
   await db.query(`
     CREATE TABLE IF NOT EXISTS lead_credits (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -70,10 +75,43 @@ async function ensureTables() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
-  await db.query(`ALTER TABLE lead_credits ADD COLUMN IF NOT EXISTS total_credits INTEGER DEFAULT 0`).catch(() => {})
-  await db.query(`ALTER TABLE lead_credits ADD COLUMN IF NOT EXISTS used_credits INTEGER DEFAULT 0`).catch(() => {})
-  await db.query(`ALTER TABLE lead_credits ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`).catch(() => {})
+  for (const c of [
+    'ADD COLUMN IF NOT EXISTS total_credits INTEGER DEFAULT 0',
+    'ADD COLUMN IF NOT EXISTS used_credits INTEGER DEFAULT 0',
+    'ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ',
+  ]) await db.query(`ALTER TABLE lead_credits ${c}`).catch(() => {})
 
+  // admin_settings
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS admin_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+
+  // parent_profiles — ensure it exists AND has the lat/lon columns we need for geo discovery
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS parent_profiles (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID UNIQUE,
+      full_name VARCHAR(200),
+      city VARCHAR(100),
+      state VARCHAR(100),
+      locality VARCHAR(200),
+      pincode VARCHAR(10),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+  // Add lat/lon if not present — these power the GEO discovery branch
+  for (const c of [
+    'ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)',
+    'ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)',
+    'ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)',
+  ]) await db.query(`ALTER TABLE parent_profiles ${c}`).catch(() => {})
+
+  // user_searches — powers the SEARCH discovery branch
   await db.query(`
     CREATE TABLE IF NOT EXISTS user_searches (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -85,16 +123,9 @@ async function ensureTables() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
-
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS admin_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `).catch(() => {})
 }
 
+// ─── masking ──────────────────────────────────────────────────────────────────
 function maskName(name: string): string {
   if (!name) return '****'
   const parts = name.trim().split(' ')
@@ -107,10 +138,10 @@ function maskPhone(phone: string): string {
   return digits.slice(0, 2) + '*'.repeat(Math.max(0, digits.length - 4)) + digits.slice(-2)
 }
 
-// Always read from DB — never hardcode
+// ─── admin config ─────────────────────────────────────────────────────────────
 interface DiscoveryCfg {
   discoveryWindowDays: number
-  radiusKm:            number
+  radiusKm: number
   singleLeadPricePaise: number
 }
 async function getDiscoveryCfg(): Promise<DiscoveryCfg> {
@@ -118,13 +149,10 @@ async function getDiscoveryCfg(): Promise<DiscoveryCfg> {
     const row = await db.query("SELECT value FROM admin_settings WHERE key='lead_pricing_defaults'")
     if (!row.rows.length) return { discoveryWindowDays: 90, radiusKm: 10, singleLeadPricePaise: 29900 }
     const cfg = JSON.parse(row.rows[0].value)
-    const price = Number(cfg.defaultPricePaise ?? (cfg.pricePerLead ? cfg.pricePerLead * 100 : 29900))
-    const radius = Number(cfg.radiusKm ?? (cfg.maskBlurMeters ? Math.round(cfg.maskBlurMeters / 1000) : 10))
-    const window = Number(cfg.discoveryWindowDays ?? 90)
     return {
-      singleLeadPricePaise: price   || 29900,
-      radiusKm:             radius  || 10,
-      discoveryWindowDays:  window  || 90,
+      singleLeadPricePaise: Number(cfg.defaultPricePaise ?? (cfg.pricePerLead ? cfg.pricePerLead * 100 : 29900)) || 29900,
+      radiusKm:             Number(cfg.radiusKm ?? (cfg.maskBlurMeters ? Math.round(cfg.maskBlurMeters / 1000) : 10)) || 10,
+      discoveryWindowDays:  Number(cfg.discoveryWindowDays ?? 90) || 90,
     }
   } catch {
     return { discoveryWindowDays: 90, radiusKm: 10, singleLeadPricePaise: 29900 }
@@ -157,6 +185,7 @@ export async function GET(req: NextRequest) {
       latitude: schoolLat, longitude: schoolLon,
     } = schoolRes.rows[0]
 
+    // Self-heal profile_completed
     let isComplete = profile_completed === true
     if (!isComplete && schoolName && schoolName !== 'School') {
       await db.query('UPDATE schools SET profile_completed=true WHERE id=$1', [schoolId]).catch(() => {})
@@ -170,132 +199,158 @@ export async function GET(req: NextRequest) {
 
     const cfg = await getDiscoveryCfg()
     const { discoveryWindowDays, radiusKm, singleLeadPricePaise } = cfg
-
-    // Integer days for safe SQL interpolation (never user-supplied string)
     const win = Math.max(1, Math.floor(discoveryWindowDays))
 
-    const unionSQL = `
-      -- Branch 1: DIRECT
-      SELECT l.id AS lead_id, 'direct' AS discovery_source
-      FROM leads l
-      WHERE l.school_id = $1
-        AND l.created_at >= NOW() - INTERVAL '${win} days'
+    // ── Step 1: Always get direct leads (safe, no joins) ─────────────────────
+    const directRes = await db.query(
+      `SELECT l.id AS lead_id, 'direct' AS discovery_source
+       FROM leads l
+       WHERE l.school_id = $1
+         AND l.created_at >= NOW() - INTERVAL '${win} days'`,
+      [schoolId]
+    )
 
-      UNION
+    // ── Step 2: Discovery branches — each runs independently and fails safely ─
+    // Collect all discovered lead IDs with their source
+    const discoveredMap = new Map<string, string>() // lead_id -> source (lowest priority wins)
 
-      -- Branch 2: PINCODE — parent profile pincode matches school pincode
-      SELECT l.id AS lead_id, 'pincode' AS discovery_source
-      FROM leads l
-      JOIN parent_profiles pp ON pp.user_id = l.parent_id
-      WHERE l.parent_id IS NOT NULL
-        AND l.school_id IS DISTINCT FROM $1
-        AND $2 IS NOT NULL
-        AND pp.pincode = $2
-        AND l.created_at >= NOW() - INTERVAL '${win} days'
+    // Branch 2: PINCODE — only if school has a pincode
+    if (schoolPincode) {
+      await db.query(
+        `SELECT l.id AS lead_id
+         FROM leads l
+         JOIN parent_profiles pp ON pp.user_id = l.parent_id
+         WHERE l.parent_id IS NOT NULL
+           AND l.school_id IS DISTINCT FROM $1
+           AND pp.pincode = $2
+           AND l.created_at >= NOW() - INTERVAL '${win} days'`,
+        [schoolId, schoolPincode]
+      ).then(res => {
+        res.rows.forEach((r: any) => {
+          if (!discoveredMap.has(r.lead_id)) discoveredMap.set(r.lead_id, 'pincode')
+        })
+      }).catch(() => {}) // safe: parent_profiles may not have pincode col yet
+    }
 
-      UNION
+    // Branch 3: GEO — only if school has lat/lon
+    if (schoolLat && schoolLon) {
+      await db.query(
+        `SELECT l.id AS lead_id
+         FROM leads l
+         JOIN parent_profiles pp ON pp.user_id = l.parent_id
+         WHERE l.parent_id IS NOT NULL
+           AND l.school_id IS DISTINCT FROM $1
+           AND pp.latitude IS NOT NULL AND pp.longitude IS NOT NULL
+           AND (
+             6371.0 * acos(
+               LEAST(1.0, GREATEST(-1.0,
+                 cos(radians($2::float)) * cos(radians(pp.latitude::float)) *
+                 cos(radians(pp.longitude::float) - radians($3::float)) +
+                 sin(radians($2::float)) * sin(radians(pp.latitude::float))
+               ))
+             )
+           ) <= $4
+           AND l.created_at >= NOW() - INTERVAL '${win} days'`,
+        [schoolId, schoolLat, schoolLon, radiusKm]
+      ).then(res => {
+        res.rows.forEach((r: any) => {
+          if (!discoveredMap.has(r.lead_id)) discoveredMap.set(r.lead_id, 'geo')
+        })
+      }).catch(() => {}) // safe: lat/lon columns may not exist on parent_profiles yet
+    }
 
-      -- Branch 3: GEO — parent lat/lon within radiusKm of school
-      SELECT l.id AS lead_id, 'geo' AS discovery_source
-      FROM leads l
-      JOIN parent_profiles pp ON pp.user_id = l.parent_id
-      WHERE l.parent_id IS NOT NULL
-        AND l.school_id IS DISTINCT FROM $1
-        AND $3 IS NOT NULL AND $4 IS NOT NULL
-        AND pp.latitude IS NOT NULL AND pp.longitude IS NOT NULL
-        AND (
-          6371.0 * acos(
-            LEAST(1.0, GREATEST(-1.0,
-              cos(radians($3::float)) * cos(radians(pp.latitude::float)) *
-              cos(radians(pp.longitude::float) - radians($4::float)) +
-              sin(radians($3::float)) * sin(radians(pp.latitude::float))
-            ))
-          )
-        ) <= $5
-        AND l.created_at >= NOW() - INTERVAL '${win} days'
+    // Branch 4: SEARCH — only if school has a city
+    if (schoolCity || schoolPincode) {
+      await db.query(
+        `SELECT l.id AS lead_id
+         FROM leads l
+         JOIN user_searches us ON us.user_id = l.parent_id
+         WHERE l.parent_id IS NOT NULL
+           AND l.school_id IS DISTINCT FROM $1
+           AND l.created_at >= NOW() - INTERVAL '${win} days'
+           AND us.created_at >= NOW() - INTERVAL '${win} days'
+           AND (
+             ($2::text IS NOT NULL AND us.search_pincode = $2)
+             OR ($3::text IS NOT NULL AND lower(us.search_city) = lower($3))
+           )`,
+        [schoolId, schoolPincode || null, schoolCity || null]
+      ).then(res => {
+        res.rows.forEach((r: any) => {
+          if (!discoveredMap.has(r.lead_id)) discoveredMap.set(r.lead_id, 'search')
+        })
+      }).catch(() => {}) // safe: user_searches may not exist yet
+    }
 
-      UNION
+    // ── Step 3: Merge direct + discovery, removing duplicates ─────────────────
+    // Build a unified map: lead_id -> discovery_source
+    // Direct always takes priority over discovery
+    const allLeadIds = new Map<string, string>()
 
-      -- Branch 4: SEARCH — user searched in this school's city or pincode
-      SELECT l.id AS lead_id, 'search' AS discovery_source
-      FROM leads l
-      JOIN user_searches us ON us.user_id = l.parent_id
-      WHERE l.parent_id IS NOT NULL
-        AND l.school_id IS DISTINCT FROM $1
-        AND l.created_at >= NOW() - INTERVAL '${win} days'
-        AND us.created_at >= NOW() - INTERVAL '${win} days'
-        AND (
-          ($2 IS NOT NULL AND us.search_pincode = $2)
-          OR ($6 IS NOT NULL AND lower(us.search_city) = lower($6))
-        )
-    `
+    // Add discovery leads first (lower priority)
+    discoveredMap.forEach((source, id) => allLeadIds.set(id, source))
 
-    const dedupedSQL = `
-      SELECT DISTINCT ON (lead_id) lead_id, discovery_source
-      FROM (${unionSQL}) raw
-      ORDER BY lead_id,
-        CASE discovery_source
-          WHEN 'direct'  THEN 1
-          WHEN 'pincode' THEN 2
-          WHEN 'geo'     THEN 3
-          WHEN 'search'  THEN 4
-          ELSE 5
-        END
-    `
+    // Add direct leads (highest priority, overwrites discovery source)
+    directRes.rows.forEach((r: any) => allLeadIds.set(r.lead_id, 'direct'))
 
-    const baseParams = [
-      schoolId,              // $1
-      schoolPincode || null, // $2
-      schoolLat     || null, // $3
-      schoolLon     || null, // $4
-      radiusKm,              // $5
-      schoolCity    || null, // $6
-    ]
+    if (allLeadIds.size === 0) {
+      return NextResponse.json({
+        data: [], total: 0, page, limit,
+        credits: creditBalance, singleLeadPricePaise, discoveryWindowDays,
+      })
+    }
 
-    const [dataRes, countRes] = await Promise.all([
-      db.query(
-        `SELECT
-           l.id, l.status,
-           l.is_purchased        AS "isPurchased",
-           l.child_name          AS "childName",
-           l.class_applying_for  AS "classApplyingFor",
-           l.city, l.created_at  AS "createdAt",
-           l.source, l.message,
-           l.how_did_you_hear    AS "howDidYouHear",
-           d.discovery_source    AS "discoverySource",
-           COALESCE(u.full_name, l.parent_name) AS "fullName",
-           COALESCE(u.phone, l.phone)            AS "fullPhone",
-           COALESCE(u.email, l.email)            AS "fullEmail"
-         FROM (${dedupedSQL}) d
-         JOIN leads l ON l.id = d.lead_id
-         LEFT JOIN users u ON u.id = l.parent_id
-         ORDER BY l.created_at DESC
-         LIMIT $7 OFFSET $8`,
-        [...baseParams, limit, offset]
-      ),
-      db.query(
-        `SELECT COUNT(*) FROM (${dedupedSQL}) d`,
-        baseParams
-      ),
-    ])
+    const allIds   = Array.from(allLeadIds.keys())
+    const total    = allIds.length
+
+    // Paginate the IDs
+    const pageIds  = allIds.slice(offset, offset + limit)
+
+    if (pageIds.length === 0) {
+      return NextResponse.json({
+        data: [], total, page, limit,
+        credits: creditBalance, singleLeadPricePaise, discoveryWindowDays,
+      })
+    }
+
+    // ── Step 4: Fetch full lead rows for this page ────────────────────────────
+    const placeholders = pageIds.map((_, i) => `$${i + 1}`).join(', ')
+    const dataRes = await db.query(
+      `SELECT
+         l.id, l.status,
+         l.is_purchased        AS "isPurchased",
+         l.child_name          AS "childName",
+         l.class_applying_for  AS "classApplyingFor",
+         l.city, l.created_at  AS "createdAt",
+         l.source, l.message,
+         l.how_did_you_hear    AS "howDidYouHear",
+         COALESCE(u.full_name, l.parent_name) AS "fullName",
+         COALESCE(u.phone, l.phone)            AS "fullPhone",
+         COALESCE(u.email, l.email)            AS "fullEmail"
+       FROM leads l
+       LEFT JOIN users u ON u.id = l.parent_id
+       WHERE l.id IN (${placeholders})
+       ORDER BY l.created_at DESC`,
+      pageIds
+    )
 
     const data = dataRes.rows.map(row => ({
       ...row,
+      discoverySource: allLeadIds.get(row.id) ?? 'direct',
       maskedName:  maskName(row.fullName || 'Parent'),
       maskedPhone: maskPhone(row.fullPhone || ''),
       fullName:    row.isPurchased ? row.fullName  : undefined,
       fullPhone:   row.isPurchased ? row.fullPhone : undefined,
       fullEmail:   undefined,
-      singleLeadPricePaise, // always from DB
+      singleLeadPricePaise,
     }))
 
     return NextResponse.json({
       data,
-      total: Number(countRes.rows[0]?.count ?? 0),
+      total,
       page,
       limit,
       credits: creditBalance,
-      singleLeadPricePaise, // always from DB
+      singleLeadPricePaise,
       discoveryWindowDays,
     })
   } catch (e: any) {
@@ -350,7 +405,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
-    // ── Record school search (powers SEARCH discovery branch) ─────────────────
+    // ── Record school search ───────────────────────────────────────────────────
     if (action === 'record_search') {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ success: true })
@@ -387,7 +442,6 @@ export async function POST(req: NextRequest) {
       if (s.is_active === false) return NextResponse.json({ error: 'ACCOUNT_SUSPENDED' }, { status: 403 })
 
       const schoolId = s.id
-
       const lead = await db.query('SELECT id, is_purchased FROM leads WHERE id=$1', [leadId])
       if (!lead.rows.length) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
       if (lead.rows[0].is_purchased) return NextResponse.json({ error: 'Lead already purchased' }, { status: 400 })
@@ -400,16 +454,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           error: 'NO_CREDITS',
           message: 'You have no lead credits.',
-          singleLeadPricePaise: cfg.singleLeadPricePaise, // from DB
+          singleLeadPricePaise: cfg.singleLeadPricePaise,
         }, { status: 402 })
       }
 
       await db.query('BEGIN')
       try {
         await db.query(
-          `UPDATE lead_credits
-           SET credits = credits - 1, used_credits = COALESCE(used_credits,0)+1, updated_at=NOW()
-           WHERE school_id=$1`,
+          `UPDATE lead_credits SET credits=credits-1, used_credits=COALESCE(used_credits,0)+1, updated_at=NOW() WHERE school_id=$1`,
           [schoolId]
         )
         await db.query(
