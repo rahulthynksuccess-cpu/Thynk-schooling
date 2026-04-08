@@ -482,22 +482,57 @@ async function getAdminLeads(req: NextRequest) {
   const limit = Math.min(50, Number(searchParams.get('limit') || 20))
   const offset = (page - 1) * limit
   const status = searchParams.get('status')
+  const search = searchParams.get('search') || ''
   const conds = ['1=1']; const params: any[] = []
   if (status) { params.push(status); conds.push(`l.status=$${params.length}`) }
+  if (search) {
+    params.push(`%${search}%`)
+    conds.push(`(l.parent_name ILIKE $${params.length} OR COALESCE(u.phone, u.mobile) ILIKE $${params.length} OR s.name ILIKE $${params.length})`)
+  }
   const where = conds.join(' AND ')
   params.push(limit, offset)
-  const [rows, ct] = await Promise.all([
+  const [rows, ct, revRow] = await Promise.all([
     db.query(`
-      SELECT l.*, s.name AS school_name
+      SELECT
+        l.*,
+        s.name                          AS school_name,
+        COALESCE(u.full_name, u.name)   AS user_full_name,
+        COALESCE(u.phone, u.mobile)     AS user_phone
       FROM leads l
       LEFT JOIN schools s ON s.id = l.school_id
+      LEFT JOIN users   u ON u.id = l.parent_id
       WHERE ${where}
       ORDER BY l.created_at DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `, params),
-    db.query(`SELECT COUNT(*) FROM leads l WHERE ${where}`, params.slice(0, -2)),
+    db.query(`
+      SELECT COUNT(*) FROM leads l
+      LEFT JOIN schools s ON s.id = l.school_id
+      LEFT JOIN users   u ON u.id = l.parent_id
+      WHERE ${where}
+    `, params.slice(0, -2)),
+    db.query(`SELECT COALESCE(SUM(amount_paise), 0) AS total FROM lead_package_payments WHERE status = 'paid'`)
+      .catch(() => ({ rows: [{ total: 0 }] })),
   ])
-  return NextResponse.json({ data: rows.rows, total: Number(ct.rows[0].count), page, limit })
+  return NextResponse.json({
+    data: rows.rows.map((r: any) => ({
+      id:           r.id,
+      schoolName:   r.school_name           || '—',
+      parentName:   r.parent_name           || r.user_full_name || '—',
+      parentPhone:  r.phone                 || r.user_phone     || '—',
+      childName:    r.child_name            || '—',
+      classApplied: r.class_applying_for    || '—',
+      city:         r.city                  || '—',
+      price:        Number(r.price          || 0),
+      isPurchased:  r.is_purchased          || false,
+      status:       r.status                || 'new',
+      createdAt:    r.created_at,
+    })),
+    total:        Number(ct.rows[0].count),
+    totalRevenue: Number(revRow.rows[0].total), // paise — UI divides by 100
+    page,
+    limit,
+  })
 }
 
 // ─── payments ─────────────────────────────────────────────────────────────────
