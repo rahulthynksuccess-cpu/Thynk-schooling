@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { Plus, Pencil, Trash2, Save, X, Loader2, LayoutGrid, ToggleLeft, ToggleRight, GripVertical } from 'lucide-react'
+import { Plus, Pencil, Trash2, Save, X, Loader2, LayoutGrid, ToggleLeft, ToggleRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -16,17 +16,20 @@ interface SubPlan {
   id: string; planKey: string; name: string; description: string
   price: number; leadCredits: number; features: string[]
   isHot: boolean; cta: string; sortOrder: number; isActive: boolean
+  isFeaturedListing: boolean; featuredListingDays: number
 }
 
 interface PlanForm {
   planKey: string; name: string; description: string
   price: number; leadCredits: number; featuresRaw: string
   isHot: boolean; cta: string; sortOrder: number; isActive: boolean
+  isFeaturedListing: boolean; featuredListingDays: number
 }
 
 const EMPTY: PlanForm = {
   planKey: '', name: '', description: '', price: 0, leadCredits: 25,
   featuresRaw: '', isHot: false, cta: 'Get Started', sortOrder: 0, isActive: true,
+  isFeaturedListing: false, featuredListingDays: 30,
 }
 
 function PlanModal({ plan, onClose, onSave, saving }: {
@@ -38,6 +41,8 @@ function PlanModal({ plan, onClose, onSave, saving }: {
     price: Math.round(plan.price / 100), leadCredits: plan.leadCredits,
     featuresRaw: plan.features.join('\n'), isHot: plan.isHot,
     cta: plan.cta, sortOrder: plan.sortOrder, isActive: plan.isActive,
+    isFeaturedListing: plan.isFeaturedListing ?? false,
+    featuredListingDays: plan.featuredListingDays ?? 30,
   } : EMPTY)
 
   const set = (k: keyof PlanForm, v: any) => setForm(p => ({ ...p, [k]: v }))
@@ -106,6 +111,7 @@ function PlanModal({ plan, onClose, onSave, saving }: {
               style={textarea as any} />
           </div>
 
+          {/* Toggles: Most Popular + Active */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input type="checkbox" checked={form.isHot} onChange={e => set('isHot', e.target.checked)}
@@ -119,6 +125,31 @@ function PlanModal({ plan, onClose, onSave, saving }: {
             </label>
           </div>
 
+          {/* Featured Listing Section */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.isFeaturedListing} onChange={e => set('isFeaturedListing', e.target.checked)}
+                style={{ accentColor: '#E8C547', width: '15px', height: '15px' }} />
+              <span style={{ fontSize: '13px', fontFamily: 'DM Sans,sans-serif', fontWeight: 600, color: form.isFeaturedListing ? '#E8C547' : 'rgba(255,255,255,0.7)' }}>
+                ⚡ Includes Featured Listing
+              </span>
+            </label>
+            {form.isFeaturedListing && (
+              <div>
+                <label style={lbl}>Featured Listing Validity <span style={{ color: 'rgba(255,255,255,0.25)', textTransform: 'none', fontSize: '10px' }}>(days — e.g. 30, 90, 365)</span></label>
+                <input
+                  type="number" min="1" value={form.featuredListingDays}
+                  onChange={e => set('featuredListingDays', Number(e.target.value))}
+                  placeholder="30"
+                  style={{ ...inp, borderColor: 'rgba(232,197,71,0.35)' }}
+                />
+                <div style={{ marginTop: '5px', fontSize: '11px', color: 'rgba(232,197,71,0.6)', fontFamily: 'DM Sans,sans-serif' }}>
+                  School's featured_until = purchase date + {form.featuredListingDays} day{form.featuredListingDays !== 1 ? 's' : ''}
+                </div>
+              </div>
+            )}
+          </div>
+
           <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
             <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: '8px', background: 'var(--admin-packages-card-bg,#111820)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '13px', fontFamily: 'DM Sans,sans-serif' }}>
               Cancel
@@ -126,6 +157,9 @@ function PlanModal({ plan, onClose, onSave, saving }: {
             <button
               onClick={() => {
                 if (!form.planKey || !form.name) { toast.error('Plan key and name are required'); return }
+                if (form.isFeaturedListing && (!form.featuredListingDays || form.featuredListingDays < 1)) {
+                  toast.error('Featured listing validity must be at least 1 day'); return
+                }
                 const features = form.featuresRaw.split('\n').map(s => s.trim()).filter(Boolean)
                 onSave({ ...form, price: form.price * 100, features: features as any, featuresRaw: form.featuresRaw })
               }}
@@ -190,6 +224,8 @@ export default function SubscriptionPlansPage() {
       price: data.price, leadCredits: data.leadCredits,
       features: (data as any).features ?? data.featuresRaw.split('\n').map((s: string) => s.trim()).filter(Boolean),
       isHot: data.isHot, cta: data.cta, sortOrder: data.sortOrder, isActive: data.isActive,
+      isFeaturedListing: data.isFeaturedListing,
+      featuredListingDays: data.isFeaturedListing ? data.featuredListingDays : 0,
     }
     if (modalPlan) updateMutation.mutate({ id: modalPlan.id, data: payload })
     else createMutation.mutate(payload)
@@ -214,6 +250,8 @@ export default function SubscriptionPlansPage() {
           : (plans ?? []).map((plan, i) => (
             <motion.div key={plan.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .06 }}
               style={{ ...card, opacity: plan.isActive ? 1 : .5, position: 'relative', overflow: 'hidden' }}>
+
+              {/* Most Popular side ribbon */}
               {plan.isHot && (
                 <div style={{ position: 'absolute', top: 0, right: 0, width: 22, height: '100%', background: 'linear-gradient(180deg,#B8860B,#E8C547)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
                   <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', fontFamily: 'DM Sans,sans-serif', fontSize: '8px', fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: '#0D1117', whiteSpace: 'nowrap', userSelect: 'none' }}>
@@ -221,40 +259,52 @@ export default function SubscriptionPlansPage() {
                   </span>
                 </div>
               )}
+
               <div style={{ paddingRight: plan.isHot ? 28 : 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(255,92,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <LayoutGrid style={{ width: '16px', height: '16px', color: '#FF5C00' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '9px', background: 'rgba(255,92,0,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <LayoutGrid style={{ width: '16px', height: '16px', color: '#FF5C00' }} />
+                  </div>
+                  <button onClick={() => toggleMutation.mutate({ id: plan.id, isActive: !plan.isActive })}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: plan.isActive ? '#4ADE80' : '#8892B0', display: 'flex' }}>
+                    {plan.isActive ? <ToggleRight style={{ width: '22px', height: '22px' }} /> : <ToggleLeft style={{ width: '22px', height: '22px' }} />}
+                  </button>
                 </div>
-                <button onClick={() => toggleMutation.mutate({ id: plan.id, isActive: !plan.isActive })}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: plan.isActive ? '#4ADE80' : '#8892B0', display: 'flex' }}>
-                  {plan.isActive ? <ToggleRight style={{ width: '22px', height: '22px' }} /> : <ToggleLeft style={{ width: '22px', height: '22px' }} />}
-                </button>
+
+                <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '17px', color: '#fff', marginBottom: '2px' }}>{plan.name}</div>
+                <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '24px', color: '#FF5C00', marginBottom: '4px' }}>
+                  {plan.price === 0 ? '₹0' : `₹${Math.round(plan.price / 100).toLocaleString('en-IN')}`}
+                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 400, marginLeft: '4px' }}>
+                    {plan.price === 0 ? 'forever' : '/month'}
+                  </span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginBottom: '4px', fontFamily: 'DM Sans,sans-serif' }}>
+                  {plan.leadCredits === -1 ? 'Unlimited credits' : `${plan.leadCredits} lead credits`}
+                </div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '6px', fontFamily: 'DM Sans,sans-serif' }}>
+                  {plan.features.length} features · sort #{plan.sortOrder}
+                </div>
+
+                {/* Featured Listing badge */}
+                {plan.isFeaturedListing && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.25)', borderRadius: '6px', padding: '3px 8px', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '10px', color: '#E8C547', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, letterSpacing: '.04em' }}>
+                      ⚡ FEATURED LISTING · {plan.featuredListingDays}d
+                    </span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <button onClick={() => { setModalPlan(plan); setModalOpen(true) }}
+                    style={{ flex: 1, padding: '8px', borderRadius: '7px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                    <Pencil style={{ width: '12px', height: '12px' }} /> Edit
+                  </button>
+                  <button onClick={() => { if (confirm(`Delete "${plan.name}"? This cannot be undone.`)) deleteMutation.mutate(plan.id) }}
+                    style={{ flex: 1, padding: '8px', borderRadius: '7px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                    <Trash2 style={{ width: '12px', height: '12px' }} /> Delete
+                  </button>
+                </div>
               </div>
-              <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '17px', color: '#fff', marginBottom: '2px' }}>{plan.name}</div>
-              <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '24px', color: '#FF5C00', marginBottom: '4px' }}>
-                {plan.price === 0 ? '₹0' : `₹${Math.round(plan.price / 100).toLocaleString('en-IN')}`}
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 400, marginLeft: '4px' }}>
-                  {plan.price === 0 ? 'forever' : '/month'}
-                </span>
-              </div>
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginBottom: '4px', fontFamily: 'DM Sans,sans-serif' }}>
-                {plan.leadCredits === -1 ? 'Unlimited credits' : `${plan.leadCredits} lead credits`}
-              </div>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '14px', fontFamily: 'DM Sans,sans-serif' }}>
-                {plan.features.length} features · sort #{plan.sortOrder}
-              </div>
-              <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <button onClick={() => { setModalPlan(plan); setModalOpen(true) }}
-                  style={{ flex: 1, padding: '8px', borderRadius: '7px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-                  <Pencil style={{ width: '12px', height: '12px' }} /> Edit
-                </button>
-                <button onClick={() => { if (confirm(`Delete "${plan.name}"? This cannot be undone.`)) deleteMutation.mutate(plan.id) }}
-                  style={{ flex: 1, padding: '8px', borderRadius: '7px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#EF4444', cursor: 'pointer', fontSize: '12px', fontFamily: 'DM Sans,sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-                  <Trash2 style={{ width: '12px', height: '12px' }} /> Delete
-                </button>
-              </div>
-              </div>{/* end paddingRight wrapper */}
             </motion.div>
           ))}
       </div>
