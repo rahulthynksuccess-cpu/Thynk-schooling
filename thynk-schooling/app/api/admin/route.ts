@@ -130,15 +130,15 @@ async function ensureSchoolsTable() {
     'ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT false',
     'ADD COLUMN IF NOT EXISTS phone VARCHAR(20)',
     'ADD COLUMN IF NOT EXISTS email VARCHAR(200)',
-    'ADD COLUMN IF NOT EXISTS logo_url TEXT',
-    'ADD COLUMN IF NOT EXISTS cover_url TEXT',
+    'ADD COLUMN IF NOT EXISTS logo_url VARCHAR(500)',
+    'ADD COLUMN IF NOT EXISTS cover_url VARCHAR(500)',
     'ADD COLUMN IF NOT EXISTS description TEXT',
     'ADD COLUMN IF NOT EXISTS address_line1 TEXT',
     'ADD COLUMN IF NOT EXISTS locality VARCHAR(100)',
     'ADD COLUMN IF NOT EXISTS pincode VARCHAR(10)',
     'ADD COLUMN IF NOT EXISTS latitude NUMERIC(10,7)',
     'ADD COLUMN IF NOT EXISTS longitude NUMERIC(10,7)',
-    'ADD COLUMN IF NOT EXISTS website_url TEXT',
+    'ADD COLUMN IF NOT EXISTS website_url VARCHAR(300)',
     'ADD COLUMN IF NOT EXISTS principal_name VARCHAR(200)',
     'ADD COLUMN IF NOT EXISTS tagline VARCHAR(300)',
     'ADD COLUMN IF NOT EXISTS affiliation_no VARCHAR(100)',
@@ -980,7 +980,7 @@ async function ensureBlogTable() {
       read_time     VARCHAR(50) DEFAULT '5 min',
       published_at  DATE DEFAULT CURRENT_DATE,
       status        VARCHAR(20) DEFAULT 'draft',
-      cover_image   TEXT DEFAULT '',
+      cover_image   VARCHAR(500) DEFAULT '',
       meta_title    TEXT DEFAULT '',
       meta_desc     TEXT DEFAULT '',
       author        VARCHAR(200) DEFAULT 'Thynk Schooling Team',
@@ -989,7 +989,7 @@ async function ensureBlogTable() {
     )
   `).catch(() => {})
   const cols = [
-    "ADD COLUMN IF NOT EXISTS cover_image TEXT DEFAULT ''",
+    "ADD COLUMN IF NOT EXISTS cover_image VARCHAR(500) DEFAULT ''",
     "ADD COLUMN IF NOT EXISTS meta_title TEXT DEFAULT ''",
     "ADD COLUMN IF NOT EXISTS meta_desc TEXT DEFAULT ''",
     "ADD COLUMN IF NOT EXISTS author VARCHAR(200) DEFAULT 'Thynk Schooling Team'",
@@ -1206,6 +1206,97 @@ async function savePaymentGateways(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
+// ─── discount coupons ─────────────────────────────────────────────────────────
+
+async function ensureCouponsTable() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS discount_coupons (
+      id                  SERIAL PRIMARY KEY,
+      code                VARCHAR(50) UNIQUE NOT NULL,
+      type                VARCHAR(10) NOT NULL DEFAULT 'percent',
+      value               NUMERIC NOT NULL,
+      min_amount          NUMERIC NOT NULL DEFAULT 0,
+      max_uses            INTEGER,
+      used_count          INTEGER NOT NULL DEFAULT 0,
+      valid_from          TIMESTAMPTZ,
+      valid_until         TIMESTAMPTZ,
+      applicable_gateways TEXT[] DEFAULT '{}',
+      active              BOOLEAN NOT NULL DEFAULT true,
+      description         TEXT DEFAULT '',
+      created_at          TIMESTAMPTZ DEFAULT NOW(),
+      updated_at          TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+}
+
+async function getCoupons() {
+  await ensureCouponsTable()
+  const res = await db.query('SELECT * FROM discount_coupons ORDER BY created_at DESC')
+  return NextResponse.json({ coupons: res.rows })
+}
+
+async function createCoupon(req: NextRequest) {
+  await ensureCouponsTable()
+  const b = await req.json()
+  if (!b.code) return NextResponse.json({ error: 'code required' }, { status: 400 })
+  const code = b.code.trim().toUpperCase()
+  const res = await db.query(
+    `INSERT INTO discount_coupons
+       (code, type, value, min_amount, max_uses, valid_from, valid_until, applicable_gateways, active, description)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+    [
+      code,
+      b.type || 'percent',
+      Number(b.value) || 0,
+      Number(b.min_amount) || 0,
+      b.max_uses ? Number(b.max_uses) : null,
+      b.valid_from || null,
+      b.valid_until || null,
+      b.applicable_gateways || [],
+      b.active !== false,
+      b.description || '',
+    ]
+  )
+  return NextResponse.json({ coupon: res.rows[0] })
+}
+
+async function updateCoupon(req: NextRequest) {
+  await ensureCouponsTable()
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const b = await req.json()
+  const code = b.code?.trim().toUpperCase()
+  await db.query(
+    `UPDATE discount_coupons SET
+       code=$1, type=$2, value=$3, min_amount=$4, max_uses=$5,
+       valid_from=$6, valid_until=$7, applicable_gateways=$8, active=$9,
+       description=$10, updated_at=NOW()
+     WHERE id=$11`,
+    [
+      code,
+      b.type || 'percent',
+      Number(b.value) || 0,
+      Number(b.min_amount) || 0,
+      b.max_uses ? Number(b.max_uses) : null,
+      b.valid_from || null,
+      b.valid_until || null,
+      b.applicable_gateways || [],
+      b.active !== false,
+      b.description || '',
+      id,
+    ]
+  )
+  return NextResponse.json({ success: true })
+}
+
+async function deleteCoupon(req: NextRequest) {
+  await ensureCouponsTable()
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  await db.query('DELETE FROM discount_coupons WHERE id=$1', [id])
+  return NextResponse.json({ success: true })
+}
+
 // ─── router ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
@@ -1243,6 +1334,7 @@ export async function GET(req: NextRequest) {
       case 'blog':                  return await getBlogPosts(req)
       case 'menus':                 return await getMenus()
       case 'payment-gateways':        return await getPaymentGateways()
+      case 'coupons':                  return await getCoupons()
       case 'seed-demo':             return NextResponse.json({ info: 'POST to seed demo users', credentials: [{ role:'School Admin', phone:'9000000001', password:'School@123' },{ role:'Parent', phone:'9000000002', password:'Parent@123' }] })
       case 'health':                return await health()
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
@@ -1268,6 +1360,7 @@ export async function POST(req: NextRequest) {
       case 'blog':               return await createBlogPost(req)
       case 'menus':            return await saveMenus(req)
       case 'payment-gateways': return await savePaymentGateways(req)
+      case 'coupons':          return await createCoupon(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin POST:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -1285,6 +1378,7 @@ export async function PUT(req: NextRequest) {
       case 'lead-pricing-defaults': return await saveLeadPricingDefaults(req)
       case 'subscription-plans':    return await updateSubPlan(req)
       case 'blog':                  return await updateBlogPost(req)
+      case 'coupons':               return await updateCoupon(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
     }
   } catch (e: any) { console.error(`[admin PUT:${action}]`, e); return NextResponse.json({ error: e.message }, { status: 500 }) }
@@ -1300,6 +1394,7 @@ export async function DELETE(req: NextRequest) {
       case 'subscription-plans': return await deleteSubPlan(req)
       case 'message-triggers':   return await deleteTrigger(req)
       case 'blog':               return await deleteBlogPost(req)
+      case 'coupons':            return await deleteCoupon(req)
       case 'theme':
         await db.query("DELETE FROM site_settings WHERE key='theme'").catch(() => {})
         return NextResponse.json({ success: true })
