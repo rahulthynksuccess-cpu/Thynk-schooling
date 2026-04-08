@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Phone, MapPin, CheckCircle2, ShoppingCart, LayoutGrid,
-  Zap, ChevronRight, Loader2, BookOpen, Globe, Hash,
+  Zap, ChevronRight, Loader2, BookOpen, Globe,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -29,7 +29,6 @@ const STATUS_COLORS: Record<string, { bg: string; color: string; label: string }
   lost:           { bg: '#FEE2E2', color: '#DC2626', label: 'Lost' },
 }
 
-// Discovery source labels — shown as subtle badges on each row
 const SOURCE_BADGE: Record<string, { label: string; bg: string; color: string; icon: string }> = {
   direct:  { label: 'Applied',  bg: '#D1FAE5', color: '#059669', icon: '✓' },
   pincode: { label: 'Pincode',  bg: '#EDE9FE', color: '#7C3AED', icon: '📍' },
@@ -47,7 +46,9 @@ function maskPhone(p: string) {
   const d = p.replace(/\D/g, '')
   return d.slice(0, 2) + '*'.repeat(Math.max(0, d.length - 4)) + d.slice(-2)
 }
-function formatPrice(paise: number) {
+// Price always formatted from API value — never a hardcoded number
+function formatPrice(paise: number | undefined) {
+  if (!paise) return '...'
   return `₹${Math.round(paise / 100).toLocaleString('en-IN')}`
 }
 
@@ -98,7 +99,7 @@ function SchoolLayout({ children, title, credits }: { children: React.ReactNode;
   )
 }
 
-// ── Single-lead purchase confirmation modal ────────────────────────────────────
+// ── Single-lead purchase modal ────────────────────────────────────────────────
 function BuyLeadModal({
   lead, priceLabel, onConfirm, onCancel, loading,
 }: {
@@ -120,7 +121,9 @@ function BuyLeadModal({
           <div style={{ fontSize: 12, color: '#9CA3AF', marginBottom: 4 }}>Lead preview</div>
           <div style={{ fontWeight: 600, fontSize: 14, color: '#374151' }}>{maskName(lead.maskedName || lead.fullName || 'Parent')}</div>
           {lead.classApplyingFor && (
-            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 3 }}>Class {lead.classApplyingFor}{lead.childName ? ` · ${lead.childName}` : ''}</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 3 }}>
+              Class {lead.classApplyingFor}{lead.childName ? ` · ${lead.childName}` : ''}
+            </div>
           )}
           <div style={{ fontSize: 12, color: '#6B7280', marginTop: 3 }}>{lead.city || '—'}</div>
         </div>
@@ -141,35 +144,6 @@ function BuyLeadModal({
   )
 }
 
-// ── Discovery legend ──────────────────────────────────────────────────────────
-function DiscoveryLegend({ windowDays }: { windowDays: number }) {
-  return (
-    <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 12, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 14, flexWrap: 'wrap' }}>
-      <div style={{ flexShrink: 0, marginTop: 2 }}>
-        <Globe size={16} color="#6B7280" />
-      </div>
-      <div style={{ flex: 1, minWidth: 200 }}>
-        <div style={{ fontWeight: 600, fontSize: 13, color: '#111827', marginBottom: 6 }}>
-          Showing leads from the last <span style={{ color: '#F59E0B' }}>{windowDays} days</span>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {Object.entries(SOURCE_BADGE).map(([key, b]) => (
-            <span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: b.bg, color: b.color }}>
-              {b.icon} {b.label}
-            </span>
-          ))}
-        </div>
-        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 6 }}>
-          <strong style={{ color: '#6B7280' }}>Applied</strong> — directly enquired your school &nbsp;·&nbsp;
-          <strong style={{ color: '#6B7280' }}>Pincode</strong> — registered in your area &nbsp;·&nbsp;
-          <strong style={{ color: '#6B7280' }}>Nearby</strong> — within your geo-radius &nbsp;·&nbsp;
-          <strong style={{ color: '#6B7280' }}>Searched</strong> — searched for schools in your city
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main content ──────────────────────────────────────────────────────────────
 function LeadsContent() {
   const queryClient = useQueryClient()
@@ -183,18 +157,25 @@ function LeadsContent() {
   const credits = creditsData?.availableCredits ?? 0
 
   const { data, isLoading } = useQuery<{
-    data?: any[]; total?: number; error?: string; message?: string;
-    singleLeadPricePaise?: number; discoveryWindowDays?: number;
+    data?: any[]
+    total?: number
+    error?: string
+    message?: string
+    singleLeadPricePaise?: number   // always from DB via API
+    discoveryWindowDays?: number    // always from DB via API
   }>({
     queryKey: ['school-leads-full'],
     queryFn: () => fetch('/api/leads?limit=50', { cache: 'no-store', credentials: 'include', headers: authHeaders() }).then(r => r.json()),
-    staleTime: 30 * 1000,
+    staleTime: 30_000,
   })
 
-  const leads               = data?.data ?? []
-  const singleLeadPricePaise = data?.singleLeadPricePaise ?? 29900
-  const discoveryWindowDays  = data?.discoveryWindowDays  ?? 90
-  const priceLabel           = formatPrice(singleLeadPricePaise)
+  const leads = data?.data ?? []
+
+  // Price and window always from API — never fallback to a visible hardcoded string
+  const singleLeadPricePaise = data?.singleLeadPricePaise
+  const discoveryWindowDays  = data?.discoveryWindowDays
+  // formatPrice returns '...' while loading, so user never sees a stale ₹299
+  const priceLabel = formatPrice(singleLeadPricePaise)
 
   const isProfileIncomplete = data?.error === 'PROFILE_INCOMPLETE'
   const isAccountSuspended  = data?.error === 'ACCOUNT_SUSPENDED'
@@ -209,7 +190,7 @@ function LeadsContent() {
     },
     onSuccess: (res) => {
       setConfirmLead(null)
-      if (res.error === 'NO_CREDITS') { toast.error('No credits available.'); setBuyingId(null); return }
+      if (res.error === 'NO_CREDITS') { toast.error('No credits.'); setBuyingId(null); return }
       if (res.error) { toast.error(res.error); setBuyingId(null); return }
       toast.success('Lead unlocked! Contact details revealed.')
       queryClient.invalidateQueries({ queryKey: ['school-leads-full'] })
@@ -285,7 +266,7 @@ function LeadsContent() {
         />
       )}
 
-      {/* No-credits banner — compact, links to /packages */}
+      {/* No-credits banner */}
       {credits === 0 && (
         <div style={{ background: 'linear-gradient(135deg,#FFFBEB,#FEF3C7)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 14, padding: '18px 22px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
           <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(245,158,11,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -294,7 +275,8 @@ function LeadsContent() {
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontWeight: 700, fontSize: 14, color: '#111827', marginBottom: 3 }}>You have 0 lead credits</div>
             <div style={{ fontSize: 13, color: '#6B7280' }}>
-              Buy a pack for the best per-lead rate, or purchase individual leads at {priceLabel} each.
+              Buy a pack for the best per-lead rate, or purchase individual leads at{' '}
+              <strong>{priceLabel}</strong> each.
             </div>
           </div>
           <Link href="/dashboard/school/packages" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '9px 18px', borderRadius: 9, background: '#F59E0B', color: '#fff', textDecoration: 'none', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
@@ -303,15 +285,32 @@ function LeadsContent() {
         </div>
       )}
 
-      {/* Discovery legend */}
-      <DiscoveryLegend windowDays={discoveryWindowDays} />
+      {/* Discovery info bar */}
+      <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.07)', borderRadius: 12, padding: '12px 18px', marginBottom: 20, display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <Globe size={15} color="#6B7280" style={{ marginTop: 2, flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>
+            Showing leads from the last{' '}
+            <span style={{ color: '#F59E0B' }}>
+              {discoveryWindowDays !== undefined ? `${discoveryWindowDays} days` : '…'}
+            </span>
+          </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+            {Object.entries(SOURCE_BADGE).map(([key, b]) => (
+              <span key={key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: b.bg, color: b.color }}>
+                {b.icon} {b.label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Leads table */}
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid rgba(0,0,0,0.08)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
           <div>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>Parent Leads</span>
-            <span style={{ fontSize: 12, color: '#9CA3AF', marginLeft: 8 }}>Nearby + direct + search</span>
+            <span style={{ fontSize: 12, color: '#9CA3AF', marginLeft: 8 }}>Direct + nearby + search</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             {credits > 0 && (
@@ -327,8 +326,8 @@ function LeadsContent() {
           <div style={{ padding: '52px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: 44, marginBottom: 12 }}>📋</div>
             <div style={{ fontWeight: 600, fontSize: 15, color: '#111827', marginBottom: 6 }}>No leads yet</div>
-            <div style={{ fontSize: 13, color: '#6B7280', maxWidth: 320, margin: '0 auto 16px' }}>
-              Leads from parents in your area will appear here automatically within {discoveryWindowDays} days of them registering.
+            <div style={{ fontSize: 13, color: '#6B7280', maxWidth: 320, margin: '0 auto' }}>
+              Leads from parents in your area will appear here automatically.
             </div>
           </div>
         ) : (
@@ -348,11 +347,14 @@ function LeadsContent() {
               </thead>
               <tbody>
                 {leads.map((lead: any) => {
-                  const st          = STATUS_COLORS[lead.status] || STATUS_COLORS.new
-                  const srcBadge    = SOURCE_BADGE[lead.discoverySource] || SOURCE_BADGE.direct
+                  const st         = STATUS_COLORS[lead.status] || STATUS_COLORS.new
+                  const srcBadge   = SOURCE_BADGE[lead.discoverySource] || SOURCE_BADGE.direct
                   const displayName  = lead.isPurchased ? lead.fullName  : maskName(lead.maskedName || lead.fullName || 'Parent')
                   const displayPhone = lead.isPurchased ? lead.fullPhone : maskPhone(lead.maskedPhone || lead.fullPhone || '')
                   const isUnlocking  = buyingId === lead.id
+                  // Price for this specific lead comes from the API response (singleLeadPricePaise on the row)
+                  // — falls back to the page-level value if not per-row
+                  const rowPrice = formatPrice(lead.singleLeadPricePaise ?? singleLeadPricePaise)
 
                   return (
                     <tr key={lead.id} style={{ borderTop: '1px solid rgba(0,0,0,0.05)' }}>
@@ -371,11 +373,12 @@ function LeadsContent() {
 
                       {/* Class */}
                       <td style={{ padding: '13px 16px' }}>
-                        {lead.classApplyingFor ? (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 99, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)', fontSize: 11, fontWeight: 600, color: '#4338CA', whiteSpace: 'nowrap' }}>
-                            <BookOpen size={10} /> {lead.classApplyingFor}
-                          </span>
-                        ) : <span style={{ fontSize: 12, color: '#D1D5DB' }}>—</span>}
+                        {lead.classApplyingFor
+                          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 99, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)', fontSize: 11, fontWeight: 600, color: '#4338CA', whiteSpace: 'nowrap' }}>
+                              <BookOpen size={10} /> {lead.classApplyingFor}
+                            </span>
+                          : <span style={{ fontSize: 12, color: '#D1D5DB' }}>—</span>
+                        }
                       </td>
 
                       {/* Phone */}
@@ -392,7 +395,7 @@ function LeadsContent() {
                         </div>
                       </td>
 
-                      {/* Discovery Source */}
+                      {/* Source */}
                       <td style={{ padding: '13px 16px' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: srcBadge.bg, color: srcBadge.color, whiteSpace: 'nowrap' }}>
                           {srcBadge.icon} {srcBadge.label}
@@ -413,24 +416,18 @@ function LeadsContent() {
                             <CheckCircle2 size={11} /> Unlocked
                           </span>
                         ) : credits >= 1 ? (
-                          <button
-                            onClick={() => handleUnlock(lead)}
-                            disabled={isUnlocking}
+                          <button onClick={() => handleUnlock(lead)} disabled={isUnlocking}
                             title="Use 1 credit to reveal contact"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#111827', border: 'none', color: '#fff', cursor: isUnlocking ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 500 }}
-                          >
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#111827', border: 'none', color: '#fff', cursor: isUnlocking ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 500 }}>
                             {isUnlocking ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={12} />}
                             Unlock (1 credit)
                           </button>
                         ) : (
-                          <button
-                            onClick={() => handleUnlock(lead)}
-                            disabled={isUnlocking}
-                            title={`Purchase this lead for ${priceLabel}`}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#F59E0B', border: 'none', color: '#fff', cursor: isUnlocking ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600 }}
-                          >
+                          <button onClick={() => handleUnlock(lead)} disabled={isUnlocking}
+                            title={`Purchase this lead for ${rowPrice}`}
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#F59E0B', border: 'none', color: '#fff', cursor: isUnlocking ? 'not-allowed' : 'pointer', fontSize: 12, fontWeight: 600 }}>
                             {isUnlocking ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <ShoppingCart size={12} />}
-                            Buy · {priceLabel}
+                            Buy · {rowPrice}
                           </button>
                         )}
                       </td>
