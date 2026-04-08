@@ -397,10 +397,21 @@ body:has(.admin-root) {
 
 /* Force all text inside the white content-manager cards to be dark */
 .admin-page-settings .admin-content label,
-.admin-page-settings .admin-content span:not(.sidebar-item-label),
+.admin-page-settings .admin-content span:not([class*="sidebar"]):not([class*="logo"]):not([class*="user"]):not([class*="notif"]),
 .admin-page-settings .admin-content p,
 .admin-page-settings .admin-content button:not(.sidebar-item):not(.header-icon-btn) {
-  color: inherit;
+  color: #0D1117 !important;
+}
+/* Section headings and accordion labels */
+.admin-page-settings .admin-main h2,
+.admin-page-settings .admin-main h3,
+.admin-page-settings .admin-main h4 {
+  color: #0D1117 !important;
+}
+/* Top-bar save/push text */
+.admin-page-settings .admin-content > div[style*="background:#fff"] *,
+.admin-page-settings .admin-content > div[style*="background: #fff"] * {
+  color: #0D1117 !important;
 }
 
 /* ── BADGES ── */
@@ -829,16 +840,20 @@ body:has(.admin-root) {
 }
 
 /* ── Recharts / chart labels inside admin ── */
-.admin-main .recharts-text {
+/* analytics page uses white cards (light theme) — exclude it from white-fill overrides */
+.admin-main:not(.admin-page-analytics) .recharts-text,
+.admin-page-overview .recharts-text {
   fill: rgba(255,255,255,0.65) !important;
   font-size: 11px !important;
   font-weight: 600 !important;
 }
-.admin-main .recharts-cartesian-axis-tick-value {
+.admin-main:not(.admin-page-analytics) .recharts-cartesian-axis-tick-value,
+.admin-page-overview .recharts-cartesian-axis-tick-value {
   font-size: 11px !important;
   fill: rgba(255,255,255,0.55) !important;
 }
-.admin-main .recharts-legend-item-text {
+.admin-main:not(.admin-page-analytics) .recharts-legend-item-text,
+.admin-page-overview .recharts-legend-item-text {
   font-size: 12px !important;
   color: rgba(255,255,255,0.70) !important;
 }
