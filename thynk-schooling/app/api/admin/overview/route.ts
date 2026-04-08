@@ -38,7 +38,7 @@ export async function GET() {
       pendingVerification: Number(pendingSchoolsCt.rows[0].count),
       newUsersToday: Number(newUsersToday.rows[0].count),
       leadsToday: Number(leadsToday.rows[0].count),
-      totalRevenue: Number(revenue.rows[0].total) * 100,
+      totalRevenue: Number(revenue.rows[0].total), // already in paise; KPI card divides by 100
       pendingApps: Number(pendingApps.rows[0].count),
       pendingReviews: Number(pendingReviews.rows[0].count),
       leadsWeekly: weeklyLeads.rows.map((r:any) => ({ day: r.day, leads: Number(r.leads), revenue: Number(r.revenue) })),
