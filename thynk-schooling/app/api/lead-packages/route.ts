@@ -256,12 +256,18 @@ export async function POST(req: NextRequest) {
           { buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone }
         )
 
-        // Store pending payment record (with coupon info in meta)
+        // Store pending payment record (coupon columns + meta)
+        const couponCodeStr = couponId
+          ? (await db.query('SELECT code FROM discount_coupons WHERE id=$1', [couponId]).catch(() => ({rows:[]}))).rows[0]?.code || null
+          : null
+
         await db.query(
           `INSERT INTO lead_package_payments
-             (school_id, package_id, gateway, order_id, amount_paise, credits_added, status, meta)
-           VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)`,
-          [schoolId, packageId, order.gateway, order.orderId, finalPricePaise, p.leads_count,
+             (school_id, package_id, gateway, order_id, amount_paise, discount_paise,
+              original_amount_paise, coupon_code, credits_added, status, meta)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10)`,
+          [schoolId, packageId, order.gateway, order.orderId, finalPricePaise,
+           discountPaise, p.price_paise, couponCodeStr, p.leads_count,
            JSON.stringify({ ...order.clientPayload, coupon_id: couponId, discount_paise: discountPaise, original_price_paise: p.price_paise })]
         )
 
