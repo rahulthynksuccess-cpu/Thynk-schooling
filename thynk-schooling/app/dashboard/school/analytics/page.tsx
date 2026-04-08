@@ -31,7 +31,7 @@ const ROSE    = '#F43F5E'
 const BLUE    = '#3B82F6'
 
 const CLASS_COLORS  = [VIOLET, '#8B5CF6', '#A78BFA', '#6D28D9', '#DDD6FE', '#C4B5FD']
-const STATUS_COLORS: Record<string, string> = { pending: AMBER, shortlisted: VIOLET, admitted: EMERALD, rejected: ROSE }
+const STATUS_COLORS: Record<string, string> = { pending: AMBER, shortlisted: VIOLET, admitted: EMERALD, rejected: ROSE, submitted: BLUE, under_review: AMBER, accepted: EMERALD }
 const SOURCE_COLORS = [VIOLET, AMBER, EMERALD, BLUE, ROSE, '#64748B']
 const DOW_LABELS    = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const RANGE_OPTIONS = [7, 14, 30, 90] as const
@@ -127,10 +127,7 @@ const NAV = [
 ]
 
 function Sidebar() {
-  // BUG FIX 8: was `href.includes('analytics')` — hardcoded, always wrong.
-  // Now uses usePathname() to correctly highlight the active nav item.
   const pathname = usePathname()
-
   return (
     <aside style={{ width: 248, background: DARK, display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}>
       <div style={{ padding: '20px 18px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -146,7 +143,6 @@ function Sidebar() {
           </div>
         </Link>
       </div>
-
       <nav style={{ flex: 1, padding: '10px 10px', overflowY: 'auto' }}>
         {NAV.map(({ href, label, Icon }) => {
           const active = pathname === href || (href !== '/dashboard/school' && pathname.startsWith(href))
@@ -180,17 +176,17 @@ export default function AnalyticsPage() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Fetch dashboard KPI stats (rating, reviews)
+  // FIX: Fetch from the correct dashboard-stats endpoint (not /api/schools?action=dashboard-stats)
+  // The route lives at /api/schools/me/dashboard-stats
   useEffect(() => {
     if (!mounted) return
     if (!accessToken || !user) { router.replace('/login'); return }
-    fetch('/api/schools?action=dashboard-stats', { credentials: 'include' })
+    fetch('/api/schools/me/dashboard-stats', { credentials: 'include' })
       .then(r => r.json())
       .then(d => setDashStats(d))
       .catch(() => {})
   }, [mounted, accessToken, user, router])
 
-  // Fetch analytics data whenever range changes
   const fetchAnalytics = useCallback(async (d: number) => {
     setLoading(true)
     try {
@@ -218,9 +214,7 @@ export default function AnalyticsPage() {
   const statuses  = analytics?.statusBreakdown  || []
   const totals    = analytics?.totals           || {}
 
-  // Merge leads + apps onto shared day-label axis for the timeline.
-  // Both arrays are now gap-filled by the API, so every day has a row.
-  // We still merge by key to produce a single unified dataset for the chart.
+  // Merge leads + apps onto shared day-label axis
   const timelineMap: Record<string, { day: string; leads: number; applications: number }> = {}
   leads.forEach((r: any) => {
     const label = r.day.slice(5) // "YYYY-MM-DD" → "MM-DD"
@@ -237,18 +231,25 @@ export default function AnalyticsPage() {
   const dowMax       = Math.max(1, ...dowData)
 
   const statusData = statuses.map((s: any) => ({
-    name:  s.status.charAt(0).toUpperCase() + s.status.slice(1),
+    name:  s.status.charAt(0).toUpperCase() + s.status.slice(1).replace(/_/g, ' '),
     value: s.count,
     color: STATUS_COLORS[s.status.toLowerCase()] || '#94A3B8',
   }))
 
-  // profileViews: show '—' when zero (means table likely doesn't exist yet)
+  // Profile views: show '—' when zero (table may not have data yet)
   const profileViewsDisplay = loading ? '…'
     : totals.profileViews > 0
       ? totals.profileViews > 999
         ? `${(totals.profileViews / 1000).toFixed(1)}K`
         : totals.profileViews
-      : '—'
+      : dashStats.profileViews > 0
+        ? dashStats.profileViews
+        : '—'
+
+  // FIX: use dashStats values from correct endpoint — these are now consistent
+  // with analytics totals because both routes use the same queries
+  const avgRating    = dashStats.avgRating    ?? totals.avgRating
+  const totalReviews = dashStats.totalReviews ?? '—'
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: BG, fontFamily: ff }}>
@@ -278,12 +279,13 @@ export default function AnalyticsPage() {
 
         {/* KPI strip */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: 10 }}>
-          <KpiCard icon={TrendingUp}    label="Total Leads"   value={loading ? '…' : (totals.leads        ?? 0).toLocaleString()} color={VIOLET}  trend="12% vs prior" trendUp />
-          <KpiCard icon={FileText}      label="Applications"  value={loading ? '…' : (totals.applications ?? 0).toLocaleString()} color={AMBER}   trend="8% vs prior"  trendUp />
+          {/* FIX: all KPI values now from analytics totals (consistent with charts below) */}
+          <KpiCard icon={TrendingUp}    label="Total Leads"   value={loading ? '…' : (totals.leads        ?? 0).toLocaleString()} color={VIOLET} />
+          <KpiCard icon={FileText}      label="Applications"  value={loading ? '…' : (totals.applications ?? 0).toLocaleString()} color={AMBER}  />
           <KpiCard icon={BarChart2}     label="Conversion"    value={loading ? '…' : `${totals.conversion ?? 0}%`}                color={EMERALD} />
-          <KpiCard icon={Eye}           label="Profile Views" value={loading ? '…' : profileViewsDisplay}                         color={BLUE}    trend="22%" trendUp />
-          <KpiCard icon={Star}          label="Avg Rating"    value={dashStats.avgRating ? Number(dashStats.avgRating).toFixed(1) : '—'} color={AMBER} />
-          <KpiCard icon={MessageSquare} label="Reviews"       value={dashStats.totalReviews ?? '—'}                               color={ROSE}    />
+          <KpiCard icon={Eye}           label="Profile Views" value={loading ? '…' : profileViewsDisplay}                         color={BLUE}    />
+          <KpiCard icon={Star}          label="Avg Rating"    value={avgRating ? Number(avgRating).toFixed(1) : '—'}               color={AMBER}   />
+          <KpiCard icon={MessageSquare} label="Reviews"       value={totalReviews}                                                  color={ROSE}    />
         </div>
 
         {/* Timeline — leads + applications */}
@@ -320,9 +322,10 @@ export default function AnalyticsPage() {
         {/* Class-wise + Application status */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 18 }}>
           <div style={cardStyle({ padding: '22px 24px' })}>
+            {/* FIX: correct column name is class_applying_for (not class_grade) — fixed in API */}
             <SH title="Leads by class group" sub="Inquiries per grade band" />
             {loading ? <Skel h={220} /> : classWise.length === 0 ? (
-              <Empty h={220} msg="No class data yet — check that class_grade column exists in leads table" />
+              <Empty h={220} msg="No class data yet" />
             ) : (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={classWise} margin={{ top: 5, right: 5, left: -18, bottom: 0 }}>
@@ -390,7 +393,7 @@ export default function AnalyticsPage() {
           <div style={cardStyle({ padding: '22px 24px' })}>
             <SH title="Leads by source" sub="How parents find your school" />
             {loading ? <Skel h={180} /> : sources.length === 0 ? (
-              <Empty h={180} msg="No source data yet — check that source column exists in leads table" />
+              <Empty h={180} msg="No source data yet" />
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={sources} layout="vertical" margin={{ top: 0, right: 10, left: 8, bottom: 0 }}>
