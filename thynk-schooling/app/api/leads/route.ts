@@ -4,27 +4,13 @@ export const dynamic = 'force-dynamic'
  * POST /api/leads?action=purchase&id=X  — school admin: unlock a lead
  * POST /api/leads (body)                — public: create_lead | request_call | record_search
  *
- * LEAD DISCOVERY LOGIC
- * ─────────────────────
- * A lead row is visible to a school if ANY branch matches:
- *
- *   1. DIRECT  — lead.school_id = this school (parent explicitly applied / enquired)
- *
- *   2. PINCODE — parent_profiles.pincode matches school.pincode
- *
- *   3. GEO     — parent_profiles lat/lon is within school's configured radius (default 10 km)
- *
- *   4. SEARCH  — user searched for schools in this school's city or pincode
- *                (recorded in user_searches via POST action=record_search)
- *
- * All discovery leads are shown MASKED. The timeline (how many days back to look)
- * and the geo radius are controlled from Admin → Lead Pricing.
+ * Single-lead price and discovery settings always come from /api/admin/lead-pricing
+ * (stored in admin_settings key='lead_pricing_defaults'). Nothing is hardcoded.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import jwt from 'jsonwebtoken'
 
-// ─── auth ─────────────────────────────────────────────────────────────────────
 function getUserId(req: NextRequest): string | null {
   try {
     const token =
@@ -37,7 +23,6 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null }
 }
 
-// ─── table setup ─────────────────────────────────────────────────────────────
 async function ensureTables() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS leads (
@@ -89,7 +74,6 @@ async function ensureTables() {
   await db.query(`ALTER TABLE lead_credits ADD COLUMN IF NOT EXISTS used_credits INTEGER DEFAULT 0`).catch(() => {})
   await db.query(`ALTER TABLE lead_credits ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`).catch(() => {})
 
-  // Tracks which cities/pincodes a user searched — powers SEARCH discovery branch
   await db.query(`
     CREATE TABLE IF NOT EXISTS user_searches (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -111,7 +95,6 @@ async function ensureTables() {
   `).catch(() => {})
 }
 
-// ─── masking ──────────────────────────────────────────────────────────────────
 function maskName(name: string): string {
   if (!name) return '****'
   const parts = name.trim().split(' ')
@@ -124,21 +107,24 @@ function maskPhone(phone: string): string {
   return digits.slice(0, 2) + '*'.repeat(Math.max(0, digits.length - 4)) + digits.slice(-2)
 }
 
-// ─── admin config ─────────────────────────────────────────────────────────────
+// Always read from DB — never hardcode
 interface DiscoveryCfg {
-  discoveryWindowDays: number   // days to look back for discovery leads
-  radiusKm: number              // geo radius
-  singleLeadPricePaise: number  // price when school has no credits
+  discoveryWindowDays: number
+  radiusKm:            number
+  singleLeadPricePaise: number
 }
 async function getDiscoveryCfg(): Promise<DiscoveryCfg> {
   try {
     const row = await db.query("SELECT value FROM admin_settings WHERE key='lead_pricing_defaults'")
     if (!row.rows.length) return { discoveryWindowDays: 90, radiusKm: 10, singleLeadPricePaise: 29900 }
     const cfg = JSON.parse(row.rows[0].value)
+    const price = Number(cfg.defaultPricePaise ?? (cfg.pricePerLead ? cfg.pricePerLead * 100 : 29900))
+    const radius = Number(cfg.radiusKm ?? (cfg.maskBlurMeters ? Math.round(cfg.maskBlurMeters / 1000) : 10))
+    const window = Number(cfg.discoveryWindowDays ?? 90)
     return {
-      discoveryWindowDays: Number(cfg.discoveryWindowDays ?? 90),
-      radiusKm: Number(cfg.radiusKm ?? (cfg.maskBlurMeters ? cfg.maskBlurMeters / 1000 : 10)),
-      singleLeadPricePaise: Number(cfg.defaultPricePaise ?? (cfg.pricePerLead ? cfg.pricePerLead * 100 : 29900)),
+      singleLeadPricePaise: price   || 29900,
+      radiusKm:             radius  || 10,
+      discoveryWindowDays:  window  || 90,
     }
   } catch {
     return { discoveryWindowDays: 90, radiusKm: 10, singleLeadPricePaise: 29900 }
@@ -171,14 +157,13 @@ export async function GET(req: NextRequest) {
       latitude: schoolLat, longitude: schoolLon,
     } = schoolRes.rows[0]
 
-    // Self-heal
     let isComplete = profile_completed === true
     if (!isComplete && schoolName && schoolName !== 'School') {
       await db.query('UPDATE schools SET profile_completed=true WHERE id=$1', [schoolId]).catch(() => {})
       isComplete = true
     }
     if (!isComplete) return NextResponse.json({ error: 'PROFILE_INCOMPLETE', message: 'Complete your school profile to access leads.' }, { status: 403 })
-    if (is_active === false) return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Your account is suspended. Contact support.' }, { status: 403 })
+    if (is_active === false) return NextResponse.json({ error: 'ACCOUNT_SUSPENDED', message: 'Your account is suspended.' }, { status: 403 })
 
     const creditRow = await db.query('SELECT credits, total_credits, used_credits FROM lead_credits WHERE school_id=$1', [schoolId])
     const creditBalance = creditRow.rows[0] ?? { credits: 0, total_credits: 0, used_credits: 0 }
@@ -186,22 +171,11 @@ export async function GET(req: NextRequest) {
     const cfg = await getDiscoveryCfg()
     const { discoveryWindowDays, radiusKm, singleLeadPricePaise } = cfg
 
-    // ── Discovery UNION ───────────────────────────────────────────────────────
-    // Params shared across all branches:
-    //   $1 = schoolId (UUID)
-    //   $2 = schoolPincode (text|null)
-    //   $3 = schoolLat (numeric|null)
-    //   $4 = schoolLon (numeric|null)
-    //   $5 = radiusKm (numeric)
-    //   $6 = schoolCity (text|null)
-    //   $7 = discoveryWindowDays (integer) — used as interval via string interpolation
-
-    // We interpolate the interval as a literal integer (safe — always a number) to avoid
-    // the "invalid input syntax for type interval" error with parameterised intervals.
+    // Integer days for safe SQL interpolation (never user-supplied string)
     const win = Math.max(1, Math.floor(discoveryWindowDays))
 
     const unionSQL = `
-      -- Branch 1: DIRECT — explicit application to this school
+      -- Branch 1: DIRECT
       SELECT l.id AS lead_id, 'direct' AS discovery_source
       FROM leads l
       WHERE l.school_id = $1
@@ -209,7 +183,7 @@ export async function GET(req: NextRequest) {
 
       UNION
 
-      -- Branch 2: PINCODE — parent registered with same pincode as school
+      -- Branch 2: PINCODE — parent profile pincode matches school pincode
       SELECT l.id AS lead_id, 'pincode' AS discovery_source
       FROM leads l
       JOIN parent_profiles pp ON pp.user_id = l.parent_id
@@ -221,7 +195,7 @@ export async function GET(req: NextRequest) {
 
       UNION
 
-      -- Branch 3: GEO — parent's saved location within radiusKm of school
+      -- Branch 3: GEO — parent lat/lon within radiusKm of school
       SELECT l.id AS lead_id, 'geo' AS discovery_source
       FROM leads l
       JOIN parent_profiles pp ON pp.user_id = l.parent_id
@@ -242,7 +216,7 @@ export async function GET(req: NextRequest) {
 
       UNION
 
-      -- Branch 4: SEARCH — user searched for schools in this school's city or pincode
+      -- Branch 4: SEARCH — user searched in this school's city or pincode
       SELECT l.id AS lead_id, 'search' AS discovery_source
       FROM leads l
       JOIN user_searches us ON us.user_id = l.parent_id
@@ -256,10 +230,9 @@ export async function GET(req: NextRequest) {
         )
     `
 
-    // Collapse to one row per lead_id, preferring more-direct sources
     const dedupedSQL = `
       SELECT DISTINCT ON (lead_id) lead_id, discovery_source
-      FROM ( ${unionSQL} ) raw
+      FROM (${unionSQL}) raw
       ORDER BY lead_id,
         CASE discovery_source
           WHEN 'direct'  THEN 1
@@ -271,11 +244,11 @@ export async function GET(req: NextRequest) {
     `
 
     const baseParams = [
-      schoolId,          // $1
+      schoolId,              // $1
       schoolPincode || null, // $2
       schoolLat     || null, // $3
       schoolLon     || null, // $4
-      radiusKm,          // $5
+      radiusKm,              // $5
       schoolCity    || null, // $6
     ]
 
@@ -283,17 +256,17 @@ export async function GET(req: NextRequest) {
       db.query(
         `SELECT
            l.id, l.status,
-           l.is_purchased              AS "isPurchased",
-           l.child_name               AS "childName",
-           l.class_applying_for       AS "classApplyingFor",
-           l.city, l.created_at       AS "createdAt",
+           l.is_purchased        AS "isPurchased",
+           l.child_name          AS "childName",
+           l.class_applying_for  AS "classApplyingFor",
+           l.city, l.created_at  AS "createdAt",
            l.source, l.message,
-           l.how_did_you_hear         AS "howDidYouHear",
-           d.discovery_source         AS "discoverySource",
+           l.how_did_you_hear    AS "howDidYouHear",
+           d.discovery_source    AS "discoverySource",
            COALESCE(u.full_name, l.parent_name) AS "fullName",
            COALESCE(u.phone, l.phone)            AS "fullPhone",
            COALESCE(u.email, l.email)            AS "fullEmail"
-         FROM ( ${dedupedSQL} ) d
+         FROM (${dedupedSQL}) d
          JOIN leads l ON l.id = d.lead_id
          LEFT JOIN users u ON u.id = l.parent_id
          ORDER BY l.created_at DESC
@@ -301,7 +274,7 @@ export async function GET(req: NextRequest) {
         [...baseParams, limit, offset]
       ),
       db.query(
-        `SELECT COUNT(*) FROM ( ${dedupedSQL} ) d`,
+        `SELECT COUNT(*) FROM (${dedupedSQL}) d`,
         baseParams
       ),
     ])
@@ -313,7 +286,7 @@ export async function GET(req: NextRequest) {
       fullName:    row.isPurchased ? row.fullName  : undefined,
       fullPhone:   row.isPurchased ? row.fullPhone : undefined,
       fullEmail:   undefined,
-      singleLeadPricePaise,
+      singleLeadPricePaise, // always from DB
     }))
 
     return NextResponse.json({
@@ -322,7 +295,7 @@ export async function GET(req: NextRequest) {
       page,
       limit,
       credits: creditBalance,
-      singleLeadPricePaise,
+      singleLeadPricePaise, // always from DB
       discoveryWindowDays,
     })
   } catch (e: any) {
@@ -377,11 +350,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
-    // ── Record a school search (called from school listing page) ─────────────
-    // This populates user_searches and powers Branch 4 (SEARCH discovery).
+    // ── Record school search (powers SEARCH discovery branch) ─────────────────
     if (action === 'record_search') {
       const userId = getUserId(req)
-      if (!userId) return NextResponse.json({ success: true }) // guests silently ignored
+      if (!userId) return NextResponse.json({ success: true })
       const { city, pincode, lat, lon } = body
       await db.query(
         `INSERT INTO user_searches (user_id, search_city, search_pincode, search_lat, search_lon)
@@ -391,7 +363,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
-    // ── School admin: purchase / unlock a lead ────────────────────────────────
+    // ── School admin: purchase / unlock ───────────────────────────────────────
     if (action === 'purchase') {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -416,7 +388,6 @@ export async function POST(req: NextRequest) {
 
       const schoolId = s.id
 
-      // Lead can be from any source (direct or geo discovery)
       const lead = await db.query('SELECT id, is_purchased FROM leads WHERE id=$1', [leadId])
       if (!lead.rows.length) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
       if (lead.rows[0].is_purchased) return NextResponse.json({ error: 'Lead already purchased' }, { status: 400 })
@@ -429,7 +400,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           error: 'NO_CREDITS',
           message: 'You have no lead credits.',
-          singleLeadPricePaise: cfg.singleLeadPricePaise,
+          singleLeadPricePaise: cfg.singleLeadPricePaise, // from DB
         }, { status: 402 })
       }
 
@@ -441,7 +412,6 @@ export async function POST(req: NextRequest) {
            WHERE school_id=$1`,
           [schoolId]
         )
-        // Assign geo/discovery leads to this school on purchase
         await db.query(
           `UPDATE leads SET is_purchased=true, school_id=$2, updated_at=NOW() WHERE id=$1`,
           [leadId, schoolId]
