@@ -85,16 +85,16 @@ function CheckoutModal({ plan, gateways, onClose, onPay }: {
         <div style={{ textAlign:'center',marginBottom:20 }}>
           <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#0D1117',marginBottom:4 }}>Subscribe to {plan.name}</div>
           <div style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096' }}>
-            {plan.leadsPerMonth > 0 ? `${plan.leadsPerMonth} leads/month · ` : ''}billed monthly · cancel anytime
+            {plan.leadCredits > 0 ? `${plan.leadCredits} lead credits included · ` : ''}cancel anytime
           </div>
         </div>
 
         {/* Price summary */}
         <div style={{ background:'#F9F7F4',border:'1px solid #E8DCC8',borderRadius:12,padding:'14px 16px',marginBottom:18 }}>
           <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:couponResult?.valid?8:0 }}>
-            <span style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096' }}>Monthly price</span>
+            <span style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096' }}>Package price</span>
             <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:18,color:'#0D1117' }}>
-              {plan.price === 0 ? 'Free' : `${fmt(plan.price)}/mo`}
+              {plan.price === 0 ? 'Free' : `${fmt(plan.price)}`}
             </span>
           </div>
           {couponResult?.valid && <>
@@ -105,7 +105,7 @@ function CheckoutModal({ plan, gateways, onClose, onPay }: {
             <div style={{ height:1,background:'#E8DCC8',marginBottom:8 }} />
             <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
               <span style={{ fontFamily:'Inter,sans-serif',fontSize:14,fontWeight:700,color:'#0D1117' }}>Total payable</span>
-              <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#B8860B' }}>{fmt(effectivePrice)}/mo</span>
+              <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#B8860B' }}>{fmt(effectivePrice)}</span>
             </div>
           </>}
         </div>
@@ -177,7 +177,7 @@ function CheckoutModal({ plan, gateways, onClose, onPay }: {
           onClick={() => onPay(selectedGw, couponResult?.valid ? couponResult.coupon_id : undefined, couponResult?.valid ? effectivePrice : undefined)}
           style={{ width:'100%',padding:'14px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#B8860B,#D4A520)',color:'#fff',fontFamily:'Inter,sans-serif',fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 6px 20px rgba(184,134,11,0.35)' }}>
           <CreditCard style={{ width:16,height:16 }} />
-          {plan.price === 0 ? 'Activate Free Plan →' : `Pay ${fmt(effectivePrice)}/mo →`}
+          {plan.price === 0 ? 'Activate Free Plan →' : `Pay ${fmt(effectivePrice)} →`}
         </button>
 
         <p style={{ fontFamily:'Inter,sans-serif',fontSize:10,color:'#A0ADB8',textAlign:'center',marginTop:12,marginBottom:0 }}>
@@ -275,7 +275,7 @@ export default function SchoolPackagesPage() {
 
   const formatPrice = (paise: number) => {
     if (paise === 0) return { label: '₹0', period: 'forever' }
-    return { label: `₹${Math.round(paise/100).toLocaleString('en-IN')}`, period: '/mo' }
+    return { label: `₹${Math.round(paise/100).toLocaleString('en-IN')}`, period: '' }
   }
 
   // ── Payment ───────────────────────────────────────────────────────────────
@@ -426,9 +426,9 @@ export default function SchoolPackagesPage() {
                     <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:800,fontSize:42,color:plan.isHot?'#FAF7F2':'#0D1117',letterSpacing:'-2px',lineHeight:1 }}>{label}</span>
                     <span style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.4)':'#9B8860' }}>{period}</span>
                   </div>
-                  {plan.leadsPerMonth > 0 && (
+                  {plan.leadCredits > 0 && (
                     <div style={{ fontSize:13,fontWeight:700,color:'#B8860B',marginBottom:20 }}>
-                      {plan.leadsPerMonth} leads/month included
+                      {plan.leadCredits} lead credits included
                     </div>
                   )}
 
