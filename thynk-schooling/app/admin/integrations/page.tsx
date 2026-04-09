@@ -14,12 +14,19 @@ import toast from 'react-hot-toast'
 const inp: React.CSSProperties = { width:'100%', padding:'10px 14px', border:'1.5px solid rgba(13,17,23,0.12)', borderRadius:'9px', fontSize:'13px', fontFamily:'Inter,sans-serif', color:'#0D1117', background:'#fff', outline:'none', boxSizing:'border-box' as const }
 const lbl: React.CSSProperties = { display:'block', fontSize:'11px', fontWeight:700, letterSpacing:'1px', textTransform:'uppercase' as const, color:'#718096', marginBottom:'6px', fontFamily:'Inter,sans-serif' }
 
-function apiSave(key: string, value: any) {
+async function apiSave(key: string, value: any) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('ts_access_token') || '' : ''
-  return fetch('/api/admin/settings', {
+  const r = await fetch('/api/admin/settings', {
     method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify({ key, value }),
-  }).then(r => { if (!r.ok) throw new Error('Save failed') })
+  })
+  if (!r.ok) {
+    const ct = r.headers.get('content-type') || ''
+    const errBody = ct.includes('application/json')
+      ? ((await r.json().catch(() => ({}))).message || `HTTP ${r.status}`)
+      : `HTTP ${r.status} — server returned non-JSON response`
+    throw new Error(errBody)
+  }
 }
 
 function authHdr() {
@@ -337,8 +344,18 @@ function CouponsTab() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    try { const r = await fetch('/api/admin?action=coupons'); const d = await r.json(); setCoupons(d.coupons || []) }
-    catch { toast.error('Failed to load coupons') }
+    try {
+      const r = await fetch('/api/admin?action=coupons')
+      if (!r.ok) {
+        const ct = r.headers.get('content-type') || ''
+        const msg = ct.includes('application/json')
+          ? ((await r.json().catch(() => ({}))).message || `HTTP ${r.status}`)
+          : `HTTP ${r.status} — API route not found or returned an error`
+        throw new Error(msg)
+      }
+      const d = await r.json()
+      setCoupons(d.coupons || [])
+    } catch (e: any) { toast.error('Failed to load coupons: ' + e.message) }
     setLoading(false)
   }, [])
 
@@ -349,7 +366,13 @@ function CouponsTab() {
     try {
       const isEdit = !!form.id
       const r = await fetch(isEdit ? `/api/admin?action=coupons&id=${form.id}` : '/api/admin?action=coupons', { method: isEdit ? 'PUT' : 'POST', headers: authHdr(), body: JSON.stringify(form) })
-      if (!r.ok) throw new Error('Save failed')
+      if (!r.ok) {
+        const ct = r.headers.get('content-type') || ''
+        const msg = ct.includes('application/json')
+          ? ((await r.json().catch(() => ({}))).message || `HTTP ${r.status}`)
+          : `HTTP ${r.status} — check API route`
+        throw new Error(msg)
+      }
       toast.success(isEdit ? 'Coupon updated!' : 'Coupon created!'); setModal(false); await load()
     } catch (e: any) { toast.error(e.message || 'Save failed') }
     setSaving(false)
@@ -534,7 +557,12 @@ function WhatsAppTab({ saving, setSaving }: { saving: boolean; setSaving: (v: bo
 
   useEffect(() => {
     fetch('/api/admin/settings', { cache: 'no-store' })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`Settings API returned ${r.status}`)
+        const ct = r.headers.get('content-type') || ''
+        if (!ct.includes('application/json')) throw new Error('Settings API returned non-JSON')
+        return r.json()
+      })
       .then(d => { if (d.whatsapp_settings) setWa(p => ({ ...WA_DEFAULTS, ...d.whatsapp_settings })) })
       .catch(() => {})
   }, [])
@@ -606,7 +634,26 @@ function WhatsAppTab({ saving, setSaving }: { saving: boolean; setSaving: (v: bo
         })
       }
 
-      const data = await res.json()
+      // Safe JSON parse — guard against HTML error pages (404, 500, auth redirect)
+      let data: any = {}
+      const ct = res.headers.get('content-type') || ''
+      if (ct.includes('application/json')) {
+        data = await res.json()
+      } else {
+        const text = await res.text().catch(() => '')
+        if (!res.ok) {
+          // Got an HTML/text error page instead of JSON — e.g. wrong URL, Vercel 404, auth redirect
+          setTestResult({
+            ok: false,
+            msg: `Server returned a non-JSON response (HTTP ${res.status}).`,
+            hint: wa.provider === 'thynkcomm'
+              ? `Check that your ThynkComm URL is correct (${wa.tcUrl}) and the deployment is live. The /api/send-message route must exist.`
+              : `The API returned an HTML error page. Status: ${res.status}.`,
+            raw: { status: res.status, body: text.slice(0, 300) },
+          })
+          setTesting(false); return
+        }
+      }
 
       if (!res.ok) {
         // Surface the exact error from the API (ThynkComm, Meta, or Twilio)
@@ -934,7 +981,13 @@ export default function IntegrationsPage() {
         setLoadingGW(false)
       }).catch(() => setLoadingGW(false))
 
-    fetch('/api/admin/settings', { cache: 'no-store' }).then(r => r.json())
+    fetch('/api/admin/settings', { cache: 'no-store' })
+      .then(r => {
+        if (!r.ok) throw new Error(`Settings API returned ${r.status}`)
+        const ct = r.headers.get('content-type') || ''
+        if (!ct.includes('application/json')) throw new Error('Settings API returned non-JSON')
+        return r.json()
+      })
       .then(d => { if (d.email_settings) setEmail(p => ({ ...p, ...d.email_settings })) })
       .catch(() => {})
   }, [])
