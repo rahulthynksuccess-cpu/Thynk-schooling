@@ -126,6 +126,8 @@ const DEFAULT: Record<string, any> = {
   adminCitiesCardBg: '#111820', adminCitiesCardBorder: '#1E2A3A',
   adminCitiesHeadingColor: 'rgba(255,255,255,0.9)', adminCitiesHeadingSize: 22,
   adminCitiesTagBg: 'rgba(184,134,11,0.15)', adminCitiesTagColor: '#B8860B',
+  adminReportCardBg: '#111820', adminReportCardBorder: '#1E2A3A',
+  adminReportHeadingColor: 'rgba(255,255,255,0.9)', adminReportHeadingSize: 22,
   /* Footer */
   footerBg: '#0D1117', footerTextColor: 'rgba(250,247,242,0.4)',
   footerLinkHover: '#B8860B', footerTextSize: 13,
@@ -280,7 +282,11 @@ const PAGES = [
   ]},
   { label:'🗂️ Admin — Dropdowns',   url: '/admin/dropdown',      sections:[
     { key:'admin-dropdown',      label:'Dropdown Manager'      },
+  ]
+  { label:'📊 Admin — School Report', url: '/admin/school-report', sections:[
+    { key:'admin-report',        label:'School Report'         },
   ]},
+]},
 ]
 
 /* ─── Helpers ─── */
@@ -1202,7 +1208,28 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       </div>
     )
 
-    default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
+    case 'admin-report': return (
+      <div>
+        <Heading text="Admin — School Report" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Layout</label>
+            <CP label="Page background"  k="adminBg"                   t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminReportCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminReportCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminReportHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminReportHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"               t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"            t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+        default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
   }
 }
 
@@ -1526,6 +1553,10 @@ function applyToDom(t: Record<string,any>) {
   s('--admin-cities-heading-size',         `${t.adminCitiesHeadingSize || 22}px`)
   s('--admin-cities-tag-bg',               String(t.adminCitiesTagBg            || 'rgba(184,134,11,0.15)'))
   s('--admin-cities-tag-color',            String(t.adminCitiesTagColor         || '#B8860B'))
+  s('--admin-report-card-bg',              String(t.adminReportCardBg           || '#111820'))
+  s('--admin-report-card-border',          String(t.adminReportCardBorder       || '#1E2A3A'))
+  s('--admin-report-heading-color',        String(t.adminReportHeadingColor     || 'rgba(255,255,255,0.9)'))
+  s('--admin-report-heading-size',         `${t.adminReportHeadingSize || 22}px`)
 }
 
 export default function AdminThemePage() {
@@ -1599,7 +1630,11 @@ export default function AdminThemePage() {
     toast.success(`Preset "${name}" applied`)
   }
 
-  const handleReset = () => { applyPreset('Ivory & Gold (Default)') }
+  const handleReset = async () => {
+    await fetch('/api/admin?action=theme', { method: 'DELETE' }).catch(() => {})
+    applyPreset('Ivory & Gold (Default)')
+    toast.success('Theme reset to default')
+  }
 
   return (
     <AdminLayout title="Theme Controller" subtitle="Customise every page and section — save to apply site-wide">
