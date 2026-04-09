@@ -1,8 +1,9 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
 import Link from 'next/link'
+import { prefetchAdmin, prefetchCommonPages } from '@/lib/adminQuery'
 import { useState } from 'react'
 import {
   School, Users, TrendingUp, DollarSign, FileCheck,
@@ -82,13 +83,22 @@ function KPICard({ icon: Icon, label, value, sub, color, href, trendUp }: any) {
 }
 
 export default function AdminDashboardPage() {
+  const queryClient = useQueryClient()
   const [chartTab, setChartTab] = useState('Leads')
   const [growthTab, setGrowthTab] = useState('6M')
 
   const { data, isLoading } = useQuery({
     queryKey:  ['admin-overview'],
-    queryFn:   () => fetch('/api/admin?action=overview', { cache: 'no-store' }).then(r => r.json()),
-    staleTime: 2 * 60_000,
+    queryFn:   async () => {
+      const res = await fetch('/api/admin?action=overview', { cache: 'no-store' })
+      const json = await res.json()
+      // Once dashboard data arrives, silently prefetch all other admin pages
+      // so navigating to leads/schools/payments/reviews/users is instant
+      prefetchCommonPages(queryClient)
+      return json
+    },
+    staleTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
     placeholderData: (prev: any) => prev,
   })
 
@@ -228,7 +238,9 @@ export default function AdminDashboardPage() {
               <h3 style={{ fontFamily: 'Plus Jakarta Sans,sans-serif', fontWeight: 700, fontSize: 15, color: T.t1, margin: 0 }}>Recent Leads</h3>
               <p style={{ fontFamily: 'Plus Jakarta Sans,sans-serif', fontSize: 12, color: T.t2, marginTop: 3 }}>Latest parent enquiries</p>
             </div>
-            <Link href="/admin/leads" style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, background: `${T.green}12`, border: `1px solid ${T.green}22`, color: T.green, fontSize: 11, fontWeight: 700, fontFamily: 'Plus Jakarta Sans,sans-serif', textDecoration: 'none' }}>
+            <Link href="/admin/leads"
+              onMouseEnter={() => prefetchAdmin(queryClient, 'admin-leads', '/api/admin?action=leads&page=1&limit=20')}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, background: `${T.green}12`, border: `1px solid ${T.green}22`, color: T.green, fontSize: 11, fontWeight: 700, fontFamily: 'Plus Jakarta Sans,sans-serif', textDecoration: 'none' }}>
               View All <ArrowUpRight style={{ width: 11, height: 11 }} />
             </Link>
           </div>
