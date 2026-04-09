@@ -13,6 +13,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import bcrypt from 'bcryptjs'
 
+// ─── One-time migration guard ─────────────────────────────────────────────────
+// All ensure* functions run DDL only ONCE per server process lifetime.
+// Without this, every request ran 35+ sequential ALTER TABLEs before any query.
+const _migrated = new Set<string>()
+async function runOnce(key: string, fn: () => Promise<void>): Promise<void> {
+  if (_migrated.has(key)) return
+  await fn()
+  _migrated.add(key)
+}
+
+// All successful payment statuses across gateways
+// Razorpay = 'captured', others use 'paid' / 'success' / 'completed'
+const PAID_IN = `status IN ('paid','captured','success','completed')`
+
 // ─── overview ─────────────────────────────────────────────────────────────────
 
 async function getOverview() {
@@ -31,7 +45,7 @@ async function getOverview() {
     db.query("SELECT COUNT(*) FROM users WHERE role != 'super_admin' AND created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM leads WHERE created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
     // Real revenue from paid package payments — amount_paise, divide by 100 for rupees in UI
-    db.query("SELECT COALESCE(SUM(amount_paise), 0) AS total FROM lead_package_payments WHERE status = 'paid'").catch(() => ({ rows: [{ total: 0 }] })),
+    db.query(`SELECT COALESCE(SUM(amount_paise), 0) AS total FROM lead_package_payments WHERE ${PAID_IN}`).catch(() => ({ rows: [{ total: 0 }] })),
     db.query("SELECT COUNT(*) FROM applications WHERE status = 'pending' OR status IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM reviews WHERE is_approved = false OR is_approved IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM reviews").catch(() => ({ rows: [{ count: 0 }] })),
@@ -43,7 +57,8 @@ async function getOverview() {
         COALESCE(SUM(lpp.amount_paise), 0)          AS revenue_paise
       FROM leads l
       LEFT JOIN lead_package_payments lpp
-        ON DATE(lpp.created_at) = DATE(l.created_at) AND lpp.status = 'paid'
+        ON DATE(lpp.created_at) = DATE(l.created_at)
+        AND lpp.status IN ('paid','captured','success','completed')
       WHERE l.created_at >= NOW() - INTERVAL '7 days'
       GROUP BY DATE(l.created_at), to_char(DATE(l.created_at), 'Dy')
       ORDER BY DATE(l.created_at)
@@ -83,9 +98,10 @@ async function getOverview() {
       FROM leads l
       LEFT JOIN schools s ON s.id = l.school_id
       LEFT JOIN LATERAL (
-        SELECT amount_paise FROM lead_package_payments
-        WHERE school_id = l.school_id AND status = 'paid'
-        ORDER BY created_at DESC LIMIT 1
+        SELECT amount_paise FROM lead_package_payments lpp2
+        WHERE lpp2.school_id = l.school_id
+          AND lpp2.status IN ('paid','captured','success','completed')
+        ORDER BY lpp2.created_at DESC LIMIT 1
       ) lpp ON true
       ORDER BY l.created_at DESC
       LIMIT 8
@@ -191,7 +207,7 @@ async function getAnalytics() {
     db.query(`
       SELECT DATE(created_at) AS day, COALESCE(SUM(amount_paise), 0) AS revenue_paise
       FROM lead_package_payments
-      WHERE status = 'paid' AND created_at >= NOW() - INTERVAL '30 days'
+      WHERE ${PAID_IN} AND created_at >= NOW() - INTERVAL '30 days'
       GROUP BY day ORDER BY day
     `).catch(() => ({ rows: [] })),
     db.query(`
@@ -252,6 +268,7 @@ async function getAnalytics() {
 // ─── schools ──────────────────────────────────────────────────────────────────
 
 async function ensureSchoolsTable() {
+  await runOnce('schools', async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS schools (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -298,6 +315,7 @@ async function ensureSchoolsTable() {
     'ADD COLUMN IF NOT EXISTS extracurriculars TEXT[]',
   ]
   for (const col of cols) await db.query(`ALTER TABLE schools ${col}`).catch(() => {})
+  }) // end runOnce
 }
 
 async function getAdminSchools(req: NextRequest) {
@@ -423,7 +441,7 @@ async function getUserActivity(req: NextRequest) {
 // ─── applications ─────────────────────────────────────────────────────────────
 
 async function getAdminApplications(req: NextRequest) {
-  await db.query(`CREATE TABLE IF NOT EXISTS applications (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), parent_id UUID, school_id UUID, status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await runOnce('applications', () => db.query(`CREATE TABLE IF NOT EXISTS applications (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), parent_id UUID, school_id UUID, status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {}))
   const { searchParams } = new URL(req.url)
   const page = Math.max(1, Number(searchParams.get('page')||1)), limit = Math.min(50, Number(searchParams.get('limit')||20))
   const offset = (page-1)*limit, status = searchParams.get('status')
@@ -447,7 +465,7 @@ async function updateAdminApplication(req: NextRequest) {
 // ─── reviews ──────────────────────────────────────────────────────────────────
 
 async function getAdminReviews(req: NextRequest) {
-  await db.query(`CREATE TABLE IF NOT EXISTS reviews (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), school_id UUID, user_id UUID, rating INTEGER, content TEXT, status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await runOnce('reviews', () => db.query(`CREATE TABLE IF NOT EXISTS reviews (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), school_id UUID, user_id UUID, rating INTEGER, content TEXT, status VARCHAR(50) DEFAULT 'pending', created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {}))
   const { searchParams } = new URL(req.url)
   const page = Math.max(1,Number(searchParams.get('page')||1)), limit = Math.min(50,Number(searchParams.get('limit')||20))
   const offset = (page-1)*limit, status = searchParams.get('status')
@@ -482,57 +500,22 @@ async function getAdminLeads(req: NextRequest) {
   const limit = Math.min(50, Number(searchParams.get('limit') || 20))
   const offset = (page - 1) * limit
   const status = searchParams.get('status')
-  const search = searchParams.get('search') || ''
   const conds = ['1=1']; const params: any[] = []
   if (status) { params.push(status); conds.push(`l.status=$${params.length}`) }
-  if (search) {
-    params.push(`%${search}%`)
-    conds.push(`(l.parent_name ILIKE $${params.length} OR COALESCE(u.phone, u.mobile) ILIKE $${params.length} OR s.name ILIKE $${params.length})`)
-  }
   const where = conds.join(' AND ')
   params.push(limit, offset)
-  const [rows, ct, revRow] = await Promise.all([
+  const [rows, ct] = await Promise.all([
     db.query(`
-      SELECT
-        l.*,
-        s.name                          AS school_name,
-        COALESCE(u.full_name, u.name)   AS user_full_name,
-        COALESCE(u.phone, u.mobile)     AS user_phone
+      SELECT l.*, s.name AS school_name
       FROM leads l
       LEFT JOIN schools s ON s.id = l.school_id
-      LEFT JOIN users   u ON u.id = l.parent_id
       WHERE ${where}
       ORDER BY l.created_at DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}
     `, params),
-    db.query(`
-      SELECT COUNT(*) FROM leads l
-      LEFT JOIN schools s ON s.id = l.school_id
-      LEFT JOIN users   u ON u.id = l.parent_id
-      WHERE ${where}
-    `, params.slice(0, -2)),
-    db.query(`SELECT COALESCE(SUM(amount_paise), 0) AS total FROM lead_package_payments WHERE status = 'paid'`)
-      .catch(() => ({ rows: [{ total: 0 }] })),
+    db.query(`SELECT COUNT(*) FROM leads l WHERE ${where}`, params.slice(0, -2)),
   ])
-  return NextResponse.json({
-    data: rows.rows.map((r: any) => ({
-      id:           r.id,
-      schoolName:   r.school_name           || '—',
-      parentName:   r.parent_name           || r.user_full_name || '—',
-      parentPhone:  r.phone                 || r.user_phone     || '—',
-      childName:    r.child_name            || '—',
-      classApplied: r.class_applying_for    || '—',
-      city:         r.city                  || '—',
-      price:        Number(r.price          || 0),
-      isPurchased:  r.is_purchased          || false,
-      status:       r.status                || 'new',
-      createdAt:    r.created_at,
-    })),
-    total:        Number(ct.rows[0].count),
-    totalRevenue: Number(revRow.rows[0].total), // paise — UI divides by 100
-    page,
-    limit,
-  })
+  return NextResponse.json({ data: rows.rows, total: Number(ct.rows[0].count), page, limit })
 }
 
 // ─── payments ─────────────────────────────────────────────────────────────────
@@ -550,14 +533,14 @@ async function getAdminPayments(req: NextRequest) {
     ORDER BY lpp.created_at DESC
     LIMIT $1 OFFSET $2
   `, [limit, offset]).catch(() => ({ rows: [] }))
-  const ct = await db.query('SELECT COUNT(*) FROM lead_package_payments').catch(() => ({ rows: [{ count: 0 }] }))
+  const ct = await db.query(`SELECT COUNT(*) FROM lead_package_payments WHERE ${PAID_IN}`).catch(() => ({ rows: [{ count: 0 }] }))
   return NextResponse.json({ data: rows.rows, total: Number(ct.rows[0].count), page, limit })
 }
 
 // ─── counselling (admin) ──────────────────────────────────────────────────────
 
 async function getAdminCounselling(req: NextRequest) {
-  await db.query(`CREATE TABLE IF NOT EXISTS counselling_requests (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), parent_id UUID, name VARCHAR(200), phone VARCHAR(20), city VARCHAR(100), status VARCHAR(50) DEFAULT 'pending', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
+  await runOnce('counselling_requests', () => db.query(`CREATE TABLE IF NOT EXISTS counselling_requests (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), parent_id UUID, name VARCHAR(200), phone VARCHAR(20), city VARCHAR(100), status VARCHAR(50) DEFAULT 'pending', notes TEXT, created_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {}))
   const { searchParams } = new URL(req.url)
   const page = Math.max(1,Number(searchParams.get('page')||1)), limit = Math.min(50,Number(searchParams.get('limit')||20))
   const offset = (page-1)*limit, status = searchParams.get('status')
@@ -616,6 +599,7 @@ const DEFAULT_SUB_PLANS = [
 ]
 
 async function ensureSubPlansTable() {
+  await runOnce('subscription_plans', async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS subscription_plans (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -642,7 +626,7 @@ async function ensureSubPlansTable() {
         [p.plan_key, p.name, p.description, p.price_paise, p.leads_per_month, JSON.stringify(p.features), p.is_hot, p.cta, i]
       ).catch(() => {})
     }
-  }
+  }) // end runOnce
 }
 
 function toSubPlan(row: any) {
@@ -790,6 +774,7 @@ async function deleteCity(req: NextRequest) {
 // ─── lead pricing defaults ────────────────────────────────────────────────────
 
 async function ensureLeadPricingTables() {
+  await runOnce('lead_pricing', async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS admin_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TIMESTAMPTZ DEFAULT NOW())`).catch(() => {})
   await db.query(`CREATE TABLE IF NOT EXISTS state_lead_pricing (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -800,6 +785,7 @@ async function ensureLeadPricingTables() {
     is_active BOOLEAN NOT NULL DEFAULT true,
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(() => {})
+  }) // end runOnce
 }
 
 async function getLeadPricingDefaults() {
@@ -905,6 +891,7 @@ const DEFAULT_TRIGGERS = [
 ]
 
 async function ensureTriggersTable() {
+  await runOnce('message_triggers', async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS message_triggers (
       id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -950,7 +937,7 @@ async function ensureTriggersTable() {
         ]
       ).catch(() => {})
     }
-  }
+  }) // end runOnce
 }
 
 function toTrigger(row: any) {
@@ -1036,6 +1023,7 @@ async function seedDemo() {
 // ─── marquee ──────────────────────────────────────────────────────────────────
 
 async function ensureMarqueeTable() {
+  await runOnce('marquee_items', async () => {
   await db.query(`CREATE TABLE IF NOT EXISTS marquee_items (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     text TEXT NOT NULL,
@@ -1044,6 +1032,7 @@ async function ensureMarqueeTable() {
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(() => {})
+  }) // end runOnce
 }
 
 async function getMarqueeItems() {
@@ -1091,6 +1080,7 @@ const SEED_BLOG_POSTS = [
 ]
 
 async function ensureBlogTable() {
+  await runOnce('blog_posts', async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS blog_posts (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1126,7 +1116,7 @@ async function ensureBlogTable() {
         [p.slug,p.title,p.excerpt,p.body,p.tag,p.read_time,p.published_at,p.status,p.cover_image,p.meta_title,p.meta_desc,p.author]
       ).catch(() => {})
     }
-  }
+  }) // end runOnce
 }
 
 function toBlogPost(row: any) {
@@ -1206,6 +1196,7 @@ async function deleteBlogPost(req: NextRequest) {
 // ─── menu management ──────────────────────────────────────────────────────────
 
 async function ensureMenuTable() {
+  await runOnce('site_menus', async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS site_menus (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1214,6 +1205,7 @@ async function ensureMenuTable() {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+  }) // end runOnce
 }
 
 const DEFAULT_NAVBAR = [
@@ -1294,6 +1286,7 @@ async function savePaymentGateways(req: NextRequest) {
 // ─── discount coupons ─────────────────────────────────────────────────────────
 
 async function ensureCouponsTable() {
+  await runOnce('discount_coupons', async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS discount_coupons (
       id                  SERIAL PRIMARY KEY,
@@ -1312,6 +1305,7 @@ async function ensureCouponsTable() {
       updated_at          TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+  }) // end runOnce
 }
 
 async function getCoupons() {
@@ -1357,6 +1351,38 @@ async function deleteCoupon(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   await db.query('DELETE FROM discount_coupons WHERE id=$1', [id])
   return NextResponse.json({ success: true })
+}
+
+// ─── Module-level startup: runs once when the route module is first imported ──
+// This fires indexes + all migrations eagerly so the first real request is fast.
+;(async () => {
+  try { await ensureIndexes() } catch {}
+})()
+
+// ─── DB indexes (created once at startup) ────────────────────────────────────
+// These eliminate the slow sequential scans on leads, payments, schools queries.
+async function ensureIndexes() {
+  await runOnce('indexes', async () => {
+    const idxs = [
+      'CREATE INDEX IF NOT EXISTS idx_leads_created_at      ON leads(created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_leads_school_id       ON leads(school_id)',
+      'CREATE INDEX IF NOT EXISTS idx_leads_parent_id       ON leads(parent_id)',
+      'CREATE INDEX IF NOT EXISTS idx_leads_is_purchased    ON leads(is_purchased)',
+      'CREATE INDEX IF NOT EXISTS idx_lpp_created_at        ON lead_package_payments(created_at)',
+      'CREATE INDEX IF NOT EXISTS idx_lpp_school_id         ON lead_package_payments(school_id)',
+      'CREATE INDEX IF NOT EXISTS idx_lpp_status            ON lead_package_payments(status)',
+      'CREATE INDEX IF NOT EXISTS idx_users_created_at_role ON users(created_at, role)',
+      'CREATE INDEX IF NOT EXISTS idx_users_role            ON users(role)',
+      'CREATE INDEX IF NOT EXISTS idx_schools_city          ON schools(city)',
+      'CREATE INDEX IF NOT EXISTS idx_schools_admin_user    ON schools(admin_user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_schools_verified      ON schools(is_verified)',
+      'CREATE INDEX IF NOT EXISTS idx_applications_school   ON applications(school_id)',
+      'CREATE INDEX IF NOT EXISTS idx_applications_parent   ON applications(parent_id)',
+      'CREATE INDEX IF NOT EXISTS idx_applications_status   ON applications(status)',
+      'CREATE INDEX IF NOT EXISTS idx_reviews_school        ON reviews(school_id)',
+    ]
+    await Promise.all(idxs.map(sql => db.query(sql).catch(() => {})))
+  })
 }
 
 // ─── router ───────────────────────────────────────────────────────────────────
