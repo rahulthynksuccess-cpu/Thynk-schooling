@@ -638,6 +638,7 @@ async function ensureSubPlansTable() {
         [p.plan_key, p.name, p.description, p.price_paise, p.leads_per_month, JSON.stringify(p.features), p.is_hot, p.cta, i]
       ).catch(() => {})
     }
+  }
   }) // end runOnce
 }
 
@@ -949,6 +950,7 @@ async function ensureTriggersTable() {
         ]
       ).catch(() => {})
     }
+  }
   }) // end runOnce
 }
 
@@ -1128,6 +1130,7 @@ async function ensureBlogTable() {
         [p.slug,p.title,p.excerpt,p.body,p.tag,p.read_time,p.published_at,p.status,p.cover_image,p.meta_title,p.meta_desc,p.author]
       ).catch(() => {})
     }
+  }
   }) // end runOnce
 }
 
