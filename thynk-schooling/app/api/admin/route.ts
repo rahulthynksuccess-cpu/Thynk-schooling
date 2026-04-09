@@ -23,9 +23,10 @@ async function runOnce(key: string, fn: () => Promise<void>): Promise<void> {
   _migrated.add(key)
 }
 
-// All successful payment statuses across gateways
-// Razorpay = 'captured', others use 'paid' / 'success' / 'completed'
-const PAID_IN = `status IN ('paid','captured','success','completed')`
+// Exclude only known failure states — this way we never miss revenue
+// due to an unexpected status variant from a payment gateway.
+// Known failure statuses: failed, cancelled, refunded, expired, pending
+const PAID_IN    = `status NOT IN ('failed','cancelled','refunded','expired','pending','')`
 
 // ─── overview ─────────────────────────────────────────────────────────────────
 
@@ -45,7 +46,16 @@ async function getOverview() {
     db.query("SELECT COUNT(*) FROM users WHERE role != 'super_admin' AND created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM leads WHERE created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
     // Real revenue from paid package payments — amount_paise, divide by 100 for rupees in UI
-    db.query(`SELECT COALESCE(SUM(amount_paise), 0) AS total FROM lead_package_payments WHERE ${PAID_IN}`).catch(() => ({ rows: [{ total: 0 }] })),
+    // No status filter — sum ALL payments for the KPI total
+    // We use original_amount_paise when available (pre-discount), fallback to amount_paise
+    db.query(`
+      SELECT
+        COALESCE(SUM(amount_paise), 0)          AS total_paise,
+        COUNT(*)                                 AS total_count,
+        COALESCE(SUM(original_amount_paise), 0) AS total_original_paise,
+        STRING_AGG(DISTINCT status, ', ')        AS statuses
+      FROM lead_package_payments
+    `).catch(() => ({ rows: [{ total_paise: 0, total_count: 0, statuses: '' }] })),
     db.query("SELECT COUNT(*) FROM applications WHERE status = 'pending' OR status IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM reviews WHERE is_approved = false OR is_approved IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM reviews").catch(() => ({ rows: [{ count: 0 }] })),
@@ -58,7 +68,7 @@ async function getOverview() {
       FROM leads l
       LEFT JOIN lead_package_payments lpp
         ON DATE(lpp.created_at) = DATE(l.created_at)
-        AND lpp.status IN ('paid','captured','success','completed')
+        AND lpp.status NOT IN ('failed','cancelled','refunded','expired','pending','')
       WHERE l.created_at >= NOW() - INTERVAL '7 days'
       GROUP BY DATE(l.created_at), to_char(DATE(l.created_at), 'Dy')
       ORDER BY DATE(l.created_at)
@@ -100,7 +110,7 @@ async function getOverview() {
       LEFT JOIN LATERAL (
         SELECT amount_paise FROM lead_package_payments lpp2
         WHERE lpp2.school_id = l.school_id
-          AND lpp2.status IN ('paid','captured','success','completed')
+          AND lpp2.status NOT IN ('failed','cancelled','refunded','expired','pending','')
         ORDER BY lpp2.created_at DESC LIMIT 1
       ) lpp ON true
       ORDER BY l.created_at DESC
@@ -137,7 +147,9 @@ async function getOverview() {
     newUsersToday:       Number(newUsersToday.rows[0].count),
     leadsToday:          Number(leadsToday.rows[0].count),
     // Stored as paise — dashboard KPI card divides by 100 to show rupees
-    totalRevenue:        Number(revenue.rows[0].total),
+    totalRevenue:        Number(revenue.rows[0]?.total_paise || 0),
+    totalRevenueCount:   Number(revenue.rows[0]?.total_count || 0),
+    revenueStatuses:     String(revenue.rows[0]?.statuses || ''),
     pendingApps:         Number(pendingApps.rows[0].count),
     pendingReviews:      Number(pendingReviews.rows[0].count),
     leadsWeekly: weeklyLeads.rows.map((r: any) => ({
@@ -533,7 +545,7 @@ async function getAdminPayments(req: NextRequest) {
     ORDER BY lpp.created_at DESC
     LIMIT $1 OFFSET $2
   `, [limit, offset]).catch(() => ({ rows: [] }))
-  const ct = await db.query(`SELECT COUNT(*) FROM lead_package_payments WHERE ${PAID_IN}`).catch(() => ({ rows: [{ count: 0 }] }))
+  const ct = await db.query(`SELECT COUNT(*) FROM lead_package_payments WHERE ${PAID_IN}`) .catch(() => ({ rows: [{ count: 0 }] }))
   return NextResponse.json({ data: rows.rows, total: Number(ct.rows[0].count), page, limit })
 }
 
