@@ -10,42 +10,43 @@ import {
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
   BarChart3, FileText, ChevronRight, ExternalLink, Mail,
   AlertTriangle, Image as ImageIcon, MapPin, Zap, BookOpen,
-  LayoutList, MessageCircle
+  LayoutList, MessageCircle, ClipboardList
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
 const NAV_GROUPS = [
   { label:'Overview', items:[
-    { icon:LayoutDashboard, label:'Dashboard',   href:'/admin' },
-    { icon:BarChart3,       label:'Analytics',   href:'/admin/analytics' },
+    { icon:LayoutDashboard, label:'Dashboard',    href:'/admin' },
+    { icon:BarChart3,       label:'Analytics',    href:'/admin/analytics' },
+    { icon:ClipboardList,   label:'School Report',href:'/admin/school-report' },
   ]},
   { label:'Management', items:[
-    { icon:School,     label:'Schools',          href:'/admin/schools' },
-    { icon:Star,       label:'Featured Schools',  href:'/admin/featured-schools' },
-    { icon:Users,      label:'Users',            href:'/admin/users' },
-    { icon:FileCheck,  label:'Applications',     href:'/admin/applications' },
-    { icon:TrendingUp, label:'Leads',            href:'/admin/leads' },
-    { icon:Star,       label:'Reviews',          href:'/admin/reviews' },
-    { icon:PhoneCall,  label:'Counselling',      href:'/admin/counselling' },
-    { icon:BookOpen,   label:'Blog',             href:'/admin/blog' },
-    { icon:MessageCircle, label:'AI Chatbot',   href:'/admin/chatbot' },
+    { icon:School,        label:'Schools',         href:'/admin/schools' },
+    { icon:Star,          label:'Featured Schools', href:'/admin/featured-schools' },
+    { icon:Users,         label:'Users',           href:'/admin/users' },
+    { icon:FileCheck,     label:'Applications',    href:'/admin/applications' },
+    { icon:TrendingUp,    label:'Leads',           href:'/admin/leads' },
+    { icon:Star,          label:'Reviews',         href:'/admin/reviews' },
+    { icon:PhoneCall,     label:'Counselling',     href:'/admin/counselling' },
+    { icon:BookOpen,      label:'Blog',            href:'/admin/blog' },
+    { icon:MessageCircle, label:'AI Chatbot',      href:'/admin/chatbot' },
   ]},
   { label:'Monetisation', items:[
-    { icon:DollarSign,   label:'Lead Pricing',         href:'/admin/lead-pricing' },
-    { icon:LayoutGrid,   label:'Subscription Plans',   href:'/admin/subscription-plans' },
-    { icon:FileText,     label:'Payments',             href:'/admin/payments' },
+    { icon:DollarSign,  label:'Lead Pricing',       href:'/admin/lead-pricing' },
+    { icon:LayoutGrid,  label:'Subscription Plans', href:'/admin/subscription-plans' },
+    { icon:FileText,    label:'Payments',           href:'/admin/payments' },
   ]},
   { label:'Platform', items:[
-    { icon:Settings,     label:'Settings',         href:'/admin/settings' },
-    { icon:Palette,      label:'Theme',            href:'/admin/theme' },
-    { icon:Mail,         label:'Integrations',     href:'/admin/integrations' },
-    { icon:FileText,     label:'Page Content',     href:'/admin/content' },
-    { icon:LayoutList,   label:'Menu Manager',     href:'/admin/menu' },
-    { icon:Bell,         label:'Notifications',    href:'/admin/notifications' },
-    { icon:Zap,          label:'Message Triggers', href:'/admin/email-triggers' },
-    { icon:BarChart3,    label:'SEO Manager',      href:'/admin/seo' },
-    { icon:ImageIcon,    label:'Media & Brand',    href:'/admin/media' },
-    { icon:MapPin,       label:'SEO Cities',       href:'/admin/cities' },
+    { icon:Settings,   label:'Settings',         href:'/admin/settings' },
+    { icon:Palette,    label:'Theme',            href:'/admin/theme' },
+    { icon:Mail,       label:'Integrations',     href:'/admin/integrations' },
+    { icon:FileText,   label:'Page Content',     href:'/admin/content' },
+    { icon:LayoutList, label:'Menu Manager',     href:'/admin/menu' },
+    { icon:Bell,       label:'Notifications',    href:'/admin/notifications' },
+    { icon:Zap,        label:'Message Triggers', href:'/admin/email-triggers' },
+    { icon:BarChart3,  label:'SEO Manager',      href:'/admin/seo' },
+    { icon:ImageIcon,  label:'Media & Brand',    href:'/admin/media' },
+    { icon:MapPin,     label:'SEO Cities',       href:'/admin/cities' },
   ]},
 ]
 
