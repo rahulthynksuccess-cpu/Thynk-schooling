@@ -527,11 +527,11 @@ function WhatsAppTab({ saving, setSaving }: { saving: boolean; setSaving: (v: bo
   const [testing,    setTesting]    = useState(false)
   const [testPhone,  setTestPhone]  = useState('')
   const [testMsg,    setTestMsg]    = useState('Hello from Thynk Schooling! Your WhatsApp integration is working. 🎉')
-  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string; hint?: string; warning?: string; raw?: any } | null>(null)
   const [showSecret, setShowSecret] = useState(false)
   const [showToken,  setShowToken]  = useState(false)
+  const [showRaw,    setShowRaw]    = useState(false)
 
-  // load saved settings
   useEffect(() => {
     fetch('/api/admin/settings', { cache: 'no-store' })
       .then(r => r.json())
@@ -548,7 +548,14 @@ function WhatsAppTab({ saving, setSaving }: { saving: boolean; setSaving: (v: bo
     setSaving(false)
   }
 
-  // ── validation helper ────────────────────────────────────────────
+  // ── phone normaliser (mirrors server-side logic) ──────────────────
+  const normalisePhone = (raw: string) => {
+    let d = raw.replace(/\D/g, '')
+    if (d.length === 10 && d[0] !== '0') d = '91' + d          // Indian 10-digit
+    if (d.length === 11 && d[0] === '0') d = '91' + d.slice(1) // leading zero
+    return d
+  }
+
   const isConfigured = () => {
     if (wa.provider === 'thynkcomm') return !!(wa.tcUrl && wa.tcApiKey && wa.tcApiSecret)
     if (wa.provider === 'meta')      return !!(wa.metaToken && wa.metaPhoneId)
@@ -556,62 +563,75 @@ function WhatsAppTab({ saving, setSaving }: { saving: boolean; setSaving: (v: bo
     return false
   }
 
-  // ── test-send helper ─────────────────────────────────────────────
+  // ── test-send ─────────────────────────────────────────────────────
   const sendTest = async () => {
-    if (!testPhone) { toast.error('Enter a test phone number'); return }
-    if (!isConfigured()) { toast.error('Configure credentials first'); return }
-    setTesting(true); setTestResult(null)
+    const phoneTrimmed = testPhone.trim()
+    if (!phoneTrimmed) { toast.error('Enter a test phone number'); return }
+    if (!isConfigured()) { toast.error('Configure and save credentials first'); return }
+
+    const toNorm = normalisePhone(phoneTrimmed)
+    if (toNorm.length < 10 || toNorm.length > 15) {
+      setTestResult({ ok: false, msg: `"${phoneTrimmed}" doesn't look like a valid phone number.`, hint: 'Use full international format without + — e.g. 919876543210 for India. 10-digit Indian numbers are auto-prefixed.' })
+      return
+    }
+
+    setTesting(true); setTestResult(null); setShowRaw(false)
+
     try {
       let res: Response
 
       if (wa.provider === 'thynkcomm') {
-        // → ThynkComm /api/send-message using API Key + Secret
         const url = wa.tcUrl.replace(/\/$/, '') + '/api/send-message'
         res = await fetch(url, {
-          method:  'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key':    wa.tcApiKey,
-            'x-api-secret': wa.tcApiSecret,
-          },
-          body: JSON.stringify({ to: testPhone.replace(/\D/g, ''), message: testMsg }),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': wa.tcApiKey, 'x-api-secret': wa.tcApiSecret },
+          body: JSON.stringify({ to: toNorm, message: testMsg }),
         })
       } else if (wa.provider === 'meta') {
-        // → Meta Cloud API direct
         res = await fetch(`https://graph.facebook.com/v19.0/${wa.metaPhoneId}/messages`, {
-          method:  'POST',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${wa.metaToken}` },
           body: JSON.stringify({
-            messaging_product: 'whatsapp',
-            to:   testPhone.replace(/\D/g, ''),
-            type: 'text',
-            text: { body: testMsg },
+            messaging_product: 'whatsapp', recipient_type: 'individual',
+            to: toNorm, type: 'text', text: { preview_url: false, body: testMsg },
           }),
         })
       } else {
-        // → Twilio
         const creds = btoa(`${wa.accountSid}:${wa.authToken}`)
         const from  = wa.fromNumber.startsWith('whatsapp:') ? wa.fromNumber : `whatsapp:${wa.fromNumber}`
-        const to    = `whatsapp:${testPhone.replace(/\D/g, '')}`
-        const body  = new URLSearchParams({ From: from, To: to, Body: testMsg })
         res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${wa.accountSid}/Messages.json`, {
-          method:  'POST',
+          method: 'POST',
           headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-          body,
+          body: new URLSearchParams({ From: from, To: `whatsapp:${toNorm}`, Body: testMsg }),
         })
       }
 
       const data = await res.json()
-      if (res.ok && (data.success || data.messages || data.sid)) {
-        setTestResult({ ok: true,  msg: 'Message sent! Check the phone for the WhatsApp message.' })
-        toast.success('Test message sent!')
+
+      if (!res.ok) {
+        // Surface the exact error from the API (ThynkComm, Meta, or Twilio)
+        const errMsg  = data.error   || data.message   || data.error_description || 'Unknown error'
+        const hint    = data.hint    || data.more_info  || ''
+        setTestResult({ ok: false, msg: errMsg, hint, raw: data })
+        toast.error('Send failed')
       } else {
-        const errMsg = data.error || data.message || data.error_description || JSON.stringify(data)
-        setTestResult({ ok: false, msg: errMsg })
-        toast.error('Send failed: ' + errMsg)
+        // Accepted — but check for a delivery warning
+        const warning = data.warning || (
+          // If called Meta directly, warn about 24h window
+          wa.provider === 'meta'
+            ? 'Message accepted by Meta. If the recipient has not messaged you in the last 24 hours, the message may not be delivered. Use a Template for first-contact sends.'
+            : undefined
+        )
+        setTestResult({
+          ok: true,
+          msg: `Message accepted ✓  →  to: ${toNorm}  (wamid: ${data.messageId || data.messages?.[0]?.id || data.sid || 'n/a'})`,
+          warning,
+          raw: data,
+        })
+        toast.success('Message queued for delivery')
       }
     } catch (e: any) {
-      setTestResult({ ok: false, msg: e.message })
+      setTestResult({ ok: false, msg: 'Network error: ' + e.message, hint: 'Check that your ThynkComm URL is correct and accessible.' })
       toast.error(e.message)
     }
     setTesting(false)
@@ -819,7 +839,11 @@ function WhatsAppTab({ saving, setSaving }: { saving: boolean; setSaving: (v: bo
             <label style={lbl}>Phone Number *</label>
             <input value={testPhone} onChange={e => setTestPhone(e.target.value)}
               placeholder="919876543210" style={inp} />
-            <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: '#A0ADB8', margin: '4px 0 0' }}>Country code + number, no + or spaces</p>
+            <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, margin: '4px 0 0', color: testPhone && normalisePhone(testPhone).length >= 10 ? '#15803d' : '#A0ADB8' }}>
+              {testPhone
+                ? `Will send to: ${normalisePhone(testPhone) || '⚠ invalid'}`
+                : 'Country code + number, no + or spaces. Indian 10-digit auto-prefixed with 91.'}
+            </p>
           </div>
           <div>
             <label style={lbl}>Message</label>
@@ -828,11 +852,42 @@ function WhatsAppTab({ saving, setSaving }: { saving: boolean; setSaving: (v: bo
         </div>
 
         {testResult && (
-          <div style={{ padding: '12px 16px', borderRadius: 10, background: testResult.ok ? 'rgba(34,197,94,0.07)' : 'rgba(239,68,68,0.07)', border: `1px solid ${testResult.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, marginBottom: 14, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-            {testResult.ok
-              ? <CheckCircle style={{ width: 15, height: 15, color: '#15803d', flexShrink: 0, marginTop: 1 }} />
-              : <AlertCircle style={{ width: 15, height: 15, color: '#dc2626', flexShrink: 0, marginTop: 1 }} />}
-            <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: testResult.ok ? '#15803d' : '#dc2626', lineHeight: 1.5 }}>{testResult.msg}</span>
+          <div style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {/* Main result */}
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: testResult.ok ? 'rgba(34,197,94,0.07)' : 'rgba(239,68,68,0.07)', border: `1px solid ${testResult.ok ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              {testResult.ok
+                ? <CheckCircle style={{ width: 15, height: 15, color: '#15803d', flexShrink: 0, marginTop: 1 }} />
+                : <AlertCircle style={{ width: 15, height: 15, color: '#dc2626', flexShrink: 0, marginTop: 1 }} />}
+              <span style={{ fontFamily: 'monospace', fontSize: 12, color: testResult.ok ? '#15803d' : '#dc2626', lineHeight: 1.6, wordBreak: 'break-all' }}>{testResult.msg}</span>
+            </div>
+            {/* Hint (fix instructions for errors) */}
+            {testResult.hint && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(184,134,11,0.07)', border: '1px solid rgba(184,134,11,0.2)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 13, flexShrink: 0 }}>🔧</span>
+                <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#92610A', lineHeight: 1.5 }}><strong>Fix:</strong> {testResult.hint}</span>
+              </div>
+            )}
+            {/* Warning (sent OK but may not be delivered) */}
+            {testResult.warning && (
+              <div style={{ padding: '10px 14px', borderRadius: 8, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.25)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 13, flexShrink: 0 }}>⚠️</span>
+                <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#92400E', lineHeight: 1.5 }}>{testResult.warning}</span>
+              </div>
+            )}
+            {/* Raw response toggle */}
+            {testResult.raw && (
+              <div>
+                <button onClick={() => setShowRaw(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#718096', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <ChevronDown style={{ width: 12, height: 12, transform: showRaw ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
+                  {showRaw ? 'Hide' : 'Show'} raw API response
+                </button>
+                {showRaw && (
+                  <pre style={{ marginTop: 6, padding: '10px 12px', background: '#F8F9FA', border: '1px solid rgba(13,17,23,0.08)', borderRadius: 8, fontFamily: 'monospace', fontSize: 11, color: '#4A5568', overflow: 'auto', maxHeight: 160, lineHeight: 1.5 }}>
+                    {JSON.stringify(testResult.raw, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
           </div>
         )}
 
