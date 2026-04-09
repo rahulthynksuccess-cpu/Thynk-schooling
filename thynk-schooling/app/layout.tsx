@@ -3,6 +3,7 @@ import { ContentStyleInjector } from '@/components/ContentStyleInjector'
 import './globals.css'
 import { Providers } from './providers'
 import { config } from '@/lib/config'
+import ChatbotWidget from '@/components/chatbot/ChatbotWidget'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -155,6 +156,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ContentStyleInjector />
         <Providers>{children}</Providers>
+        <ChatbotWidget />
       </body>
     </html>
   )
