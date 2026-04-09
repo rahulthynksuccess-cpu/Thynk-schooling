@@ -113,7 +113,9 @@ export default function AdminDashboardPage() {
     { icon: School,     label: 'Total Schools',    value: (data?.totalSchools || 0).toLocaleString('en-IN'),                    sub: `${data?.pendingVerification || 0} pending`,    trendUp: true,  color: T.gold,    href: '/admin/schools' },
     { icon: Users,      label: 'Registered Users', value: (data?.totalUsers   || 0).toLocaleString('en-IN'),                    sub: `+${data?.newUsersToday || 0} today`,           trendUp: true,  color: T.blue,    href: '/admin/users' },
     { icon: TrendingUp, label: 'Total Leads',      value: (data?.totalLeads   || 0).toLocaleString('en-IN'),                    sub: `+${data?.leadsToday || 0} today`,              trendUp: true,  color: T.green,   href: '/admin/leads' },
-    { icon: DollarSign, label: 'Total Revenue',    value: `₹${revenueRupees.toLocaleString('en-IN')}`,                         sub: 'All-time collections',                         trendUp: true,  color: '#F59E0B', href: '/admin/payments' },
+    { icon: DollarSign, label: 'Total Revenue',    value: `₹${revenueRupees.toLocaleString('en-IN')}`,
+      sub: data?.revenueStatuses ? `Statuses: ${data.revenueStatuses}` : `${data?.totalRevenueCount || 0} payments`,
+      trendUp: true,  color: '#F59E0B', href: '/admin/payments' },
     { icon: FileCheck,  label: 'Applications',     value: (data?.totalApps    || 0).toLocaleString('en-IN'),                    sub: `${data?.pendingApps || 0} pending`,            trendUp: null,  color: T.purple,  href: '/admin/applications' },
     { icon: Star,       label: 'Reviews',          value: (data?.totalReviews || 0).toLocaleString('en-IN'),                    sub: `${data?.pendingReviews || 0} to moderate`,    trendUp: null,  color: T.orange,  href: '/admin/reviews' },
   ]
