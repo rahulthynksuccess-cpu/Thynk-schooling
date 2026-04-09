@@ -82,12 +82,14 @@ function PlanModal({ plan, onClose, onSave, saving }: {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             <div>
+              {/* FIX: removed "/month" — price is a one-time package price */}
               <label style={lbl}>Price (in Paise) <span style={{ color: 'rgba(255,255,255,0.25)', textTransform: 'none', fontSize: '10px' }}>e.g. 135000 = ₹1,350</span></label>
               <input type="number" min="0" value={form.price}
                 onChange={e => set('price', Number(e.target.value))} style={inp} />
             </div>
             <div>
-              <label style={lbl}>Credits/month <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px' }}>(-1 = unlimited)</span></label>
+              {/* FIX: "Credits/month" → "Lead Credits" */}
+              <label style={lbl}>Lead Credits <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px' }}>(-1 = unlimited)</span></label>
               <input type="number" min="-1" value={form.leadCredits}
                 onChange={e => set('leadCredits', Number(e.target.value))} style={inp} />
             </div>
@@ -111,7 +113,6 @@ function PlanModal({ plan, onClose, onSave, saving }: {
               style={textarea as any} />
           </div>
 
-          {/* Toggles: Most Popular + Active */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input type="checkbox" checked={form.isHot} onChange={e => set('isHot', e.target.checked)}
@@ -125,7 +126,6 @@ function PlanModal({ plan, onClose, onSave, saving }: {
             </label>
           </div>
 
-          {/* Featured Listing Section */}
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
               <input type="checkbox" checked={form.isFeaturedListing} onChange={e => set('isFeaturedListing', e.target.checked)}
@@ -137,12 +137,9 @@ function PlanModal({ plan, onClose, onSave, saving }: {
             {form.isFeaturedListing && (
               <div>
                 <label style={lbl}>Featured Listing Validity <span style={{ color: 'rgba(255,255,255,0.25)', textTransform: 'none', fontSize: '10px' }}>(days — e.g. 30, 90, 365)</span></label>
-                <input
-                  type="number" min="1" value={form.featuredListingDays}
+                <input type="number" min="1" value={form.featuredListingDays}
                   onChange={e => set('featuredListingDays', Number(e.target.value))}
-                  placeholder="30"
-                  style={{ ...inp, borderColor: 'rgba(232,197,71,0.35)' }}
-                />
+                  placeholder="30" style={{ ...inp, borderColor: 'rgba(232,197,71,0.35)' }} />
                 <div style={{ marginTop: '5px', fontSize: '11px', color: 'rgba(232,197,71,0.6)', fontFamily: 'DM Sans,sans-serif' }}>
                   School's featured_until = purchase date + {form.featuredListingDays} day{form.featuredListingDays !== 1 ? 's' : ''}
                 </div>
@@ -190,19 +187,13 @@ export default function SubscriptionPlansPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: any) => fetch('/api/admin?action=subscription-plans', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-    onSuccess: (res) => {
-      if (res.error) { toast.error(res.error); return }
-      toast.success('Plan created!'); setModalOpen(false); invalidate()
-    },
+    onSuccess: (res) => { if (res.error) { toast.error(res.error); return } toast.success('Plan created!'); setModalOpen(false); invalidate() },
     onError: () => toast.error('Failed to create plan.'),
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => fetch(`/api/admin?action=subscription-plans&id=${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-    onSuccess: (res) => {
-      if (res.error) { toast.error(res.error); return }
-      toast.success('Plan updated!'); setModalOpen(false); invalidate()
-    },
+    onSuccess: (res) => { if (res.error) { toast.error(res.error); return } toast.success('Plan updated!'); setModalOpen(false); invalidate() },
     onError: () => toast.error('Failed to update plan.'),
   })
 
@@ -234,7 +225,7 @@ export default function SubscriptionPlansPage() {
   const saving = createMutation.isPending || updateMutation.isPending
 
   return (
-    <AdminLayout pageClass="admin-page-packages" title="Subscription Plans" subtitle="Manage the Free / Silver / Gold / Platinum plan cards shown on the pricing page and homepage">
+    <AdminLayout pageClass="admin-page-packages" title="Subscription Plans" subtitle="Manage plan cards shown on the pricing page and homepage">
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '20px' }}>
         <button onClick={() => { setModalPlan(null); setModalOpen(true) }}
           style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#FF5C00', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px 20px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'DM Sans,sans-serif' }}>
@@ -251,7 +242,6 @@ export default function SubscriptionPlansPage() {
             <motion.div key={plan.id} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * .06 }}
               style={{ ...card, opacity: plan.isActive ? 1 : .5, position: 'relative', overflow: 'hidden' }}>
 
-              {/* Most Popular side ribbon */}
               {plan.isHot && (
                 <div style={{ position: 'absolute', top: 0, right: 0, width: 22, height: '100%', background: 'linear-gradient(180deg,#B8860B,#E8C547)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2 }}>
                   <span style={{ writingMode: 'vertical-rl', textOrientation: 'mixed', transform: 'rotate(180deg)', fontFamily: 'DM Sans,sans-serif', fontSize: '8px', fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: '#0D1117', whiteSpace: 'nowrap', userSelect: 'none' }}>
@@ -272,20 +262,23 @@ export default function SubscriptionPlansPage() {
                 </div>
 
                 <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '17px', color: '#fff', marginBottom: '2px' }}>{plan.name}</div>
+
+                {/* FIX: removed "/month" from price display */}
                 <div style={{ fontFamily: 'Syne,sans-serif', fontWeight: 700, fontSize: '24px', color: '#FF5C00', marginBottom: '4px' }}>
                   {plan.price === 0 ? '₹0' : `₹${Math.round(plan.price / 100).toLocaleString('en-IN')}`}
                   <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 400, marginLeft: '4px' }}>
-                    {plan.price === 0 ? 'forever' : '/month'}
+                    {plan.price === 0 ? 'forever' : ''}
                   </span>
                 </div>
+
+                {/* FIX: "lead credits" not "credits/month" */}
                 <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginBottom: '4px', fontFamily: 'DM Sans,sans-serif' }}>
-                  {plan.leadCredits === -1 ? 'Unlimited credits' : `${plan.leadCredits} lead credits`}
+                  {plan.leadCredits === -1 ? 'Unlimited lead credits' : `${plan.leadCredits} lead credits`}
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '6px', fontFamily: 'DM Sans,sans-serif' }}>
                   {plan.features.length} features · sort #{plan.sortOrder}
                 </div>
 
-                {/* Featured Listing badge */}
                 {plan.isFeaturedListing && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.25)', borderRadius: '6px', padding: '3px 8px', marginBottom: '10px' }}>
                     <span style={{ fontSize: '10px', color: '#E8C547', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, letterSpacing: '.04em' }}>
@@ -326,6 +319,7 @@ export default function SubscriptionPlansPage() {
           />
         )}
       </AnimatePresence>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}`}</style>
     </AdminLayout>
   )
 }
