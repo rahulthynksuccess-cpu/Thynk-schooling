@@ -28,7 +28,6 @@ const NAV_GROUPS = [
     { icon:Star,       label:'Reviews',          href:'/admin/reviews' },
     { icon:PhoneCall,  label:'Counselling',      href:'/admin/counselling' },
     { icon:BookOpen,   label:'Blog',             href:'/admin/blog' },
-    { icon: MessageCircle, label: 'AI Chatbot', href: '/admin/chatbot' },
   ]},
   { label:'Monetisation', items:[
     { icon:DollarSign,   label:'Lead Pricing',         href:'/admin/lead-pricing' },
