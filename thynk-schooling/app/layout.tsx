@@ -149,7 +149,7 @@ const WA_MESSAGE = 'Hi%2C%20I%20have%20an%20enquiry'
 const waStyle    = `
   .wa-float-btn {
     position: fixed;
-    bottom: 24px;
+    bottom: 90px;
     right: 24px;
     z-index: 9999;
     display: flex;
