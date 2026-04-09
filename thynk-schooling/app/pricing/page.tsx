@@ -125,7 +125,7 @@ function CheckoutModal({
         <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: couponResult?.valid ? 8 : 0 }}>
             <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, color: 'rgba(250,247,242,0.55)' }}>Subtotal</span>
-            <span style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 18, color: '#FAF7F2' }}>{displayPrice(plan.price)}/mo</span>
+            <span style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 18, color: '#FAF7F2' }}>{displayPrice(plan.price)}</span>
           </div>
           {couponResult?.valid && (
             <>
@@ -136,7 +136,7 @@ function CheckoutModal({
               <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 8 }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 13, fontWeight: 600, color: '#FAF7F2' }}>Total</span>
-                <span style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#E8C547' }}>{displayPrice(effectiveAmount)}/mo</span>
+                <span style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#E8C547' }}>{displayPrice(effectiveAmount)}</span>
               </div>
             </>
           )}
@@ -301,7 +301,7 @@ export default function PricingPage() {
   const formatPrice = (paise: number) => {
     if (paise === 0) return { label: '₹0', period: 'forever' }
     const rs = Math.round(paise / 100)
-    return { label: `₹${rs.toLocaleString('en-IN')}`, period: '/mo' }
+    return { label: `₹${rs.toLocaleString('en-IN')}`, period: '' }
   }
 
   // ── FIX 1: Responsive column count — up to 4 on desktop, not capped at 4 cards ──
