@@ -10,7 +10,7 @@ import {
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
   BarChart3, FileText, ChevronRight, ExternalLink, Mail,
   AlertTriangle, Image as ImageIcon, MapPin, Zap, BookOpen,
-  LayoutList
+  LayoutList, MessageCircle
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -28,6 +28,7 @@ const NAV_GROUPS = [
     { icon:Star,       label:'Reviews',          href:'/admin/reviews' },
     { icon:PhoneCall,  label:'Counselling',      href:'/admin/counselling' },
     { icon:BookOpen,   label:'Blog',             href:'/admin/blog' },
+    { icon:MessageCircle, label:'AI Chatbot',   href:'/admin/chatbot' },
   ]},
   { label:'Monetisation', items:[
     { icon:DollarSign,   label:'Lead Pricing',         href:'/admin/lead-pricing' },
