@@ -386,6 +386,226 @@ const PAGES: PageGroup[] = [
     ],
   },
   {
+    label: 'Careers', icon: '💼', contentKey: 'careers', previewUrl: '/careers',
+    sections: [
+      { id:'careers', label:'Careers Page',
+        fields: [
+          { id:'careersTitle',   label:'Page title',      type:'text',     default:'Work With Us' },
+          { id:'careersSub',     label:'Subtitle',        type:'textarea', default:'Join the team building India\'s most trusted school discovery platform.' },
+          { id:'careersBg',      label:'Background',      type:'color',    default:'#FAF7F2', cssVar:'--careers-bg' },
+          { id:'careersH1Color', label:'H1 colour',       type:'color',    default:'#0D1117', cssVar:'--careers-h1-color' },
+          { id:'careersH1Size',  label:'H1 size',         type:'size',     default:'40', min:24, max:72, cssVar:'--careers-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Press', icon: '📰', contentKey: 'press', previewUrl: '/press',
+    sections: [
+      { id:'press', label:'Press Page',
+        fields: [
+          { id:'pressTitle',   label:'Page title',      type:'text',     default:'Press & Media' },
+          { id:'pressSub',     label:'Subtitle',        type:'textarea', default:'News, awards and media resources for Thynk Schooling.' },
+          { id:'pressContact', label:'Press contact email', type:'text', default:'press@thynkschooling.com' },
+          { id:'pressBg',      label:'Background',      type:'color',    default:'#FAF7F2', cssVar:'--press-bg' },
+          { id:'pressH1Color', label:'H1 colour',       type:'color',    default:'#0D1117', cssVar:'--press-h1-color' },
+          { id:'pressH1Size',  label:'H1 size',         type:'size',     default:'48', min:24, max:72, cssVar:'--press-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Terms of Service', icon: '⚖️', contentKey: 'terms', previewUrl: '/terms',
+    sections: [
+      { id:'terms', label:'Terms Page',
+        fields: [
+          { id:'termsTitle',   label:'Page title',      type:'text',     default:'Terms of Service' },
+          { id:'termsUpdated', label:'Last updated',    type:'text',     default:'January 2025' },
+          { id:'termsBg',      label:'Background',      type:'color',    default:'#FAF7F2', cssVar:'--terms-bg' },
+          { id:'termsH1Color', label:'H1 colour',       type:'color',    default:'#0D1117', cssVar:'--terms-h1-color' },
+          { id:'termsH1Size',  label:'H1 size',         type:'size',     default:'40', min:24, max:72, cssVar:'--terms-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Grievance', icon: '😤', contentKey: 'grievance', previewUrl: '/grievance',
+    sections: [
+      { id:'grievance', label:'Grievance Page',
+        fields: [
+          { id:'grievanceTitle',   label:'Page title',      type:'text',     default:'Grievance Redressal' },
+          { id:'grievanceSub',     label:'Subtitle',        type:'textarea', default:'We take all complaints seriously. Please reach out and we\'ll respond within 48 hours.' },
+          { id:'grievanceEmail',   label:'Grievance email', type:'text',     default:'grievance@thynkschooling.com' },
+          { id:'grievanceBg',      label:'Background',      type:'color',    default:'#FAF7F2', cssVar:'--grievance-bg' },
+          { id:'grievanceH1Color', label:'H1 colour',       type:'color',    default:'#0D1117', cssVar:'--grievance-h1-color' },
+          { id:'grievanceH1Size',  label:'H1 size',         type:'size',     default:'40', min:24, max:72, cssVar:'--grievance-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Refund Policy', icon: '💸', contentKey: 'refund', previewUrl: '/refund',
+    sections: [
+      { id:'refund', label:'Refund Policy Page',
+        fields: [
+          { id:'refundTitle',   label:'Page title',      type:'text',     default:'Refund Policy' },
+          { id:'refundUpdated', label:'Last updated',    type:'text',     default:'January 2025' },
+          { id:'refundContact', label:'Contact email',   type:'text',     default:'billing@thynkschooling.com' },
+          { id:'refundBg',      label:'Background',      type:'color',    default:'#FAF7F2', cssVar:'--refund-bg' },
+          { id:'refundH1Color', label:'H1 colour',       type:'color',    default:'#0D1117', cssVar:'--refund-h1-color' },
+          { id:'refundH1Size',  label:'H1 size',         type:'size',     default:'40', min:24, max:72, cssVar:'--refund-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Recommendations', icon: '🎯', contentKey: 'recommendations', previewUrl: '/recommendations',
+    sections: [
+      { id:'recommendations', label:'Recommendations Page',
+        fields: [
+          { id:'recommendationsTitle',  label:'Page title',  type:'text',     default:'Recommended For You' },
+          { id:'recommendationsSub',    label:'Subtitle',    type:'textarea', default:'Schools matched to your child\'s age, board preference and location.' },
+          { id:'recommendationsBg',     label:'Background',  type:'color',    default:'#FAF7F2', cssVar:'--recommendations-bg' },
+          { id:'recommendationsH1Color',label:'H1 colour',   type:'color',    default:'#0D1117', cssVar:'--recommendations-h1-color' },
+          { id:'recommendationsH1Size', label:'H1 size',     type:'size',     default:'40', min:24, max:64, cssVar:'--recommendations-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'User Profile', icon: '👤', contentKey: 'profile', previewUrl: '/profile',
+    sections: [
+      { id:'profile-user', label:'User Profile Page',
+        fields: [
+          { id:'profileUserTitle',   label:'Page title',         type:'text',  default:'My Profile' },
+          { id:'profileUserBg',      label:'Background',         type:'color', default:'#FAF7F2', cssVar:'--profile-user-bg' },
+          { id:'profileUserCardBg',  label:'Card background',    type:'color', default:'#FFFFFF', cssVar:'--profile-user-card-bg' },
+          { id:'profileUserH1Color', label:'Heading colour',     type:'color', default:'#0D1117', cssVar:'--profile-user-h1-color' },
+          { id:'profileUserH1Size',  label:'Heading size',       type:'size',  default:'28', min:20, max:48, cssVar:'--profile-user-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Apply Page', icon: '📝', contentKey: 'apply', previewUrl: '/apply/school',
+    sections: [
+      { id:'apply', label:'Application Form Page',
+        fields: [
+          { id:'applyTitle',    label:'Page title',        type:'text',     default:'Apply for Admission' },
+          { id:'applySub',      label:'Subtitle',          type:'textarea', default:'Fill in the details below and the school will contact you directly.' },
+          { id:'applyBtnText',  label:'Submit button',     type:'text',     default:'Submit Application' },
+          { id:'applyBg',       label:'Background',        type:'color',    default:'#FAF7F2', cssVar:'--apply-bg' },
+          { id:'applyCardBg',   label:'Card background',   type:'color',    default:'#FFFFFF', cssVar:'--apply-card-bg' },
+          { id:'applyH1Color',  label:'H1 colour',         type:'color',    default:'#0D1117', cssVar:'--apply-h1-color' },
+          { id:'applyH1Size',   label:'H1 size',           type:'size',     default:'32', min:20, max:56, cssVar:'--apply-h1-size' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Blog — Post', icon: '📰', contentKey: 'blog-post', previewUrl: '/blog',
+    sections: [
+      { id:'blog-post', label:'Blog Single Post',
+        fields: [
+          { id:'blogSlugBg',         label:'Page background',    type:'color', default:'#FAF7F2', cssVar:'--blog-slug-bg' },
+          { id:'blogSlugTitleColor', label:'Post title colour',  type:'color', default:'#0D1117', cssVar:'--blog-slug-title-color' },
+          { id:'blogSlugTitleSize',  label:'Post title size',    type:'size',  default:'40', min:24, max:72, cssVar:'--blog-slug-title-size' },
+          { id:'blogSlugBodyColor',  label:'Body text colour',   type:'color', default:'#4A5568', cssVar:'--blog-slug-body-color' },
+          { id:'blogSlugBodySize',   label:'Body text size',     type:'size',  default:'16', min:13, max:24, cssVar:'--blog-slug-body-size' },
+          { id:'blogReadMoreText',   label:'"Read more" text',   type:'text',  default:'Read More Articles' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Forgot / Reset Password', icon: '🔑', contentKey: 'forgot-password', previewUrl: '/forgot-password',
+    sections: [
+      { id:'forgot-password', label:'Forgot & Reset Password',
+        fields: [
+          { id:'forgotTitle',        label:'Forgot password title',  type:'text',  default:'Forgot Password?' },
+          { id:'forgotSub',          label:'Forgot subtitle',        type:'text',  default:'Enter your email and we\'ll send you a reset link.' },
+          { id:'resetTitle',         label:'Reset password title',   type:'text',  default:'Set New Password' },
+          { id:'resetSub',           label:'Reset subtitle',         type:'text',  default:'Choose a strong password for your account.' },
+          { id:'forgotBtnText',      label:'Send link button',       type:'text',  default:'Send Reset Link' },
+          { id:'forgotPasswordBg',   label:'Background',             type:'color', default:'#FAF7F2', cssVar:'--forgot-password-bg' },
+          { id:'forgotPasswordCardBg',label:'Card background',       type:'color', default:'#FFFFFF', cssVar:'--forgot-password-card-bg' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Admin — Blog', icon: '📝', contentKey: 'admin-blog', previewUrl: '/admin/blog',
+    sections: [
+      { id:'admin-blog', label:'Blog Manager',
+        fields: [
+          { id:'adminBlogTitle',   label:'Page title',    type:'text', default:'Blog Manager' },
+          { id:'adminBlogSub',     label:'Subtitle',      type:'text', default:'Create, edit and publish blog articles.' },
+          { id:'adminBlogNewBtn',  label:'New post button', type:'text', default:'New Article' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Admin — Featured Schools', icon: '🏆', contentKey: 'admin-featured', previewUrl: '/admin/featured-schools',
+    sections: [
+      { id:'admin-featured', label:'Featured Schools Manager',
+        fields: [
+          { id:'adminFeaturedTitle', label:'Page title',  type:'text', default:'Featured Schools' },
+          { id:'adminFeaturedSub',   label:'Subtitle',    type:'text', default:'Control which schools appear in the Featured section on the homepage.' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Admin — Menu', icon: '📋', contentKey: 'admin-menu', previewUrl: '/admin/menu',
+    sections: [
+      { id:'admin-menu', label:'Menu / Navigation Manager',
+        fields: [
+          { id:'adminMenuTitle',    label:'Page title',   type:'text', default:'Menu Manager' },
+          { id:'adminMenuSub',      label:'Subtitle',     type:'text', default:'Edit the navigation links shown to visitors.' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Admin — School Report', icon: '📊', contentKey: 'admin-school-report', previewUrl: '/admin/school-report',
+    sections: [
+      { id:'admin-school-report', label:'School Report',
+        fields: [
+          { id:'adminSchoolReportTitle', label:'Page title', type:'text', default:'School Report' },
+          { id:'adminSchoolReportSub',   label:'Subtitle',   type:'text', default:'Detailed analytics and performance data per school.' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Admin — Email Triggers', icon: '📧', contentKey: 'admin-email-triggers', previewUrl: '/admin/email-triggers',
+    sections: [
+      { id:'admin-email-triggers', label:'Email Triggers',
+        fields: [
+          { id:'adminEmailTitle',       label:'Page title',          type:'text',     default:'Email Triggers' },
+          { id:'adminEmailSub',         label:'Subtitle',            type:'text',     default:'Configure automated emails sent to parents and schools.' },
+          { id:'adminEmailFooterSig',   label:'Email footer signature', type:'textarea', default:'The Thynk Schooling Team' },
+          { id:'adminEmailFromName',    label:'Sender name',         type:'text',     default:'Thynk Schooling' },
+        ],
+      },
+    ],
+  },
+  {
+    label: 'Admin — Chatbot', icon: '🤖', contentKey: 'admin-chatbot', previewUrl: '/admin/chatbot',
+    sections: [
+      { id:'admin-chatbot', label:'Chatbot Settings',
+        fields: [
+          { id:'adminChatbotTitle',        label:'Page title',          type:'text',     default:'Chatbot Manager' },
+          { id:'adminChatbotSub',          label:'Subtitle',            type:'text',     default:'Manage the AI assistant shown to parents on the site.' },
+          { id:'chatbotGreeting',          label:'Chatbot greeting',    type:'text',     default:'Hi! I\'m your school finder. What are you looking for?' },
+          { id:'chatbotPlaceholder',       label:'Input placeholder',   type:'text',     default:'Ask me anything about schools...' },
+          { id:'chatbotBubbleColor',       label:'Bubble colour',       type:'color',    default:'#B8860B', cssVar:'--chatbot-bubble-color' },
+        ],
+      },
+    ],
+  },
+  {
     label: 'Global Buttons', icon: '🔘', contentKey: 'buttons', previewUrl: '/',
     sections: [
       {
@@ -410,28 +630,44 @@ const PAGES: PageGroup[] = [
 // Build ALL_FIELDS flat map
 // ── URL map for live preview per page group ──────────────────────────
 const PAGE_URLS: Record<string, string> = {
-  'Homepage':           '/',
-  'Navbar':             '/',
-  'Footer':             '/',
-  'Schools Page':       '/schools',
-  'Login / Register':   '/login',
-  'Counselling Page':   '/counselling',
-  'Cities Section':     '/',
-  'Counselling CTA':    '/',
-  'For Schools CTA':    '/',
-  'Testimonials':       '/',
-  'Blog Preview':       '/',
-  'Compare Page':       '/compare',
-  'Pricing Page':       '/pricing',
-  'Blog Page':          '/blog',
-  'About Page':         '/about',
-  'Admin Panel':        '/admin',
-  'Global Buttons':     '/',
-  'School Dashboard':   '/dashboard/school',
-  'Parent Dashboard':   '/dashboard/parent',
-  'Cities Page':        '/cities',
-  'Privacy / Terms':    '/privacy',
-  'Contact Page':       '/contact',
+  'Homepage':                   '/',
+  'Navbar':                     '/',
+  'Footer':                     '/',
+  'Schools Page':               '/schools',
+  'Login / Register':           '/login',
+  'Counselling Page':           '/counselling',
+  'Cities Section':             '/',
+  'Counselling CTA':            '/',
+  'For Schools CTA':            '/',
+  'Testimonials':               '/',
+  'Blog Preview':               '/',
+  'Compare Page':               '/compare',
+  'Pricing Page':               '/pricing',
+  'Blog Page':                  '/blog',
+  'About Page':                 '/about',
+  'Admin Panel':                '/admin',
+  'Global Buttons':             '/',
+  'School Dashboard':           '/dashboard/school',
+  'Parent Dashboard':           '/dashboard/parent',
+  'Cities Page':                '/cities',
+  'Privacy / Terms':            '/privacy',
+  'Contact Page':               '/contact',
+  'Careers':                    '/careers',
+  'Press':                      '/press',
+  'Terms of Service':           '/terms',
+  'Grievance':                  '/grievance',
+  'Refund Policy':              '/refund',
+  'Recommendations':            '/recommendations',
+  'User Profile':               '/profile',
+  'Apply Page':                 '/apply/school',
+  'Blog — Post':                '/blog',
+  'Forgot / Reset Password':    '/forgot-password',
+  'Admin — Blog':               '/admin/blog',
+  'Admin — Featured Schools':   '/admin/featured-schools',
+  'Admin — Menu':               '/admin/menu',
+  'Admin — School Report':      '/admin/school-report',
+  'Admin — Email Triggers':     '/admin/email-triggers',
+  'Admin — Chatbot':            '/admin/chatbot',
 }
 
 const ALL_CSS_FIELDS: Record<string, Field> = {}
