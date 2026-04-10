@@ -126,8 +126,35 @@ const DEFAULT: Record<string, any> = {
   adminCitiesCardBg: '#111820', adminCitiesCardBorder: '#1E2A3A',
   adminCitiesHeadingColor: 'rgba(255,255,255,0.9)', adminCitiesHeadingSize: 22,
   adminCitiesTagBg: 'rgba(184,134,11,0.15)', adminCitiesTagColor: '#B8860B',
-  adminReportCardBg: '#111820', adminReportCardBorder: '#1E2A3A',
-  adminReportHeadingColor: 'rgba(255,255,255,0.9)', adminReportHeadingSize: 22,
+  /* Press / Grievance / Refund / Terms / Recommendations / Profile / Apply / Auth extra */
+  pressBg: '#FAF7F2', pressH1Size: 48, pressH1Color: '#0D1117',
+  grievanceBg: '#FAF7F2', grievanceH1Size: 40, grievanceH1Color: '#0D1117',
+  refundBg: '#FAF7F2', refundH1Size: 40, refundH1Color: '#0D1117',
+  termsBg: '#FAF7F2', termsH1Size: 40, termsH1Color: '#0D1117',
+  recommendationsBg: '#FAF7F2', recommendationsH1Size: 40, recommendationsH1Color: '#0D1117',
+  profilePageUserBg: '#FAF7F2', profilePageUserCardBg: '#FFFFFF', profilePageUserH1Size: 28, profilePageUserH1Color: '#0D1117',
+  applyBg: '#FAF7F2', applyCardBg: '#FFFFFF', applyH1Size: 32, applyH1Color: '#0D1117',
+  blogSlugBg: '#FAF7F2', blogSlugTitleSize: 40, blogSlugTitleColor: '#0D1117', blogSlugBodySize: 16, blogSlugBodyColor: '#4A5568',
+  careersBg: '#FAF7F2', careersH1Size: 40, careersH1Color: '#0D1117',
+  forgotPasswordBg: '#FAF7F2', forgotPasswordCardBg: '#FFFFFF',
+  /* Admin — Blog Manager */
+  adminBlogCardBg: '#111820', adminBlogCardBorder: '#1E2A3A',
+  adminBlogHeadingColor: 'rgba(255,255,255,0.9)', adminBlogHeadingSize: 22,
+  /* Admin — Featured Schools */
+  adminFeaturedCardBg: '#111820', adminFeaturedCardBorder: '#1E2A3A',
+  adminFeaturedHeadingColor: 'rgba(255,255,255,0.9)', adminFeaturedHeadingSize: 22,
+  /* Admin — Menu Manager */
+  adminMenuCardBg: '#111820', adminMenuCardBorder: '#1E2A3A',
+  adminMenuHeadingColor: 'rgba(255,255,255,0.9)', adminMenuHeadingSize: 22,
+  /* Admin — School Report */
+  adminSchoolReportCardBg: '#111820', adminSchoolReportCardBorder: '#1E2A3A',
+  adminSchoolReportHeadingColor: 'rgba(255,255,255,0.9)', adminSchoolReportHeadingSize: 22,
+  /* Admin — Email Triggers */
+  adminEmailCardBg: '#111820', adminEmailCardBorder: '#1E2A3A',
+  adminEmailHeadingColor: 'rgba(255,255,255,0.9)', adminEmailHeadingSize: 22,
+  /* Admin — Chatbot */
+  adminChatbotCardBg: '#111820', adminChatbotCardBorder: '#1E2A3A',
+  adminChatbotHeadingColor: 'rgba(255,255,255,0.9)', adminChatbotHeadingSize: 22,
   /* Footer */
   footerBg: '#0D1117', footerTextColor: 'rgba(250,247,242,0.4)',
   footerLinkHover: '#B8860B', footerTextSize: 13,
@@ -225,8 +252,38 @@ const PAGES = [
   { label:'🔒 Privacy / Terms',      url: '/privacy',             sections:[
     { key:'legal',           label:'Legal Pages'        },
   ]},
-  { label:'📞 Contact / Careers',    url: '/contact',             sections:[
-    { key:'contact-page',    label:'Contact & Careers'  },
+  { label:'📞 Contact',              url: '/contact',             sections:[
+    { key:'contact-page',    label:'Contact Page'       },
+  ]},
+  { label:'💼 Careers',             url: '/careers',             sections:[
+    { key:'careers-page',    label:'Careers Page'       },
+  ]},
+  { label:'📰 Press',               url: '/press',               sections:[
+    { key:'press-page',      label:'Press Page'         },
+  ]},
+  { label:'⚖️ Terms',               url: '/terms',               sections:[
+    { key:'terms-page',      label:'Terms of Service'   },
+  ]},
+  { label:'😤 Grievance',           url: '/grievance',           sections:[
+    { key:'grievance-page',  label:'Grievance Page'     },
+  ]},
+  { label:'💸 Refund Policy',       url: '/refund',              sections:[
+    { key:'refund-page',     label:'Refund Policy'      },
+  ]},
+  { label:'🎯 Recommendations',     url: '/recommendations',     sections:[
+    { key:'recommendations-page', label:'Recommendations Page' },
+  ]},
+  { label:'👤 User Profile',        url: '/profile',             sections:[
+    { key:'profile-user-page', label:'Profile Page'     },
+  ]},
+  { label:'📝 Apply Page',          url: '/apply/school',        sections:[
+    { key:'apply-page',      label:'Apply Page'         },
+  ]},
+  { label:'📰 Blog — Post',         url: '/blog',                sections:[
+    { key:'blog-post-page',  label:'Blog Single Post'   },
+  ]},
+  { label:'🔑 Forgot / Reset',      url: '/forgot-password',     sections:[
+    { key:'forgot-password-page', label:'Forgot / Reset Password' },
   ]},
   { label:'⚙️ Admin — Overview',     url: '/admin',               sections:[
     { key:'admin-overview',  label:'Overview Dashboard'  },
@@ -253,7 +310,7 @@ const PAGES = [
   { label:'⭐ Admin — Reviews',      url: '/admin/reviews',       sections:[
     { key:'admin-reviews',   label:'Reviews'            },
   ]},
-  { label:'📦 Admin — Subscription Plans', url: '/admin/subscription-plans',      sections:[
+  { label:'📦 Admin — Subscription Plans', url: '/admin/subscription-plans', sections:[
     { key:'admin-subscription-plans', label:'Subscription Plans' },
   ]},
   { label:'🔔 Admin — Notifications', url: '/admin/notifications', sections:[
@@ -282,11 +339,25 @@ const PAGES = [
   ]},
   { label:'🗂️ Admin — Dropdowns',   url: '/admin/dropdown',      sections:[
     { key:'admin-dropdown',      label:'Dropdown Manager'      },
-  ]
-  { label:'📊 Admin — School Report', url: '/admin/school-report', sections:[
-    { key:'admin-report',        label:'School Report'         },
   ]},
-]},
+  { label:'📝 Admin — Blog',        url: '/admin/blog',          sections:[
+    { key:'admin-blog',          label:'Blog Manager'          },
+  ]},
+  { label:'🏆 Admin — Featured',    url: '/admin/featured-schools', sections:[
+    { key:'admin-featured',      label:'Featured Schools'      },
+  ]},
+  { label:'📋 Admin — Menu',        url: '/admin/menu',          sections:[
+    { key:'admin-menu',          label:'Menu Manager'          },
+  ]},
+  { label:'📊 Admin — School Report', url: '/admin/school-report', sections:[
+    { key:'admin-school-report', label:'School Report'         },
+  ]},
+  { label:'📧 Admin — Email Triggers', url: '/admin/email-triggers', sections:[
+    { key:'admin-email-triggers', label:'Email Triggers'       },
+  ]},
+  { label:'🤖 Admin — Chatbot',     url: '/admin/chatbot',       sections:[
+    { key:'admin-chatbot',       label:'Chatbot Settings'      },
+  ]},
 ]
 
 /* ─── Helpers ─── */
@@ -1208,20 +1279,281 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       </div>
     )
 
-    case 'admin-report': return (
+    case 'careers-page': return (
+      <div>
+        <Heading text="Careers Page" />
+        <G2>
+          <div>
+            <CP label="Background"  k="careersBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"   k="careersH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="careersH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'press-page': return (
+      <div>
+        <Heading text="Press Page" />
+        <G2>
+          <div>
+            <CP label="Background"  k="pressBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"   k="pressH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="pressH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'terms-page': return (
+      <div>
+        <Heading text="Terms of Service Page" />
+        <G2>
+          <div>
+            <CP label="Background"  k="termsBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"   k="termsH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="termsH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'grievance-page': return (
+      <div>
+        <Heading text="Grievance Page" />
+        <G2>
+          <div>
+            <CP label="Background"  k="grievanceBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"   k="grievanceH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="grievanceH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'refund-page': return (
+      <div>
+        <Heading text="Refund Policy Page" />
+        <G2>
+          <div>
+            <CP label="Background"  k="refundBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"   k="refundH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="refundH1Size" min={24} max={72} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'recommendations-page': return (
+      <div>
+        <Heading text="Recommendations Page" />
+        <G2>
+          <div>
+            <CP label="Background"  k="recommendationsBg"      t={t} onChange={onChange} />
+            <CP label="H1 colour"   k="recommendationsH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="recommendationsH1Size" min={24} max={64} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'profile-user-page': return (
+      <div>
+        <Heading text="User Profile Page" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="profilePageUserBg"      t={t} onChange={onChange} />
+            <CP label="Card background"  k="profilePageUserCardBg"  t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="profilePageUserH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Heading size" k="profilePageUserH1Size" min={20} max={48} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'apply-page': return (
+      <div>
+        <Heading text="Apply / Admission Form Page" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="applyBg"      t={t} onChange={onChange} />
+            <CP label="Card background"  k="applyCardBg"  t={t} onChange={onChange} />
+            <CP label="H1 colour"        k="applyH1Color" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size" k="applyH1Size" min={20} max={56} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'blog-post-page': return (
+      <div>
+        <Heading text="Blog Single Post Page" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="blogSlugBg"        t={t} onChange={onChange} />
+            <CP label="Post title colour" k="blogSlugTitleColor" t={t} onChange={onChange} />
+            <CP label="Body text colour" k="blogSlugBodyColor"  t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Post title size" k="blogSlugTitleSize" min={24} max={72} t={t} onChange={onChange} />
+            <SR label="Body text size"  k="blogSlugBodySize"  min={13} max={24} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'forgot-password-page': return (
+      <div>
+        <Heading text="Forgot / Reset Password Pages" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="forgotPasswordBg"     t={t} onChange={onChange} />
+            <CP label="Card background"  k="forgotPasswordCardBg" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <div style={{ fontSize:'12px', color:'#718096', fontFamily:'Inter,sans-serif', padding:'8px 0' }}>
+              💡 Login colours (card, heading, inputs) also apply here — edit them under Login / Register.
+            </div>
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-subscription-plans': return (
+      <div>
+        <Heading text="Admin — Subscription Plans" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                       t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminPackagesCardBg"           t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminPackagesCardBorder"       t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminPackagesHeadingColor"     t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminPackagesHeadingSize"      min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                   t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"                t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-blog': return (
+      <div>
+        <Heading text="Admin — Blog Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                 t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminBlogCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminBlogCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminBlogHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminBlogHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"             t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"          t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-featured': return (
+      <div>
+        <Heading text="Admin — Featured Schools" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                     t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminFeaturedCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminFeaturedCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminFeaturedHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminFeaturedHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                 t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"              t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-menu': return (
+      <div>
+        <Heading text="Admin — Menu Manager" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                 t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminMenuCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminMenuCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminMenuHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminMenuHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"             t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"          t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-school-report': return (
       <div>
         <Heading text="Admin — School Report" />
         <G2>
           <div>
-            <label style={lbl}>Cards & Layout</label>
-            <CP label="Page background"  k="adminBg"                   t={t} onChange={onChange} />
-            <CP label="Card background"  k="adminReportCardBg"         t={t} onChange={onChange} />
-            <CP label="Card border"      k="adminReportCardBorder"     t={t} onChange={onChange} />
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                         t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminSchoolReportCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminSchoolReportCardBorder"     t={t} onChange={onChange} />
           </div>
           <div>
             <label style={lbl}>Typography</label>
-            <CP label="Heading colour"   k="adminReportHeadingColor"   t={t} onChange={onChange} />
-            <SR label="Heading size"     k="adminReportHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="adminSchoolReportHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminSchoolReportHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                     t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"                  t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'admin-email-triggers': return (
+      <div>
+        <Heading text="Admin — Email Triggers" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                   t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminEmailCardBg"          t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminEmailCardBorder"      t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminEmailHeadingColor"    t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminEmailHeadingSize"     min={16} max={40} t={t} onChange={onChange} />
             <CP label="Accent colour"    k="adminAccent"               t={t} onChange={onChange} />
             <CP label="Muted text"       k="adminTextMuted"            t={t} onChange={onChange} />
           </div>
@@ -1229,7 +1561,28 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       </div>
     )
 
-        default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
+    case 'admin-chatbot': return (
+      <div>
+        <Heading text="Admin — Chatbot Settings" />
+        <G2>
+          <div>
+            <label style={lbl}>Cards & Backgrounds</label>
+            <CP label="Page background"  k="adminBg"                    t={t} onChange={onChange} />
+            <CP label="Card background"  k="adminChatbotCardBg"         t={t} onChange={onChange} />
+            <CP label="Card border"      k="adminChatbotCardBorder"     t={t} onChange={onChange} />
+          </div>
+          <div>
+            <label style={lbl}>Typography</label>
+            <CP label="Heading colour"   k="adminChatbotHeadingColor"   t={t} onChange={onChange} />
+            <SR label="Heading size"     k="adminChatbotHeadingSize"    min={16} max={40} t={t} onChange={onChange} />
+            <CP label="Accent colour"    k="adminAccent"                t={t} onChange={onChange} />
+            <CP label="Muted text"       k="adminTextMuted"             t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
   }
 }
 
@@ -1379,6 +1732,63 @@ function buildThemeCssText(t: Record<string,any>): string {
   --admin-cities-heading-size: ${px('adminCitiesHeadingSize',22)};
   --admin-cities-tag-bg: ${co('adminCitiesTagBg','rgba(184,134,11,0.15)')};
   --admin-cities-tag-color: ${co('adminCitiesTagColor','#B8860B')};
+  --press-bg: ${co('pressBg','#FAF7F2')};
+  --press-h1-color: ${co('pressH1Color','#0D1117')};
+  --press-h1-size: ${px('pressH1Size',48)};
+  --careers-bg: ${co('careersBg','#FAF7F2')};
+  --careers-h1-color: ${co('careersH1Color','#0D1117')};
+  --careers-h1-size: ${px('careersH1Size',40)};
+  --grievance-bg: ${co('grievanceBg','#FAF7F2')};
+  --grievance-h1-color: ${co('grievanceH1Color','#0D1117')};
+  --grievance-h1-size: ${px('grievanceH1Size',40)};
+  --refund-bg: ${co('refundBg','#FAF7F2')};
+  --refund-h1-color: ${co('refundH1Color','#0D1117')};
+  --refund-h1-size: ${px('refundH1Size',40)};
+  --terms-bg: ${co('termsBg','#FAF7F2')};
+  --terms-h1-color: ${co('termsH1Color','#0D1117')};
+  --terms-h1-size: ${px('termsH1Size',40)};
+  --recommendations-bg: ${co('recommendationsBg','#FAF7F2')};
+  --recommendations-h1-color: ${co('recommendationsH1Color','#0D1117')};
+  --recommendations-h1-size: ${px('recommendationsH1Size',40)};
+  --profile-user-bg: ${co('profilePageUserBg','#FAF7F2')};
+  --profile-user-card-bg: ${co('profilePageUserCardBg','#FFFFFF')};
+  --profile-user-h1-color: ${co('profilePageUserH1Color','#0D1117')};
+  --profile-user-h1-size: ${px('profilePageUserH1Size',28)};
+  --apply-bg: ${co('applyBg','#FAF7F2')};
+  --apply-card-bg: ${co('applyCardBg','#FFFFFF')};
+  --apply-h1-color: ${co('applyH1Color','#0D1117')};
+  --apply-h1-size: ${px('applyH1Size',32)};
+  --blog-slug-bg: ${co('blogSlugBg','#FAF7F2')};
+  --blog-slug-title-color: ${co('blogSlugTitleColor','#0D1117')};
+  --blog-slug-title-size: ${px('blogSlugTitleSize',40)};
+  --blog-slug-body-color: ${co('blogSlugBodyColor','#4A5568')};
+  --blog-slug-body-size: ${px('blogSlugBodySize',16)};
+  --forgot-password-bg: ${co('forgotPasswordBg','#FAF7F2')};
+  --forgot-password-card-bg: ${co('forgotPasswordCardBg','#FFFFFF')};
+  --admin-blog-card-bg: ${co('adminBlogCardBg','#111820')};
+  --admin-blog-card-border: ${co('adminBlogCardBorder','#1E2A3A')};
+  --admin-blog-heading-color: ${co('adminBlogHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-blog-heading-size: ${px('adminBlogHeadingSize',22)};
+  --admin-featured-card-bg: ${co('adminFeaturedCardBg','#111820')};
+  --admin-featured-card-border: ${co('adminFeaturedCardBorder','#1E2A3A')};
+  --admin-featured-heading-color: ${co('adminFeaturedHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-featured-heading-size: ${px('adminFeaturedHeadingSize',22)};
+  --admin-menu-card-bg: ${co('adminMenuCardBg','#111820')};
+  --admin-menu-card-border: ${co('adminMenuCardBorder','#1E2A3A')};
+  --admin-menu-heading-color: ${co('adminMenuHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-menu-heading-size: ${px('adminMenuHeadingSize',22)};
+  --admin-school-report-card-bg: ${co('adminSchoolReportCardBg','#111820')};
+  --admin-school-report-card-border: ${co('adminSchoolReportCardBorder','#1E2A3A')};
+  --admin-school-report-heading-color: ${co('adminSchoolReportHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-school-report-heading-size: ${px('adminSchoolReportHeadingSize',22)};
+  --admin-email-card-bg: ${co('adminEmailCardBg','#111820')};
+  --admin-email-card-border: ${co('adminEmailCardBorder','#1E2A3A')};
+  --admin-email-heading-color: ${co('adminEmailHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-email-heading-size: ${px('adminEmailHeadingSize',22)};
+  --admin-chatbot-card-bg: ${co('adminChatbotCardBg','#111820')};
+  --admin-chatbot-card-border: ${co('adminChatbotCardBorder','#1E2A3A')};
+  --admin-chatbot-heading-color: ${co('adminChatbotHeadingColor','rgba(255,255,255,0.9)')};
+  --admin-chatbot-heading-size: ${px('adminChatbotHeadingSize',22)};
 }`
 }
 
@@ -1553,10 +1963,65 @@ function applyToDom(t: Record<string,any>) {
   s('--admin-cities-heading-size',         `${t.adminCitiesHeadingSize || 22}px`)
   s('--admin-cities-tag-bg',               String(t.adminCitiesTagBg            || 'rgba(184,134,11,0.15)'))
   s('--admin-cities-tag-color',            String(t.adminCitiesTagColor         || '#B8860B'))
-  s('--admin-report-card-bg',              String(t.adminReportCardBg           || '#111820'))
-  s('--admin-report-card-border',          String(t.adminReportCardBorder       || '#1E2A3A'))
-  s('--admin-report-heading-color',        String(t.adminReportHeadingColor     || 'rgba(255,255,255,0.9)'))
-  s('--admin-report-heading-size',         `${t.adminReportHeadingSize || 22}px`)
+  // New public pages
+  s('--press-bg',                          String(t.pressBg                     || '#FAF7F2'))
+  s('--press-h1-color',                    String(t.pressH1Color                || '#0D1117'))
+  s('--press-h1-size',                     `${t.pressH1Size || 48}px`)
+  s('--careers-bg',                        String(t.careersBg                   || '#FAF7F2'))
+  s('--careers-h1-color',                  String(t.careersH1Color              || '#0D1117'))
+  s('--careers-h1-size',                   `${t.careersH1Size || 40}px`)
+  s('--grievance-bg',                      String(t.grievanceBg                 || '#FAF7F2'))
+  s('--grievance-h1-color',                String(t.grievanceH1Color            || '#0D1117'))
+  s('--grievance-h1-size',                 `${t.grievanceH1Size || 40}px`)
+  s('--refund-bg',                         String(t.refundBg                    || '#FAF7F2'))
+  s('--refund-h1-color',                   String(t.refundH1Color               || '#0D1117'))
+  s('--refund-h1-size',                    `${t.refundH1Size || 40}px`)
+  s('--terms-bg',                          String(t.termsBg                     || '#FAF7F2'))
+  s('--terms-h1-color',                    String(t.termsH1Color                || '#0D1117'))
+  s('--terms-h1-size',                     `${t.termsH1Size || 40}px`)
+  s('--recommendations-bg',               String(t.recommendationsBg            || '#FAF7F2'))
+  s('--recommendations-h1-color',         String(t.recommendationsH1Color       || '#0D1117'))
+  s('--recommendations-h1-size',          `${t.recommendationsH1Size || 40}px`)
+  s('--profile-user-bg',                  String(t.profilePageUserBg            || '#FAF7F2'))
+  s('--profile-user-card-bg',             String(t.profilePageUserCardBg        || '#FFFFFF'))
+  s('--profile-user-h1-color',            String(t.profilePageUserH1Color       || '#0D1117'))
+  s('--profile-user-h1-size',             `${t.profilePageUserH1Size || 28}px`)
+  s('--apply-bg',                         String(t.applyBg                      || '#FAF7F2'))
+  s('--apply-card-bg',                    String(t.applyCardBg                  || '#FFFFFF'))
+  s('--apply-h1-color',                   String(t.applyH1Color                 || '#0D1117'))
+  s('--apply-h1-size',                    `${t.applyH1Size || 32}px`)
+  s('--blog-slug-bg',                     String(t.blogSlugBg                   || '#FAF7F2'))
+  s('--blog-slug-title-color',            String(t.blogSlugTitleColor           || '#0D1117'))
+  s('--blog-slug-title-size',             `${t.blogSlugTitleSize || 40}px`)
+  s('--blog-slug-body-color',             String(t.blogSlugBodyColor            || '#4A5568'))
+  s('--blog-slug-body-size',              `${t.blogSlugBodySize || 16}px`)
+  s('--forgot-password-bg',              String(t.forgotPasswordBg              || '#FAF7F2'))
+  s('--forgot-password-card-bg',         String(t.forgotPasswordCardBg          || '#FFFFFF'))
+  // New admin pages
+  s('--admin-blog-card-bg',              String(t.adminBlogCardBg               || '#111820'))
+  s('--admin-blog-card-border',          String(t.adminBlogCardBorder           || '#1E2A3A'))
+  s('--admin-blog-heading-color',        String(t.adminBlogHeadingColor         || 'rgba(255,255,255,0.9)'))
+  s('--admin-blog-heading-size',         `${t.adminBlogHeadingSize || 22}px`)
+  s('--admin-featured-card-bg',          String(t.adminFeaturedCardBg           || '#111820'))
+  s('--admin-featured-card-border',      String(t.adminFeaturedCardBorder       || '#1E2A3A'))
+  s('--admin-featured-heading-color',    String(t.adminFeaturedHeadingColor     || 'rgba(255,255,255,0.9)'))
+  s('--admin-featured-heading-size',     `${t.adminFeaturedHeadingSize || 22}px`)
+  s('--admin-menu-card-bg',              String(t.adminMenuCardBg               || '#111820'))
+  s('--admin-menu-card-border',          String(t.adminMenuCardBorder           || '#1E2A3A'))
+  s('--admin-menu-heading-color',        String(t.adminMenuHeadingColor         || 'rgba(255,255,255,0.9)'))
+  s('--admin-menu-heading-size',         `${t.adminMenuHeadingSize || 22}px`)
+  s('--admin-school-report-card-bg',     String(t.adminSchoolReportCardBg       || '#111820'))
+  s('--admin-school-report-card-border', String(t.adminSchoolReportCardBorder   || '#1E2A3A'))
+  s('--admin-school-report-heading-color', String(t.adminSchoolReportHeadingColor || 'rgba(255,255,255,0.9)'))
+  s('--admin-school-report-heading-size',  `${t.adminSchoolReportHeadingSize || 22}px`)
+  s('--admin-email-card-bg',             String(t.adminEmailCardBg              || '#111820'))
+  s('--admin-email-card-border',         String(t.adminEmailCardBorder          || '#1E2A3A'))
+  s('--admin-email-heading-color',       String(t.adminEmailHeadingColor        || 'rgba(255,255,255,0.9)'))
+  s('--admin-email-heading-size',        `${t.adminEmailHeadingSize || 22}px`)
+  s('--admin-chatbot-card-bg',           String(t.adminChatbotCardBg            || '#111820'))
+  s('--admin-chatbot-card-border',       String(t.adminChatbotCardBorder        || '#1E2A3A'))
+  s('--admin-chatbot-heading-color',     String(t.adminChatbotHeadingColor      || 'rgba(255,255,255,0.9)'))
+  s('--admin-chatbot-heading-size',      `${t.adminChatbotHeadingSize || 22}px`)
 }
 
 export default function AdminThemePage() {
