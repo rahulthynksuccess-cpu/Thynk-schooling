@@ -126,6 +126,10 @@ const DEFAULT: Record<string, any> = {
   adminCitiesCardBg: '#111820', adminCitiesCardBorder: '#1E2A3A',
   adminCitiesHeadingColor: 'rgba(255,255,255,0.9)', adminCitiesHeadingSize: 22,
   adminCitiesTagBg: 'rgba(184,134,11,0.15)', adminCitiesTagColor: '#B8860B',
+  /* School Dashboard — Packages page */
+  pkgPageBg: '#FDFAF5', pkgCardBg: '#FFFFFF', pkgCardDarkBg: '#0D1117',
+  pkgAccentColor: '#B8860B', pkgH1Size: 40, pkgH1Color: '#0D1117',
+  pkgBorderColor: '#E8DCC8',
   /* Press / Grievance / Refund / Terms / Recommendations / Profile / Apply / Auth extra */
   pressBg: '#FAF7F2', pressH1Size: 48, pressH1Color: '#0D1117',
   grievanceBg: '#FAF7F2', grievanceH1Size: 40, grievanceH1Color: '#0D1117',
@@ -228,8 +232,23 @@ const PAGES = [
   { label:'👨‍👩‍👧 Parent Dashboard',    url: '/dashboard/parent',    sections:[
     { key:'parent-dash',     label:'Parent Dashboard'   },
   ]},
-  { label:'🏫 School Dashboard',     url: '/dashboard/school',    sections:[
-    { key:'school-dash',     label:'School Dashboard'   },
+  { label:'🏫 School Dashboard',     url: '/dashboard/school',                sections:[
+    { key:'school-dash',        label:'School Dashboard'         },
+  ]},
+  { label:'📦 School Dashboard — Packages', url: '/dashboard/school/packages',  sections:[
+    { key:'school-packages',    label:'Packages / Plans Page'    },
+  ]},
+  { label:'📊 School Dashboard — Analytics', url: '/dashboard/school/analytics', sections:[
+    { key:'school-analytics',   label:'Analytics Page'           },
+  ]},
+  { label:'📋 School Dashboard — Applications', url: '/dashboard/school/applications', sections:[
+    { key:'school-applications',label:'Applications Page'        },
+  ]},
+  { label:'📈 School Dashboard — Leads', url: '/dashboard/school/leads',         sections:[
+    { key:'school-leads-dash',  label:'Leads Page'               },
+  ]},
+  { label:'⭐ School Dashboard — Reviews', url: '/dashboard/school/reviews',     sections:[
+    { key:'school-reviews-dash',label:'Reviews Page'             },
   ]},
   { label:'🔍 Counselling',          url: '/counselling',         sections:[
     { key:'counselling',     label:'Counselling Page'   },
@@ -1582,6 +1601,92 @@ function SectionControls({ section, t, onChange }: { section:string; t:any; onCh
       </div>
     )
 
+    case 'school-packages': return (
+      <div>
+        <Heading text="School Dashboard — Packages / Plans" />
+        <G2>
+          <div>
+            <CP label="Page background"     k="pkgPageBg"        t={t} onChange={onChange} />
+            <CP label="Card bg (regular)"   k="pkgCardBg"        t={t} onChange={onChange} />
+            <CP label="Card bg (featured)"  k="pkgCardDarkBg"    t={t} onChange={onChange} />
+            <CP label="Accent colour"       k="pkgAccentColor"   t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="H1 size"             k="pkgH1Size"        min={24} max={64} t={t} onChange={onChange} />
+            <CP label="H1 colour"           k="pkgH1Color"       t={t} onChange={onChange} />
+            <CP label="Border colour"       k="pkgBorderColor"   t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'school-analytics': return (
+      <div>
+        <Heading text="School Dashboard — Analytics" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="dashboardBg"           t={t} onChange={onChange} />
+            <CP label="Card background"  k="dashboardCardBg"       t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="dashboardHeadingColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Heading size"     k="dashboardHeadingSize"  min={18} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+        <div style={{ marginTop:12, padding:'10px 14px', background:'rgba(184,134,11,0.08)', borderRadius:'8px', fontFamily:'Inter,sans-serif', fontSize:'12px', color:'#718096', borderLeft:'3px solid #B8860B' }}>
+          💡 Inherits dashboard colours — change them under Parent/School Dashboard.
+        </div>
+      </div>
+    )
+
+    case 'school-applications': return (
+      <div>
+        <Heading text="School Dashboard — Applications" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="dashboardBg"           t={t} onChange={onChange} />
+            <CP label="Card background"  k="dashboardCardBg"       t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="dashboardHeadingColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Heading size"     k="dashboardHeadingSize"  min={18} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'school-leads-dash': return (
+      <div>
+        <Heading text="School Dashboard — Leads" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="dashboardBg"           t={t} onChange={onChange} />
+            <CP label="Card background"  k="dashboardCardBg"       t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="dashboardHeadingColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Heading size"     k="dashboardHeadingSize"  min={18} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
+    case 'school-reviews-dash': return (
+      <div>
+        <Heading text="School Dashboard — Reviews" />
+        <G2>
+          <div>
+            <CP label="Page background"  k="dashboardBg"           t={t} onChange={onChange} />
+            <CP label="Card background"  k="dashboardCardBg"       t={t} onChange={onChange} />
+            <CP label="Heading colour"   k="dashboardHeadingColor" t={t} onChange={onChange} />
+          </div>
+          <div>
+            <SR label="Heading size"     k="dashboardHeadingSize"  min={18} max={40} t={t} onChange={onChange} />
+          </div>
+        </G2>
+      </div>
+    )
+
     default: return <div style={{ color:'#718096', fontSize:'13px', padding:'20px 0', fontFamily:'Inter,sans-serif' }}>Select a section from the left.</div>
   }
 }
@@ -1733,6 +1838,13 @@ function buildThemeCssText(t: Record<string,any>): string {
   --admin-cities-tag-bg: ${co('adminCitiesTagBg','rgba(184,134,11,0.15)')};
   --admin-cities-tag-color: ${co('adminCitiesTagColor','#B8860B')};
   --press-bg: ${co('pressBg','#FAF7F2')};
+  --school-packages-bg: ${co('pkgPageBg','#FDFAF5')};
+  --school-packages-card-bg: ${co('pkgCardBg','#FFFFFF')};
+  --school-packages-card-dark-bg: ${co('pkgCardDarkBg','#0D1117')};
+  --school-packages-accent: ${co('pkgAccentColor','#B8860B')};
+  --school-packages-h1-color: ${co('pkgH1Color','#0D1117')};
+  --school-packages-h1-size: ${px('pkgH1Size',40)};
+  --school-packages-border: ${co('pkgBorderColor','#E8DCC8')};
   --press-h1-color: ${co('pressH1Color','#0D1117')};
   --press-h1-size: ${px('pressH1Size',48)};
   --careers-bg: ${co('careersBg','#FAF7F2')};
@@ -1965,6 +2077,13 @@ function applyToDom(t: Record<string,any>) {
   s('--admin-cities-tag-color',            String(t.adminCitiesTagColor         || '#B8860B'))
   // New public pages
   s('--press-bg',                          String(t.pressBg                     || '#FAF7F2'))
+  s('--school-packages-bg',               String(t.pkgPageBg                    || '#FDFAF5'))
+  s('--school-packages-card-bg',          String(t.pkgCardBg                    || '#FFFFFF'))
+  s('--school-packages-card-dark-bg',     String(t.pkgCardDarkBg                || '#0D1117'))
+  s('--school-packages-accent',           String(t.pkgAccentColor               || '#B8860B'))
+  s('--school-packages-h1-color',         String(t.pkgH1Color                   || '#0D1117'))
+  s('--school-packages-h1-size',          `${t.pkgH1Size || 40}px`)
+  s('--school-packages-border',           String(t.pkgBorderColor               || '#E8DCC8'))
   s('--press-h1-color',                    String(t.pressH1Color                || '#0D1117'))
   s('--press-h1-size',                     `${t.pressH1Size || 48}px`)
   s('--careers-bg',                        String(t.careersBg                   || '#FAF7F2'))
