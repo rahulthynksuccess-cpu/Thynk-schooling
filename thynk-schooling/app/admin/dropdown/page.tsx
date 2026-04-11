@@ -37,6 +37,7 @@ const CATEGORIES: DropdownCategory[] = [
   { key: 'occupation',      name: 'Occupation',            emoji: '💼', description: 'Salaried, Business, Other…' },
   { key: 'income_range',    name: 'Annual Income Range',   emoji: '💰', description: 'e.g. ₹2–5L, ₹5–10L, ₹10L+…' },
   { key: 'how_did_you_hear',name: 'How Did You Hear?',     emoji: '📣', description: 'Google, Friend, Social Media…' },
+  { key: 'lead_status',     name: 'Lead Status',           emoji: '🏷️', description: 'New, Contacted, Interested, Admitted, Lost…' },
 ]
 
 /* ── Inline edit input ── */
