@@ -1,10 +1,14 @@
+'use client'
+export const dynamic = 'force-dynamic'
+import { useContent } from '@/hooks/useContent'
 import { Navbar } from '@/components/layout/Navbar'
 import { Footer } from '@/components/layout/Footer'
 import Link from 'next/link'
 
-export const metadata = { title: 'Terms of Service — Thynk Schooling' }
 
 export default function Page() {
+  const ct = useContent('terms') ?? {}
+  const g = (k: string, d: string) => (ct[k] as string) || d
   return (
     <>
       <Navbar />
@@ -17,8 +21,7 @@ export default function Page() {
               <span style={{ width:22, height:1.5, background:'#B8860B', display:'block' }} />Legal
             </div>
             <h1 style={{ fontFamily:"'Cormorant Garamond',Georgia,serif", fontWeight:700, fontSize:'clamp(2.4rem,5vw,4.5rem)', color:'#0D1117', letterSpacing:'-2px', lineHeight:.92, marginBottom:14 }}>
-              Terms of Service
-            </h1>
+              {g('h1','Terms of Service')}</h1>
             <p style={{ fontFamily:'DM Sans,sans-serif', fontSize:'clamp(14px,1.5vw,16px)', color:'#718096', fontWeight:300 }}>
               Effective: January 2025 — Please read these terms carefully before using our platform.
             </p>
