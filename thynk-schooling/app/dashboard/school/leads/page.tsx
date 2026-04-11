@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   Phone, MapPin, CheckCircle2, ShoppingCart, LayoutGrid,
   Zap, ChevronRight, Loader2, BookOpen, Globe,
-  Download, FileSpreadsheet, FileText,
+  Download, FileSpreadsheet, FileText, Pencil, X,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -24,14 +24,14 @@ async function exportToExcel(leads: any[], priceLabel: string) {
     'City':           l.city        || '',
     'Source':         l.discoverySource || '',
     'Status':         l.status      || '',
+    'Remarks':        l.schoolRemarks || '',
     'Unlocked':       l.isPurchased ? 'Yes' : 'No',
   }))
   const ws  = XLSX.utils.json_to_sheet(rows)
   const wb  = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Leads')
-  // Column widths
   ws['!cols'] = [
-    {wch:22},{wch:16},{wch:10},{wch:16},{wch:14},{wch:12},{wch:14},{wch:10},
+    {wch:22},{wch:16},{wch:10},{wch:16},{wch:14},{wch:12},{wch:14},{wch:24},{wch:10},
   ]
   XLSX.writeFile(wb, `leads-${new Date().toISOString().slice(0,10)}.xlsx`)
 }
@@ -47,7 +47,7 @@ async function exportToPDF(leads: any[]) {
   doc.text(`Exported ${new Date().toLocaleDateString('en-IN')}`, 14, 22)
   autoTable(doc, {
     startY: 28,
-    head: [['Parent','Child','Class','Phone','City','Source','Status','Unlocked']],
+    head: [['Parent','Child','Class','Phone','City','Source','Status','Remarks','Unlocked']],
     body: leads.map((l: any) => [
       l.isPurchased ? (l.fullName  || '—') : (l.maskedName  || '—'),
       l.childName || '—',
@@ -56,6 +56,7 @@ async function exportToPDF(leads: any[]) {
       l.city || '—',
       l.discoverySource || '—',
       l.status || '—',
+      l.schoolRemarks || '—',
       l.isPurchased ? 'Yes' : 'No',
     ]),
     styles:     { fontSize: 8, cellPadding: 3 },
@@ -249,7 +250,159 @@ function BuyLeadModal({ lead, priceLabel, onConfirm, onCancel, loading }: {
   )
 }
 
-// ─── Skeleton loader (faster perceived load) ──────────────────────────────────
+// ─── Edit Status Modal ────────────────────────────────────────────────────────
+function EditStatusModal({ lead, onClose, onSaved }: {
+  lead: any; onClose: () => void; onSaved: () => void
+}) {
+  const [status,  setStatus]  = useState<string>(lead.status || 'new')
+  const [remarks, setRemarks] = useState<string>(lead.schoolRemarks || '')
+  const [saving,  setSaving]  = useState(false)
+
+  // Fetch dynamic statuses from admin dropdown; fall back to hardcoded STATUS_COLORS
+  const { data: dropdownData } = useQuery<any>({
+    queryKey: ['dropdown-lead_status'],
+    queryFn:  () => fetch('/api/settings/dropdown?category=lead_status').then(r => r.json()),
+    staleTime: 60_000,
+  })
+
+  const statusOptions: { value: string; label: string }[] =
+    dropdownData?.options?.length
+      ? dropdownData.options.map((o: any) => ({ value: o.value, label: o.label }))
+      : Object.entries(STATUS_COLORS).map(([k, v]) => ({ value: k, label: v.label }))
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ leadId: lead.id, status, remarks }),
+      })
+      const data = await res.json()
+      if (data.error) { toast.error(data.error); return }
+      toast.success('Lead updated')
+      onSaved()
+      onClose()
+    } catch {
+      toast.error('Failed to save')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const currentSt = STATUS_COLORS[status] || STATUS_COLORS.new
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 999,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#fff', borderRadius: 14, padding: '24px', maxWidth: 420, width: '100%',
+        border: '0.5px solid rgba(0,0,0,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+        animation: 'modalIn 0.18s ease' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ fontWeight: 600, fontSize: 16, color: '#111827', margin: 0, lineHeight: 1.3 }}>
+              Update Lead Status
+            </h2>
+            <p style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, marginBottom: 0 }}>
+              {lead.fullName || lead.maskedName || 'Parent'}
+              {lead.classApplyingFor ? ` · Class ${lead.classApplyingFor}` : ''}
+            </p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer',
+            padding: 4, borderRadius: 6, display: 'flex', alignItems: 'center',
+            color: '#9CA3AF', marginLeft: 12, flexShrink: 0 }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Status selector */}
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9CA3AF',
+          letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
+          Status
+        </label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+          {statusOptions.map(opt => {
+            const optSt = STATUS_COLORS[opt.value] || { bg: '#F3F4F6', color: '#6B7280', label: opt.label }
+            const isActive = status === opt.value
+            return (
+              <button
+                key={opt.value}
+                onClick={() => setStatus(opt.value)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '5px 11px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+                  cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.1s',
+                  background: isActive ? optSt.bg : '#F9FAFB',
+                  color: isActive ? optSt.color : '#6B7280',
+                  border: isActive
+                    ? `1.5px solid ${optSt.color}40`
+                    : '1px solid rgba(0,0,0,0.1)',
+                  boxShadow: isActive ? `0 0 0 2px ${optSt.color}18` : 'none',
+                }}
+              >
+                {isActive && (
+                  <span style={{ width: 6, height: 6, borderRadius: '50%',
+                    background: optSt.color, flexShrink: 0 }} />
+                )}
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Current status preview */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px',
+          borderRadius: 7, background: currentSt.bg, marginBottom: 18,
+          border: `0.5px solid ${currentSt.color}30` }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: currentSt.color, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, fontWeight: 500, color: currentSt.color }}>
+            Will be marked as: {currentSt.label}
+          </span>
+        </div>
+
+        {/* Remarks */}
+        <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9CA3AF',
+          letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
+          Remarks <span style={{ fontWeight: 400, textTransform: 'none' as const, letterSpacing: 0 }}>(optional)</span>
+        </label>
+        <textarea
+          value={remarks}
+          onChange={e => setRemarks(e.target.value)}
+          placeholder="Add internal notes about this lead e.g. 'Called, interested in Grade 3 admission, follow up next week'…"
+          rows={3}
+          style={{ width: '100%', padding: '9px 12px', borderRadius: 8,
+            border: '0.5px solid rgba(0,0,0,0.15)', fontSize: 13, color: '#374151',
+            fontFamily: 'inherit', resize: 'vertical', outline: 'none',
+            boxSizing: 'border-box', marginBottom: 20, lineHeight: 1.5 }}
+        />
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onClose} disabled={saving}
+            style={{ flex: 1, padding: '9px', borderRadius: 8, background: '#F3F4F6',
+              border: 'none', fontSize: 13, fontWeight: 500, color: '#374151',
+              cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            Cancel
+          </button>
+          <button onClick={handleSave} disabled={saving}
+            style={{ flex: 2, padding: '9px', borderRadius: 8, background: '#111827',
+              border: 'none', fontSize: 13, fontWeight: 600, color: '#fff',
+              cursor: saving ? 'not-allowed' : 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', gap: 7,
+              fontFamily: 'inherit', opacity: saving ? 0.7 : 1 }}>
+            {saving && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
+            Save changes
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Skeleton loader ──────────────────────────────────────────────────────────
 function SkeletonRow() {
   return (
     <tr>
@@ -267,17 +420,18 @@ function LeadsContent() {
   const queryClient = useQueryClient()
   const [buyingId,    setBuyingId]    = useState<string | null>(null)
   const [confirmLead, setConfirmLead] = useState<any | null>(null)
+  const [editLead,    setEditLead]    = useState<any | null>(null)
 
-  // ── Credits query — separate, very fast, cached 60s ──
+  // ── Credits query ──
   const { data: creditsData } = useQuery<any>({
     queryKey: ['lead-credits'],
     queryFn: () => fetch('/api/lead-credits', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
-    staleTime: 60_000,       // don't refetch every render
-    gcTime:    5 * 60_000,   // keep in cache 5 min
+    staleTime: 60_000,
+    gcTime:    5 * 60_000,
   })
   const credits = creditsData?.availableCredits ?? 0
 
-  // ── Leads query — staleTime 30s, background refetch ──
+  // ── Leads query ──
   const { data, isLoading } = useQuery<{
     data?: any[]; total?: number; error?: string; message?: string;
     singleLeadPricePaise?: number; discoveryWindowDays?: number;
@@ -286,8 +440,8 @@ function LeadsContent() {
     queryFn: () => fetch('/api/leads?limit=50', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
     staleTime:          30_000,
     gcTime:             5 * 60_000,
-    refetchOnWindowFocus: false,   // ← stops refetch every tab switch
-    placeholderData:    (prev) => prev,  // keep old data while refetching
+    refetchOnWindowFocus: false,
+    placeholderData:    (prev) => prev,
   })
 
   const leads = data?.data ?? []
@@ -311,7 +465,6 @@ function LeadsContent() {
       if (res.error === 'NO_CREDITS') { toast.error('No credits.'); setBuyingId(null); return }
       if (res.error) { toast.error(res.error); setBuyingId(null); return }
       toast.success('Lead unlocked!')
-      // Optimistic invalidation — only the rows that changed
       queryClient.invalidateQueries({ queryKey: ['school-leads-full'] })
       queryClient.invalidateQueries({ queryKey: ['lead-credits'] })
       setBuyingId(null)
@@ -354,6 +507,16 @@ function LeadsContent() {
 
   return (
     <div>
+      {/* Edit status modal */}
+      {editLead && (
+        <EditStatusModal
+          lead={editLead}
+          onClose={() => setEditLead(null)}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ['school-leads-full'] })}
+        />
+      )}
+
+      {/* Buy lead modal */}
       {confirmLead && (
         <BuyLeadModal
           lead={confirmLead}
@@ -404,7 +567,6 @@ function LeadsContent() {
               </span>
             )}
           </div>
-          {/* Export button — only shown when there's data */}
           {leads.length > 0 && <ExportButton leads={leads} />}
         </div>
 
@@ -451,6 +613,7 @@ function LeadsContent() {
                       onMouseEnter={e => (e.currentTarget.style.background = '#FAFAFA')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
 
+                      {/* Parent / child */}
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
                           <div style={{ width: 30, height: 30, borderRadius: 7, background: '#F3F4F6', border: '0.5px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 11, color: '#6B7280', flexShrink: 0 }}>
@@ -463,6 +626,7 @@ function LeadsContent() {
                         </div>
                       </td>
 
+                      {/* Class */}
                       <td style={{ padding: '11px 14px' }}>
                         {lead.classApplyingFor
                           ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, background: 'rgba(99,102,241,0.07)', border: '0.5px solid rgba(99,102,241,0.15)', fontSize: 11, fontWeight: 500, color: '#3730A3', whiteSpace: 'nowrap' }}>
@@ -472,30 +636,61 @@ function LeadsContent() {
                         }
                       </td>
 
+                      {/* Phone */}
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: lead.isPurchased ? '#374151' : '#9CA3AF', fontFamily: 'ui-monospace,monospace' }}>
                           <Phone size={10} color="#D1D5DB" />{displayPhone || '—'}
                         </div>
                       </td>
 
+                      {/* City */}
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#6B7280' }}>
                           <MapPin size={10} color="#E5A50A" />{lead.city || '—'}
                         </div>
                       </td>
 
+                      {/* Source */}
                       <td style={{ padding: '11px 14px' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 4, fontSize: 11, fontWeight: 500, background: srcBadge.bg, color: srcBadge.color, whiteSpace: 'nowrap' }}>
                           {srcBadge.icon} {srcBadge.label}
                         </span>
                       </td>
 
+                      {/* Status — editable for purchased leads */}
                       <td style={{ padding: '11px 14px' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 500, background: st.bg, color: st.color }}>
-                          <span style={{ width: 5, height: 5, borderRadius: '50%', background: st.color, flexShrink: 0 }} />{st.label}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 500, background: st.bg, color: st.color, whiteSpace: 'nowrap' }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: st.color, flexShrink: 0 }} />
+                            {st.label}
+                          </span>
+                          {lead.isPurchased && (
+                            <button
+                              onClick={() => setEditLead(lead)}
+                              title="Edit status & remarks"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer',
+                                padding: 3, borderRadius: 4, display: 'flex', alignItems: 'center',
+                                opacity: 0.35, transition: 'opacity 0.15s, background 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'rgba(0,0,0,0.05)' }}
+                              onMouseLeave={e => { e.currentTarget.style.opacity = '0.35'; e.currentTarget.style.background = 'transparent' }}
+                            >
+                              <Pencil size={11} color="#374151" />
+                            </button>
+                          )}
+                        </div>
+                        {/* Remarks preview */}
+                        {lead.isPurchased && lead.schoolRemarks && (
+                          <div
+                            title={lead.schoolRemarks}
+                            style={{ fontSize: 10, color: '#9CA3AF', marginTop: 3,
+                              maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                            💬 {lead.schoolRemarks}
+                          </div>
+                        )}
                       </td>
 
+                      {/* Action */}
                       <td style={{ padding: '11px 14px', textAlign: 'right' }}>
                         {lead.isPurchased ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 5, background: 'rgba(16,185,129,0.08)', border: '0.5px solid rgba(16,185,129,0.2)', color: '#0D7A5F', fontSize: 11, fontWeight: 500 }}>
@@ -525,8 +720,9 @@ function LeadsContent() {
       </div>
 
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin    { to { transform: rotate(360deg); } }
         @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        @keyframes modalIn { from { opacity:0; transform:scale(0.96) translateY(6px); } to { opacity:1; transform:scale(1) translateY(0); } }
       `}</style>
     </div>
   )
