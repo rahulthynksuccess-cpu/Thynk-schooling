@@ -61,6 +61,7 @@ async function ensureTables() {
     'ADD COLUMN IF NOT EXISTS source VARCHAR(100)',
     'ADD COLUMN IF NOT EXISTS how_did_you_hear VARCHAR(200)',
     'ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()',
+    'ADD COLUMN IF NOT EXISTS school_remarks TEXT',
   ]) await db.query(`ALTER TABLE leads ${c}`).catch(() => {})
 
   // lead_credits
@@ -323,6 +324,7 @@ export async function GET(req: NextRequest) {
          l.city, l.created_at  AS "createdAt",
          l.source, l.message,
          l.how_did_you_hear    AS "howDidYouHear",
+         l.school_remarks      AS "schoolRemarks",
          COALESCE(u.full_name, l.parent_name) AS "fullName",
          COALESCE(u.phone, l.phone)            AS "fullPhone",
          COALESCE(u.email, l.email)            AS "fullEmail"
@@ -487,6 +489,48 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) {
     console.error('[leads POST]', e)
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
+}
+
+// ─── PATCH /api/leads — school updates lead status + remarks ─────────────────
+export async function PATCH(req: NextRequest) {
+  try {
+    await ensureTables()
+    const userId = getUserId(req)
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const body = await req.json()
+    const { leadId, status, remarks } = body
+
+    if (!leadId) return NextResponse.json({ error: 'leadId required' }, { status: 400 })
+    if (!status)  return NextResponse.json({ error: 'status required' },  { status: 400 })
+
+    // Confirm the lead belongs to this school
+    const schoolRes = await db.query(
+      'SELECT id, is_active FROM schools WHERE admin_user_id=$1',
+      [userId]
+    )
+    if (!schoolRes.rows.length) return NextResponse.json({ error: 'School not found' }, { status: 403 })
+    const school = schoolRes.rows[0]
+    if (school.is_active === false) return NextResponse.json({ error: 'ACCOUNT_SUSPENDED' }, { status: 403 })
+
+    // Only allow updating leads that belong to this school
+    const lead = await db.query(
+      'SELECT id, is_purchased FROM leads WHERE id=$1 AND school_id=$2',
+      [leadId, school.id]
+    )
+    if (!lead.rows.length) return NextResponse.json({ error: 'Lead not found or not accessible' }, { status: 404 })
+    if (!lead.rows[0].is_purchased) return NextResponse.json({ error: 'Unlock the lead first before updating status' }, { status: 403 })
+
+    await db.query(
+      `UPDATE leads SET status=$1, school_remarks=$2, updated_at=NOW() WHERE id=$3 AND school_id=$4`,
+      [status, remarks?.trim() || null, leadId, school.id]
+    )
+
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    console.error('[leads PATCH]', e)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
 }
