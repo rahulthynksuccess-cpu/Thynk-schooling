@@ -63,7 +63,8 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const school = await db.query(
-      `SELECT id, name, logo_url, city, state, board, profile_completed, rating
+      `SELECT id, name, logo_url, city, state, board, profile_completed, rating,
+              facebook_url, instagram_url, youtube_url, twitter_url
        FROM schools WHERE admin_user_id = $1`,
       [userId]
     ).catch(() => ({ rows: [] }))
@@ -80,6 +81,7 @@ export async function GET(req: NextRequest) {
       id: schoolId, name: schoolName, logo_url: schoolLogo,
       city: schoolCity, state: schoolState, board: schoolBoard,
       profile_completed, rating,
+      facebook_url, instagram_url, youtube_url, twitter_url,
     } = school.rows[0]
 
     // Ensure views table exists before querying
@@ -160,6 +162,10 @@ export async function GET(req: NextRequest) {
       schoolCity:  schoolCity  || null,
       schoolState: schoolState || null,
       schoolBoard: Array.isArray(schoolBoard) ? schoolBoard : [],
+      facebookUrl:  facebook_url  || null,
+      instagramUrl: instagram_url || null,
+      youtubeUrl:   youtube_url   || null,
+      twitterUrl:   twitter_url   || null,
     })
   } catch (e: any) {
     console.error('[schools/me/dashboard-stats GET]', e)
