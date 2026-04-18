@@ -25,8 +25,8 @@ export function useDropdown(category: string, opts: { parentValue?: string; enab
   const { data = [], isLoading, isError } = useQuery<SelectOption[]>({
     queryKey: ['dropdown', category, parentValue],
     queryFn: () => fetchDropdown(category, parentValue),
-    staleTime: 0,   // always fresh — admin changes reflect immediately
-    gcTime:    5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,  // cache for 5 min — admin changes still reflect on next visit
+    gcTime:    10 * 60 * 1000,
     enabled,
     retry: 2,
   })
