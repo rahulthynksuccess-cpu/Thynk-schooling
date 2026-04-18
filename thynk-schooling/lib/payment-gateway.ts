@@ -330,7 +330,7 @@ async function createEasebuzzOrder(
     firstname,
     email,
     phone,
-    surl:        `${process.env.NEXT_PUBLIC_APP_URL}/api/lead-packages?action=verify-payment`,
+    surl: `${process.env.NEXT_PUBLIC_APP_URL}/api/lead-packages?action=verify-payment`
     furl:        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/school/packages?status=failed`,
     hash,
   })
