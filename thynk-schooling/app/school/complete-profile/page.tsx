@@ -697,6 +697,10 @@ export default function SchoolCompleteProfilePage() {
             latitude: s.latitude||'', longitude: s.longitude||'',
             phone: s.phone||'', email: s.email||'',
             websiteUrl: s.website_url||'', principalName: s.principal_name||'',
+            facebookUrl:  s.facebook_url  || '',
+            instagramUrl: s.instagram_url || '',
+            youtubeUrl:   s.youtube_url   || '',
+            twitterUrl:   s.twitter_url   || '',
           })
           setExistingLogoUrl(s.logo_url || null)
           setExistingCoverUrl(s.cover_url || null)
@@ -948,6 +952,34 @@ export default function SchoolCompleteProfilePage() {
         <Field label="Principal Name">
           <input className="sp-inp" value={(formData.principalName as string) || ''} onChange={e => set('principalName', e.target.value)} placeholder="Dr. Ranjana Sharma" />
         </Field>
+
+        <div className="sp-divider">Social Media Pages</div>
+        <div className="sp-g2">
+          <Field label="Facebook Page URL">
+            <div className="sp-with-icon" style={{ position: 'relative' }}>
+              <span className="sp-fi" style={{ fontSize: 13 }}>📘</span>
+              <input className="sp-inp" value={(formData.facebookUrl as string) || ''} onChange={e => set('facebookUrl', e.target.value)} placeholder="https://facebook.com/yourschool" />
+            </div>
+          </Field>
+          <Field label="Instagram Profile URL">
+            <div className="sp-with-icon" style={{ position: 'relative' }}>
+              <span className="sp-fi" style={{ fontSize: 13 }}>📸</span>
+              <input className="sp-inp" value={(formData.instagramUrl as string) || ''} onChange={e => set('instagramUrl', e.target.value)} placeholder="https://instagram.com/yourschool" />
+            </div>
+          </Field>
+          <Field label="YouTube Channel URL">
+            <div className="sp-with-icon" style={{ position: 'relative' }}>
+              <span className="sp-fi" style={{ fontSize: 13 }}>▶️</span>
+              <input className="sp-inp" value={(formData.youtubeUrl as string) || ''} onChange={e => set('youtubeUrl', e.target.value)} placeholder="https://youtube.com/@yourschool" />
+            </div>
+          </Field>
+          <Field label="Twitter / X Profile URL">
+            <div className="sp-with-icon" style={{ position: 'relative' }}>
+              <span className="sp-fi" style={{ fontSize: 13 }}>🐦</span>
+              <input className="sp-inp" value={(formData.twitterUrl as string) || ''} onChange={e => set('twitterUrl', e.target.value)} placeholder="https://twitter.com/yourschool" />
+            </div>
+          </Field>
+        </div>
         <div className="sp-divider">School Photos</div>
         <div className="sp-g2">
           <ImageUpload label="School Logo"  hint="Square · JPG, PNG, WEBP · Max 1 MB"  file={logoFile}  existingUrl={existingLogoUrl}  onChange={setLogoFile}  onClearExisting={() => setExistingLogoUrl(null)} />
