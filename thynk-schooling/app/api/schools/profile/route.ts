@@ -124,6 +124,10 @@ async function ensureSchoolsTable() {
     'ADD COLUMN IF NOT EXISTS logo_url TEXT',
     'ADD COLUMN IF NOT EXISTS cover_url TEXT',
     'ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN DEFAULT false',
+    'ADD COLUMN IF NOT EXISTS facebook_url TEXT',
+    'ADD COLUMN IF NOT EXISTS instagram_url TEXT',
+    'ADD COLUMN IF NOT EXISTS youtube_url TEXT',
+    'ADD COLUMN IF NOT EXISTS twitter_url TEXT',
   ]
   for (const m of migrations) {
     await db.query(`ALTER TABLE schools ${m}`).catch(() => {})
@@ -234,6 +238,8 @@ export async function POST(req: NextRequest) {
       getFloat(fd, 'latitude'), getFloat(fd, 'longitude'),
       getStr(fd, 'phone'), getStr(fd, 'email'), getStr(fd, 'websiteUrl'), getStr(fd, 'principalName'),
       logoUrl, coverUrl,
+      getStr(fd, 'facebookUrl'), getStr(fd, 'instagramUrl'),
+      getStr(fd, 'youtubeUrl'),  getStr(fd, 'twitterUrl'),
     ]
 
     // Check existing row FIRST — never regenerate slug (causes UNIQUE constraint crash)
@@ -256,6 +262,7 @@ export async function POST(req: NextRequest) {
           phone=$32, email=$33, website_url=$34, principal_name=$35,
           logo_url=COALESCE($36, logo_url),
           cover_url=COALESCE($37, cover_url),
+          facebook_url=$38, instagram_url=$39, youtube_url=$40, twitter_url=$41,
           profile_completed=true
         WHERE admin_user_id=$1`,
         [userId, ...fields]
@@ -272,10 +279,12 @@ export async function POST(req: NextRequest) {
           admission_open, admission_academic_year,
           facilities, sports, languages, extracurriculars,
           address_line1, state, city, locality, pincode, latitude, longitude,
-          phone, email, website_url, principal_name, logo_url, cover_url, profile_completed
+          phone, email, website_url, principal_name, logo_url, cover_url,
+          facebook_url, instagram_url, youtube_url, twitter_url, profile_completed
         ) VALUES (
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,
-          $20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,true
+          $20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,
+          $38,$39,$40,$41,true
         )`,
         [
           userId, name, slug,
@@ -285,6 +294,7 @@ export async function POST(req: NextRequest) {
           fields[19], fields[20], fields[21], fields[22], fields[23], fields[24],
           fields[25], fields[26], fields[27], fields[28], fields[29], fields[30],
           fields[31], fields[32], fields[33], fields[34], fields[35],
+          fields[36], fields[37], fields[38], fields[39],
         ]
       )
     }
