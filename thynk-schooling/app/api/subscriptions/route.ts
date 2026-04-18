@@ -328,18 +328,19 @@ export async function POST(req: NextRequest) {
       const receipt = `sub_${shortId}_${Date.now().toString(36)}`
 
       try {
-       const order = await createOrder(
-  gatewayId,
-  finalPricePaise,
-  'INR',
-  receipt,
-  {
-    buyerName:  buyer.name,
-    buyerEmail: buyer.email,
-    buyerPhone: buyer.phone,
-    successUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/subscriptions?action=verify-payment`,
-  }
-)
+        const order = await createOrder(
+          gatewayId,
+          finalPricePaise,
+          'INR',
+          receipt,
+          {
+            buyerName:  buyer.name,
+            buyerEmail: buyer.email,
+            buyerPhone: buyer.phone,
+            // Easebuzz posts back here — must point to subscriptions, not lead-packages
+            successUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/subscriptions?action=verify-payment`,
+          }
+        )
 
         // Record pending payment
         await db.query(`
