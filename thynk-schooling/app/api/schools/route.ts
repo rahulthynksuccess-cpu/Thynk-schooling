@@ -399,11 +399,100 @@ async function getAnalytics(req: NextRequest) {
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
   if (!school.rows.length) return NextResponse.json({ leads: [], applications: [] })
   const sid = school.rows[0].id
-  const [leads, apps] = await Promise.all([
+
+  const [leads, apps, sourceBreakdown, cityBreakdown, classBreakdown, recentActivity] = await Promise.all([
     db.query(`SELECT DATE(created_at) AS day, COUNT(*) AS count FROM leads WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '${days} days' GROUP BY day ORDER BY day`, [sid]).catch(() => ({ rows: [] })),
     db.query(`SELECT DATE(created_at) AS day, COUNT(*) AS count FROM applications WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '${days} days' GROUP BY day ORDER BY day`, [sid]).catch(() => ({ rows: [] })),
+
+    // Lead source breakdown — uses leads.source column
+    db.query(`
+      SELECT
+        COALESCE(NULLIF(TRIM(source), ''), 'Direct / Unknown') AS source,
+        COUNT(*) AS count
+      FROM leads
+      WHERE school_id=$1
+      GROUP BY source
+      ORDER BY count DESC
+      LIMIT 10
+    `, [sid]).catch(() => ({ rows: [] })),
+
+    // City breakdown
+    db.query(`
+      SELECT
+        COALESCE(NULLIF(TRIM(city), ''), 'Unknown') AS city,
+        COUNT(*) AS count
+      FROM leads
+      WHERE school_id=$1
+      GROUP BY city
+      ORDER BY count DESC
+      LIMIT 8
+    `, [sid]).catch(() => ({ rows: [] })),
+
+    // Class breakdown
+    db.query(`
+      SELECT
+        COALESCE(NULLIF(TRIM(class_applying_for), ''), 'Not specified') AS class,
+        COUNT(*) AS count
+      FROM leads
+      WHERE school_id=$1
+      GROUP BY class_applying_for
+      ORDER BY count DESC
+      LIMIT 8
+    `, [sid]).catch(() => ({ rows: [] })),
+
+    // Recent activity feed — leads, applications, reviews
+    db.query(`
+      SELECT * FROM (
+        SELECT
+          'lead_unlocked'   AS event_type,
+          l.id              AS ref_id,
+          CASE WHEN l.is_purchased THEN COALESCE(l.parent_name, 'Parent') ELSE '•••' END AS title_detail,
+          COALESCE(l.class_applying_for, '') AS extra,
+          COALESCE(l.city, '') AS city,
+          l.created_at
+        FROM leads l
+        WHERE l.school_id=$1 AND l.is_purchased=true
+        ORDER BY l.created_at DESC LIMIT 4
+      ) t1
+      UNION ALL
+      SELECT * FROM (
+        SELECT
+          'application'     AS event_type,
+          a.id              AS ref_id,
+          COALESCE(a.child_name, 'Student') AS title_detail,
+          COALESCE(a.class_applying_for, '') AS extra,
+          ''                AS city,
+          a.created_at
+        FROM applications a
+        WHERE a.school_id=$1
+        ORDER BY a.created_at DESC LIMIT 3
+      ) t2
+      UNION ALL
+      SELECT * FROM (
+        SELECT
+          'review'          AS event_type,
+          r.id              AS ref_id,
+          CAST(r.rating AS VARCHAR) AS title_detail,
+          ''                AS extra,
+          ''                AS city,
+          r.created_at
+        FROM reviews r
+        WHERE r.school_id=$1
+        ORDER BY r.created_at DESC LIMIT 2
+      ) t3
+      ORDER BY created_at DESC
+      LIMIT 10
+    `, [sid]).catch(() => ({ rows: [] })),
   ])
-  return NextResponse.json({ leads: leads.rows, applications: apps.rows })
+
+  return NextResponse.json({
+    leads: leads.rows,
+    applications: apps.rows,
+    sourceBreakdown: sourceBreakdown.rows,
+    cityBreakdown: cityBreakdown.rows,
+    classBreakdown: classBreakdown.rows,
+    recentActivity: recentActivity.rows,
+  })
 }
 
 async function getDashboardStats(req: NextRequest) {
