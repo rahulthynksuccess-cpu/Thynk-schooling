@@ -29,7 +29,8 @@ import {
   CheckCircle2, Clock, Loader2, MapPin, Sparkles,
   Phone, Flame, ArrowUp, ArrowDown, TrendingUp,
   Bell, AlertTriangle, Target, Activity, Layers,
-  PieChart, Globe, BookOpen, Sun, Moon, Palette
+  PieChart, Globe, BookOpen, Sun, Moon, Palette,
+  Instagram, Youtube, Facebook, Twitter
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
@@ -269,7 +270,6 @@ export const DASHBOARD_CONFIG = {
 
   // Quick action buttons
   quickActions: [
-    { icon: '🚀', label: 'New Campaign',   href: '/dashboard/school/campaigns' },
     { icon: '⚡', label: 'Buy Credits',    href: '/dashboard/school/packages'  },
     { icon: '👥', label: 'View Leads',     href: '/dashboard/school/leads'     },
     { icon: '✏️', label: 'Edit Profile',  href: '/school/complete-profile'    },
@@ -306,6 +306,10 @@ interface SchoolDashboardStats {
   responseRate: number
   conversionRate: number
   performanceScore: number
+  facebookUrl?: string | null
+  instagramUrl?: string | null
+  youtubeUrl?: string | null
+  twitterUrl?: string | null
 }
 
 interface FunnelStage {
@@ -530,13 +534,14 @@ function ThemeController({ themeKey, applyTheme, theme }: {
 // ██  SIDEBAR                                                  ██
 // ═══════════════════════════════════════════════════════════════
 
-function Sidebar({ active, onClose, credits, theme, themeKey, applyTheme }: {
+function Sidebar({ active, onClose, credits, theme, themeKey, applyTheme, socialLinks }: {
   active: string
   onClose?: () => void
   credits?: LeadCredits
   theme: Theme
   themeKey: ThemeKey
   applyTheme: (k: ThemeKey) => void
+  socialLinks?: { facebook?: string | null; instagram?: string | null; youtube?: string | null; twitter?: string | null }
 }) {
   const { user, logout } = useAuthStore()
   const router = useRouter()
@@ -619,6 +624,39 @@ function Sidebar({ active, onClose, credits, theme, themeKey, applyTheme }: {
 
       {/* Theme controller */}
       <ThemeController theme={theme} themeKey={themeKey} applyTheme={applyTheme} />
+
+      {/* Social Media Links */}
+      {(socialLinks?.facebook || socialLinks?.instagram || socialLinks?.youtube || socialLinks?.twitter) && (
+        <div style={{ position: 'relative', zIndex: 1, margin: '0 12px 8px', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 12, border: `1px solid ${theme.sbBorder}` }}>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.sbMuted, marginBottom: 8, fontFamily: theme.bodyFont }}>Social Media</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {socialLinks.facebook && (
+              <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(24,119,242,0.12)', color: '#4A9FE8', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
+                <Facebook size={12} /> Facebook
+              </a>
+            )}
+            {socialLinks.instagram && (
+              <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(225,48,108,0.12)', color: '#E1306C', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
+                <Instagram size={12} /> Instagram
+              </a>
+            )}
+            {socialLinks.youtube && (
+              <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,0,0,0.10)', color: '#FF4444', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
+                <Youtube size={12} /> YouTube
+              </a>
+            )}
+            {socialLinks.twitter && (
+              <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(29,161,242,0.10)', color: '#1DA1F2', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
+                <Twitter size={12} /> Twitter
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Logout */}
       <button
@@ -1001,37 +1039,70 @@ function ConversionFunnel({ stats, theme }: { stats: SchoolDashboardStats | unde
 
 type LeadSourceTab = 'sources' | 'city' | 'class'
 
-function LeadSourcesCard({ theme }: { theme: Theme }) {
+const SLOT_COLORS = [
+  '#8B5CF6', '#10B981', '#F59E0B', '#F43F5E', '#06B6D4',
+  '#3B82F6', '#EC4899', '#14B8A6', '#F97316', '#84CC16',
+]
+
+function LeadSourcesCard({ analyticsRaw, theme }: { analyticsRaw: any; theme: Theme }) {
   const [tab, setTab] = useState<LeadSourceTab>('sources')
 
-  const sources: LeadSource[] = [
-    { rank: 1, label: 'ThynkSchooling search', sublabel: 'Organic discovery', count: 193, pct: 78, color: theme.accent },
-    { rank: 2, label: 'Word of mouth',          sublabel: 'Parent referral',   count: 84,  pct: 34, color: '#10B981' },
-    { rank: 3, label: 'Google search',          sublabel: 'SEO traffic',       count: 54,  pct: 22, color: '#F59E0B' },
-    { rank: 4, label: 'Social media',           sublabel: 'Instagram/Facebook',count: 35,  pct: 14, color: '#F43F5E' },
-    { rank: 5, label: 'School fairs',           sublabel: 'Offline events',    count: 17,  pct: 7,  color: '#8B5CF6' },
-  ]
+  // Build sources from real API data
+  const sources: LeadSource[] = useMemo(() => {
+    const rows: { source: string; count: string }[] = analyticsRaw?.sourceBreakdown || []
+    if (!rows.length) return []
+    const max = Math.max(...rows.map(r => Number(r.count)), 1)
+    return rows.map((r, i) => ({
+      rank: i + 1,
+      label: r.source,
+      sublabel: '',
+      count: Number(r.count),
+      pct: Math.round((Number(r.count) / max) * 100),
+      color: SLOT_COLORS[i % SLOT_COLORS.length],
+    }))
+  }, [analyticsRaw])
 
-  const cities = [
-    { name: 'Delhi', count: 104, pct: 100, color: theme.accent },
-    { name: 'Noida', count: 61,  pct: 59,  color: '#10B981' },
-    { name: 'Gurgaon', count: 42, pct: 40, color: '#F59E0B' },
-    { name: 'Faridabad', count: 24, pct: 23, color: '#06B6D4' },
-    { name: 'Ghaziabad', count: 11, pct: 11, color: '#8B5CF6' },
-  ]
+  const cities = useMemo(() => {
+    const rows: { city: string; count: string }[] = analyticsRaw?.cityBreakdown || []
+    if (!rows.length) return []
+    const max = Math.max(...rows.map(r => Number(r.count)), 1)
+    return rows.map((r, i) => ({
+      name: r.city,
+      count: Number(r.count),
+      pct: Math.round((Number(r.count) / max) * 100),
+      color: SLOT_COLORS[i % SLOT_COLORS.length],
+      totalLeads: max,
+    }))
+  }, [analyticsRaw])
 
-  const classes = [
-    { label: 'Class 6–8', sublabel: 'Middle school', count: 178, pct: 72, color: theme.accent },
-    { label: 'Class 1–5', sublabel: 'Primary',       count: 109, pct: 44, color: '#10B981' },
-    { label: 'Class 9–10', sublabel: 'Secondary',    count: 74,  pct: 30, color: '#F59E0B' },
-    { label: 'Class 11–12', sublabel: 'Sr. Secondary', count: 27, pct: 11, color: '#F43F5E' },
-  ]
+  const classes = useMemo(() => {
+    const rows: { class: string; count: string }[] = analyticsRaw?.classBreakdown || []
+    if (!rows.length) return []
+    const max = Math.max(...rows.map(r => Number(r.count)), 1)
+    return rows.map((r, i) => ({
+      label: r.class,
+      count: Number(r.count),
+      pct: Math.round((Number(r.count) / max) * 100),
+      color: SLOT_COLORS[i % SLOT_COLORS.length],
+    }))
+  }, [analyticsRaw])
+
+  const totalLeads = useMemo(() =>
+    cities.reduce((s, c) => s + c.count, 0) || 1
+  , [cities])
 
   const TABS: { key: LeadSourceTab; label: string }[] = [
     { key: 'sources', label: 'By source' },
     { key: 'city',    label: 'By city'   },
     { key: 'class',   label: 'By class'  },
   ]
+
+  const EmptyState = ({ msg }: { msg: string }) => (
+    <div style={{ padding: '28px 0', textAlign: 'center', color: theme.faint, fontSize: 12, fontFamily: theme.bodyFont }}>
+      <TrendingUp size={28} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }} />
+      {msg}
+    </div>
+  )
 
   return (
     <div style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: 16, padding: 22 }}>
@@ -1050,60 +1121,64 @@ function LeadSourcesCard({ theme }: { theme: Theme }) {
       <AnimatePresence mode="wait">
         {tab === 'sources' && (
           <motion.div key="sources" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {sources.map(s => (
-              <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: theme.faint, width: 14, textAlign: 'right', flexShrink: 0 }}>{s.rank}</span>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>🌐</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
-                  <div style={{ fontSize: 10, color: theme.faint, marginTop: 1, fontFamily: theme.bodyFont }}>{s.sublabel}</div>
-                </div>
-                <div style={{ width: 90, flexShrink: 0 }}>
-                  <div style={{ height: 5, background: theme.accentLight, borderRadius: 99, overflow: 'hidden', marginBottom: 3 }}>
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${s.pct}%` }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }} style={{ height: '100%', background: s.color, borderRadius: 99 }} />
+            {sources.length === 0
+              ? <EmptyState msg="No lead source data yet. Leads will appear here once parents enquire." />
+              : sources.map(s => (
+                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: theme.faint, width: 14, textAlign: 'right', flexShrink: 0 }}>{s.rank}</span>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: `${s.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 }}>🌐</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.label}</div>
                   </div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: s.color, textAlign: 'right', fontFamily: theme.bodyFont }}>{s.pct}%</div>
+                  <div style={{ width: 90, flexShrink: 0 }}>
+                    <div style={{ height: 5, background: theme.accentLight, borderRadius: 99, overflow: 'hidden', marginBottom: 3 }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${s.pct}%` }} transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }} style={{ height: '100%', background: s.color, borderRadius: 99 }} />
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: s.color, textAlign: 'right', fontFamily: theme.bodyFont }}>{s.pct}%</div>
+                  </div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: theme.text, width: 28, textAlign: 'right', flexShrink: 0, fontFamily: theme.bodyFont }}>{s.count}</div>
                 </div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: theme.text, width: 28, textAlign: 'right', flexShrink: 0, fontFamily: theme.bodyFont }}>{s.count}</div>
-              </div>
-            ))}
+              ))
+            }
           </motion.div>
         )}
 
         {tab === 'city' && (
           <motion.div key="city" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            {cities.map(c => (
-              <div key={c.name} style={{ padding: '10px 12px', background: theme.accentLight, borderRadius: 10, border: `0.5px solid ${theme.cardBorder}` }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: theme.muted, fontFamily: theme.bodyFont }}>{c.name}</div>
-                <div style={{ fontSize: 20, fontWeight: 700, color: theme.text, letterSpacing: '-0.03em', lineHeight: 1.2, marginTop: 2, fontFamily: theme.displayFont }}>{c.count}</div>
-                <div style={{ height: 3, background: theme.cardBorder, borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: `${c.pct}%` }} transition={{ duration: 1 }} style={{ height: '100%', background: c.color, borderRadius: 99 }} />
+            {cities.length === 0
+              ? <div style={{ gridColumn: '1/-1' }}><EmptyState msg="No city data yet." /></div>
+              : cities.map(c => (
+                <div key={c.name} style={{ padding: '10px 12px', background: theme.accentLight, borderRadius: 10, border: `0.5px solid ${theme.cardBorder}` }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: theme.muted, fontFamily: theme.bodyFont }}>{c.name}</div>
+                  <div style={{ fontSize: 20, fontWeight: 700, color: theme.text, letterSpacing: '-0.03em', lineHeight: 1.2, marginTop: 2, fontFamily: theme.displayFont }}>{c.count}</div>
+                  <div style={{ height: 3, background: theme.cardBorder, borderRadius: 99, marginTop: 6, overflow: 'hidden' }}>
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${c.pct}%` }} transition={{ duration: 1 }} style={{ height: '100%', background: c.color, borderRadius: 99 }} />
+                  </div>
+                  <div style={{ fontSize: 10, color: theme.faint, marginTop: 3, fontFamily: theme.bodyFont }}>{Math.round((c.count / totalLeads) * 100)}% of leads</div>
                 </div>
-                <div style={{ fontSize: 10, color: theme.faint, marginTop: 3, fontFamily: theme.bodyFont }}>{Math.round((c.count / 247) * 100)}% of leads</div>
-              </div>
-            ))}
+              ))
+            }
           </motion.div>
         )}
 
         {tab === 'class' && (
           <motion.div key="class" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {classes.map(c => (
-              <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont }}>{c.label}</span>
-                    <span style={{ fontSize: 11, color: theme.muted, fontFamily: theme.bodyFont }}>{c.count}</span>
-                  </div>
-                  <div style={{ height: 6, background: theme.accentLight, borderRadius: 99, overflow: 'hidden' }}>
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${c.pct}%` }} transition={{ duration: 1.1 }} style={{ height: '100%', background: c.color, borderRadius: 99 }} />
+            {classes.length === 0
+              ? <EmptyState msg="No class data yet." />
+              : classes.map(c => (
+                <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont }}>{c.label}</span>
+                      <span style={{ fontSize: 11, color: theme.muted, fontFamily: theme.bodyFont }}>{c.count}</span>
+                    </div>
+                    <div style={{ height: 6, background: theme.accentLight, borderRadius: 99, overflow: 'hidden' }}>
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${c.pct}%` }} transition={{ duration: 1.1 }} style={{ height: '100%', background: c.color, borderRadius: 99 }} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-            <div style={{ marginTop: 4, padding: '10px 12px', background: 'rgba(244,63,94,0.06)', borderRadius: 8, border: '0.5px solid rgba(244,63,94,0.15)' }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: '#be123c', fontFamily: theme.bodyFont }}>Class 11–12 leads down 40% vs last month</div>
-              <div style={{ fontSize: 10, color: '#9f1239', marginTop: 2, fontFamily: theme.bodyFont }}>Consider reviewing fee structure or senior-grade highlights.</div>
-            </div>
+              ))
+            }
           </motion.div>
         )}
       </AnimatePresence>
@@ -1116,11 +1191,34 @@ function LeadSourcesCard({ theme }: { theme: Theme }) {
 // ═══════════════════════════════════════════════════════════════
 
 function MonthlyGoalsCard({ stats, theme }: { stats: SchoolDashboardStats | undefined; theme: Theme }) {
+  const [showModal, setShowModal] = useState(false)
+  const [editGoals, setEditGoals] = useState({ admissions: 20, leads: 50, applications: 30, reviews: 5 })
+  const [savedGoals, setSavedGoals] = useState({ admissions: 20, leads: 50, applications: 30, reviews: 5 })
+
+  // Load saved goals from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('school_monthly_goals')
+      if (saved) {
+        const g = JSON.parse(saved)
+        setSavedGoals(g)
+        setEditGoals(g)
+      }
+    } catch {}
+  }, [])
+
+  const saveGoals = () => {
+    setSavedGoals({ ...editGoals })
+    localStorage.setItem('school_monthly_goals', JSON.stringify(editGoals))
+    setShowModal(false)
+    toast.success('Goals saved!')
+  }
+
   const goals: MonthlyGoal[] = [
-    { label: 'Admissions',        achieved: 8,  target: 20, color: '#F59E0B', status: 'behind'   },
-    { label: 'New leads',         achieved: stats?.newLeadsThisMonth ?? 42, target: 50, color: theme.accent, status: 'on-track' },
-    { label: 'Applications',      achieved: stats?.totalApplications ?? 23, target: 30, color: '#10B981', status: 'on-track' },
-    { label: 'Reviews collected', achieved: 5,  target: 5,  color: '#06B6D4', status: 'achieved' },
+    { label: 'Admissions',        achieved: 8,  target: savedGoals.admissions,   color: '#F59E0B', status: 8  >= savedGoals.admissions   ? 'achieved' : 8  / savedGoals.admissions   < 0.5 ? 'behind' : 'on-track' },
+    { label: 'New leads',         achieved: stats?.newLeadsThisMonth ?? 0, target: savedGoals.leads,        color: theme.accent, status: (stats?.newLeadsThisMonth ?? 0) >= savedGoals.leads        ? 'achieved' : (stats?.newLeadsThisMonth ?? 0) / savedGoals.leads        < 0.5 ? 'behind' : 'on-track' },
+    { label: 'Applications',      achieved: stats?.totalApplications ?? 0, target: savedGoals.applications, color: '#10B981', status: (stats?.totalApplications ?? 0) >= savedGoals.applications ? 'achieved' : (stats?.totalApplications ?? 0) / savedGoals.applications < 0.5 ? 'behind' : 'on-track' },
+    { label: 'Reviews collected', achieved: 5,  target: savedGoals.reviews,      color: '#06B6D4', status: 5  >= savedGoals.reviews      ? 'achieved' : 'on-track' },
   ]
 
   const BADGE: Record<string, [string, string]> = {
@@ -1128,50 +1226,113 @@ function MonthlyGoalsCard({ stats, theme }: { stats: SchoolDashboardStats | unde
     'behind':   ['rgba(244,63,94,0.1)',  '#be123c'],
     'achieved': [theme.accentLight, theme.accent],
   }
-
   const BADGE_LABEL: Record<string, string> = { 'on-track': 'On track', 'behind': 'Behind', 'achieved': 'Achieved ✓' }
 
   return (
-    <div style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: 16, padding: 22 }}>
-      <div style={{ fontFamily: theme.displayFont, fontSize: 16, fontWeight: 700, color: theme.text }}>Monthly Goals</div>
-      <div style={{ fontSize: 11, color: theme.muted, marginTop: 2, marginBottom: 16, fontFamily: theme.bodyFont }}>
-        {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })} targets
+    <>
+      <div style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: 16, padding: 22 }}>
+        <div style={{ fontFamily: theme.displayFont, fontSize: 16, fontWeight: 700, color: theme.text }}>Monthly Goals</div>
+        <div style={{ fontSize: 11, color: theme.muted, marginTop: 2, marginBottom: 16, fontFamily: theme.bodyFont }}>
+          {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })} targets
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {goals.map(g => {
+            const pct = Math.min(100, Math.round((g.achieved / g.target) * 100))
+            const [badgeBg, badgeColor] = BADGE[g.status]
+            return (
+              <div key={g.label}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont }}>{g.label}</span>
+                  <span style={{ fontSize: 11, color: theme.muted, fontFamily: theme.bodyFont }}>{g.achieved} <span style={{ color: theme.faint }}>/ {g.target}</span></span>
+                </div>
+                <div style={{ height: 8, background: theme.accentLight, borderRadius: 99, overflow: 'hidden', marginBottom: 4 }}>
+                  <motion.div
+                    initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                    transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ height: '100%', background: g.color, borderRadius: 99 }}
+                  />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: theme.faint, fontFamily: theme.bodyFont }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 99, background: badgeBg, color: badgeColor, fontWeight: 700 }}>
+                    {BADGE_LABEL[g.status]}
+                  </span>
+                  <span>{pct}% done</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div style={{ height: '0.5px', background: theme.cardBorder, margin: '14px 0' }} />
+
+        <button
+          onClick={() => setShowModal(true)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: 10, background: theme.accentLight, borderRadius: 10, color: theme.accent, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, fontFamily: theme.bodyFont, transition: 'all .2s' }}
+        >
+          <Target size={13} /> Set / Edit Goals
+        </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {goals.map(g => {
-          const pct = Math.min(100, Math.round((g.achieved / g.target) * 100))
-          const [badgeBg, badgeColor] = BADGE[g.status]
-          return (
-            <div key={g.label}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont }}>{g.label}</span>
-                <span style={{ fontSize: 11, color: theme.muted, fontFamily: theme.bodyFont }}>{g.achieved} <span style={{ color: theme.faint }}>/ {g.target}</span></span>
+      {/* Goals Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', padding: 16 }}
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              onClick={e => e.stopPropagation()}
+              style={{ background: theme.card, borderRadius: 20, padding: 28, width: '100%', maxWidth: 400, boxShadow: '0 24px 80px rgba(0,0,0,0.3)', border: `1px solid ${theme.cardBorder}` }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <div style={{ fontFamily: theme.displayFont, fontSize: 18, fontWeight: 700, color: theme.text }}>Set Monthly Goals</div>
+                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: theme.faint, padding: 4 }}><X size={16} /></button>
               </div>
-              <div style={{ height: 8, background: theme.accentLight, borderRadius: 99, overflow: 'hidden', marginBottom: 4 }}>
-                <motion.div
-                  initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                  transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1] }}
-                  style={{ height: '100%', background: g.color, borderRadius: 99 }}
-                />
+              <div style={{ fontSize: 12, color: theme.muted, marginBottom: 20, fontFamily: theme.bodyFont }}>
+                {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })} targets
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: theme.faint, fontFamily: theme.bodyFont }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 99, background: badgeBg, color: badgeColor, fontWeight: 700 }}>
-                  {BADGE_LABEL[g.status]}
-                </span>
-                <span>{pct}% done</span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
 
-      <div style={{ height: '0.5px', background: theme.cardBorder, margin: '14px 0' }} />
+              {([
+                { key: 'admissions',   label: 'Admissions target',   icon: '🎓' },
+                { key: 'leads',        label: 'New leads target',     icon: '👥' },
+                { key: 'applications', label: 'Applications target',  icon: '📋' },
+                { key: 'reviews',      label: 'Reviews to collect',   icon: '⭐' },
+              ] as const).map(field => (
+                <div key={field.key} style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: theme.text, marginBottom: 6, fontFamily: theme.bodyFont }}>
+                    {field.icon} {field.label}
+                  </label>
+                  <input
+                    type="number" min={1} max={9999}
+                    value={editGoals[field.key]}
+                    onChange={e => setEditGoals(p => ({ ...p, [field.key]: Math.max(1, Number(e.target.value)) }))}
+                    style={{ width: '100%', padding: '10px 12px', border: `1px solid ${theme.cardBorder}`, borderRadius: 10, fontSize: 14, fontWeight: 600, color: theme.text, background: theme.pageBg, fontFamily: theme.bodyFont, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              ))}
 
-      <Link href="/dashboard/school/analytics" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, width: '100%', padding: 10, background: theme.accentLight, borderRadius: 10, color: theme.accent, textDecoration: 'none', fontSize: 11, fontWeight: 700, fontFamily: theme.bodyFont, transition: 'all .2s' }}>
-        <Target size={13} /> Set / Edit Goals
-      </Link>
-    </div>
+              <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+                <button
+                  onClick={() => setShowModal(false)}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: `1px solid ${theme.cardBorder}`, background: 'transparent', color: theme.muted, cursor: 'pointer', fontSize: 13, fontWeight: 600, fontFamily: theme.bodyFont }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveGoals}
+                  style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: theme.accent, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700, fontFamily: theme.bodyFont }}
+                >
+                  Save Goals
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   )
 }
 
@@ -1179,33 +1340,81 @@ function MonthlyGoalsCard({ stats, theme }: { stats: SchoolDashboardStats | unde
 // ██  WIDGET: ACTIVITY FEED                                    ██
 // ═══════════════════════════════════════════════════════════════
 
-function ActivityFeed({ theme }: { theme: Theme }) {
-  const events: ActivityEvent[] = [
-    { id: '1', title: 'Lead unlocked',      desc: 'Priya Sharma — Class 4, Delhi',          time: '2m ago',   color: '#10B981' },
-    { id: '2', title: 'Application received', desc: 'Rajan Mehta — Class 9',                time: '18m ago',  color: theme.accent },
-    { id: '3', title: 'New review posted',  desc: '4★ review from a parent',                time: '1h ago',   color: '#06B6D4' },
-    { id: '4', title: 'Lead status updated', desc: 'Suresh Verma marked as interested',     time: '3h ago',   color: '#F59E0B' },
-    { id: '5', title: 'Credits low alert',  desc: 'Only 3 credits remaining',               time: '5h ago',   color: '#F43F5E' },
-    { id: '6', title: 'Admission confirmed', desc: 'Anika Patel — Class 2',                 time: 'Yesterday', color: '#10B981' },
-  ]
+function ActivityFeed({ analyticsRaw, theme }: { analyticsRaw: any; theme: Theme }) {
+  const events: ActivityEvent[] = useMemo(() => {
+    const rows: any[] = analyticsRaw?.recentActivity || []
+    if (!rows.length) return []
+
+    return rows.map((r: any, i: number) => {
+      const ago = (dateStr: string) => {
+        const diff = Date.now() - new Date(dateStr).getTime()
+        const mins = Math.floor(diff / 60000)
+        if (mins < 1)  return 'Just now'
+        if (mins < 60) return `${mins}m ago`
+        const hrs = Math.floor(mins / 60)
+        if (hrs < 24)  return `${hrs}h ago`
+        const days = Math.floor(hrs / 24)
+        return days === 1 ? 'Yesterday' : `${days}d ago`
+      }
+
+      if (r.event_type === 'lead_unlocked') {
+        const cls = r.extra ? ` — Class ${r.extra}` : ''
+        const city = r.city ? `, ${r.city}` : ''
+        return {
+          id: r.ref_id || String(i),
+          title: 'Lead unlocked',
+          desc: `${r.title_detail}${cls}${city}`,
+          time: ago(r.created_at),
+          color: '#10B981',
+        }
+      }
+      if (r.event_type === 'application') {
+        const cls = r.extra ? ` — Class ${r.extra}` : ''
+        return {
+          id: r.ref_id || String(i),
+          title: 'Application received',
+          desc: `${r.title_detail}${cls}`,
+          time: ago(r.created_at),
+          color: theme.accent,
+        }
+      }
+      if (r.event_type === 'review') {
+        return {
+          id: r.ref_id || String(i),
+          title: 'New review posted',
+          desc: `${r.title_detail}★ rating from a parent`,
+          time: ago(r.created_at),
+          color: '#06B6D4',
+        }
+      }
+      return { id: String(i), title: r.event_type, desc: '', time: ago(r.created_at), color: theme.faint }
+    })
+  }, [analyticsRaw, theme])
 
   return (
     <div style={{ background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: 16, padding: 22 }}>
       <div style={{ fontFamily: theme.displayFont, fontSize: 16, fontWeight: 700, color: theme.text }}>Recent Activity</div>
       <div style={{ fontSize: 11, color: theme.muted, marginTop: 2, marginBottom: 14, fontFamily: theme.bodyFont }}>Live event feed</div>
 
-      <div>
-        {events.map((e, i) => (
-          <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 0', borderBottom: i < events.length - 1 ? `0.5px solid ${theme.cardBorder}` : 'none' }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: e.color, flexShrink: 0, marginTop: 4 }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont }}>{e.title}</div>
-              <div style={{ fontSize: 11, color: theme.muted, marginTop: 1, fontFamily: theme.bodyFont }}>{e.desc}</div>
+      {events.length === 0 ? (
+        <div style={{ padding: '28px 0', textAlign: 'center', color: theme.faint, fontSize: 12, fontFamily: theme.bodyFont }}>
+          <Activity size={28} style={{ margin: '0 auto 8px', display: 'block', opacity: 0.4 }} />
+          No activity yet — events will appear as leads, applications and reviews come in.
+        </div>
+      ) : (
+        <div>
+          {events.map((e, i) => (
+            <div key={e.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 0', borderBottom: i < events.length - 1 ? `0.5px solid ${theme.cardBorder}` : 'none' }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: e.color, flexShrink: 0, marginTop: 4 }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: theme.text, fontFamily: theme.bodyFont }}>{e.title}</div>
+                <div style={{ fontSize: 11, color: theme.muted, marginTop: 1, fontFamily: theme.bodyFont }}>{e.desc}</div>
+              </div>
+              <div style={{ fontSize: 10, color: theme.faint, flexShrink: 0, marginTop: 2, fontFamily: theme.bodyFont }}>{e.time}</div>
             </div>
-            <div style={{ fontSize: 10, color: theme.faint, flexShrink: 0, marginTop: 2, fontFamily: theme.bodyFont }}>{e.time}</div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -1483,7 +1692,7 @@ export function SchoolDashboardClient() {
 
         {/* Desktop sidebar */}
         <div style={{ width: 252, flexShrink: 0, position: 'sticky', top: 0, height: '100vh', display: typeof window !== 'undefined' && window.innerWidth <= 880 ? 'none' : 'block' }}>
-          <Sidebar active="/dashboard/school" credits={credits} theme={theme} themeKey={themeKey} applyTheme={applyTheme} />
+          <Sidebar active="/dashboard/school" credits={credits} theme={theme} themeKey={themeKey} applyTheme={applyTheme} socialLinks={{ facebook: stats?.facebookUrl, instagram: stats?.instagramUrl, youtube: stats?.youtubeUrl, twitter: stats?.twitterUrl }} />
         </div>
 
         {/* Mobile sidebar overlay */}
@@ -1493,7 +1702,7 @@ export function SchoolDashboardClient() {
               style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
               <motion.div initial={{ x: -252 }} animate={{ x: 0 }} exit={{ x: -252 }} transition={{ type: 'tween', duration: 0.22 }}
                 style={{ width: 252, height: '100%', flexShrink: 0 }}>
-                <Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} theme={theme} themeKey={themeKey} applyTheme={applyTheme} />
+                <Sidebar active="/dashboard/school" onClose={() => setSidebarOpen(false)} credits={credits} theme={theme} themeKey={themeKey} applyTheme={applyTheme} socialLinks={{ facebook: stats?.facebookUrl, instagram: stats?.instagramUrl, youtube: stats?.youtubeUrl, twitter: stats?.twitterUrl }} />
               </motion.div>
               <div style={{ flex: 1, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }} onClick={() => setSidebarOpen(false)} />
             </motion.div>
@@ -1577,7 +1786,7 @@ export function SchoolDashboardClient() {
             {/* Lead Sources + Goals */}
             {(cfg.leadSources || cfg.monthlyGoals) && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16, marginBottom: 18 }}>
-                {cfg.leadSources && <LeadSourcesCard theme={theme} />}
+                {cfg.leadSources && <LeadSourcesCard analyticsRaw={analyticsRaw} theme={theme} />}
                 {cfg.monthlyGoals && <MonthlyGoalsCard stats={stats} theme={theme} />}
               </div>
             )}
@@ -1585,7 +1794,7 @@ export function SchoolDashboardClient() {
             {/* Activity feed */}
             {cfg.activityFeed && (
               <div style={{ marginBottom: 18 }}>
-                <ActivityFeed theme={theme} />
+                <ActivityFeed analyticsRaw={analyticsRaw} theme={theme} />
               </div>
             )}
 
