@@ -1,222 +1,498 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AdminLayout } from '@/components/admin/AdminLayout'
-import { Plus, Pencil, Trash2, Save, X, Loader2, Package, ToggleLeft, ToggleRight } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { LeadPackage } from '@/types'
+import { Package, CheckCircle, Loader2, ArrowLeft, CreditCard, X, Tag, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { useAuthStore } from '@/store/authStore'
+import toast from 'react-hot-toast'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
-const card: React.CSSProperties   = { background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', borderRadius:'14px', padding:'20px' }
-const lbl: React.CSSProperties    = { display:'block', fontSize:'11px', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'6px', fontFamily:'DM Sans,sans-serif' }
-const inp: React.CSSProperties    = { width:'100%', padding:'10px 13px', background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', borderRadius:'8px', color:'#fff', fontSize:'13px', fontFamily:'DM Sans,sans-serif', outline:'none', boxSizing:'border-box' }
-
-interface PackageForm {
-  name: string
-  leadCredits: number
-  price: number
-  description: string
-  isActive: boolean
+type GatewayId = 'razorpay' | 'cashfree' | 'easebuzz' | 'paypal'
+interface Gateway { id: string; name: string; priority: number }
+interface SubPlan {
+  id: string; planKey: string; name: string; description: string
+  price: number; leadsPerMonth: number; features: string[]
+  isHot: boolean; cta: string; sortOrder: number; isActive: boolean
+}
+interface LeadPricingConfig {
+  defaultPricePaise: number
+  statePricing: Array<{ state: string; defaultPricePaise: number; isActive: boolean }>
+}
+interface CouponResult {
+  valid: boolean; coupon_id?: string; code?: string
+  discount_paise?: number; final_amount_paise?: number; message: string
 }
 
-const EMPTY: PackageForm = { name:'', leadCredits:10, price:199900, description:'', isActive:true }
+const GW: Record<string, { emoji: string; color: string; desc: string }> = {
+  razorpay: { emoji: '💙', color: '#3395FF', desc: 'UPI · Cards · Netbanking · Wallets' },
+  cashfree: { emoji: '💚', color: '#00C853', desc: 'UPI · Cards · BNPL' },
+  easebuzz: { emoji: '🟠', color: '#FF6600', desc: 'Cards · UPI · Netbanking' },
+  paypal:   { emoji: '🌐', color: '#003087', desc: 'International · USD/AED/SAR' },
+}
 
-function PackageModal({ pkg, onClose, onSave }: {
-  pkg?: LeadPackage
+declare global {
+  interface Window {
+    Razorpay: new (o: object) => { open: () => void }
+    Cashfree: (config: { mode: 'production' | 'sandbox' }) => {
+      checkout: (options: { paymentSessionId: string; returnUrl: string }) => void
+    }
+  }
+}
+
+// ─── Checkout Modal ───────────────────────────────────────────────────────────
+
+function CheckoutModal({ plan, gateways, onClose, onPay }: {
+  plan: SubPlan
+  gateways: Gateway[]
   onClose: () => void
-  onSave: (data: PackageForm) => void
+  onPay: (g: GatewayId, couponId?: string, finalAmount?: number) => void
 }) {
-  const [form, setForm] = useState<PackageForm>(pkg ? {
-    name: pkg.name, leadCredits: pkg.leadCredits, price: pkg.price,
-    description: pkg.description || '', isActive: pkg.isActive,
-  } : EMPTY)
+  const [couponCode, setCouponCode]       = useState('')
+  const [couponResult, setCouponResult]   = useState<CouponResult | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [selectedGw, setSelectedGw]       = useState<GatewayId>(gateways[0]?.id as GatewayId || 'razorpay')
 
-  const set = (k: keyof PackageForm, v: PackageForm[keyof PackageForm]) => setForm(p => ({ ...p, [k]: v }))
-  const priceRs = (form.price / 100).toFixed(0)
-  const perLead = form.leadCredits > 0 ? Math.round(form.price / form.leadCredits / 100) : 0
+  const effectivePrice = couponResult?.valid ? couponResult.final_amount_paise! : plan.price
+  const fmt = (p: number) => `₹${Math.round(p / 100).toLocaleString('en-IN')}`
 
-  return (
-    <div style={{ position:'fixed', inset:0, zIndex:50, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
-      <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.7)' }} onClick={onClose} />
-      <motion.div initial={{ opacity:0, scale:.96, y:16 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:.96 }}
-        style={{ ...card, width:'100%', maxWidth:'480px', position:'relative', zIndex:1 }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px' }}>
-          <h3 style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'16px', color:'#fff', margin:0 }}>
-            {pkg ? 'Edit Package' : 'New Lead Package'}
-          </h3>
-          <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', display:'flex' }}>
-            <X style={{ width:'18px', height:'18px' }} />
-          </button>
-        </div>
-
-        <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
-          <div>
-            <label style={lbl}>Package Name</label>
-            <input value={form.name} onChange={e => set('name', e.target.value)}
-              placeholder="e.g. Starter 10, Growth 30, Pro 75"
-              style={inp} />
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
-            <div>
-              <label style={lbl}>Lead Credits</label>
-              <input type="number" value={form.leadCredits} min="1"
-                onChange={e => set('leadCredits', Number(e.target.value))}
-                style={inp} />
-            </div>
-            <div>
-              <label style={lbl}>Price (₹)</label>
-              <input type="number" value={priceRs} min="1"
-                onChange={e => set('price', Math.round(parseFloat(e.target.value) * 100))}
-                style={inp} />
-            </div>
-          </div>
-
-          <div>
-            <label style={lbl}>Description (optional)</label>
-            <input value={form.description} onChange={e => set('description', e.target.value)}
-              placeholder="Short description shown on buy page"
-              style={inp} />
-          </div>
-
-          {/* Price per lead preview */}
-          <div style={{ padding:'12px', borderRadius:'8px', background:'rgba(255,92,0,0.06)', border:'1px solid rgba(255,92,0,0.2)' }}>
-            <div style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif' }}>Price per lead</div>
-            <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'22px', color:'#FF5C00' }}>₹{perLead}/lead</div>
-          </div>
-
-          <div style={{ display:'flex', gap:'10px', paddingTop:'4px' }}>
-            <button onClick={onClose} style={{ flex:1, padding:'11px', borderRadius:'8px', background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'13px', fontFamily:'DM Sans,sans-serif', fontWeight:500 }}>
-              Cancel
-            </button>
-            <button onClick={() => { if (!form.name || form.leadCredits < 1) { toast.error('Name and credits are required'); return } onSave(form) }}
-              style={{ flex:1, padding:'11px', borderRadius:'8px', background:'#FF5C00', border:'none', color:'#fff', cursor:'pointer', fontSize:'13px', fontFamily:'DM Sans,sans-serif', fontWeight:600, display:'flex', alignItems:'center', justifyContent:'center', gap:'6px' }}>
-              <Save style={{ width:'14px', height:'14px' }} /> {pkg ? 'Save Changes' : 'Create Package'}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  )
-}
-
-export default function LeadPackagesPage() {
-  const queryClient = useQueryClient()
-  const [modalPkg, setModalPkg]     = useState<LeadPackage | null | undefined>(undefined)
-  const [modalOpen, setModalOpen]   = useState(false)
-
-  const { data: packages, isLoading } = useQuery<LeadPackage[]>({
-    queryKey: ['admin-lead-packages'],
-    queryFn: () => fetch('/api/lead-packages?all=true',{cache:'no-store'}).then(r=>r.json()),
-    staleTime: 5 * 60 * 1000,
-  })
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin-lead-packages'] })
-
-  const createMutation = useMutation({
-    mutationFn: (data: PackageForm) => fetch('/api/lead-packages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()),
-    onSuccess: () => { toast.success('Package created!'); setModalOpen(false); invalidate() },
-    onError: () => toast.error('Failed to create package.'),
-  })
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: PackageForm }) => fetch(`/api/lead-packages?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(r=>r.json()),
-    onSuccess: () => { toast.success('Package updated!'); setModalOpen(false); invalidate() },
-    onError: () => toast.error('Failed to update package.'),
-  })
-
-  const toggleMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => fetch(`/api/lead-packages?id=${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({isActive})}).then(r=>r.json()),
-    onSuccess: () => invalidate(),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => fetch(`/api/lead-packages?id=${id}`,{method:'DELETE'}).then(r=>r.json()),
-    onSuccess: () => { toast.success('Package deleted.'); invalidate() },
-    onError: () => toast.error('Cannot delete — package may have active purchases.'),
-  })
-
-  const handleSave = (data: PackageForm) => {
-    if (modalPkg) {
-      updateMutation.mutate({ id: modalPkg.id, data })
-    } else {
-      createMutation.mutate(data)
+  const validateCoupon = async () => {
+    if (!couponCode.trim()) return
+    setCouponLoading(true)
+    try {
+      const res = await fetch('/api/coupon', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponCode.trim(), amount_paise: plan.price, gateway: selectedGw }),
+      })
+      setCouponResult(await res.json())
+    } catch {
+      setCouponResult({ valid: false, message: 'Could not validate coupon' })
+    } finally {
+      setCouponLoading(false)
     }
   }
 
   return (
-    <AdminLayout pageClass="admin-page-packages" title="Lead Packages" subtitle="Create and manage bulk lead credit packages for schools">
+    <div style={{ position:'fixed',inset:0,zIndex:200,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.75)',backdropFilter:'blur(6px)',padding:16 }}>
+      <motion.div initial={{ opacity:0,scale:0.95,y:10 }} animate={{ opacity:1,scale:1,y:0 }}
+        style={{ background:'#fff',borderRadius:20,padding:28,width:'100%',maxWidth:440,position:'relative',boxShadow:'0 24px 80px rgba(0,0,0,0.3)',maxHeight:'90vh',overflowY:'auto' }}>
 
-      <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'20px' }}>
-        <button onClick={() => { setModalPkg(null); setModalOpen(true) }}
-          style={{ display:'flex', alignItems:'center', gap:'8px', background:'#FF5C00', color:'#fff', border:'none', borderRadius:'8px', padding:'11px 20px', fontSize:'13px', fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>
-          <Plus style={{ width:'15px', height:'15px' }} /> New Package
+        <button onClick={onClose} style={{ position:'absolute',top:14,right:14,background:'none',border:'none',cursor:'pointer',color:'#A0ADB8',padding:4 }}>
+          <X style={{ width:16,height:16 }} />
         </button>
-      </div>
 
-      {/* Package grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(220px,1fr))', gap:'14px' }}>
-        {isLoading
-          ? Array.from({ length:5 }).map((_,i) => (
-              <div key={i} style={{ ...card, height:'220px', animation:'pulse 1.5s infinite' }} />
-            ))
-          : (packages ?? []).map((pkg, i) => (
-              <motion.div key={pkg.id} initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
-                style={{ ...card, opacity: pkg.isActive ? 1 : .5, position:'relative' }}>
-                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'14px' }}>
-                  <div style={{ width:'38px', height:'38px', borderRadius:'9px', background:'rgba(255,92,0,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <Package style={{ width:'18px', height:'18px', color:'#FF5C00' }} />
-                  </div>
-                  <button onClick={() => toggleMutation.mutate({ id: pkg.id, isActive: !pkg.isActive })}
-                    style={{ background:'none', border:'none', cursor:'pointer', color: pkg.isActive ? '#4ADE80' : '#8892B0', display:'flex' }}>
-                    {pkg.isActive ? <ToggleRight style={{ width:'22px', height:'22px' }} /> : <ToggleLeft style={{ width:'22px', height:'22px' }} />}
-                  </button>
-                </div>
-                <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'17px', color:'#fff', marginBottom:'3px' }}>{pkg.name}</div>
-                <div style={{ fontFamily:'Syne,sans-serif', fontWeight:700, fontSize:'26px', color:'#FF5C00', marginBottom:'4px' }}>
-                  ₹{(pkg.price / 100).toLocaleString('en-IN')}
-                </div>
-                <div style={{ fontSize:'12px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'3px', fontFamily:'DM Sans,sans-serif' }}>
-                  {pkg.leadCredits} lead credits
-                </div>
-                <div style={{ fontSize:'11px', color:'#4ADE80', marginBottom:'14px', fontFamily:'DM Sans,sans-serif' }}>
-                  ₹{Math.round(pkg.price / pkg.leadCredits / 100)}/lead
-                </div>
-                {pkg.description && (
-                  <div style={{ fontSize:'11px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', marginBottom:'14px', fontFamily:'DM Sans,sans-serif', lineHeight:1.5 }}>{pkg.description}</div>
-                )}
-                <div style={{ display:'flex', gap:'8px', paddingTop:'12px', borderTop:'1px solid #1E2A52' }}>
-                  <button onClick={() => { setModalPkg(pkg); setModalOpen(true) }}
-                    style={{ flex:1, padding:'8px', borderRadius:'7px', background:'var(--admin-packages-card-bg,#111820)', border:'1px solid var(--admin-packages-card-border,rgba(255,255,255,0.07))', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', cursor:'pointer', fontSize:'12px', fontFamily:'DM Sans,sans-serif', display:'flex', alignItems:'center', justifyContent:'center', gap:'5px' }}>
-                    <Pencil style={{ width:'12px', height:'12px' }} /> Edit
-                  </button>
-                  <button onClick={() => { if (confirm(`Delete "${pkg.name}"?`)) deleteMutation.mutate(pkg.id) }}
-                    style={{ padding:'8px 12px', borderRadius:'7px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)', color:'#F87171', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <Trash2 style={{ width:'13px', height:'13px' }} />
-                  </button>
-                </div>
-              </motion.div>
-            ))
-        }
-      </div>
-
-      {!isLoading && (packages ?? []).length === 0 && (
-        <div style={{ textAlign:'center', padding:'60px 0' }}>
-          <Package style={{ width:'48px', height:'48px', color:'#1E2A52', margin:'0 auto 12px' }} />
-          <div style={{ fontSize:'15px', fontWeight:600, color:'#fff', marginBottom:'6px', fontFamily:'Syne,sans-serif' }}>No packages yet</div>
-          <div style={{ fontSize:'13px', color:'var(--admin-text-muted,rgba(255,255,255,0.45))', fontFamily:'DM Sans,sans-serif' }}>Create your first lead credit package for schools.</div>
+        <div style={{ textAlign:'center',marginBottom:20 }}>
+          <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#0D1117',marginBottom:4 }}>Subscribe to {plan.name}</div>
+          <div style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096' }}>
+            {plan.price === 0 ? 'Free forever · ' : ''}cancel anytime
+          </div>
         </div>
-      )}
+
+        {/* Price summary */}
+        <div style={{ background:'#F9F7F4',border:'1px solid #E8DCC8',borderRadius:12,padding:'14px 16px',marginBottom:18 }}>
+          <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:couponResult?.valid?8:0 }}>
+            <span style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096' }}>Package price</span>
+            <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:18,color:'#0D1117' }}>
+              {plan.price === 0 ? 'Free' : `${fmt(plan.price)}`}
+            </span>
+          </div>
+          {couponResult?.valid && <>
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8 }}>
+              <span style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#16A34A' }}>Discount ({couponResult.code})</span>
+              <span style={{ fontFamily:'Inter,sans-serif',fontSize:13,fontWeight:600,color:'#16A34A' }}>−{fmt(couponResult.discount_paise!)}</span>
+            </div>
+            <div style={{ height:1,background:'#E8DCC8',marginBottom:8 }} />
+            <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center' }}>
+              <span style={{ fontFamily:'Inter,sans-serif',fontSize:14,fontWeight:700,color:'#0D1117' }}>Total payable</span>
+              <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#B8860B' }}>{fmt(effectivePrice)}</span>
+            </div>
+          </>}
+        </div>
+
+        {/* Coupon — only show for paid plans */}
+        {plan.price > 0 && (
+          <div style={{ marginBottom:18 }}>
+            <div style={{ fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#9B8860',marginBottom:8 }}>Coupon Code</div>
+            {couponResult?.valid ? (
+              <div style={{ display:'flex',alignItems:'center',gap:10,padding:'10px 14px',background:'#F0FDF4',border:'1px solid #86EFAC',borderRadius:10 }}>
+                <CheckCircle style={{ width:15,height:15,color:'#16A34A',flexShrink:0 }} />
+                <span style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#16A34A',flex:1 }}>{couponResult.message}</span>
+                <button onClick={() => { setCouponResult(null); setCouponCode('') }} style={{ background:'none',border:'none',cursor:'pointer',color:'#86EFAC',padding:2,display:'flex' }}>
+                  <X style={{ width:14,height:14 }} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div style={{ display:'flex',gap:8 }}>
+                  <div style={{ flex:1,position:'relative' }}>
+                    <Tag style={{ position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',width:14,height:14,color:'#C4A96A' }} />
+                    <input value={couponCode}
+                      onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponResult(null) }}
+                      onKeyDown={e => e.key==='Enter' && validateCoupon()}
+                      placeholder="ENTER CODE"
+                      style={{ width:'100%',padding:'10px 12px 10px 34px',boxSizing:'border-box',border:'1px solid #E8DCC8',borderRadius:10,background:'#FDFAF5',fontSize:13,fontFamily:'Inter,sans-serif',outline:'none',color:'#0D1117',letterSpacing:'.04em' }} />
+                  </div>
+                  <button onClick={validateCoupon} disabled={!couponCode.trim()||couponLoading}
+                    style={{ padding:'10px 16px',borderRadius:10,border:'1px solid #D4B483',background:couponCode.trim()?'#FFF8E7':'#F5F0E8',color:'#B8860B',fontSize:13,fontWeight:700,cursor:couponCode.trim()?'pointer':'not-allowed',fontFamily:'Inter,sans-serif',display:'flex',alignItems:'center',gap:6,opacity:couponCode.trim()?1:0.5 }}>
+                    {couponLoading ? <Loader2 style={{ width:14,height:14,animation:'spin 1s linear infinite' }} /> : 'Apply'}
+                  </button>
+                </div>
+                {couponResult && !couponResult.valid && (
+                  <div style={{ display:'flex',alignItems:'center',gap:6,marginTop:7 }}>
+                    <AlertCircle style={{ width:13,height:13,color:'#EF4444',flexShrink:0 }} />
+                    <span style={{ fontFamily:'Inter,sans-serif',fontSize:12,color:'#EF4444' }}>{couponResult.message}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Gateway — only show if multiple */}
+        {gateways.length > 1 && plan.price > 0 && (
+          <div style={{ marginBottom:20 }}>
+            <div style={{ fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#9B8860',marginBottom:8 }}>Payment Method</div>
+            <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
+              {gateways.map(gw => {
+                const d = GW[gw.id]; if (!d) return null
+                const active = selectedGw === gw.id
+                return (
+                  <button key={gw.id} onClick={() => { setSelectedGw(gw.id as GatewayId); setCouponResult(null); setCouponCode(couponCode) }}
+                    style={{ display:'flex',alignItems:'center',gap:14,padding:'12px 16px',borderRadius:12,border:`1.5px solid ${active?d.color:'rgba(13,17,23,0.1)'}`,background:active?`${d.color}10`:`${d.color}04`,cursor:'pointer',textAlign:'left',width:'100%',transition:'all .15s' }}>
+                    <span style={{ fontSize:24,flexShrink:0 }}>{d.emoji}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontFamily:'Inter,sans-serif',fontWeight:700,fontSize:14,color:'#0D1117',marginBottom:2 }}>{gw.name}</div>
+                      <div style={{ fontFamily:'Inter,sans-serif',fontSize:11,color:'#718096' }}>{d.desc}</div>
+                    </div>
+                    {active && <div style={{ width:8,height:8,borderRadius:'50%',background:d.color,flexShrink:0 }} />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        <button
+          onClick={() => onPay(selectedGw, couponResult?.valid ? couponResult.coupon_id : undefined, couponResult?.valid ? effectivePrice : undefined)}
+          style={{ width:'100%',padding:'14px',borderRadius:12,border:'none',background:'linear-gradient(135deg,#B8860B,#D4A520)',color:'#fff',fontFamily:'Inter,sans-serif',fontSize:15,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,boxShadow:'0 6px 20px rgba(184,134,11,0.35)' }}>
+          <CreditCard style={{ width:16,height:16 }} />
+          {plan.price === 0 ? 'Activate Free Plan →' : `Pay ${fmt(effectivePrice)} →`}
+        </button>
+
+        <p style={{ fontFamily:'Inter,sans-serif',fontSize:10,color:'#A0ADB8',textAlign:'center',marginTop:12,marginBottom:0 }}>
+          🔒 Secure payment · Cancel anytime · No hidden fees
+        </p>
+      </motion.div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+export default function SchoolPackagesPage() {
+  const { accessToken, user } = useAuthStore()
+  const router      = useRouter()
+  const searchParams = useSearchParams()
+  const [mounted, setMounted]           = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<SubPlan | null>(null)
+  const [payingId, setPayingId]         = useState<string | null>(null)
+
+  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => { if (mounted && !accessToken) router.replace('/login') }, [mounted, accessToken, router])
+
+  // Handle redirect back from Cashfree / Easebuzz
+  useEffect(() => {
+    if (!mounted || !accessToken) return
+    const status  = searchParams.get('status')
+    const gateway = searchParams.get('gateway')
+    const orderId = searchParams.get('order_id')
+    if (status === 'failed') { toast.error('Payment failed or was cancelled.'); router.replace('/dashboard/school/packages'); return }
+    if (status === 'success') { toast.success('🎉 Subscription activated!'); router.replace('/dashboard/school/packages'); return }
+    if (gateway === 'cashfree' && orderId) {
+      const headers: Record<string,string> = { 'Content-Type':'application/json' }
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+      fetch('/api/subscriptions?action=verify-payment', {
+        method:'POST', credentials:'include', headers,
+        body: JSON.stringify({ gateway:'cashfree', orderId, cfOrderId: orderId }),
+      })
+        .then(r => r.json())
+        .then(res => res.success ? toast.success('🎉 Subscription activated!') : toast.error(res.error || 'Verification failed'))
+        .catch(() => toast.error('Could not verify payment'))
+        .finally(() => router.replace('/dashboard/school/packages'))
+    }
+  }, [mounted, accessToken, searchParams, router])
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+
+  // Fetch subscription plans — same API as public /pricing page
+  const { data: plansData, isLoading } = useQuery<SubPlan[]>({
+    queryKey: ['subscription-plans'],
+    queryFn: () => fetch('/api/admin?action=subscription-plans').then(r => r.json()),
+    staleTime: 5 * 60 * 1000,
+    enabled: mounted,
+  })
+
+  // Reuse lead-packages endpoint just to get enabled gateways list
+  const { data: gwData } = useQuery<{ gateways: Gateway[] }>({
+    queryKey: ['payment-gateways'],
+    queryFn: () => fetch('/api/lead-packages', { credentials:'include' }).then(r => r.json()),
+    enabled: !!accessToken && mounted,
+    staleTime: 10 * 60 * 1000,
+  })
+
+  // Dynamic per-lead price
+  const { data: leadPricing } = useQuery<LeadPricingConfig>({
+    queryKey: ['lead-pricing-cfg'],
+    queryFn: () => fetch('/api/admin/lead-pricing', { cache:'no-store' }).then(r => r.json()),
+    staleTime: 5 * 60 * 1000,
+    enabled: mounted,
+  })
+
+  // Current school subscription (to highlight active plan)
+  const { data: currentSub } = useQuery<{ planKey?: string }>({
+    queryKey: ['school-subscription'],
+    queryFn: () => fetch('/api/subscriptions?action=current', { credentials:'include' }).then(r => r.json()),
+    enabled: !!accessToken && mounted,
+  })
+
+  const activePlans = (plansData ?? [])
+    .filter(p => p.isActive)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+
+  const gateways = gwData?.gateways ?? []
+
+  const perLeadPaise = (() => {
+    if (!leadPricing) return null
+    if (user?.state && leadPricing.statePricing?.length) {
+      const row = leadPricing.statePricing.find(s => s.isActive && s.state.toLowerCase() === (user.state ?? '').toLowerCase())
+      if (row) return row.defaultPricePaise
+    }
+    return leadPricing.defaultPricePaise
+  })()
+  const perLeadDisplay = perLeadPaise != null ? `₹${Math.round(perLeadPaise/100).toLocaleString('en-IN')}/lead` : '₹299/lead'
+
+  const formatPrice = (paise: number) => {
+    if (paise === 0) return { label: '₹0', period: 'forever' }
+    return { label: `₹${Math.round(paise/100).toLocaleString('en-IN')}`, period: '' }
+  }
+
+  // ── Payment ───────────────────────────────────────────────────────────────
+
+  const handlePay = async (plan: SubPlan, gatewayId: GatewayId, couponId?: string, finalAmountPaise?: number) => {
+    setSelectedPlan(null)
+    setPayingId(plan.id)
+    try {
+      const headers: Record<string,string> = { 'Content-Type':'application/json' }
+      if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
+
+      // Free plan — no payment needed
+      if (plan.price === 0) {
+        const res = await fetch(`/api/subscriptions?action=activate-free&planKey=${plan.planKey}`, {
+          method:'POST', credentials:'include', headers,
+        })
+        const data = await res.json()
+        if (data.success) toast.success(`✅ ${plan.name} plan activated!`)
+        else toast.error(data.error || 'Could not activate plan')
+        setPayingId(null)
+        return
+      }
+
+      const orderRes = await fetch(
+        `/api/subscriptions?action=buy&planKey=${plan.planKey}&gateway=${gatewayId}${couponId ? `&coupon_id=${couponId}` : ''}`,
+        { method:'POST', credentials:'include', headers }
+      )
+      const order = await orderRes.json()
+      if (!orderRes.ok) throw new Error(order.error || 'Order creation failed')
+
+      if (order._dev || order.success) {
+        toast.success(`✅ Subscribed to ${plan.name}!`)
+        setPayingId(null)
+        return
+      }
+
+      if (gatewayId === 'razorpay') {
+        const cp = order.clientPayload
+        await new Promise<void>((resolve, reject) => {
+          const rzp = new window.Razorpay({
+            key: cp.key, amount: finalAmountPaise ?? cp.amount,
+            currency: cp.currency, order_id: cp.orderId,
+            name: 'Thynk Schooling', description: `${plan.name} subscription`,
+            theme: { color: '#B8860B' },
+            handler: async (resp: any) => {
+              await fetch('/api/subscriptions?action=verify-payment', {
+                method:'POST', credentials:'include', headers,
+                body: JSON.stringify({ gateway:'razorpay', coupon_id: couponId, ...resp }),
+              })
+              resolve()
+            },
+            modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
+          })
+          rzp.open()
+        })
+        toast.success(`🎉 Subscribed to ${plan.name}!`)
+
+      } else if (gatewayId === 'cashfree') {
+        const { sessionId, orderId, mode } = order.clientPayload
+        if (!sessionId) throw new Error('Cashfree session ID missing')
+        const cashfree = window.Cashfree({ mode: mode === 'live' ? 'production' : 'sandbox' })
+        cashfree.checkout({
+          paymentSessionId: sessionId,
+          returnUrl: `${window.location.origin}/dashboard/school/packages?order_id=${orderId}&gateway=cashfree`,
+        })
+
+      } else if (gatewayId === 'easebuzz') {
+        const { accessKey, baseUrl } = order.clientPayload
+        if (!accessKey) throw new Error('Easebuzz access key missing')
+        window.location.href = `${baseUrl}/pay/?access_key=${accessKey}`
+
+      } else if (gatewayId === 'paypal') {
+        if (order.clientPayload?.approveUrl) window.location.href = order.clientPayload.approveUrl
+      }
+
+    } catch (err: any) {
+      if (err?.message !== 'Payment cancelled') toast.error(err?.message || 'Payment failed')
+    }
+    setPayingId(null)
+  }
+
+  if (!mounted) return null
+
+  return (
+    <div style={{ minHeight:'100vh',background:'linear-gradient(160deg,#FDFAF5 0%,#F5EDD8 60%,#EEE0C0 100%)',padding:'40px 20px',fontFamily:'Inter,sans-serif' }}>
+      {gateways.some(g => g.id==='razorpay') && <script src="https://checkout.razorpay.com/v1/checkout.js" async />}
+      {gateways.some(g => g.id==='cashfree') && <script src="https://sdk.cashfree.com/js/v3/cashfree.js" async />}
+
+      <div style={{ maxWidth:1140,margin:'0 auto' }}>
+        <Link href="/dashboard/school" style={{ display:'inline-flex',alignItems:'center',gap:8,color:'#6B5744',textDecoration:'none',fontSize:13,fontWeight:600,marginBottom:32,padding:'8px 14px',borderRadius:9,background:'rgba(184,134,11,0.08)',border:'1px solid rgba(184,134,11,0.15)' }}>
+          <ArrowLeft style={{ width:14,height:14 }} /> Back to Dashboard
+        </Link>
+
+        <div style={{ textAlign:'center',maxWidth:960,margin:'0 auto 48px' }}>
+          <div style={{ display:'inline-flex',alignItems:'center',gap:6,fontSize:11,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#B8860B',marginBottom:14 }}>
+            <Package style={{ width:13,height:13 }} /> Subscription Plans
+          </div>
+          <h1 style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.2rem,5vw,3.2rem)',color:'#0D1117',letterSpacing:'-1.5px',lineHeight:0.95,margin:'0 0 14px' }}>
+            Choose Your Plan<br /><em style={{ fontStyle:'italic',color:'#B8860B' }}>& Grow Admissions</em>
+          </h1>
+          <p style={{ fontSize:15,color:'#718096',lineHeight:1.6,maxWidth:520,margin:'0 auto' }}>
+            Get leads included every month. Upgrade or cancel anytime.
+          </p>
+        </div>
+
+        {/* Plans grid */}
+        {isLoading ? (
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:20,maxWidth:1100,margin:'0 auto 40px' }}>
+            {[1,2,3,4].map(i => <div key={i} style={{ height:420,borderRadius:20,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s ease-in-out infinite' }} />)}
+          </div>
+        ) : (
+          <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:20,maxWidth:1100,margin:'0 auto 40px' }}>
+            {activePlans.map((plan, i) => {
+              const { label, period } = formatPrice(plan.price)
+              const isCurrent = currentSub?.planKey === plan.planKey
+              return (
+                <motion.div key={plan.id}
+                  initial={{ opacity:0,y:24 }} animate={{ opacity:1,y:0 }} transition={{ delay:i*0.07 }}
+                  style={{
+                    background: plan.isHot?'#0D1117':'#FFFFFF',
+                    border: plan.isHot?'2px solid #B8860B':'1px solid #E8DCC8',
+                    borderRadius:20, padding:'28px 24px', display:'flex', flexDirection:'column',
+                    position:'relative', boxShadow: plan.isHot?'0 20px 60px rgba(13,17,23,0.25)':'0 2px 16px rgba(13,17,23,0.06)',
+                    transition:'transform .2s,box-shadow .2s',
+                  }}
+                  onMouseEnter={e => { if (!plan.isHot) { (e.currentTarget as HTMLElement).style.transform='translateY(-4px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 12px 40px rgba(13,17,23,0.12)' }}}
+                  onMouseLeave={e => { if (!plan.isHot) { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow='0 2px 16px rgba(13,17,23,0.06)' }}}>
+
+                  {plan.isHot && (
+                    <div style={{ position:'absolute',top:-13,left:'50%',transform:'translateX(-50%)',background:'#B8860B',color:'#fff',fontSize:11,fontWeight:700,padding:'4px 14px',borderRadius:99,whiteSpace:'nowrap' }}>
+                      ⭐ Most Popular
+                    </div>
+                  )}
+                  {isCurrent && (
+                    <div style={{ position:'absolute',top:14,left:14,background:'#16A34A',color:'#fff',fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:99 }}>
+                      ✓ Current Plan
+                    </div>
+                  )}
+
+                  <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:4,marginTop:plan.isHot?16:0 }}>
+                    {plan.name}
+                  </div>
+                  <div style={{ fontSize:12,color:plan.isHot?'rgba(250,247,242,0.5)':'#9B8860',marginBottom:20,lineHeight:1.5 }}>
+                    {plan.description}
+                  </div>
+
+                  <div style={{ display:'flex',alignItems:'baseline',gap:4,marginBottom:20 }}>
+                    <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:800,fontSize:42,color:plan.isHot?'#FAF7F2':'#0D1117',letterSpacing:'-2px',lineHeight:1 }}>{label}</span>
+                    <span style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.4)':'#9B8860' }}>{period}</span>
+                  </div>
+
+                  <div style={{ flex:1,marginBottom:24 }}>
+                    {(plan.features ?? []).map(f => (
+                      <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:9,marginBottom:10 }}>
+                        <CheckCircle style={{ width:15,height:15,color:'#22C55E',flexShrink:0,marginTop:1 }} />
+                        <span style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.75)':'#4A3728',lineHeight:1.4 }}>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      if (!accessToken) { toast.error('Please log in first'); router.push('/login'); return }
+                      if (isCurrent) { toast('You are already on this plan'); return }
+                      setSelectedPlan(plan)
+                    }}
+                    disabled={payingId === plan.id}
+                    style={{
+                      width:'100%', padding:'13px', borderRadius:12, border:'none',
+                      cursor: isCurrent ? 'default' : 'pointer',
+                      fontFamily:'Inter,sans-serif', fontWeight:700, fontSize:14,
+                      display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                      background: isCurrent ? '#16A34A' : plan.isHot ? 'linear-gradient(135deg,#B8860B,#D4A520)' : '#0D1117',
+                      color:'#fff',
+                      boxShadow: plan.isHot ? '0 8px 24px rgba(184,134,11,0.4)' : '0 4px 12px rgba(13,17,23,0.2)',
+                      opacity: payingId===plan.id ? 0.7 : 1,
+                    }}>
+                    {payingId === plan.id
+                      ? <Loader2 style={{ width:16,height:16,animation:'spin 1s linear infinite' }} />
+                      : isCurrent ? '✓ Active Plan'
+                      : <><CreditCard style={{ width:15,height:15 }} /> {plan.cta || 'Subscribe'} →</>
+                    }
+                  </button>
+                </motion.div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* Per-lead note */}
+        <div style={{ maxWidth:1100,margin:'0 auto',background:'white',border:'1px solid #E8DCC8',borderRadius:16,padding:'18px 24px',display:'flex',alignItems:'center',gap:12 }}>
+          <span style={{ fontSize:20 }}>💡</span>
+          <p style={{ margin:0,fontSize:13,color:'#6B5744',lineHeight:1.6 }}>
+            <strong>Pay-per-lead</strong> also available — unlock individual leads directly from your dashboard.{' '}
+            Price: <strong>{perLeadDisplay}</strong>
+            {user?.state && perLeadPaise != null && (
+              <span style={{ color:'#9B8860',fontSize:12 }}> ({user.state} pricing)</span>
+            )}
+          </p>
+        </div>
+      </div>
 
       <AnimatePresence>
-        {modalOpen && (
-          <PackageModal
-            pkg={modalPkg ?? undefined}
-            onClose={() => { setModalOpen(false); setModalPkg(undefined) }}
-            onSave={handleSave}
+        {selectedPlan && (
+          <CheckoutModal
+            plan={selectedPlan}
+            gateways={gateways}
+            onClose={() => setSelectedPlan(null)}
+            onPay={(gwId, couponId, finalAmount) => handlePay(selectedPlan, gwId, couponId, finalAmount)}
           />
         )}
       </AnimatePresence>
-    </AdminLayout>
+
+      <style>{`
+        @keyframes spin  { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
+      `}</style>
+    </div>
   )
 }
