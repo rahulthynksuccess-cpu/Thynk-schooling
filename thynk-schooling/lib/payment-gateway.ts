@@ -119,7 +119,7 @@ export async function createOrder(
   amountSmallestUnit: number,
   currency: string,
   receipt: string,
-  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string } = {}
+  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; successUrl?: string } = {}
 ): Promise<CreateOrderResult> {
   const cfg = await getGatewayById(gateway)
   if (!cfg || !cfg.enabled) throw new Error(`Gateway ${gateway} is not configured`)
@@ -305,9 +305,9 @@ async function createEasebuzzOrder(
   amount: number,
   _currency: string,
   receipt: string,
-  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string }
+  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; successUrl?: string }
 ): Promise<CreateOrderResult> {
-  const salt     = cfg.extra?.salt || ''
+  const salt        = cfg.extra?.salt || ''
   const amountMajor = (amount / 100).toFixed(2)
   const productInfo = 'Lead Credits'
   const firstname   = meta.buyerName  || 'School'
@@ -322,6 +322,11 @@ async function createEasebuzzOrder(
     ? 'https://pay.easebuzz.in'
     : 'https://testpay.easebuzz.in'
 
+  // Use caller-provided successUrl (so subscriptions route gets its own callback)
+  // Fall back to lead-packages for backward compat
+  const surl = meta.successUrl
+    || `${process.env.NEXT_PUBLIC_APP_URL}/api/lead-packages?action=verify-payment`
+
   const formData = new URLSearchParams({
     key:         cfg.keyId,
     txnid:       receipt,
@@ -330,7 +335,7 @@ async function createEasebuzzOrder(
     firstname,
     email,
     phone,
-    surl: `${process.env.NEXT_PUBLIC_APP_URL}/api/lead-packages?action=verify-payment`
+    surl,
     furl:        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/school/packages?status=failed`,
     hash,
   })
