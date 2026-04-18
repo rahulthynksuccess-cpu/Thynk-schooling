@@ -94,30 +94,6 @@ async function ensureTables() {
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_school_subscriptions_school_id ON school_subscriptions(school_id)
   `).catch(() => {})
-
-  // Migrations: add featured listing columns to subscription_plans if not already present
-  await db.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_featured_listing BOOLEAN DEFAULT false`).catch(() => {})
-  await db.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS featured_listing_days INTEGER NOT NULL DEFAULT 0`).catch(() => {})
-}
-
-// ─── Helper: set featured_until on school if plan includes featured listing ───
-
-async function applyFeaturedListing(planKey: string, schoolId: string) {
-  try {
-    const planRow = await db.query(
-      `SELECT is_featured_listing, featured_listing_days FROM subscription_plans WHERE plan_key=$1`,
-      [planKey]
-    ).catch(() => ({ rows: [] }))
-    const plan = planRow.rows[0]
-    if (plan?.is_featured_listing && plan.featured_listing_days > 0) {
-      await db.query(
-        `UPDATE schools SET featured_until = NOW() + ($1 || ' days')::INTERVAL WHERE id = $2`,
-        [plan.featured_listing_days, schoolId]
-      )
-    }
-  } catch (e) {
-    console.error('[applyFeaturedListing]', e)
-  }
 }
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
@@ -182,6 +158,7 @@ export async function POST(req: NextRequest) {
       const planKey = searchParams.get('planKey')
       if (!planKey) return NextResponse.json({ error: 'planKey required' }, { status: 400 })
 
+      // Fetch plan details
       const plan = await db.query(
         `SELECT * FROM subscription_plans WHERE plan_key=$1 AND is_active=true`,
         [planKey]
@@ -209,12 +186,12 @@ export async function POST(req: NextRequest) {
         INSERT INTO school_subscriptions (school_id, plan_key, plan_name, leads_per_month, activated_at, expires_at)
         VALUES ($1, $2, $3, $4, NOW(), NULL)
         ON CONFLICT (school_id) DO UPDATE
-          SET plan_key        = EXCLUDED.plan_key,
-              plan_name       = EXCLUDED.plan_name,
+          SET plan_key       = EXCLUDED.plan_key,
+              plan_name      = EXCLUDED.plan_name,
               leads_per_month = EXCLUDED.leads_per_month,
-              activated_at    = NOW(),
-              expires_at      = NULL,
-              updated_at      = NOW()
+              activated_at   = NOW(),
+              expires_at     = NULL,
+              updated_at     = NOW()
       `, [schoolId, p.plan_key, p.name, p.leads_per_month])
 
       // Credit monthly leads if plan gives any
@@ -228,9 +205,6 @@ export async function POST(req: NextRequest) {
                 updated_at    = NOW()
         `, [schoolId, p.leads_per_month])
       }
-
-      // Apply featured listing if plan includes it
-      await applyFeaturedListing(p.plan_key, schoolId)
 
       return NextResponse.json({ success: true, planKey: p.plan_key, planName: p.name })
     } catch (e: any) {
@@ -336,9 +310,6 @@ export async function POST(req: NextRequest) {
           `, [schoolId, p.leads_per_month])
         }
 
-        // Apply featured listing if plan includes it
-        await applyFeaturedListing(p.plan_key, schoolId)
-
         return NextResponse.json({
           success: true, _dev: true,
           orderId: 'demo_sub_' + Date.now(),
@@ -365,7 +336,7 @@ export async function POST(req: NextRequest) {
           { buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone }
         )
 
-        // Record pending payment — store leads_per_month so verify-payment can credit it
+        // Record pending payment
         await db.query(`
           INSERT INTO subscription_payments
             (school_id, plan_key, gateway, order_id, amount_paise, discount_paise,
@@ -451,6 +422,7 @@ export async function POST(req: NextRequest) {
           if (devPayment.rows.length) {
             const { school_id, plan_key, leads_per_month } = devPayment.rows[0]
 
+            // Get plan name
             const planRow = await db.query(`SELECT name FROM subscription_plans WHERE plan_key=$1`, [plan_key]).catch(() => ({ rows: [] }))
             const planName = planRow.rows[0]?.name || plan_key
 
@@ -468,9 +440,6 @@ export async function POST(req: NextRequest) {
                   SET credits=lead_credits.credits+$2, total_credits=lead_credits.total_credits+$2, updated_at=NOW()
               `, [school_id, leads_per_month])
             }
-
-            // Apply featured listing if plan includes it
-            await applyFeaturedListing(plan_key, school_id)
 
             await db.query(`UPDATE subscription_payments SET status='completed', payment_id='dev_payment' WHERE order_id=$1`, [resolvedOrderId])
             return NextResponse.json({ success: true, leadsAdded: leads_per_month })
@@ -496,6 +465,7 @@ export async function POST(req: NextRequest) {
 
       const { school_id, plan_key, leads_per_month } = rec
 
+      // Get plan name
       const planRow = await db.query(`SELECT name FROM subscription_plans WHERE plan_key=$1`, [plan_key]).catch(() => ({ rows: [] }))
       const planName = planRow.rows[0]?.name || plan_key
 
@@ -515,9 +485,6 @@ export async function POST(req: NextRequest) {
             SET credits=lead_credits.credits+$2, total_credits=lead_credits.total_credits+$2, updated_at=NOW()
         `, [school_id, leads_per_month])
       }
-
-      // Apply featured listing if plan includes it
-      await applyFeaturedListing(plan_key, school_id)
 
       await db.query(
         `UPDATE subscription_payments SET status='completed', payment_id=$1, updated_at=NOW() WHERE order_id=$2`,
