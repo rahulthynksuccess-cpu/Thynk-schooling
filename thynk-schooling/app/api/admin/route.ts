@@ -196,6 +196,45 @@ async function getOverview() {
       role:     r.role,
     })),
     pendingSchools: pendingSchoolsRows.rows,
+    periodStats: await (async () => {
+      const PAID = `status IN ('paid','captured','success','completed')`
+      const [lp, rp, sp, up] = await Promise.all([
+        db.query(`SELECT
+          COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END)::int AS today,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('week',NOW()) THEN 1 END)::int AS week,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('month',NOW()) THEN 1 END)::int AS month,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('year',NOW()) THEN 1 END)::int AS year,
+          COUNT(*)::int AS all FROM leads`).catch(() => ({ rows: [{}] })),
+        db.query(`SELECT
+          COALESCE(SUM(CASE WHEN created_at >= CURRENT_DATE THEN amount_paise END),0)::bigint AS today,
+          COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('week',NOW()) THEN amount_paise END),0)::bigint AS week,
+          COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('month',NOW()) THEN amount_paise END),0)::bigint AS month,
+          COALESCE(SUM(CASE WHEN created_at >= DATE_TRUNC('year',NOW()) THEN amount_paise END),0)::bigint AS year,
+          COALESCE(SUM(amount_paise),0)::bigint AS all
+          FROM (SELECT created_at, amount_paise FROM lead_package_payments WHERE ${PAID}
+                UNION ALL SELECT created_at, amount_paise FROM subscription_payments WHERE ${PAID}) pay`).catch(() => ({ rows: [{}] })),
+        db.query(`SELECT
+          COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END)::int AS today,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('week',NOW()) THEN 1 END)::int AS week,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('month',NOW()) THEN 1 END)::int AS month,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('year',NOW()) THEN 1 END)::int AS year,
+          COUNT(*)::int AS all FROM schools`).catch(() => ({ rows: [{}] })),
+        db.query(`SELECT
+          COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END)::int AS today,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('week',NOW()) THEN 1 END)::int AS week,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('month',NOW()) THEN 1 END)::int AS month,
+          COUNT(CASE WHEN created_at >= DATE_TRUNC('year',NOW()) THEN 1 END)::int AS year,
+          COUNT(*)::int AS all FROM users WHERE role='parent'`).catch(() => ({ rows: [{}] })),
+      ])
+      const l = lp.rows[0]||{}, r = rp.rows[0]||{}, s = sp.rows[0]||{}, u = up.rows[0]||{}
+      const paise2rs = (v: any) => Math.round(Number(v||0)/100)
+      return {
+        leads:   { today: l.today||0, week: l.week||0, month: l.month||0, year: l.year||0, all: l.all||0 },
+        revenue: { today: paise2rs(r.today), week: paise2rs(r.week), month: paise2rs(r.month), year: paise2rs(r.year), all: paise2rs(r.all) },
+        schools: { today: s.today||0, week: s.week||0, month: s.month||0, year: s.year||0, all: s.all||0 },
+        users:   { today: u.today||0, week: u.week||0, month: u.month||0, year: u.year||0, all: u.all||0 },
+      }
+    })(),
   })
 }
 
