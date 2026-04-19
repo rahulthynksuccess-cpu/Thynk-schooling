@@ -196,9 +196,15 @@ export async function GET() {
     const totalParents = Number(p.total_parents || 0)
     const repeatBuyers = Number(p.repeat_buyers || 0)
 
+    // Format day as "DD MMM" (e.g. "19 Apr") for clean chart labels
+    function fmtDay(d: any): string {
+      const dt = new Date(d)
+      return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' })
+    }
+
     // Both arrays are gap-filled with same 30 days → safe to zip by index
     const dailyLeads30 = leads30.rows.map((r: any, i: number) => ({
-      day:     String(r.day).slice(5),
+      day:     fmtDay(r.day),
       leads:   Number(r.count),
       revenue: Math.round(Number(revenue30.rows[i]?.revenue_paise || 0) / 100),
     }))
@@ -223,8 +229,8 @@ export async function GET() {
     }))
 
     return NextResponse.json({
-      signups:     signups30.rows.map((r: any) => ({ day: String(r.day).slice(5), count: Number(r.count) })),
-      schools:     schools30.rows.map((r: any) => ({ day: String(r.day).slice(5), count: Number(r.count) })),
+      signups:     signups30.rows.map((r: any) => ({ day: fmtDay(r.day), count: Number(r.count) })),
+      schools:     schools30.rows.map((r: any) => ({ day: fmtDay(r.day), count: Number(r.count) })),
       dailyLeads30,
       topCities:   topCities.rows.map((r: any) => ({ city: r.city, leads: Number(r.leads), schools: Number(r.schools) })),
       boardData:   boardDist.rows.map((r: any, i: number) => ({ name: r.name, value: Number(r.value), color: BOARD_COLORS[i] || '#888' })),
