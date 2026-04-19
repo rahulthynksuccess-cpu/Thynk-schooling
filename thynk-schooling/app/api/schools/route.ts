@@ -193,7 +193,7 @@ async function listSchools(req: NextRequest) {
   if (extra.feeMin)           { params.push(Number(extra.feeMin));           conditions.push(`monthly_fee_min >= $${params.length}`) }
   if (extra.feeMax)           { params.push(Number(extra.feeMax));           conditions.push(`monthly_fee_max <= $${params.length}`) }
   if (extra.rating)           { params.push(Number(extra.rating));           conditions.push(`rating >= $${params.length}`) }
-  if (extra.isFeatured)       { conditions.push('is_featured = true') }
+  if (extra.isFeatured)       { conditions.push('is_featured = true AND (featured_until IS NULL OR featured_until > NOW())') }
   if (extra.type)             { params.push(extra.type);         conditions.push(`school_type ILIKE $${params.length}`) }
   if (extra.gender_policy)    { params.push(extra.gender_policy); conditions.push(`gender_policy ILIKE $${params.length}`) }
   if (extra.medium)           { params.push(extra.medium);       conditions.push(`medium_of_instruction ILIKE $${params.length}`) }
@@ -210,8 +210,8 @@ async function listSchools(req: NextRequest) {
   }
 
   // ── Sort order ─────────────────────────────────────────────────────────────
-  let orderBy = 'is_featured DESC NULLS LAST, rating DESC NULLS LAST, created_at DESC'
-  if (useGPS)                   orderBy = 'distance_km ASC NULLS LAST, is_featured DESC NULLS LAST'
+  let orderBy = '(is_featured AND (featured_until IS NULL OR featured_until > NOW())) DESC NULLS LAST, rating DESC NULLS LAST, created_at DESC'
+  if (useGPS)                   orderBy = 'distance_km ASC NULLS LAST, (is_featured AND (featured_until IS NULL OR featured_until > NOW())) DESC NULLS LAST'
   else if (sortBy === 'fee_asc')  orderBy = 'monthly_fee_min ASC NULLS LAST'
   else if (sortBy === 'fee_desc') orderBy = 'monthly_fee_min DESC NULLS LAST'
   else if (sortBy === 'newest')   orderBy = 'created_at DESC'
@@ -238,7 +238,7 @@ async function listSchools(req: NextRequest) {
     logoUrl: s.logo_url || null,
     coverImageUrl: s.cover_url || null,
     isVerified: s.is_verified || false,
-    isFeatured: s.is_featured || false,
+    isFeatured: (s.is_featured && (!s.featured_until || new Date(s.featured_until) > new Date())) || false,
     isActive: s.is_active !== false,
     avgRating: Number(s.rating) || 0,
     totalReviews: 0,
