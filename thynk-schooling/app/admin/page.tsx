@@ -86,14 +86,13 @@ export default function AdminDashboardPage() {
   const queryClient = useQueryClient()
   const [chartTab, setChartTab] = useState('Leads')
   const [growthTab, setGrowthTab] = useState('6M')
+  const [periodTab, setPeriodTab] = useState<'today' | 'week' | 'month' | 'year' | 'all'>('all')
 
   const { data, isLoading } = useQuery({
     queryKey:  ['admin-overview'],
     queryFn:   async () => {
       const res = await fetch('/api/admin?action=overview', { cache: 'no-store' })
       const json = await res.json()
-      // Once dashboard data arrives, silently prefetch all other admin pages
-      // so navigating to leads/schools/payments/reviews/users is instant
       prefetchCommonPages(queryClient)
       return json
     },
@@ -106,18 +105,26 @@ export default function AdminDashboardPage() {
     <div style={{ height: h, background: 'rgba(255,255,255,0.04)', borderRadius: 8, animation: 'tskel 1.4s ease-in-out infinite' }} />
   )
 
-  // Revenue is stored as paise in DB → divide by 100 for rupees
-  const revenueRupees = Math.round((data?.totalRevenue || 0) / 100)
+  const ps = data?.periodStats
+  const period = periodTab as 'today' | 'week' | 'month' | 'year' | 'all'
+
+  // Period-filtered values
+  const periodLeads   = ps?.leads?.[period]   ?? (data?.totalLeads   || 0)
+  const periodRev     = ps?.revenue?.[period] ?? Math.round((data?.totalRevenue || 0) / 100)
+  const periodSchools = ps?.schools?.[period] ?? (data?.totalSchools  || 0)
+  const periodUsers   = ps?.users?.[period]   ?? (data?.totalUsers    || 0)
+
+  const PERIOD_LABELS: Record<string, string> = {
+    today: 'Today', week: 'This Week', month: 'This Month', year: 'This Year', all: 'All Time'
+  }
 
   const KPIS = [
-    { icon: School,     label: 'Total Schools',    value: (data?.totalSchools || 0).toLocaleString('en-IN'),                    sub: `${data?.pendingVerification || 0} pending`,    trendUp: true,  color: T.gold,    href: '/admin/schools' },
-    { icon: Users,      label: 'Registered Users', value: (data?.totalUsers   || 0).toLocaleString('en-IN'),                    sub: `+${data?.newUsersToday || 0} today`,           trendUp: true,  color: T.blue,    href: '/admin/users' },
-    { icon: TrendingUp, label: 'Total Leads',      value: (data?.totalLeads   || 0).toLocaleString('en-IN'),                    sub: `+${data?.leadsToday || 0} today`,              trendUp: true,  color: T.green,   href: '/admin/leads' },
-    { icon: DollarSign, label: 'Total Revenue',    value: `₹${revenueRupees.toLocaleString('en-IN')}`,
-      sub: data?.revenueStatuses ? `Statuses: ${data.revenueStatuses}` : `${data?.totalRevenueCount || 0} payments`,
-      trendUp: true,  color: '#F59E0B', href: '/admin/payments' },
-    { icon: FileCheck,  label: 'Applications',     value: (data?.totalApps    || 0).toLocaleString('en-IN'),                    sub: `${data?.pendingApps || 0} pending`,            trendUp: null,  color: T.purple,  href: '/admin/applications' },
-    { icon: Star,       label: 'Reviews',          value: (data?.totalReviews || 0).toLocaleString('en-IN'),                    sub: `${data?.pendingReviews || 0} to moderate`,    trendUp: null,  color: T.orange,  href: '/admin/reviews' },
+    { icon: School,     label: `Schools (${PERIOD_LABELS[period]})`,  value: periodSchools.toLocaleString('en-IN'),               sub: `${data?.pendingVerification || 0} pending`,  trendUp: true,  color: T.gold,    href: '/admin/schools' },
+    { icon: Users,      label: `Users (${PERIOD_LABELS[period]})`,    value: periodUsers.toLocaleString('en-IN'),                 sub: `+${data?.newUsersToday || 0} today`,         trendUp: true,  color: T.blue,    href: '/admin/users' },
+    { icon: TrendingUp, label: `Leads (${PERIOD_LABELS[period]})`,    value: periodLeads.toLocaleString('en-IN'),                 sub: `+${data?.leadsToday || 0} today`,            trendUp: true,  color: T.green,   href: '/admin/leads' },
+    { icon: DollarSign, label: `Revenue (${PERIOD_LABELS[period]})`,  value: `₹${periodRev.toLocaleString('en-IN')}`,            sub: `${data?.totalRevenueCount || 0} payments`,   trendUp: true,  color: '#F59E0B', href: '/admin/payments' },
+    { icon: FileCheck,  label: 'Applications',                         value: (data?.totalApps    || 0).toLocaleString('en-IN'), sub: `${data?.pendingApps || 0} pending`,           trendUp: null,  color: T.purple,  href: '/admin/applications' },
+    { icon: Star,       label: 'Reviews',                              value: (data?.totalReviews || 0).toLocaleString('en-IN'), sub: `${data?.pendingReviews || 0} to moderate`,   trendUp: null,  color: T.orange,  href: '/admin/reviews' },
   ]
 
   return (
@@ -127,6 +134,24 @@ export default function AdminDashboardPage() {
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:none} }
         .ds { animation: fadeUp 0.4s ease both }
       `}</style>
+
+      {/* Period Tab Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }} className="ds">
+        <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 3, border: `1px solid ${T.border}` }}>
+          {(['today', 'week', 'month', 'year', 'all'] as const).map(t => {
+            const labels = { today: 'Today', week: 'This Week', month: 'This Month', year: 'This Year', all: 'All Time' }
+            return (
+              <button key={t} onClick={() => setPeriodTab(t)}
+                style={{ padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Plus Jakarta Sans,sans-serif', fontSize: 12, fontWeight: periodTab === t ? 700 : 500, background: periodTab === t ? T.gold : 'transparent', color: periodTab === t ? '#000' : T.t2, transition: 'all 0.15s' }}>
+                {labels[t]}
+              </button>
+            )
+          })}
+        </div>
+        <span style={{ fontSize: 11, color: T.t3, fontFamily: 'Plus Jakarta Sans,sans-serif' }}>
+          Showing: <strong style={{ color: T.t2 }}>{({ today: 'Today', week: 'This Week', month: 'This Month', year: 'This Year', all: 'All Time' } as any)[periodTab]}</strong>
+        </span>
+      </div>
 
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 24 }} className="ds">
