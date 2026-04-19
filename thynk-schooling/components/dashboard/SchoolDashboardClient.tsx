@@ -262,10 +262,10 @@ export const DASHBOARD_CONFIG = {
 
   // KPI cards: label, stat key, icon, trend label
   kpiCards: [
-    { icon: Users,    label: 'Total Leads',    statKey: 'totalLeads',           trendLabel: '+12%', trendDir: 'up'   },
-    { icon: Flame,    label: 'This Month',     statKey: 'newLeadsThisMonth',    trendLabel: '+8%',  trendDir: 'up'   },
-    { icon: FileText, label: 'Applications',   statKey: 'totalApplications',    trendLabel: '-3%',  trendDir: 'down' },
-    { icon: Star,     label: 'Avg Rating',     statKey: 'avgRating',            trendLabel: '+0.2', trendDir: 'up'   },
+    { icon: Users,    label: 'Total Leads',    statKey: 'totalLeads',           trendLabel: null, trendDir: 'neutral' },
+    { icon: Flame,    label: 'This Month',     statKey: 'newLeadsThisMonth',    trendLabel: null, trendDir: 'neutral' },
+    { icon: FileText, label: 'Applications',   statKey: 'totalApplications',    trendLabel: null, trendDir: 'neutral' },
+    { icon: Star,     label: 'Avg Rating',     statKey: 'avgRating',            trendLabel: null, trendDir: 'neutral' },
   ],
 
   // Quick action buttons
@@ -307,6 +307,11 @@ interface SchoolDashboardStats {
   responseRate: number
   conversionRate: number
   performanceScore: number
+  schoolName?: string | null
+  schoolLogo?: string | null
+  schoolCity?: string | null
+  schoolState?: string | null
+  schoolBoard?: string[]
   facebookUrl?: string | null
   instagramUrl?: string | null
   youtubeUrl?: string | null
@@ -441,8 +446,8 @@ function useInsights(
     } else {
       out.push({
         id: 'leads-trend', severity: 'positive',
-        title: 'Leads up 18% vs last week',
-        desc: 'Class 6–8 is your top-searched segment. Consider highlighting middle-school facilities.',
+        title: `Conversion looks good — above 14% average`,
+        desc: 'Keep responding to leads quickly to maintain your admission rate.',
       })
     }
 
@@ -816,7 +821,7 @@ interface KPICardProps {
   value: number | string
   sub: string
   trendDir: 'up' | 'down' | 'neutral'
-  trendLabel: string
+  trendLabel: string | null
   gradient: [string, string]
   href?: string
   delay?: number
@@ -1013,13 +1018,14 @@ function ChartCard({ data, loading, theme }: { data: AnalyticsPoint[]; loading: 
 // ═══════════════════════════════════════════════════════════════
 
 function ConversionFunnel({ stats, theme }: { stats: SchoolDashboardStats | undefined; theme: Theme }) {
-  const total = stats?.totalLeads ?? 247
+  const total = stats?.totalLeads ?? 0
+  const hasData = total > 0
   const stages: FunnelStage[] = [
-    { label: 'Leads received', count: total,                  color: theme.accent },
-    { label: 'Contacted',      count: Math.round(total * 0.68), color: '#06B6D4' },
-    { label: 'Interested',     count: Math.round(total * 0.36), color: '#F59E0B' },
-    { label: 'Applied',        count: stats?.totalApplications ?? Math.round(total * 0.23), color: '#8B5CF6' },
-    { label: 'Admitted',       count: Math.round(total * 0.09), color: '#10B981' },
+    { label: 'Leads received', count: total,                                              color: theme.accent },
+    { label: 'Contacted',      count: hasData ? Math.round(total * 0.68) : 0,             color: '#06B6D4' },
+    { label: 'Interested',     count: hasData ? Math.round(total * 0.36) : 0,             color: '#F59E0B' },
+    { label: 'Applied',        count: stats?.totalApplications ?? 0,                      color: '#8B5CF6' },
+    { label: 'Admitted',       count: hasData ? Math.round(total * 0.09) : 0,             color: '#10B981' },
   ]
 
   return (
@@ -1027,35 +1033,55 @@ function ConversionFunnel({ stats, theme }: { stats: SchoolDashboardStats | unde
       <div style={{ fontFamily: theme.displayFont, fontSize: 16, fontWeight: 700, color: theme.text }}>Conversion Funnel</div>
       <div style={{ fontSize: 11, color: theme.muted, marginTop: 2, marginBottom: 18, fontFamily: theme.bodyFont }}>Lead to admission pipeline</div>
 
-      {stages.map((s, i) => (
-        <div key={s.label}>
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: i === stages.length - 1 ? '#047857' : theme.text, fontFamily: theme.bodyFont }}>{s.label}</span>
-              <span style={{ fontSize: 11, color: theme.muted, fontFamily: theme.bodyFont }}>{s.count.toLocaleString('en-IN')}</span>
-            </div>
-            <div style={{ height: 8, background: theme.accentLight, borderRadius: 99, overflow: 'hidden' }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${(s.count / total) * 100}%` }}
-                transition={{ duration: 1.4, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
-                style={{ height: '100%', background: s.color, borderRadius: 99 }}
-              />
-            </div>
-            <div style={{ fontSize: 10, color: theme.faint, marginTop: 3, fontFamily: theme.bodyFont }}>{Math.round((s.count / total) * 100)}% of leads</div>
-          </div>
-          {i < stages.length - 1 && <div style={{ textAlign: 'center', fontSize: 10, color: theme.faint, margin: '2px 0', fontFamily: theme.bodyFont }}>↓ {Math.round((stages[i + 1].count / s.count) * 100)}%</div>}
+      {!hasData ? (
+        <div style={{ padding: '28px 0', textAlign: 'center' }}>
+          <div style={{ fontSize: 28, marginBottom: 8 }}>📊</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: theme.text, marginBottom: 4, fontFamily: theme.bodyFont }}>No data yet</div>
+          <div style={{ fontSize: 11, color: theme.muted, fontFamily: theme.bodyFont }}>Funnel will populate once leads come in.</div>
         </div>
-      ))}
+      ) : (
+        <>
+          {stages.map((s, i) => {
+            const pct = total > 0 ? Math.round((s.count / total) * 100) : 0
+            const dropPct = s.count > 0 && i < stages.length - 1
+              ? Math.round((stages[i + 1].count / s.count) * 100)
+              : 0
+            return (
+              <div key={s.label}>
+                <div style={{ marginBottom: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: i === stages.length - 1 ? '#047857' : theme.text, fontFamily: theme.bodyFont }}>{s.label}</span>
+                    <span style={{ fontSize: 11, color: theme.muted, fontFamily: theme.bodyFont }}>{s.count.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div style={{ height: 8, background: theme.accentLight, borderRadius: 99, overflow: 'hidden' }}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 1.4, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] }}
+                      style={{ height: '100%', background: s.color, borderRadius: 99 }}
+                    />
+                  </div>
+                  <div style={{ fontSize: 10, color: theme.faint, marginTop: 3, fontFamily: theme.bodyFont }}>{pct}% of leads</div>
+                </div>
+                {i < stages.length - 1 && (
+                  <div style={{ textAlign: 'center', fontSize: 10, color: theme.faint, margin: '2px 0', fontFamily: theme.bodyFont }}>
+                    ↓ {dropPct}%
+                  </div>
+                )}
+              </div>
+            )
+          })}
 
-      <div style={{ marginTop: 14, padding: '10px 12px', background: theme.accentLight, borderRadius: 8, border: `0.5px solid ${theme.accentLight}` }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, fontFamily: theme.bodyFont }}>
-          {Math.round((stages[4].count / total) * 100)}% conversion rate
-        </div>
-        <div style={{ fontSize: 10, color: theme.muted, marginTop: 2, fontFamily: theme.bodyFont }}>
-          Delhi avg is 14%. Faster follow-up can close the gap.
-        </div>
-      </div>
+          <div style={{ marginTop: 14, padding: '10px 12px', background: theme.accentLight, borderRadius: 8, border: `0.5px solid ${theme.accentLight}` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: theme.accent, fontFamily: theme.bodyFont }}>
+              {total > 0 ? Math.round((stages[4].count / total) * 100) : 0}% conversion rate
+            </div>
+            <div style={{ fontSize: 10, color: theme.muted, marginTop: 2, fontFamily: theme.bodyFont }}>
+              Delhi avg is 14%. Faster follow-up can close the gap.
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1755,7 +1781,13 @@ export function SchoolDashboardClient() {
                 <h1 style={{ fontFamily: theme.displayFont, fontSize: 28, fontWeight: 700, color: theme.text, letterSpacing: '-0.03em', lineHeight: 1.15 }}>
                   {greeting}, <span style={{ color: theme.accent }}>{firstName}</span> 👋
                 </h1>
-                <p style={{ fontSize: 13, color: theme.muted, marginTop: 5, fontWeight: 500 }}>Here's what's happening with your school today</p>
+                {stats?.schoolName && (
+                  <div style={{ fontSize: 13, fontWeight: 600, color: theme.text, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    🏫 {stats.schoolName}
+                    {stats.schoolCity && <span style={{ fontWeight: 400, color: theme.muted }}>· {stats.schoolCity}{stats.schoolState ? `, ${stats.schoolState}` : ''}</span>}
+                  </div>
+                )}
+                <p style={{ fontSize: 13, color: theme.muted, marginTop: 4, fontWeight: 500 }}>Here's what's happening with your school today</p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: theme.card, border: `0.5px solid ${theme.cardBorder}`, borderRadius: 99, fontSize: 12, color: theme.muted, fontWeight: 600, whiteSpace: 'nowrap', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>

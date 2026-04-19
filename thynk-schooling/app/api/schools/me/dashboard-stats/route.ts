@@ -87,7 +87,7 @@ export async function GET(req: NextRequest) {
     // Ensure views table exists before querying
     await ensureViewsTable()
 
-    const [leads, newLeads, apps, credits, reviews, reviewCount, profileViews] = await Promise.all([
+    const [leads, newLeads, newLeadsMonth, apps, credits, reviews, reviewCount, profileViews] = await Promise.all([
       // Total direct leads
       db.query('SELECT COUNT(*) FROM leads WHERE school_id = $1', [schoolId])
         .catch(() => ({ rows: [{ count: 0 }] })),
@@ -95,6 +95,12 @@ export async function GET(req: NextRequest) {
       // FIX: use NOW()::date for consistent UTC-based "today"
       db.query(
         `SELECT COUNT(*) FROM leads WHERE school_id = $1 AND created_at >= NOW()::date`,
+        [schoolId]
+      ).catch(() => ({ rows: [{ count: 0 }] })),
+
+      // New leads this calendar month
+      db.query(
+        `SELECT COUNT(*) FROM leads WHERE school_id = $1 AND created_at >= DATE_TRUNC('month', NOW())`,
         [schoolId]
       ).catch(() => ({ rows: [{ count: 0 }] })),
 
@@ -149,9 +155,10 @@ export async function GET(req: NextRequest) {
         : 0
 
     return NextResponse.json({
-      totalLeads:        Number(leads.rows[0].count),
-      newLeadsToday:     Number(newLeads.rows[0].count),
-      totalApplications: Number(apps.rows[0].count),
+      totalLeads:          Number(leads.rows[0].count),
+      newLeadsToday:       Number(newLeads.rows[0].count),
+      newLeadsThisMonth:   Number(newLeadsMonth.rows[0].count),
+      totalApplications:   Number(apps.rows[0].count),
       avgRating,
       totalReviews:      Number(reviewCount.rows[0].total),
       profileViews:      Number(profileViews.rows[0]?.total || 0),
