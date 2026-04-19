@@ -32,9 +32,10 @@ const NAV_GROUPS = [
     { icon:MessageCircle, label:'AI Chatbot',      href:'/admin/chatbot' },
   ]},
   { label:'Monetisation', items:[
-    { icon:DollarSign,  label:'Lead Pricing',       href:'/admin/lead-pricing' },
-    { icon:LayoutGrid,  label:'Subscription Plans', href:'/admin/subscription-plans' },
-    { icon:FileText,    label:'Payments',           href:'/admin/payments' },
+    { icon:DollarSign,  label:'Lead Pricing',            href:'/admin/lead-pricing' },
+    { icon:LayoutGrid,  label:'Subscription Plans',      href:'/admin/subscription-plans' },
+    { icon:Star,        label:'Featured Listing Plans',  href:'/admin/featured-listing-plans' },
+    { icon:FileText,    label:'Payments',                href:'/admin/payments' },
   ]},
   { label:'Platform', items:[
     { icon:Settings,   label:'Settings',         href:'/admin/settings' },

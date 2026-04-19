@@ -41,8 +41,8 @@ function PlanModal({ plan, onClose, onSave, saving }: {
     price: Math.round(plan.price / 100), leadCount: plan.leadCount,
     featuresRaw: plan.features.join('\n'), isHot: plan.isHot,
     cta: plan.cta, sortOrder: plan.sortOrder, isActive: plan.isActive,
-    isFeaturedListing: plan.isFeaturedListing ?? false,
-    featuredListingDays: plan.featuredListingDays ?? 30,
+    isFeaturedListing: (plan as any).includesFeaturedListing ?? plan.isFeaturedListing ?? false,
+    featuredListingDays: (plan as any).featuredListingDays ?? 30,
   } : EMPTY)
 
   const set = (k: keyof PlanForm, v: any) => setForm(p => ({ ...p, [k]: v }))
@@ -280,7 +280,7 @@ export default function SubscriptionPlansPage() {
                   {plan.features.length} features · sort #{plan.sortOrder}
                 </div>
 
-                {plan.isFeaturedListing && (
+                {((plan as any).includesFeaturedListing || plan.isFeaturedListing) && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: 'rgba(232,197,71,0.1)', border: '1px solid rgba(232,197,71,0.25)', borderRadius: '6px', padding: '3px 8px', marginBottom: '10px' }}>
                     <span style={{ fontSize: '10px', color: '#E8C547', fontFamily: 'DM Sans,sans-serif', fontWeight: 700, letterSpacing: '.04em' }}>
                       ⚡ FEATURED LISTING · {plan.featuredListingDays}d

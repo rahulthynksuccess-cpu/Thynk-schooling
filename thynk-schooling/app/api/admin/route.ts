@@ -700,6 +700,7 @@ function toSubPlan(row: any) {
     price: row.price_paise, leadCount: row.lead_count,
     features, isHot: row.is_hot, cta: row.cta, sortOrder: row.sort_order, isActive: row.is_active,
     includesFeaturedListing: row.includes_featured_listing ?? false,
+    isFeaturedListing:       row.includes_featured_listing ?? false,  // alias for form compatibility
     featuredListingDays: row.featured_listing_days ?? 30,
   }
 }
@@ -749,6 +750,92 @@ async function deleteSubPlan(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   await db.query('DELETE FROM subscription_plans WHERE id=$1', [id])
+  return NextResponse.json({ success: true })
+}
+
+// ─── Admin CRUD: Featured Listing Plans ───────────────────────────────────────
+
+function toFeaturedPlan(row: any) {
+  return {
+    id:           row.id,
+    planKey:      row.plan_key,
+    name:         row.name,
+    description:  row.description || '',
+    price:        row.price_paise,
+    durationDays: row.duration_days,
+    features:     Array.isArray(row.features) ? row.features : JSON.parse(row.features || '[]'),
+    isHot:        row.is_hot ?? false,
+    cta:          row.cta || 'Get Featured',
+    sortOrder:    row.sort_order ?? 0,
+    isActive:     row.is_active,
+  }
+}
+
+async function getAdminFeaturedPlans() {
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS featured_listing_plans (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      plan_key VARCHAR(80) NOT NULL UNIQUE,
+      name VARCHAR(200) NOT NULL,
+      description TEXT,
+      price_paise INTEGER NOT NULL DEFAULT 0,
+      duration_days INTEGER NOT NULL DEFAULT 30,
+      features JSONB NOT NULL DEFAULT '[]',
+      is_hot BOOLEAN NOT NULL DEFAULT false,
+      cta VARCHAR(100) NOT NULL DEFAULT 'Get Featured',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      is_active BOOLEAN NOT NULL DEFAULT true,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `).catch(() => {})
+  // Delete auto-seeded defaults
+  await db.query(`DELETE FROM featured_listing_plans WHERE plan_key IN ('featured_7','featured_30','featured_90')`).catch(() => {})
+  const rows = await db.query('SELECT * FROM featured_listing_plans ORDER BY sort_order ASC, created_at ASC')
+  return NextResponse.json(rows.rows.map(toFeaturedPlan))
+}
+
+async function saveAdminFeaturedPlan(req: NextRequest) {
+  const body = await req.json()
+  const { planKey, name, description, price, durationDays, features, isHot, cta, sortOrder, isActive } = body
+  if (!planKey || !name) return NextResponse.json({ error: 'planKey and name required' }, { status: 400 })
+  const res = await db.query(
+    `INSERT INTO featured_listing_plans (plan_key,name,description,price_paise,duration_days,features,is_hot,cta,sort_order,is_active)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     ON CONFLICT (plan_key) DO UPDATE SET
+       name=$2, description=$3, price_paise=$4, duration_days=$5,
+       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10, updated_at=NOW()
+     RETURNING *`,
+    [planKey, name, description||'', price??0, durationDays??30, JSON.stringify(features??[]), isHot??false, cta||'Get Featured', sortOrder??0, isActive??true]
+  )
+  return NextResponse.json(toFeaturedPlan(res.rows[0]))
+}
+
+async function updateAdminFeaturedPlan(req: NextRequest) {
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  const body = await req.json()
+  const sets: string[] = []; const params: any[] = []
+  const map: Record<string,string> = {
+    name:'name', description:'description', price:'price_paise', durationDays:'duration_days',
+    isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active',
+  }
+  for (const [k, col] of Object.entries(map)) {
+    if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
+  }
+  if (body.features !== undefined) { params.push(JSON.stringify(body.features)); sets.push(`features=$${params.length}`) }
+  if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+  sets.push(`updated_at=NOW()`)
+  params.push(id)
+  const res = await db.query(`UPDATE featured_listing_plans SET ${sets.join(',')} WHERE id=$${params.length} RETURNING *`, params)
+  if (!res.rows.length) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
+  return NextResponse.json(toFeaturedPlan(res.rows[0]))
+}
+
+async function deleteAdminFeaturedPlan(req: NextRequest) {
+  const id = new URL(req.url).searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  await db.query('DELETE FROM featured_listing_plans WHERE id=$1', [id])
   return NextResponse.json({ success: true })
 }
 
@@ -1484,6 +1571,7 @@ export async function GET(req: NextRequest) {
       case 'cities':                return await getCities()
       case 'lead-pricing-defaults': return await getLeadPricingDefaults()
       case 'subscription-plans':    return await getSubPlans()
+      case 'featured-listing-plans': return await getAdminFeaturedPlans()
       case 'message-triggers':      return await getTriggers()
       case 'marquee-items':         return await getMarqueeItems()
       case 'blog':                  return await getBlogPosts(req)
@@ -1511,6 +1599,7 @@ export async function POST(req: NextRequest) {
       case 'seed-demo':          return await seedDemo()
       case 'marquee-items':      return await saveMarqueeItems(req)
       case 'subscription-plans': return await saveSubPlan(req)
+      case 'featured-listing-plans': return await saveAdminFeaturedPlan(req)
       case 'message-triggers':   return await saveTrigger(req)
       case 'blog':               return await createBlogPost(req)
       case 'menus':              return await saveMenus(req)
@@ -1532,6 +1621,7 @@ export async function PUT(req: NextRequest) {
       case 'counselling':           return await updateAdminCounselling(req)
       case 'lead-pricing-defaults': return await saveLeadPricingDefaults(req)
       case 'subscription-plans':    return await updateSubPlan(req)
+      case 'featured-listing-plans': return await updateAdminFeaturedPlan(req)
       case 'blog':                  return await updateBlogPost(req)
       case 'coupons':               return await updateCoupon(req)
       default: return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
@@ -1547,6 +1637,7 @@ export async function DELETE(req: NextRequest) {
       case 'reviews':            return await deleteAdminReview(req)
       case 'cities':             return await deleteCity(req)
       case 'subscription-plans': return await deleteSubPlan(req)
+      case 'featured-listing-plans': return await deleteAdminFeaturedPlan(req)
       case 'message-triggers':   return await deleteTrigger(req)
       case 'blog':               return await deleteBlogPost(req)
       case 'coupons':            return await deleteCoupon(req)
