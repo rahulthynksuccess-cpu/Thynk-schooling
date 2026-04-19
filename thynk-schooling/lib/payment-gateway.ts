@@ -114,25 +114,57 @@ export async function getGatewayById(id: GatewayId): Promise<GatewayConfig | nul
 
 /* ── CREATE ORDER ───────────────────────────────────────────────────────────── */
 
+export interface CreateOrderOptions {
+  gatewayId: GatewayId
+  amountPaise: number
+  currency: string
+  receiptId: string
+  description?: string
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+  callbackType?: string
+  returnUrl?: string
+}
+
+// Overload: supports both positional args (legacy) and a named-options object (new)
 export async function createOrder(
-  gateway: GatewayId,
-  amountSmallestUnit: number,
-  currency: string,
-  receipt: string,
-  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string } = {}
+  gatewayOrOptions: GatewayId | CreateOrderOptions,
+  amountSmallestUnit?: number,
+  currency?: string,
+  receipt?: string,
+  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; callbackType?: string } = {}
 ): Promise<CreateOrderResult> {
+  // Normalize: if first arg is an object, unpack it into positional params
+  let gateway: GatewayId
+  if (typeof gatewayOrOptions === 'object') {
+    const o = gatewayOrOptions
+    gateway            = o.gatewayId
+    amountSmallestUnit = o.amountPaise
+    currency           = o.currency
+    receipt            = o.receiptId
+    meta               = {
+      buyerName:    o.customerName,
+      buyerEmail:   o.customerEmail,
+      buyerPhone:   o.customerPhone,
+      callbackType: o.callbackType,
+    }
+  } else {
+    gateway = gatewayOrOptions
+  }
+
   const cfg = await getGatewayById(gateway)
   if (!cfg || !cfg.enabled) throw new Error(`Gateway ${gateway} is not configured`)
 
   switch (gateway) {
     case 'razorpay':
-      return createRazorpayOrder(cfg, amountSmallestUnit, currency, receipt)
+      return createRazorpayOrder(cfg, amountSmallestUnit!, currency!, receipt!)
     case 'cashfree':
-      return createCashfreeOrder(cfg, amountSmallestUnit, currency, receipt, meta)
+      return createCashfreeOrder(cfg, amountSmallestUnit!, currency!, receipt!, meta)
     case 'easebuzz':
-      return createEasebuzzOrder(cfg, amountSmallestUnit, currency, receipt, meta)
+      return createEasebuzzOrder(cfg, amountSmallestUnit!, currency!, receipt!, meta)
     case 'paypal':
-      return createPayPalOrder(cfg, amountSmallestUnit, currency, receipt)
+      return createPayPalOrder(cfg, amountSmallestUnit!, currency!, receipt!)
     default:
       throw new Error(`Unknown gateway: ${gateway}`)
   }
@@ -249,7 +281,7 @@ async function createCashfreeOrder(
         customer_phone: meta.buyerPhone || '9999999999',
       },
       order_meta: {
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/school/packages?order_id=${receipt}&gateway=cashfree`,
+        return_url: `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?order_id=${receipt}&gateway=cashfree`,
       },
     }),
   })
@@ -335,8 +367,9 @@ async function createEasebuzzOrder(
     email,
     phone,
     // surl/furl must be public URLs — Easebuzz POSTs form data without auth headers
-    surl:        `${process.env.NEXT_PUBLIC_APP_URL}/api/easebuzz-callback?type=${meta.callbackType || 'lead'}`,
-    furl:        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/school/packages?status=failed`,
+    // Use APP_URL (server-side) with fallback to NEXT_PUBLIC_APP_URL
+    surl:        `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/api/easebuzz-callback?type=${meta.callbackType || 'lead'}`,
+    furl:        `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?status=failed`,
     hash,
   })
 
@@ -435,8 +468,8 @@ async function createPayPalOrder(
         amount: { currency_code: currency, value: amountMajor },
       }],
       application_context: {
-        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/school/packages?gateway=paypal&order_id=${receipt}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/school/packages?status=cancelled`,
+        return_url: `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?gateway=paypal&order_id=${receipt}`,
+        cancel_url: `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?status=cancelled`,
       },
     }),
   })

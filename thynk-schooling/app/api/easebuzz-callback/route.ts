@@ -89,10 +89,38 @@ export async function POST(req: NextRequest) {
     }
 
     if (!success) {
-      return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?status=failed`, 303)
+      const failTab = type === 'featured' ? 'featured' : type === 'subscription' ? 'leads' : 'leads'
+      return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?tab=${failTab}&status=failed`, 303)
     }
 
-    if (type === 'subscription') {
+    if (type === 'featured') {
+      // ── Handle featured listing payment ──────────────────────────────────
+      const payment = await db.query(
+        `SELECT * FROM featured_listing_payments WHERE order_id=$1 AND status='pending'`,
+        [txnid]
+      ).catch(() => ({ rows: [] }))
+
+      if (!payment.rows.length) {
+        console.error('[easebuzz-callback] featured payment not found for txnid:', txnid)
+        return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?tab=featured&status=failed`, 303)
+      }
+
+      const rec = payment.rows[0]
+      const { school_id, duration_days } = rec
+
+      await db.query(
+        `UPDATE featured_listing_payments SET status='completed', payment_id=$1, updated_at=NOW() WHERE order_id=$2`,
+        [params['mihpayid'] || txnid, txnid]
+      ).catch(() => {})
+
+      await db.query(
+        `UPDATE schools SET is_featured=true, featured_until=NOW() + ($1 || ' days')::INTERVAL WHERE id=$2`,
+        [duration_days, school_id]
+      ).catch(() => {})
+
+      return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?tab=featured&status=success`, 303)
+
+    } else if (type === 'subscription') {
       // ── Handle subscription payment ─────────────────────────────────────
       const payment = await db.query(
         `SELECT * FROM subscription_payments WHERE order_id=$1 AND status='pending'`,

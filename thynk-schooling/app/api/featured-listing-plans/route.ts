@@ -256,7 +256,8 @@ export async function POST(req: NextRequest) {
         customerName:  u.name  || schoolName || 'School',
         customerEmail: u.email || '',
         customerPhone: u.phone || '',
-        returnUrl: `${process.env.NEXT_PUBLIC_BASE_URL || ''}/dashboard/school/packages?tab=featured&order_id=${payId}&gateway=${gatewayId}`,
+        callbackType:  'featured',
+        returnUrl: `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?tab=featured&order_id=${payId}&gateway=${gatewayId}`,
       })
 
       await db.query(`UPDATE featured_listing_payments SET order_id=$1 WHERE id=$2`, [order.orderId, payId])
@@ -266,29 +267,37 @@ export async function POST(req: NextRequest) {
     // ── Verify payment ────────────────────────────────────────────────────────
     if (action === 'verify-payment') {
       const body = await parseBody(req)
-      const { gateway, orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature } = body
+      const {
+        gateway,
+        orderId,
+        razorpay_payment_id, razorpay_order_id, razorpay_signature,
+        cfOrderId,
+      } = body
+
+      const resolvedOrderId = orderId || razorpay_order_id || cfOrderId
+      if (!resolvedOrderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 })
 
       const payRec = await db.query(
         `SELECT * FROM featured_listing_payments WHERE order_id=$1 AND status='pending'`,
-        [orderId]
+        [resolvedOrderId]
       ).catch(() => ({ rows: [] }))
 
       if (!payRec.rows.length) return NextResponse.json({ error: 'Payment record not found' }, { status: 404 })
       const pay = payRec.rows[0]
 
-      const verified = await verifyPayment({
-        gatewayId: gateway,
-        orderId,
-        paymentId: razorpay_payment_id,
+      const gwId = (gateway || pay.gateway) as GatewayId
+      const result = await verifyPayment({
+        gateway:   gwId,
+        orderId:   resolvedOrderId,
+        paymentId: razorpay_payment_id || cfOrderId,
         signature: razorpay_signature,
-        razorpayOrderId: razorpay_order_id,
       })
 
-      if (!verified) return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 })
+      if (!result.success) return NextResponse.json({ error: result.error || 'Payment verification failed' }, { status: 400 })
 
       await db.query(
         `UPDATE featured_listing_payments SET status='completed', payment_id=$1, updated_at=NOW() WHERE id=$2`,
-        [razorpay_payment_id || orderId, pay.id]
+        [result.paymentId || razorpay_payment_id || resolvedOrderId, pay.id]
       )
       await db.query(
         `UPDATE schools SET is_featured=true, featured_until=NOW()+($1||' days')::INTERVAL WHERE id=$2`,
