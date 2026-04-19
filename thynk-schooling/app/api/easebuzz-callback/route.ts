@@ -3,11 +3,11 @@ export const dynamic = 'force-dynamic'
  * /api/easebuzz-callback
  *
  * PUBLIC endpoint — Easebuzz POSTs back here after payment (no auth header sent).
- * It handles both lead-package payments and subscription-plan payments.
+ * Handles both lead-package payments and subscription-plan payments.
  *
  * Query param: ?type=lead | ?type=subscription
  *
- * Easebuzz posts form-urlencoded with fields:
+ * Easebuzz posts form-urlencoded:
  *   txnid, status, hash, amount, email, firstname, productinfo, key, ...
  */
 
@@ -23,24 +23,51 @@ async function getEasebuzzConfig() {
   ).catch(() => ({ rows: [] }))
   if (!row.rows.length) return null
   return {
-    keyId:  row.rows[0].key_id  as string,
-    salt:   (row.rows[0].extra as any)?.salt as string || '',
+    keyId: row.rows[0].key_id as string,
+    salt:  ((row.rows[0].extra as any)?.salt as string) || '',
   }
 }
 
 function verifyHash(params: Record<string, string>, salt: string): boolean {
-  // Easebuzz reverse hash: sha512(SALT|status|||||||||||udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key)
+  // Easebuzz reverse hash:
+  // sha512(SALT|status|udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key)
   const fields = ['status','udf5','udf4','udf3','udf2','udf1','email','firstname','productinfo','amount','txnid','key']
   const hashStr = [salt, ...fields.map(f => params[f] || '')].join('|')
   const expected = crypto.createHash('sha512').update(hashStr).digest('hex')
   return expected === params['hash']
 }
 
+async function applyFeaturedListing(schoolId: string, planKey: string) {
+  const planRow = await db.query(
+    `SELECT includes_featured_listing, featured_listing_days FROM subscription_plans WHERE plan_key=$1`,
+    [planKey]
+  ).catch(() => ({ rows: [] }))
+  const isFeatured = planRow.rows[0]?.includes_featured_listing ?? false
+  const days = Number(planRow.rows[0]?.featured_listing_days ?? 30)
+  if (isFeatured) {
+    await db.query(
+      `UPDATE schools SET is_featured=true, featured_until=NOW() + ($1 || ' days')::INTERVAL WHERE id=$2`,
+      [days, schoolId]
+    ).catch(() => {})
+  }
+}
+
+async function creditLeads(schoolId: string, leadCount: number) {
+  if (!leadCount || leadCount === -1) return
+  await db.query(`
+    INSERT INTO lead_credits (school_id, credits, total_credits, used_credits)
+    VALUES ($1, $2, $2, 0)
+    ON CONFLICT (school_id) DO UPDATE
+      SET credits       = lead_credits.credits + $2,
+          total_credits = lead_credits.total_credits + $2,
+          updated_at    = NOW()
+  `, [schoolId, leadCount])
+}
+
 export async function POST(req: NextRequest) {
   const type = new URL(req.url).searchParams.get('type') || 'lead'
 
   try {
-    // Parse form-urlencoded body
     const text = await req.text()
     const params = Object.fromEntries(new URLSearchParams(text).entries())
 
@@ -66,7 +93,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (type === 'subscription') {
-      // ── Handle subscription payment ───────────────────────────────────────
+      // ── Handle subscription payment ─────────────────────────────────────
       const payment = await db.query(
         `SELECT * FROM subscription_payments WHERE order_id=$1 AND status='pending'`,
         [txnid]
@@ -78,35 +105,25 @@ export async function POST(req: NextRequest) {
       }
 
       const rec = payment.rows[0]
-      const { school_id, plan_key, leads_per_month } = rec
+      const { school_id, plan_key } = rec
+      // Support both old column name (leads_per_month) and new (lead_count)
+      const leadCount: number = rec.lead_count ?? rec.leads_per_month ?? 0
 
-      // Get plan name
       const planRow = await db.query(
-        `SELECT name, includes_featured_listing FROM subscription_plans WHERE plan_key=$1`,
-        [plan_key]
+        `SELECT name FROM subscription_plans WHERE plan_key=$1`, [plan_key]
       ).catch(() => ({ rows: [] }))
       const planName = planRow.rows[0]?.name || plan_key
-      const isFeaturedPlan = planRow.rows[0]?.includes_featured_listing ?? false
 
       // Activate subscription
       await db.query(`
-        INSERT INTO school_subscriptions (school_id, plan_key, plan_name, leads_per_month, activated_at, payment_id)
+        INSERT INTO school_subscriptions (school_id, plan_key, plan_name, lead_count, activated_at, payment_id)
         VALUES ($1,$2,$3,$4,NOW(),$5)
         ON CONFLICT (school_id) DO UPDATE
-          SET plan_key=$2, plan_name=$3, leads_per_month=$4, activated_at=NOW(), payment_id=$5, updated_at=NOW()
-      `, [school_id, plan_key, planName, leads_per_month, rec.id])
+          SET plan_key=$2, plan_name=$3, lead_count=$4, activated_at=NOW(), payment_id=$5, updated_at=NOW()
+      `, [school_id, plan_key, planName, leadCount, rec.id])
 
-      // Auto-feature school if plan includes featured listing
-      await db.query(`UPDATE schools SET is_featured=$1 WHERE id=$2`, [isFeaturedPlan, school_id]).catch(() => {})
-
-      // Credit leads
-      if (leads_per_month > 0) {
-        await db.query(`
-          INSERT INTO lead_credits (school_id, credits, total_credits, used_credits) VALUES ($1,$2,$2,0)
-          ON CONFLICT (school_id) DO UPDATE
-            SET credits=lead_credits.credits+$2, total_credits=lead_credits.total_credits+$2, updated_at=NOW()
-        `, [school_id, leads_per_month])
-      }
+      await applyFeaturedListing(school_id, plan_key)
+      await creditLeads(school_id, leadCount)
 
       await db.query(
         `UPDATE subscription_payments SET status='completed', payment_id=$1, updated_at=NOW() WHERE order_id=$2`,
@@ -114,7 +131,7 @@ export async function POST(req: NextRequest) {
       ).catch(() => {})
 
     } else {
-      // ── Handle lead-package payment ───────────────────────────────────────
+      // ── Handle lead-package payment ──────────────────────────────────────
       const payment = await db.query(
         `SELECT * FROM lead_package_payments WHERE order_id=$1 AND status='pending'`,
         [txnid]
@@ -128,11 +145,13 @@ export async function POST(req: NextRequest) {
       const rec = payment.rows[0]
       const { school_id, credits_added } = rec
 
-      // Credit lead credits
       await db.query(`
-        INSERT INTO lead_credits (school_id, credits, total_credits, used_credits) VALUES ($1,$2,$2,0)
+        INSERT INTO lead_credits (school_id, credits, total_credits, used_credits)
+        VALUES ($1, $2, $2, 0)
         ON CONFLICT (school_id) DO UPDATE
-          SET credits=lead_credits.credits+$2, total_credits=lead_credits.total_credits+$2, updated_at=NOW()
+          SET credits       = lead_credits.credits + $2,
+              total_credits = lead_credits.total_credits + $2,
+              updated_at    = NOW()
       `, [school_id, credits_added])
 
       await db.query(

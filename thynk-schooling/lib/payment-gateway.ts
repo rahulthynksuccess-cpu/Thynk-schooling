@@ -310,12 +310,16 @@ async function createEasebuzzOrder(
   const salt     = cfg.extra?.salt || ''
   const amountMajor = (amount / 100).toFixed(2)
   const productInfo = 'Lead Credits'
-  const firstname   = meta.buyerName  || 'School'
+  const firstname   = (meta.buyerName  || 'School').slice(0, 50)
   const email       = meta.buyerEmail || 'admin@school.com'
-  const phone       = meta.buyerPhone || '9999999999'
+  // Easebuzz requires exactly 10-digit Indian mobile — strip country code, fallback to valid default
+  const rawPhone = meta.buyerPhone || ''
+  const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^91/, '').slice(-10)
+  const phone = cleanPhone.length === 10 ? cleanPhone : '9999999999'
 
-  // Easebuzz hash: sha512(key|txnid|amount|productinfo|firstname|email|||||||||||SALT)
-  const hashStr = `${cfg.keyId}|${receipt}|${amountMajor}|${productInfo}|${firstname}|${email}|||||||||||${salt}`
+  // Easebuzz hash: sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|SALT)
+  // IMPORTANT: exactly 5 UDF fields (not 10/11), all empty here since we don't use them
+  const hashStr = `${cfg.keyId}|${receipt}|${amountMajor}|${productInfo}|${firstname}|${email}|||||${salt}`
   const hash = crypto.createHash('sha512').update(hashStr).digest('hex')
 
   const baseUrl = cfg.mode === 'live'

@@ -620,28 +620,31 @@ async function ensureSubPlansTable() {
   await runOnce('subscription_plans', async () => {
   await db.query(`
     CREATE TABLE IF NOT EXISTS subscription_plans (
-      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      plan_key      VARCHAR(50) NOT NULL UNIQUE,
-      name          VARCHAR(200) NOT NULL,
-      description   TEXT,
-      price_paise   INTEGER NOT NULL DEFAULT 0,
-      leads_per_month INTEGER NOT NULL DEFAULT 0,
-      features      TEXT NOT NULL DEFAULT '[]',
-      is_hot        BOOLEAN DEFAULT false,
-      cta           VARCHAR(200) NOT NULL DEFAULT 'Get Started',
-      sort_order    INTEGER NOT NULL DEFAULT 0,
-      is_active     BOOLEAN DEFAULT true,
-      created_at    TIMESTAMPTZ DEFAULT NOW()
+      id                        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      plan_key                  VARCHAR(50) NOT NULL UNIQUE,
+      name                      VARCHAR(200) NOT NULL,
+      description               TEXT,
+      price_paise               INTEGER NOT NULL DEFAULT 0,
+      lead_count                INTEGER NOT NULL DEFAULT 0,
+      features                  TEXT NOT NULL DEFAULT '[]',
+      is_hot                    BOOLEAN DEFAULT false,
+      cta                       VARCHAR(200) NOT NULL DEFAULT 'Get Started',
+      sort_order                INTEGER NOT NULL DEFAULT 0,
+      is_active                 BOOLEAN DEFAULT true,
+      created_at                TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
-  // Add includes_featured_listing column if it doesn't exist (auto-migrate)
+  // Auto-migrate: rename old column name if it still exists
+  await db.query(`ALTER TABLE subscription_plans RENAME COLUMN leads_per_month TO lead_count`).catch(() => {})
+  // Add any missing columns
   await db.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS includes_featured_listing BOOLEAN NOT NULL DEFAULT false`).catch(() => {})
+  await db.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS featured_listing_days INTEGER NOT NULL DEFAULT 30`).catch(() => {})
   const count = await db.query('SELECT COUNT(*) FROM subscription_plans').catch(() => ({ rows:[{ count:'0' }] }))
   if (parseInt(count.rows[0].count) === 0) {
     for (let i = 0; i < DEFAULT_SUB_PLANS.length; i++) {
       const p = DEFAULT_SUB_PLANS[i]
       await db.query(
-        `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order)
+        `INSERT INTO subscription_plans (plan_key,name,description,price_paise,lead_count,features,is_hot,cta,sort_order)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (plan_key) DO NOTHING`,
         [p.plan_key, p.name, p.description, p.price_paise, p.lead_count, JSON.stringify(p.features), p.is_hot, p.cta, i]
       ).catch(() => {})
@@ -655,9 +658,10 @@ function toSubPlan(row: any) {
   try { features = JSON.parse(row.features) } catch { features = [] }
   return {
     id: row.id, planKey: row.plan_key, name: row.name, description: row.description || '',
-    price: row.price_paise, leadCount: row.leads_per_month,
+    price: row.price_paise, leadCount: row.lead_count,
     features, isHot: row.is_hot, cta: row.cta, sortOrder: row.sort_order, isActive: row.is_active,
     includesFeaturedListing: row.includes_featured_listing ?? false,
+    featuredListingDays: row.featured_listing_days ?? 30,
   }
 }
 
@@ -670,16 +674,16 @@ async function getSubPlans() {
 async function saveSubPlan(req: NextRequest) {
   await ensureSubPlansTable()
   const body = await req.json()
-  const { planKey, name, description, price, leadCount, features, isHot, cta, sortOrder, isActive, includesFeaturedListing } = body
+  const { planKey, name, description, price, leadCount, features, isHot, cta, sortOrder, isActive, includesFeaturedListing, featuredListingDays } = body
   if (!planKey || !name) return NextResponse.json({ error: 'planKey and name are required' }, { status: 400 })
   const res = await db.query(
-    `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order,is_active,includes_featured_listing)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+    `INSERT INTO subscription_plans (plan_key,name,description,price_paise,lead_count,features,is_hot,cta,sort_order,is_active,includes_featured_listing,featured_listing_days)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
      ON CONFLICT (plan_key) DO UPDATE SET
-       name=$2, description=$3, price_paise=$4, leads_per_month=$5,
-       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10, includes_featured_listing=$11
+       name=$2, description=$3, price_paise=$4, lead_count=$5,
+       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10, includes_featured_listing=$11, featured_listing_days=$12
      RETURNING *`,
-    [planKey, name, description||'', price??0, leadCount??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true, includesFeaturedListing??false]
+    [planKey, name, description||'', price??0, leadCount??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true, includesFeaturedListing??false, featuredListingDays??30]
   )
   return NextResponse.json(toSubPlan(res.rows[0]))
 }
@@ -690,7 +694,7 @@ async function updateSubPlan(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const body = await req.json()
   const sets: string[] = []; const params: any[] = []
-  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadCount:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active', includesFeaturedListing:'includes_featured_listing' }
+  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadCount:'lead_count', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active', includesFeaturedListing:'includes_featured_listing', featuredListingDays:'featured_listing_days' }
   for (const [k, col] of Object.entries(map)) {
     if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
   }
