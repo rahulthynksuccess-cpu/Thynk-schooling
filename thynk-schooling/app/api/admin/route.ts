@@ -610,10 +610,10 @@ async function saveContent(req: NextRequest) {
 
 // ─── subscription plans ───────────────────────────────────────────────────────
 const DEFAULT_SUB_PLANS = [
-  { name:'Free',    price_paise:0,     description:'Get listed and start receiving leads.',          features:['5 lead credits per month','Basic school profile','Up to 5 photos','Standard listing placement','Email support'],                                                                                  leads_per_month:5,   is_hot:false, cta:'Get Started Free', plan_key:'free' },
-  { name:'Silver',  price_paise:299900,description:'For schools serious about admissions.',          features:['25 lead credits per month','Verified school badge','Unlimited photos & video','Enhanced listing placement','Analytics dashboard','Priority email support'],                                    leads_per_month:25,  is_hot:false, cta:'Start Silver',     plan_key:'silver' },
-  { name:'Gold',    price_paise:599900,description:'Most popular — best ROI for growing schools.',   features:['75 lead credits per month','Featured school badge','Top placement in search','Full analytics & reports','School profile video','Dedicated account manager','WhatsApp support'],                leads_per_month:75,  is_hot:true,  cta:'Start Gold',       plan_key:'gold' },
-  { name:'Platinum',price_paise:999900,description:'For chains and premium institutions.',           features:['Unlimited lead credits','Top-of-search placement','Homepage featured listing','AI-optimised profile','Multi-branch management','SLA-backed account manager'],                                  leads_per_month:-1,  is_hot:false, cta:'Start Platinum',   plan_key:'platinum' },
+  { name:'Free',    price_paise:0,     description:'Get listed and start receiving leads.',          features:['5 lead credits included','Basic school profile','Up to 5 photos','Standard listing placement','Email support'],                                                                                  lead_count:5,   is_hot:false, cta:'Get Started Free', plan_key:'free' },
+  { name:'Silver',  price_paise:299900,description:'For schools serious about admissions.',          features:['25 lead credits included','Verified school badge','Unlimited photos & video','Enhanced listing placement','Analytics dashboard','Priority email support'],                                    lead_count:25,  is_hot:false, cta:'Start Silver',     plan_key:'silver' },
+  { name:'Gold',    price_paise:599900,description:'Most popular — best ROI for growing schools.',   features:['75 lead credits included','Featured school badge','Top placement in search','Full analytics & reports','School profile video','Dedicated account manager','WhatsApp support'],                lead_count:75,  is_hot:true,  cta:'Start Gold',       plan_key:'gold' },
+  { name:'Platinum',price_paise:999900,description:'For chains and premium institutions.',           features:['Unlimited lead credits','Top-of-search placement','Homepage featured listing','AI-optimised profile','Multi-branch management','SLA-backed account manager'],                                  lead_count:-1,  is_hot:false, cta:'Start Platinum',   plan_key:'platinum' },
 ]
 
 async function ensureSubPlansTable() {
@@ -643,7 +643,7 @@ async function ensureSubPlansTable() {
       await db.query(
         `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (plan_key) DO NOTHING`,
-        [p.plan_key, p.name, p.description, p.price_paise, p.leads_per_month, JSON.stringify(p.features), p.is_hot, p.cta, i]
+        [p.plan_key, p.name, p.description, p.price_paise, p.lead_count, JSON.stringify(p.features), p.is_hot, p.cta, i]
       ).catch(() => {})
     }
   }
@@ -655,7 +655,7 @@ function toSubPlan(row: any) {
   try { features = JSON.parse(row.features) } catch { features = [] }
   return {
     id: row.id, planKey: row.plan_key, name: row.name, description: row.description || '',
-    price: row.price_paise, leadsPerMonth: row.leads_per_month,
+    price: row.price_paise, leadCount: row.leads_per_month,
     features, isHot: row.is_hot, cta: row.cta, sortOrder: row.sort_order, isActive: row.is_active,
     includesFeaturedListing: row.includes_featured_listing ?? false,
   }
@@ -670,7 +670,7 @@ async function getSubPlans() {
 async function saveSubPlan(req: NextRequest) {
   await ensureSubPlansTable()
   const body = await req.json()
-  const { planKey, name, description, price, leadsPerMonth, features, isHot, cta, sortOrder, isActive, includesFeaturedListing } = body
+  const { planKey, name, description, price, leadCount, features, isHot, cta, sortOrder, isActive, includesFeaturedListing } = body
   if (!planKey || !name) return NextResponse.json({ error: 'planKey and name are required' }, { status: 400 })
   const res = await db.query(
     `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order,is_active,includes_featured_listing)
@@ -679,7 +679,7 @@ async function saveSubPlan(req: NextRequest) {
        name=$2, description=$3, price_paise=$4, leads_per_month=$5,
        features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10, includes_featured_listing=$11
      RETURNING *`,
-    [planKey, name, description||'', price??0, leadsPerMonth??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true, includesFeaturedListing??false]
+    [planKey, name, description||'', price??0, leadCount??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true, includesFeaturedListing??false]
   )
   return NextResponse.json(toSubPlan(res.rows[0]))
 }
@@ -690,7 +690,7 @@ async function updateSubPlan(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const body = await req.json()
   const sets: string[] = []; const params: any[] = []
-  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadsPerMonth:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active', includesFeaturedListing:'includes_featured_listing' }
+  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadCount:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active', includesFeaturedListing:'includes_featured_listing' }
   for (const [k, col] of Object.entries(map)) {
     if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
   }
@@ -878,7 +878,7 @@ async function sendNotification(req: NextRequest) {
 const DEFAULT_TRIGGERS = [
   { trigger_key:'welcome_school',              category:'Onboarding',   event:'School Registration',        description:'Sent when a school admin creates an account',               recipients:['school'], variables:['{{school_name}}','{{admin_name}}','{{login_url}}','{{profile_url}}'],
     email_school_subject:'Welcome to Thynk Schooling — {{school_name}} is now live!',
-    email_school_body:`Hi {{admin_name}},\n\nCongratulations! {{school_name}} is now listed on Thynk Schooling.\n\nNext steps:\n• Complete your school profile\n• Your Free plan includes 5 lead credits/month\n• Parents in your city can now find and apply\n\nLogin: {{login_url}}\n\nThe Thynk Schooling Team`,
+    email_school_body:`Hi {{admin_name}},\n\nCongratulations! {{school_name}} is now listed on Thynk Schooling.\n\nNext steps:\n• Complete your school profile\n• Your Free plan includes 5 lead credits\n• Parents in your city can now find and apply\n\nLogin: {{login_url}}\n\nThe Thynk Schooling Team`,
     email_school_enabled:true, email_parent_subject:'', email_parent_body:'', email_parent_enabled:false,
     wa_school_body:`Hi {{admin_name}} 👋\n\n*{{school_name}}* is now live on Thynk Schooling!\n\nComplete your profile to start receiving leads 👉 {{profile_url}}`,
     wa_school_enabled:true, wa_parent_body:'', wa_parent_enabled:false, sort_order:0 },

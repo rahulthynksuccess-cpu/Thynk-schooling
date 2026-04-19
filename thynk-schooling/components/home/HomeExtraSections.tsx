@@ -240,7 +240,7 @@ export function CounsellingCTA() {
 export function ForSchoolsCTA() {
   const ref=useRef(null)
   const inView=useInView(ref,{once:true,amount:.15})
-  const [plans,setPlans]=useState<{id:string,name:string,price:number,leadsPerMonth:number,isHot:boolean,description:string}[]>([])
+  const [plans,setPlans]=useState<{id:string,name:string,price:number,leadCount:number,isHot:boolean,description:string}[]>([])
   useEffect(()=>{
     fetch('/api/admin?action=subscription-plans')
       .then(r=>r.json())
@@ -252,10 +252,10 @@ export function ForSchoolsCTA() {
   },[])
   // fallback while loading
   const displayPlans = plans.length>0 ? plans : [
-    {id:'f',name:'Free',    price:0,     leadsPerMonth:5,  isHot:false,description:'Basic profile · 5 images'},
-    {id:'s',name:'Silver',  price:299900,leadsPerMonth:25, isHot:false,description:'Verified badge · Analytics'},
-    {id:'g',name:'Gold',    price:599900,leadsPerMonth:75, isHot:true, description:'Featured listing · Priority'},
-    {id:'p',name:'Platinum',price:999900,leadsPerMonth:-1, isHot:false,description:'Top placement · Manager'},
+    {id:'f',name:'Free',    price:0,     leadCount:5,  isHot:false,description:'Basic profile · 5 images'},
+    {id:'s',name:'Silver',  price:299900,leadCount:25, isHot:false,description:'Verified badge · Analytics'},
+    {id:'g',name:'Gold',    price:599900,leadCount:75, isHot:true, description:'Featured listing · Priority'},
+    {id:'p',name:'Platinum',price:999900,leadCount:-1, isHot:false,description:'Top placement · Manager'},
   ]
   const PERKS=[
     {icon:<Shield style={{width:15,height:15}}/>,t:'Free school listing — no upfront cost ever'},
@@ -296,7 +296,7 @@ export function ForSchoolsCTA() {
             <div style={{fontFamily:'Inter,sans-serif',fontSize:11,fontWeight:600,letterSpacing:'.18em',textTransform:'uppercase',color:'#B8860B',marginBottom:4}}>Pricing Plans</div>
             {displayPlans.map((p,i)=>{
               const priceLabel = p.price===0 ? '₹0' : `₹${Math.round(p.price/100).toLocaleString('en-IN')}`
-              const leadsLabel = p.leadsPerMonth===-1 ? 'Unlimited' : `${p.leadsPerMonth} leads/mo`
+              const leadsLabel = p.leadCount===-1 ? 'Unlimited credits' : `${p.leadCount} lead credits`
               return (
               <motion.div key={p.id} initial={{opacity:0,x:16}} animate={inView?{opacity:1,x:0}:{}} transition={{delay:.1+i*.07,duration:.5}}
                 style={{background:p.isHot?'linear-gradient(135deg,#FDFAF0,#FEF7E0)':'#fff',border:p.isHot?'1.5px solid rgba(184,134,11,0.3)':'1.5px solid rgba(13,17,23,0.07)',borderRadius:14,padding:'clamp(14px,2vw,20px) clamp(16px,2vw,24px)',display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:p.isHot?'0 4px 24px rgba(184,134,11,0.12)':'none',transition:'all .22s cubic-bezier(.22,1,.36,1)',position:'relative',cursor:'default'}}

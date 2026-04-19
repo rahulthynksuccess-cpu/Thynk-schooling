@@ -14,15 +14,15 @@ import { useAuthStore } from '@/store/authStore'
 
 const DEFAULT_FAQ = [
   { q: 'What is a lead credit?', a: 'One lead credit = one parent enquiry. When a parent fills an admission form for your school, you use a credit to unlock their full contact details.' },
-  { q: 'Can I try before I pay?', a: 'Yes! Our Free subscription plan lets you list your school and receive lead credits every month, forever. No credit card required.' },
-  { q: 'Do credits roll over?', a: 'Monthly plan credits do not roll over. Credits refresh each month with your active subscription plan.' },
+  { q: 'Can I try before I pay?', a: 'Yes! Our Free subscription plan lets you list your school and receive lead credits included at no cost. No credit card required.' },
+  { q: 'Do credits roll over?', a: 'Lead credits are included with your subscription plan purchase. Use them to unlock parent contact details anytime.' },
   { q: 'Can I change plans anytime?', a: 'Yes. Upgrade or downgrade instantly from your school dashboard. Unused credits from the old plan carry over for 30 days.' },
   { q: 'Is there a setup fee?', a: 'Never. Listing is free, plans are monthly with no lock-in, and you can cancel anytime.' },
 ]
 
 interface SubPlan {
   id: string; planKey: string; name: string; description: string
-  price: number; leadsPerMonth: number; features: string[]
+  price: number; leadCount: number; features: string[]
   isHot: boolean; cta: string; sortOrder: number; isActive: boolean
 }
 
@@ -253,30 +253,6 @@ export default function PricingPage() {
   const { user, isAuthenticated } = useAuthStore()
   const isSchoolUser = isAuthenticated && user?.role === 'school_admin'
   const pricingContent = useContent('pricing')
-
-  // ── FIX 2: Fetch lead pricing for dynamic per-lead price ──
-  const { data: leadPricing } = useQuery<LeadPricingConfig>({
-    queryKey: ['lead-pricing-cfg'],
-    queryFn: () => fetch('/api/admin/lead-pricing', { cache: 'no-store' }).then(r => r.json()),
-    staleTime: 5 * 60 * 1000,
-  })
-
-  // For a logged-in school admin, try to match their state; otherwise use global default
-  const perLeadPaise = (() => {
-    if (!leadPricing) return null
-    if (isSchoolUser && user?.state && leadPricing.statePricing?.length) {
-      const stateRow = leadPricing.statePricing.find(
-        s => s.isActive && s.state.toLowerCase() === (user.state ?? '').toLowerCase()
-      )
-      if (stateRow) return stateRow.defaultPricePaise
-    }
-    return leadPricing.defaultPricePaise
-  })()
-
-  const perLeadDisplay = perLeadPaise != null
-    ? `₹${Math.round(perLeadPaise / 100).toLocaleString('en-IN')}/lead`
-    : null
-
   // ── FIX 1: Fetch all active plans (no cap at 4) ──
   const { data: subPlans, isLoading: plansLoading } = useQuery<SubPlan[]>({
     queryKey: ['subscription-plans'],
@@ -417,7 +393,7 @@ export default function PricingPage() {
 
             <motion.p initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.18, ease }}
               style={{ fontFamily: 'Inter,sans-serif', fontSize: 'clamp(14px,1.6vw,16px)', color: 'rgba(250,247,242,0.5)', lineHeight: 1.75, fontWeight: 300, maxWidth: 500, margin: '0 auto 28px', textAlign: 'center' }}>
-              List free. Subscribe and get leads included monthly. No wastage, no lock-in.
+              List free. Subscribe and get lead credits included. Buy single leads anytime — no lock-in.
             </motion.p>
 
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32, duration: 0.55 }}
@@ -543,17 +519,8 @@ export default function PricingPage() {
             {/* FIX 2: Dynamic per-lead price footnote */}
             <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.3, duration: 0.5 }}
               style={{ textAlign: 'center', marginTop: 28, fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#A0ADB8', fontWeight: 300 }}>
-              All prices in INR · Cancel anytime · No credit card needed for Free plan
-              {perLeadDisplay && (
-                <>
-                  {' · '}
-                  Pay-per-lead also available — unlock individual leads directly from your dashboard.
-                  {' Price: '}
-                  <strong style={{ color: '#0D1117' }}>{perLeadDisplay}</strong>
-                  {isSchoolUser && user?.state ? ` (${user.state} pricing)` : ' (school-specific pricing may apply)'}
-                </>
-              )}
-            </motion.p>
+              All prices in INR · Cancel anytime · No credit card needed for Free plan · Buy single leads from your Leads page
+              </motion.p>
           </div>
         </section>
 

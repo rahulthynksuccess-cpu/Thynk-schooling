@@ -134,7 +134,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         planKey:       row.plan_key,
         planName:      row.plan_name,
-        leadsPerMonth: row.leads_per_month,
+        leadCount: row.leads_per_month,
         activatedAt:   row.activated_at,
         expiresAt:     row.expires_at,
       })

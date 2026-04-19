@@ -191,13 +191,16 @@ export interface Application {
 // ── Subscription Plan ─────────────────────────────────────────
 export interface SubscriptionPlan {
   id: string
-  name: 'free' | 'silver' | 'gold' | 'platinum'
-  priceMonthly: number
-  priceAnnual: number
-  leadCreditsPerMonth: number
+  planKey: string
+  name: string
+  description: string
+  price: number          // one-time price in paise
+  leadCount: number      // lead credits included (-1 = unlimited)
   features: string[]
-  maxImages: number
-  isFeatured: boolean
+  isHot: boolean
+  cta: string
+  sortOrder: number
+  isActive: boolean
 }
 
 // ── API Responses ─────────────────────────────────────────────

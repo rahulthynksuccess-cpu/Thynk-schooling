@@ -6,19 +6,15 @@ import { Package, CheckCircle, Loader2, ArrowLeft, CreditCard, X, Tag, AlertCirc
 import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 type GatewayId = 'razorpay' | 'cashfree' | 'easebuzz' | 'paypal'
 interface Gateway { id: string; name: string; priority: number }
 interface SubPlan {
   id: string; planKey: string; name: string; description: string
-  price: number; leadsPerMonth: number; features: string[]
+  price: number; leadCount: number; features: string[]
   isHot: boolean; cta: string; sortOrder: number; isActive: boolean
-}
-interface LeadPricingConfig {
-  defaultPricePaise: number
-  statePricing: Array<{ state: string; defaultPricePaise: number; isActive: boolean }>
 }
 interface CouponResult {
   valid: boolean; coupon_id?: string; code?: string
@@ -42,10 +38,8 @@ declare global {
 }
 
 // ─── Checkout Modal ───────────────────────────────────────────────────────────
-
 function CheckoutModal({ plan, gateways, onClose, onPay }: {
-  plan: SubPlan
-  gateways: Gateway[]
+  plan: SubPlan; gateways: Gateway[]
   onClose: () => void
   onPay: (g: GatewayId, couponId?: string, finalAmount?: number) => void
 }) {
@@ -85,7 +79,7 @@ function CheckoutModal({ plan, gateways, onClose, onPay }: {
         <div style={{ textAlign:'center',marginBottom:20 }}>
           <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:'#0D1117',marginBottom:4 }}>Subscribe to {plan.name}</div>
           <div style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096' }}>
-            {plan.leadCredits > 0 ? `${plan.leadCredits} lead credits included · ` : ''}cancel anytime
+            {plan.leadCount > 0 ? `${plan.leadCount === -1 ? 'Unlimited' : plan.leadCount} lead credits included · ` : ''}cancel anytime
           </div>
         </div>
 
@@ -94,7 +88,7 @@ function CheckoutModal({ plan, gateways, onClose, onPay }: {
           <div style={{ display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:couponResult?.valid?8:0 }}>
             <span style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096' }}>Package price</span>
             <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:18,color:'#0D1117' }}>
-              {plan.price === 0 ? 'Free' : `${fmt(plan.price)}`}
+              {plan.price === 0 ? 'Free' : fmt(plan.price)}
             </span>
           </div>
           {couponResult?.valid && <>
@@ -181,7 +175,7 @@ function CheckoutModal({ plan, gateways, onClose, onPay }: {
         </button>
 
         <p style={{ fontFamily:'Inter,sans-serif',fontSize:10,color:'#A0ADB8',textAlign:'center',marginTop:12,marginBottom:0 }}>
-          🔒 Secure payment · Cancel anytime · No hidden fees
+          🔒 Secure payment · No hidden fees
         </p>
       </motion.div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
@@ -189,12 +183,11 @@ function CheckoutModal({ plan, gateways, onClose, onPay }: {
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-export default function SchoolPackagesPage() {
-  const { accessToken, user } = useAuthStore()
-  const router      = useRouter()
-  const searchParams = useSearchParams()
+// ─── Inner page (needs useSearchParams — wrapped in Suspense below) ────────────
+function PackagesInner() {
+  const { accessToken } = useAuthStore()
+  const router          = useRouter()
+  const searchParams    = useSearchParams()
   const [mounted, setMounted]           = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<SubPlan | null>(null)
   const [payingId, setPayingId]         = useState<string | null>(null)
@@ -208,8 +201,8 @@ export default function SchoolPackagesPage() {
     const status  = searchParams.get('status')
     const gateway = searchParams.get('gateway')
     const orderId = searchParams.get('order_id')
-    if (status === 'failed') { toast.error('Payment failed or was cancelled.'); router.replace('/dashboard/school/packages'); return }
-    if (status === 'success') { toast.success('🎉 Subscription activated!'); router.replace('/dashboard/school/packages'); return }
+    if (status === 'failed')  { toast.error('Payment failed or was cancelled.'); router.replace('/dashboard/school/packages'); return }
+    if (status === 'success') { toast.success('🎉 Subscription activated!');     router.replace('/dashboard/school/packages'); return }
     if (gateway === 'cashfree' && orderId) {
       const headers: Record<string,string> = { 'Content-Type':'application/json' }
       if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
@@ -224,62 +217,38 @@ export default function SchoolPackagesPage() {
     }
   }, [mounted, accessToken, searchParams, router])
 
-  // ── Data ──────────────────────────────────────────────────────────────────
-
-  // Fetch subscription plans — same API as public /pricing page
+  // ── Fetch plans ───────────────────────────────────────────────────────────
   const { data: plansData, isLoading } = useQuery<SubPlan[]>({
     queryKey: ['subscription-plans'],
-    queryFn: () => fetch('/api/admin?action=subscription-plans').then(r => r.json()),
+    queryFn:  () => fetch('/api/admin?action=subscription-plans').then(r => r.json()),
     staleTime: 5 * 60 * 1000,
     enabled: mounted,
   })
 
-  // Reuse lead-packages endpoint just to get enabled gateways list
+  // ── Fetch gateways ────────────────────────────────────────────────────────
   const { data: gwData } = useQuery<{ gateways: Gateway[] }>({
     queryKey: ['payment-gateways'],
-    queryFn: () => fetch('/api/lead-packages', { credentials:'include' }).then(r => r.json()),
+    queryFn:  () => fetch('/api/lead-packages', { credentials:'include' }).then(r => r.json()),
     enabled: !!accessToken && mounted,
     staleTime: 10 * 60 * 1000,
   })
 
-  // Dynamic per-lead price
-  const { data: leadPricing } = useQuery<LeadPricingConfig>({
-    queryKey: ['lead-pricing-cfg'],
-    queryFn: () => fetch('/api/admin/lead-pricing', { cache:'no-store' }).then(r => r.json()),
-    staleTime: 5 * 60 * 1000,
-    enabled: mounted,
-  })
-
-  // Current school subscription (to highlight active plan)
+  // ── Current subscription (highlight active plan) ──────────────────────────
   const { data: currentSub } = useQuery<{ planKey?: string }>({
     queryKey: ['school-subscription'],
-    queryFn: () => fetch('/api/subscriptions?action=current', { credentials:'include' }).then(r => r.json()),
+    queryFn:  () => fetch('/api/subscriptions?action=current', { credentials:'include' }).then(r => r.json()),
     enabled: !!accessToken && mounted,
   })
 
-  const activePlans = (plansData ?? [])
-    .filter(p => p.isActive)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-
-  const gateways = gwData?.gateways ?? []
-
-  const perLeadPaise = (() => {
-    if (!leadPricing) return null
-    if (user?.state && leadPricing.statePricing?.length) {
-      const row = leadPricing.statePricing.find(s => s.isActive && s.state.toLowerCase() === (user.state ?? '').toLowerCase())
-      if (row) return row.defaultPricePaise
-    }
-    return leadPricing.defaultPricePaise
-  })()
-  const perLeadDisplay = perLeadPaise != null ? `₹${Math.round(perLeadPaise/100).toLocaleString('en-IN')}/lead` : '₹299/lead'
+  const activePlans = (plansData ?? []).filter(p => p.isActive).sort((a, b) => a.sortOrder - b.sortOrder)
+  const gateways    = gwData?.gateways ?? []
 
   const formatPrice = (paise: number) => {
-    if (paise === 0) return { label: '₹0', period: 'forever' }
+    if (paise === 0) return { label: 'Free', period: '' }
     return { label: `₹${Math.round(paise/100).toLocaleString('en-IN')}`, period: '' }
   }
 
-  // ── Payment ───────────────────────────────────────────────────────────────
-
+  // ── Payment handler ───────────────────────────────────────────────────────
   const handlePay = async (plan: SubPlan, gatewayId: GatewayId, couponId?: string, finalAmountPaise?: number) => {
     setSelectedPlan(null)
     setPayingId(plan.id)
@@ -287,11 +256,8 @@ export default function SchoolPackagesPage() {
       const headers: Record<string,string> = { 'Content-Type':'application/json' }
       if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`
 
-      // Free plan — no payment needed
       if (plan.price === 0) {
-        const res = await fetch(`/api/subscriptions?action=activate-free&planKey=${plan.planKey}`, {
-          method:'POST', credentials:'include', headers,
-        })
+        const res  = await fetch(`/api/subscriptions?action=activate-free&planKey=${plan.planKey}`, { method:'POST', credentials:'include', headers })
         const data = await res.json()
         if (data.success) toast.success(`✅ ${plan.name} plan activated!`)
         else toast.error(data.error || 'Could not activate plan')
@@ -337,10 +303,7 @@ export default function SchoolPackagesPage() {
         const { sessionId, orderId, mode } = order.clientPayload
         if (!sessionId) throw new Error('Cashfree session ID missing')
         const cashfree = window.Cashfree({ mode: mode === 'live' ? 'production' : 'sandbox' })
-        cashfree.checkout({
-          paymentSessionId: sessionId,
-          returnUrl: `${window.location.origin}/dashboard/school/packages?order_id=${orderId}&gateway=cashfree`,
-        })
+        cashfree.checkout({ paymentSessionId: sessionId, returnUrl: `${window.location.origin}/dashboard/school/packages?order_id=${orderId}&gateway=cashfree` })
 
       } else if (gatewayId === 'easebuzz') {
         const { accessKey, baseUrl } = order.clientPayload
@@ -369,6 +332,7 @@ export default function SchoolPackagesPage() {
           <ArrowLeft style={{ width:14,height:14 }} /> Back to Dashboard
         </Link>
 
+        {/* Header */}
         <div style={{ textAlign:'center',maxWidth:960,margin:'0 auto 48px' }}>
           <div style={{ display:'inline-flex',alignItems:'center',gap:6,fontSize:11,fontWeight:700,letterSpacing:'.12em',textTransform:'uppercase',color:'#B8860B',marginBottom:14 }}>
             <Package style={{ width:13,height:13 }} /> Subscription Plans
@@ -377,7 +341,7 @@ export default function SchoolPackagesPage() {
             Choose Your Plan<br /><em style={{ fontStyle:'italic',color:'#B8860B' }}>& Grow Admissions</em>
           </h1>
           <p style={{ fontSize:15,color:'#718096',lineHeight:1.6,maxWidth:520,margin:'0 auto' }}>
-            Get leads included every month. Upgrade or cancel anytime.
+            Get lead credits with your plan. Buy additional single leads anytime from your Leads page.
           </p>
         </div>
 
@@ -389,7 +353,7 @@ export default function SchoolPackagesPage() {
         ) : (
           <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:20,maxWidth:1100,margin:'0 auto 40px' }}>
             {activePlans.map((plan, i) => {
-              const { label, period } = formatPrice(plan.price)
+              const { label } = formatPrice(plan.price)
               const isCurrent = currentSub?.planKey === plan.planKey
               return (
                 <motion.div key={plan.id}
@@ -415,23 +379,28 @@ export default function SchoolPackagesPage() {
                     </div>
                   )}
 
-                  <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:4,marginTop:plan.isHot?16:0 }}>
+                  <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:4,marginTop:plan.isHot||isCurrent?16:0 }}>
                     {plan.name}
                   </div>
                   <div style={{ fontSize:12,color:plan.isHot?'rgba(250,247,242,0.5)':'#9B8860',marginBottom:20,lineHeight:1.5 }}>
                     {plan.description}
                   </div>
 
-                  <div style={{ display:'flex',alignItems:'baseline',gap:4,marginBottom:4 }}>
+                  {/* Price */}
+                  <div style={{ display:'flex',alignItems:'baseline',gap:4,marginBottom:plan.leadCount !== 0 ? 6 : 20 }}>
                     <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:800,fontSize:42,color:plan.isHot?'#FAF7F2':'#0D1117',letterSpacing:'-2px',lineHeight:1 }}>{label}</span>
-                    <span style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.4)':'#9B8860' }}>{period}</span>
                   </div>
-                  {plan.leadCredits > 0 && (
-                    <div style={{ fontSize:13,fontWeight:700,color:'#B8860B',marginBottom:20 }}>
-                      {plan.leadCredits} lead credits included
+
+                  {/* Lead credits badge */}
+                  {plan.leadCount !== 0 && (
+                    <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginBottom:20,padding:'5px 12px',borderRadius:8,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
+                      <span style={{ fontSize:13,fontWeight:700,color:'#B8860B' }}>
+                        {plan.leadCount === -1 ? '∞ Unlimited' : `${plan.leadCount}`} lead credits included
+                      </span>
                     </div>
                   )}
 
+                  {/* Features */}
                   <div style={{ flex:1,marginBottom:24 }}>
                     {(plan.features ?? []).map(f => (
                       <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:9,marginBottom:10 }}>
@@ -470,15 +439,13 @@ export default function SchoolPackagesPage() {
           </div>
         )}
 
-        {/* Per-lead note */}
+        {/* Buy single lead note */}
         <div style={{ maxWidth:1100,margin:'0 auto',background:'white',border:'1px solid #E8DCC8',borderRadius:16,padding:'18px 24px',display:'flex',alignItems:'center',gap:12 }}>
           <span style={{ fontSize:20 }}>💡</span>
           <p style={{ margin:0,fontSize:13,color:'#6B5744',lineHeight:1.6 }}>
-            <strong>Pay-per-lead</strong> also available — unlock individual leads directly from your dashboard.{' '}
-            Price: <strong>{perLeadDisplay}</strong>
-            {user?.state && perLeadPaise != null && (
-              <span style={{ color:'#9B8860',fontSize:12 }}> ({user.state} pricing)</span>
-            )}
+            Need just a few leads? <strong>Buy individual leads</strong> directly from your{' '}
+            <Link href="/dashboard/school/leads" style={{ color:'#B8860B',fontWeight:600,textDecoration:'none' }}>Leads page</Link>{' '}
+            — pay only for what you unlock, no subscription needed.
           </p>
         </div>
       </div>
@@ -499,5 +466,14 @@ export default function SchoolPackagesPage() {
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.5 } }
       `}</style>
     </div>
+  )
+}
+
+// ─── Default export — wraps inner in Suspense (required for useSearchParams) ──
+export default function SchoolPackagesPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#FDFAF5',fontFamily:'Inter,sans-serif',color:'#9B8860' }}>Loading…</div>}>
+      <PackagesInner />
+    </Suspense>
   )
 }
