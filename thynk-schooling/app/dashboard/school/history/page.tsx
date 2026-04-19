@@ -164,7 +164,6 @@ function SubscriptionsTab() {
   const payments: any[] = data?.payments ?? []
   const activeSub       = data?.activeSub
   const featuredStatus  = data?.featuredStatus
-  const activeSub       = data?.activeSub
 
   const statusStyle = (s: string) => PAYMENT_STATUS[s?.toLowerCase()] || {
     bg: '#F3F4F6', color: '#6B7280', icon: <AlertCircle size={10} />, label: s || '—',
