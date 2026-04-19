@@ -28,7 +28,7 @@ import {
   GraduationCap, LogOut, Menu, X, ArrowUpRight,
   CheckCircle2, Clock, Loader2, MapPin, Sparkles,
   Phone, Flame, ArrowUp, ArrowDown, TrendingUp,
-  Bell, AlertTriangle, Target, Activity, Layers,
+  Bell, AlertTriangle, Target, Activity, Layers, History,
   PieChart, Globe, BookOpen, Sun, Moon, Palette,
   Instagram, Youtube, Facebook, Twitter, Linkedin
 } from 'lucide-react'
@@ -288,6 +288,7 @@ const NAV = [
   { icon: FileText,        label: 'Applications',      href: '/dashboard/school/applications', badge: null  },
   { icon: Star,            label: 'Reviews',           href: '/dashboard/school/reviews',      badge: null  },
   { icon: Layers,          label: 'Subscription Plan', href: '/dashboard/school/packages',     badge: null  },
+  { icon: History,         label: 'History',           href: '/dashboard/school/history',      badge: null  },
   { icon: BarChart3,       label: 'Analytics',         href: '/dashboard/school/analytics',    badge: null  },
   { icon: Settings,        label: 'School Profile',    href: '/school/complete-profile',       badge: null  },
 ]
