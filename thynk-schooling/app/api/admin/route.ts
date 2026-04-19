@@ -628,9 +628,6 @@ async function ensureSubPlansTable() {
       created_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
-  // Migrations for featured listing columns
-  await db.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS is_featured_listing BOOLEAN DEFAULT false`).catch(() => {})
-  await db.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS featured_listing_days INTEGER NOT NULL DEFAULT 0`).catch(() => {})
   const count = await db.query('SELECT COUNT(*) FROM subscription_plans').catch(() => ({ rows:[{ count:'0' }] }))
   if (parseInt(count.rows[0].count) === 0) {
     for (let i = 0; i < DEFAULT_SUB_PLANS.length; i++) {
@@ -650,12 +647,8 @@ function toSubPlan(row: any) {
   try { features = JSON.parse(row.features) } catch { features = [] }
   return {
     id: row.id, planKey: row.plan_key, name: row.name, description: row.description || '',
-    price: row.price_paise,
-    leadCredits: row.leads_per_month,   // UI uses leadCredits, DB stores as leads_per_month
-    leadsPerMonth: row.leads_per_month, // keep for backward compat
+    price: row.price_paise, leadsPerMonth: row.leads_per_month,
     features, isHot: row.is_hot, cta: row.cta, sortOrder: row.sort_order, isActive: row.is_active,
-    isFeaturedListing: row.is_featured_listing ?? false,
-    featuredListingDays: row.featured_listing_days ?? 0,
   }
 }
 
@@ -668,19 +661,16 @@ async function getSubPlans() {
 async function saveSubPlan(req: NextRequest) {
   await ensureSubPlansTable()
   const body = await req.json()
-  const { planKey, name, description, price, leadCredits, leadsPerMonth, features, isHot, cta, sortOrder, isActive, isFeaturedListing, featuredListingDays } = body
-  // UI sends leadCredits; older calls may send leadsPerMonth — accept both
-  const creditsValue = leadCredits ?? leadsPerMonth ?? 0
+  const { planKey, name, description, price, leadsPerMonth, features, isHot, cta, sortOrder, isActive } = body
   if (!planKey || !name) return NextResponse.json({ error: 'planKey and name are required' }, { status: 400 })
   const res = await db.query(
-    `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order,is_active,is_featured_listing,featured_listing_days)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+    `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order,is_active)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
      ON CONFLICT (plan_key) DO UPDATE SET
        name=$2, description=$3, price_paise=$4, leads_per_month=$5,
-       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10,
-       is_featured_listing=$11, featured_listing_days=$12
+       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10
      RETURNING *`,
-    [planKey, name, description||'', price??0, creditsValue, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true, isFeaturedListing??false, featuredListingDays??0]
+    [planKey, name, description||'', price??0, leadsPerMonth??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true]
   )
   return NextResponse.json(toSubPlan(res.rows[0]))
 }
@@ -691,7 +681,7 @@ async function updateSubPlan(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const body = await req.json()
   const sets: string[] = []; const params: any[] = []
-  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadCredits:'leads_per_month', leadsPerMonth:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active', isFeaturedListing:'is_featured_listing', featuredListingDays:'featured_listing_days' }
+  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadsPerMonth:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active' }
   for (const [k, col] of Object.entries(map)) {
     if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
   }
