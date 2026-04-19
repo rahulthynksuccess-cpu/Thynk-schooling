@@ -151,6 +151,35 @@ export async function POST(req: NextRequest) {
     )
     const leadId = leadRes.rows[0].id
 
+    // ── AUTO-UNLOCK: if applied school has lead credits, unlock immediately ───
+    // This means school sees full parent details straight away (no manual purchase needed)
+    // If NO credits → lead stays masked, school must buy credits/single lead to unlock
+    const creditRow = await db.query(
+      'SELECT credits FROM lead_credits WHERE school_id=$1', [school.id]
+    ).catch(() => ({ rows: [] }))
+    const availableCredits = creditRow.rows[0]?.credits ?? 0
+
+    if (availableCredits >= 1) {
+      // Deduct 1 credit and mark lead as purchased by this school
+      await db.query('BEGIN')
+      try {
+        await db.query(
+          `UPDATE lead_credits SET credits=credits-1, used_credits=COALESCE(used_credits,0)+1, updated_at=NOW()
+           WHERE school_id=$1`, [school.id]
+        )
+        await db.query(
+          `UPDATE leads SET is_purchased=true, purchased_by=$2, updated_at=NOW() WHERE id=$1`,
+          [leadId, school.id]
+        )
+        await db.query('COMMIT')
+      } catch {
+        await db.query('ROLLBACK').catch(() => {})
+        // Non-fatal: lead stays masked, school can unlock manually
+      }
+    }
+    // If no credits: lead inserted with is_purchased=false — school sees it masked in Leads page
+    // with a "Buy Credits" / "Unlock this lead" prompt
+
     // Also create an application record so the school sees it in applications tab
     await db.query(
       `INSERT INTO applications (parent_id, school_id, lead_id, status, child_name, class_applying_for, parent_name, phone, email, message)
