@@ -48,14 +48,18 @@ export async function GET() {
         GROUP BY gs.day ORDER BY gs.day
       `).catch(() => ({ rows: [] })),
 
-      // Revenue: all successful statuses, gap-filled so index aligns with leads30
+      // Revenue: lead credits + subscription plans, gap-filled
       db.query(`
         SELECT gs.day::date AS day,
-               COALESCE(SUM(lpp.amount_paise), 0) AS revenue_paise
+               COALESCE(SUM(pay.amount_paise), 0) AS revenue_paise
         FROM generate_series(NOW() - INTERVAL '29 days', NOW(), INTERVAL '1 day') AS gs(day)
-        LEFT JOIN lead_package_payments lpp
-          ON DATE(lpp.created_at) = gs.day::date
-          AND lpp.status IN ('paid','captured','success','completed')
+        LEFT JOIN (
+          SELECT created_at, amount_paise FROM lead_package_payments
+          WHERE status IN ('paid','captured','success','completed')
+          UNION ALL
+          SELECT created_at, amount_paise FROM subscription_payments
+          WHERE status IN ('paid','captured','success','completed')
+        ) pay ON DATE(pay.created_at) = gs.day::date
         GROUP BY gs.day ORDER BY gs.day
       `).catch(() => ({ rows: [] })),
 
@@ -167,8 +171,8 @@ export async function GET() {
         SELECT
           (SELECT COUNT(*) FROM leads WHERE created_at >= NOW()-INTERVAL '30 days')::int                                                         AS leads_cur,
           (SELECT COUNT(*) FROM leads WHERE created_at BETWEEN NOW()-INTERVAL '60 days' AND NOW()-INTERVAL '30 days')::int                       AS leads_prev,
-          (SELECT COALESCE(SUM(amount_paise),0) FROM lead_package_payments WHERE status IN ('paid','captured','success','completed') AND created_at >= NOW()-INTERVAL '30 days')::numeric              AS rev_cur,
-          (SELECT COALESCE(SUM(amount_paise),0) FROM lead_package_payments WHERE status IN ('paid','captured','success','completed') AND created_at BETWEEN NOW()-INTERVAL '60 days' AND NOW()-INTERVAL '30 days')::numeric AS rev_prev,
+          (SELECT COALESCE(SUM(amount_paise),0) FROM (SELECT amount_paise FROM lead_package_payments WHERE status IN ('paid','captured','success','completed') AND created_at >= NOW()-INTERVAL '30 days' UNION ALL SELECT amount_paise FROM subscription_payments WHERE status IN ('paid','captured','success','completed') AND created_at >= NOW()-INTERVAL '30 days') rp)::numeric AS rev_cur,
+          (SELECT COALESCE(SUM(amount_paise),0) FROM (SELECT amount_paise FROM lead_package_payments WHERE status IN ('paid','captured','success','completed') AND created_at BETWEEN NOW()-INTERVAL '60 days' AND NOW()-INTERVAL '30 days' UNION ALL SELECT amount_paise FROM subscription_payments WHERE status IN ('paid','captured','success','completed') AND created_at BETWEEN NOW()-INTERVAL '60 days' AND NOW()-INTERVAL '30 days') rp2)::numeric AS rev_prev,
           (SELECT COUNT(*) FROM users WHERE role='parent' AND created_at >= NOW()-INTERVAL '30 days')::int                                       AS signups_cur,
           (SELECT COUNT(*) FROM users WHERE role='parent' AND created_at BETWEEN NOW()-INTERVAL '60 days' AND NOW()-INTERVAL '30 days')::int     AS signups_prev,
           (SELECT COUNT(*) FROM schools WHERE created_at >= NOW()-INTERVAL '30 days')::int                                                       AS schools_cur,

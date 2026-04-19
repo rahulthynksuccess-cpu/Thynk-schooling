@@ -52,8 +52,6 @@ const IMG_TYPES = ['image/jpeg', 'image/png', 'image/webp']
    Inspired by Linear / Stripe / Notion
 ════════════════════════════════════════════════════════════ */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
-
 .sp *, .sp *::before, .sp *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 .sp {

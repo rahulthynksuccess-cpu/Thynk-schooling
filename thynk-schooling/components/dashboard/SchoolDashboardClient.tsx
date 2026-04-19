@@ -564,24 +564,28 @@ function ThynkSocialLinks({ theme }: { theme: Theme }) {
     { href: media.socialLinkedin,  label: 'LinkedIn',  Icon: Linkedin,  bg: 'rgba(10,102,194,0.12)', color: '#0A66C2' },
   ].filter(l => l.href && l.href !== '#')
 
-  if (!links.length) return null
-
   return (
     <div style={{ position: 'relative', zIndex: 1, margin: '0 12px 10px', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 12, border: `1px solid ${theme.sbBorder}` }}>
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.sbMuted, marginBottom: 8, fontFamily: theme.bodyFont }}>
         Follow Us
       </div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {links.map(({ href, label, Icon, bg, color }) => (
-          <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: bg, color, textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont, transition: 'opacity .15s' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.75'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
-          >
-            <Icon size={12} /> {label}
-          </a>
-        ))}
-      </div>
+      {links.length > 0 ? (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {links.map(({ href, label, Icon, bg, color }) => (
+            <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: bg, color, textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont, transition: 'opacity .15s' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.75'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+            >
+              <Icon size={12} /> {label}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div style={{ fontSize: 10, color: theme.sbMuted, fontFamily: theme.bodyFont, opacity: 0.5 }}>
+          Set links in Admin → Media
+        </div>
+      )}
     </div>
   )
 }

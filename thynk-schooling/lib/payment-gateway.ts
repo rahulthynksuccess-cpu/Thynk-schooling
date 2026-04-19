@@ -336,13 +336,18 @@ async function createEasebuzzOrder(
     hash,
   })
 
-  const res = await fetch(`${baseUrl}/initiate_payment/`, {
+  const res = await fetch(`${baseUrl}/payment/initiateLink/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formData.toString(),
   })
+  const ct = res.headers.get('content-type') || ''
+  if (!ct.includes('application/json')) {
+    const txt = await res.text()
+    throw new Error(`Easebuzz error (HTTP ${res.status}): ${txt.slice(0, 300)}`)
+  }
   const data = await res.json()
-  if (data.status !== 1) throw new Error(data.data || 'Easebuzz initiation failed')
+  if (data.status !== 1) throw new Error(data.data || data.error || 'Easebuzz initiation failed')
 
   return {
     gateway: 'easebuzz',

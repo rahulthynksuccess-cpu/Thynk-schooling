@@ -458,14 +458,23 @@ async function getRevenueSection(
   const [totals, byPackage, bySchool, details] = await Promise.all([
     db.query(`
       SELECT
-        COALESCE(SUM(lpp.amount_paise), 0)                                                AS total_paise,
-        COALESCE(SUM(CASE WHEN lpp.status='completed' THEN lpp.amount_paise END), 0)      AS completed_paise,
-        COALESCE(SUM(COALESCE(lpp.discount_paise,(lpp.meta->>'discount_paise')::int,0)),0) AS discount_paise,
-        COUNT(*)                                                                            AS txn_count,
-        COUNT(CASE WHEN lpp.status='completed' THEN 1 END)                                AS completed_count,
-        COALESCE(SUM(lpp.credits_added), 0)                                               AS total_credits
-      FROM lead_package_payments lpp
-      WHERE 1=1 ${schoolFilter} ${dClause}
+        COALESCE(SUM(amount_paise), 0)                                                AS total_paise,
+        COALESCE(SUM(CASE WHEN status='completed' THEN amount_paise END), 0)          AS completed_paise,
+        COALESCE(SUM(discount_paise),0)                                               AS discount_paise,
+        COUNT(*)                                                                       AS txn_count,
+        COUNT(CASE WHEN status='completed' THEN 1 END)                                AS completed_count,
+        COALESCE(SUM(credits_added), 0)                                               AS total_credits
+      FROM (
+        SELECT lpp.amount_paise, lpp.status,
+               COALESCE(lpp.discount_paise,(lpp.meta->>'discount_paise')::int,0) AS discount_paise,
+               lpp.credits_added
+        FROM lead_package_payments lpp WHERE 1=1 ${schoolFilter} ${dClause}
+        UNION ALL
+        SELECT sp.amount_paise, sp.status,
+               COALESCE(sp.discount_paise,0) AS discount_paise,
+               0 AS credits_added
+        FROM subscription_payments sp WHERE 1=1 ${schoolFilter.replace(/lpp\./g,'sp.')} ${dClause.replace(/lpp\./g,'sp.')}
+      ) all_pay
     `, [...baseP]).catch(() => ({ rows: [{}] })),
 
     db.query(`

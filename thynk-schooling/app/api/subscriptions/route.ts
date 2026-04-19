@@ -72,6 +72,11 @@ async function ensureTables() {
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_sub_payments_school_id ON subscription_payments(school_id)
   `).catch(() => {})
+
+  // Ensure includes_featured_listing column exists on subscription_plans
+  await db.query(`
+    ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS includes_featured_listing BOOLEAN NOT NULL DEFAULT false
+  `).catch(() => {})
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_sub_payments_order_id ON subscription_payments(order_id)
   `).catch(() => {})
