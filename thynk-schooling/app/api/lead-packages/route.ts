@@ -30,18 +30,45 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null }
 }
 
-// FIX: include is_hot in returned package object
+// ── Apply featured listing based on the lead package's settings ───────────────
+async function applyFeaturedListingForPackage(schoolId: string, packageId: string) {
+  try {
+    const pkg = await db.query(
+      `SELECT includes_featured_listing, featured_listing_days FROM lead_packages WHERE id=$1`,
+      [packageId]
+    ).catch(() => ({ rows: [] }))
+
+    const row = pkg.rows[0]
+    if (!row?.includes_featured_listing) return   // package does not include featured
+
+    const days = Number(row.featured_listing_days ?? 30)
+    await db.query(
+      `UPDATE schools
+       SET is_featured    = true,
+           featured_until = NOW() + ($1 || ' days')::INTERVAL
+       WHERE id = $2`,
+      [days, schoolId]
+    )
+    console.log(`[lead-packages] Featured listing applied: school=${schoolId} days=${days}`)
+  } catch (e) {
+    console.error('[lead-packages] applyFeaturedListing error:', e)
+  }
+}
+
+// FIX: include is_hot + featured fields in returned package object
 function toPackage(row: any) {
   return {
-    id:           row.id,
-    name:         row.name,
-    description:  row.description || null,
-    leadCredits:  row.leads_count,
-    price:        row.price_paise,
-    validityDays: row.validity_days ?? 365,
-    isActive:     row.is_active,
-    isHot:        row.is_hot ?? false,     // ← was missing; caused all cards to show as non-hot
-    sortOrder:    row.sort_order ?? 0,
+    id:                     row.id,
+    name:                   row.name,
+    description:            row.description || null,
+    leadCredits:            row.leads_count,
+    price:                  row.price_paise,
+    validityDays:           row.validity_days ?? 365,
+    isActive:               row.is_active,
+    isHot:                  row.is_hot ?? false,
+    sortOrder:              row.sort_order ?? 0,
+    includesFeaturedListing: row.includes_featured_listing ?? false,
+    featuredListingDays:    row.featured_listing_days ?? 30,
   }
 }
 
@@ -71,6 +98,9 @@ async function ensureTable() {
   // FIX: add is_hot and sort_order columns if they don't exist
   await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS is_hot BOOLEAN DEFAULT false`).catch(() => {})
   await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS sort_order INTEGER DEFAULT 0`).catch(() => {})
+  // FIX: add featured listing columns so lead packages can trigger featured status
+  await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS includes_featured_listing BOOLEAN NOT NULL DEFAULT false`).catch(() => {})
+  await db.query(`ALTER TABLE lead_packages ADD COLUMN IF NOT EXISTS featured_listing_days INTEGER NOT NULL DEFAULT 30`).catch(() => {})
 
   const count = await db.query('SELECT COUNT(*) FROM lead_packages').catch(() => ({ rows: [{ count: '0' }] }))
   if (parseInt(count.rows[0].count) === 0) {
@@ -269,6 +299,8 @@ export async function POST(req: NextRequest) {
            VALUES ($1, $2, 'demo', $3, $4, 'completed', NOW())`,
           [schoolId, packageId, p.price_paise, p.leads_count]
         ).catch(() => {})
+        // FIX: apply featured listing if the package includes it
+        await applyFeaturedListingForPackage(schoolId, packageId)
         return NextResponse.json({ success: true, _dev: true, orderId: 'demo_' + Date.now(), message: 'Credits added (demo mode — configure payment gateway in Admin > Integrations)' })
       }
 
@@ -362,12 +394,14 @@ export async function POST(req: NextRequest) {
             [resolvedOrderId]
           )
           if (devPayment.rows.length) {
-            const { school_id, credits_added } = devPayment.rows[0]
+            const { school_id, package_id, credits_added } = devPayment.rows[0]
             await db.query(`
               INSERT INTO lead_credits (school_id, credits, total_credits, used_credits) VALUES ($1,$2,$2,0)
               ON CONFLICT (school_id) DO UPDATE SET credits = lead_credits.credits + $2, total_credits = lead_credits.total_credits + $2, updated_at = NOW()
             `, [school_id, credits_added])
             await db.query(`UPDATE lead_package_payments SET status='completed', payment_id=$1 WHERE order_id=$2`, ['dev_payment', resolvedOrderId])
+            // FIX: apply featured listing on successful dev payment
+            await applyFeaturedListingForPackage(school_id, package_id)
             return NextResponse.json({ success: true, creditsAdded: credits_added })
           }
         }
@@ -389,7 +423,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: result.error || 'Payment verification failed' }, { status: 400 })
       }
 
-      const { school_id, credits_added } = rec
+      const { school_id, package_id, credits_added } = rec
 
       await db.query(`
         INSERT INTO lead_credits (school_id, credits, total_credits, used_credits) VALUES ($1,$2,$2,0)
@@ -403,6 +437,9 @@ export async function POST(req: NextRequest) {
         `UPDATE lead_package_payments SET status='completed', payment_id=$1 WHERE order_id=$2`,
         [result.paymentId, resolvedOrderId]
       )
+
+      // FIX: apply featured listing on successful real payment
+      await applyFeaturedListingForPackage(school_id, package_id)
 
       const contentType = req.headers.get('content-type') || ''
       if (contentType.includes('application/x-www-form-urlencoded')) {
@@ -423,13 +460,13 @@ export async function POST(req: NextRequest) {
     try {
       await ensureTable()
       const body = await req.json()
-      const { name, leadCredits, price, description, isActive, isHot, sortOrder } = body
+      const { name, leadCredits, price, description, isActive, isHot, sortOrder, includesFeaturedListing, featuredListingDays } = body
       if (!name || !leadCredits) return NextResponse.json({ error: 'name and leadCredits required' }, { status: 400 })
 
       const res = await db.query(
-        `INSERT INTO lead_packages (name, description, leads_count, price_paise, is_active, is_hot, sort_order)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-        [name, description || null, leadCredits, price ?? 0, isActive ?? true, isHot ?? false, sortOrder ?? 0]
+        `INSERT INTO lead_packages (name, description, leads_count, price_paise, is_active, is_hot, sort_order, includes_featured_listing, featured_listing_days)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+        [name, description || null, leadCredits, price ?? 0, isActive ?? true, isHot ?? false, sortOrder ?? 0, includesFeaturedListing ?? false, featuredListingDays ?? 30]
       )
       return NextResponse.json(toPackage(res.rows[0]))
     } catch (e: any) {
@@ -455,9 +492,11 @@ export async function PUT(req: NextRequest) {
     if (body.price       !== undefined) { params.push(body.price);       sets.push(`price_paise=$${params.length}`) }
     if (body.validityDays!== undefined) { params.push(body.validityDays);sets.push(`validity_days=$${params.length}`) }
     if (body.isActive    !== undefined) { params.push(body.isActive);    sets.push(`is_active=$${params.length}`) }
-    // FIX: persist isHot and sortOrder changes from admin page
-    if (body.isHot       !== undefined) { params.push(body.isHot);       sets.push(`is_hot=$${params.length}`) }
-    if (body.sortOrder   !== undefined) { params.push(body.sortOrder);   sets.push(`sort_order=$${params.length}`) }
+    // FIX: persist isHot, sortOrder and featured listing changes from admin page
+    if (body.isHot                   !== undefined) { params.push(body.isHot);                   sets.push(`is_hot=$${params.length}`) }
+    if (body.sortOrder               !== undefined) { params.push(body.sortOrder);               sets.push(`sort_order=$${params.length}`) }
+    if (body.includesFeaturedListing !== undefined) { params.push(body.includesFeaturedListing); sets.push(`includes_featured_listing=$${params.length}`) }
+    if (body.featuredListingDays     !== undefined) { params.push(body.featuredListingDays);     sets.push(`featured_listing_days=$${params.length}`) }
     if (!sets.length) return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
 
     params.push(id)
