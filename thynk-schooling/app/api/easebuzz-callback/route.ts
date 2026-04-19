@@ -20,7 +20,7 @@ async function getEasebuzzSalt(): Promise<string> {
 }
 
 function verifyHash(params: Record<string, string>, salt: string): boolean {
-  // Easebuzz reverse hash formula:
+  // Easebuzz REVERSE hash (official docs):
   // sha512(SALT|status|udf5|udf4|udf3|udf2|udf1|email|firstname|productinfo|amount|txnid|key)
   const fields = ['status','udf5','udf4','udf3','udf2','udf1','email','firstname','productinfo','amount','txnid','key']
   const str = [salt, ...fields.map(f => params[f] || '')].join('|')

@@ -8,7 +8,7 @@ import {
   Zap, LayoutGrid, CreditCard, Users, Clock,
   CheckCircle2, XCircle, AlertCircle, Loader2,
   Receipt, Tag, BookOpen, MapPin, Phone,
-  History, ChevronRight, RefreshCw,
+  History, ChevronRight, RefreshCw, Star,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { authHeaders } from '@/utils/authHeaders'
@@ -163,6 +163,8 @@ function SubscriptionsTab() {
 
   const payments: any[] = data?.payments ?? []
   const activeSub       = data?.activeSub
+  const featuredStatus  = data?.featuredStatus
+  const activeSub       = data?.activeSub
 
   const statusStyle = (s: string) => PAYMENT_STATUS[s?.toLowerCase()] || {
     bg: '#F3F4F6', color: '#6B7280', icon: <AlertCircle size={10} />, label: s || '—',
@@ -188,6 +190,24 @@ function SubscriptionsTab() {
           </div>
           <Link href="/dashboard/school/packages" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6, background: '#E5A50A', color: '#fff', textDecoration: 'none', fontSize: 11, fontWeight: 600 }}>
             Upgrade <ChevronRight size={10} />
+          </Link>
+        </div>
+      )}
+
+      {/* Featured listing active banner */}
+      {!isLoading && featuredStatus?.isFeatured && featuredStatus?.featuredUntil && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px', borderRadius: 10, border: '0.5px solid rgba(184,134,11,0.3)', background: 'rgba(184,134,11,0.04)', marginBottom: 16, flexWrap: 'wrap' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(184,134,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Star size={16} color="#B8860B" />
+          </div>
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div style={{ fontWeight: 600, fontSize: 13, color: '#111827' }}>⭐ Featured Listing Active</div>
+            <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
+              Featured until {fmtDate(featuredStatus.featuredUntil)}
+            </div>
+          </div>
+          <Link href="/dashboard/school/packages?tab=featured" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 6, background: '#B8860B', color: '#fff', textDecoration: 'none', fontSize: 11, fontWeight: 600 }}>
+            Extend <ChevronRight size={10} />
           </Link>
         </div>
       )}
@@ -244,11 +264,16 @@ function SubscriptionsTab() {
                       {/* Plan */}
                       <td style={{ padding: '11px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <div style={{ width: 30, height: 30, borderRadius: 7, background: 'rgba(229,165,10,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Receipt size={13} color="#E5A50A" />
+                          <div style={{ width: 30, height: 30, borderRadius: 7, background: p.paymentType === 'featured' ? 'rgba(184,134,11,0.12)' : 'rgba(229,165,10,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {p.paymentType === 'featured' ? <Star size={13} color="#B8860B" /> : <Receipt size={13} color="#E5A50A" />}
                           </div>
                           <div>
                             <div style={{ fontWeight: 500, fontSize: 13, color: '#111827' }}>{p.planName || p.planKey}</div>
+                            {p.paymentType === 'featured' && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(184,134,11,0.08)', color: '#B8860B', fontSize: 10, fontWeight: 600, marginTop: 2 }}>
+                                ⭐ Featured Listing
+                              </div>
+                            )}
                             {p.couponCode && (
                               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '1px 6px', borderRadius: 4, background: 'rgba(16,185,129,0.08)', color: '#0D7A5F', fontSize: 10, fontWeight: 500, marginTop: 2 }}>
                                 <Tag size={8} /> {p.couponCode}
@@ -266,9 +291,13 @@ function SubscriptionsTab() {
                         )}
                       </td>
 
-                      {/* Credits */}
+                      {/* Credits — shows lead credits OR featured duration */}
                       <td style={{ padding: '11px 14px' }}>
-                        {p.leadCredits > 0 ? (
+                        {p.paymentType === 'featured' && p.durationDays > 0 ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, background: 'rgba(184,134,11,0.08)', border: '0.5px solid rgba(184,134,11,0.2)', fontSize: 11, fontWeight: 600, color: '#92400E' }}>
+                            ⭐ {p.durationDays} days
+                          </span>
+                        ) : p.leadCredits > 0 ? (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, background: 'rgba(229,165,10,0.08)', border: '0.5px solid rgba(229,165,10,0.2)', fontSize: 11, fontWeight: 600, color: '#92400E' }}>
                             <Zap size={9} /> {p.leadCredits} leads
                           </span>

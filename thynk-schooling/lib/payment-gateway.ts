@@ -133,7 +133,7 @@ export async function createOrder(
   amountSmallestUnit?: number,
   currency?: string,
   receipt?: string,
-  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; callbackType?: string } = {}
+  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; callbackType?: string; returnUrl?: string } = {}
 ): Promise<CreateOrderResult> {
   // Normalize: if first arg is an object, unpack it into positional params
   let gateway: GatewayId
@@ -148,6 +148,7 @@ export async function createOrder(
       buyerEmail:   o.customerEmail,
       buyerPhone:   o.customerPhone,
       callbackType: o.callbackType,
+      returnUrl:    o.returnUrl,
     }
   } else {
     gateway = gatewayOrOptions
@@ -254,7 +255,7 @@ async function createCashfreeOrder(
   amount: number,
   currency: string,
   receipt: string,
-  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string }
+  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; returnUrl?: string }
 ): Promise<CreateOrderResult> {
   const baseUrl = cfg.mode === 'live'
     ? 'https://api.cashfree.com/pg'
@@ -281,7 +282,7 @@ async function createCashfreeOrder(
         customer_phone: meta.buyerPhone || '9999999999',
       },
       order_meta: {
-        return_url: `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?order_id=${receipt}&gateway=cashfree`,
+        return_url: meta.returnUrl || `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?order_id=${receipt}&gateway=cashfree`,
       },
     }),
   })
@@ -339,20 +340,33 @@ async function createEasebuzzOrder(
   receipt: string,
   meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; callbackType?: string }
 ): Promise<CreateOrderResult> {
-  const salt     = cfg.extra?.salt || ''
-  const amountMajor = (amount / 100).toFixed(2)
-  const productInfo = meta.callbackType === 'featured' ? 'Featured Listing' : meta.callbackType === 'subscription' ? 'Subscription Plan' : 'Lead Credits'
-  const firstname   = (meta.buyerName  || 'School').slice(0, 50)
-  const email       = meta.buyerEmail || 'admin@school.com'
-  // Easebuzz requires exactly 10-digit Indian mobile — strip country code, fallback to valid default
-  const rawPhone = meta.buyerPhone || ''
-  const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^91/, '').slice(-10)
-  const phone = cleanPhone.length === 10 ? cleanPhone : '9999999999'
+  const salt = cfg.extra?.salt || ''
 
-  // Easebuzz hash: sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5|SALT)
-  // IMPORTANT: exactly 5 UDF fields (not 10/11), all empty here since we don't use them
-  const hashStr = `${cfg.keyId}|${receipt}|${amountMajor}|${productInfo}|${firstname}|${email}|||||${salt}`
-  const hash = crypto.createHash('sha512').update(hashStr).digest('hex')
+  // FIX 1: txnid must be alphanumeric only, max 25 chars — strip hyphens from UUID receipts
+  const txnid = receipt.replace(/-/g, '').slice(0, 25)
+
+  const amountMajor = (amount / 100).toFixed(2)
+  const productInfo = meta.callbackType === 'featured'
+    ? 'Featured Listing'
+    : meta.callbackType === 'subscription'
+    ? 'Subscription Plan'
+    : 'Lead Credits'
+  const firstname = (meta.buyerName || 'School').replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 50) || 'School'
+  const email     = meta.buyerEmail || 'admin@school.com'
+
+  // Phone: exactly 10 digits, no country code
+  const rawPhone   = meta.buyerPhone || ''
+  const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^91/, '').slice(-10)
+  const phone      = cleanPhone.length === 10 ? cleanPhone : '9999999999'
+
+  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+  if (!appUrl) throw new Error('APP_URL env var is not set — Easebuzz requires a full public URL for surl/furl')
+
+  // FIX 2: Easebuzz hash requires EXACTLY 16 pipes (17 segments):
+  // sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)
+  // = 6 named fields + udf1-5 (empty) + udf6-10 (5 empty) + SALT = 16 pipes total
+  const hashStr = `${cfg.keyId}|${txnid}|${amountMajor}|${productInfo}|${firstname}|${email}|||||||||||${salt}`
+  const hash    = crypto.createHash('sha512').update(hashStr).digest('hex')
 
   const baseUrl = cfg.mode === 'live'
     ? 'https://pay.easebuzz.in'
@@ -360,23 +374,21 @@ async function createEasebuzzOrder(
 
   const formData = new URLSearchParams({
     key:         cfg.keyId,
-    txnid:       receipt,
+    txnid,
     amount:      amountMajor,
     productinfo: productInfo,
     firstname,
     email,
     phone,
-    // surl/furl must be public URLs — Easebuzz POSTs form data without auth headers
-    // Use APP_URL (server-side) with fallback to NEXT_PUBLIC_APP_URL
-    surl:        `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/api/easebuzz-callback?type=${meta.callbackType || 'lead'}`,
-    furl:        `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?status=failed`,
+    surl: `${appUrl}/api/easebuzz-callback?type=${meta.callbackType || 'lead'}`,
+    furl: `${appUrl}/dashboard/school/packages?status=failed`,
     hash,
   })
 
   const res = await fetch(`${baseUrl}/payment/initiateLink/`, {
-    method: 'POST',
+    method:  'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: formData.toString(),
+    body:    formData.toString(),
   })
   const ct = res.headers.get('content-type') || ''
   if (!ct.includes('application/json')) {
@@ -387,13 +399,13 @@ async function createEasebuzzOrder(
   if (data.status !== 1) throw new Error(data.data || data.error || 'Easebuzz initiation failed')
 
   return {
-    gateway: 'easebuzz',
-    orderId: receipt,
+    gateway:  'easebuzz',
+    orderId:  txnid,   // store the cleaned txnid — callback posts this back as txnid
     amount,
     currency: 'INR',
     clientPayload: {
       accessKey: data.data,
-      txnId:     receipt,
+      txnId:     txnid,
       baseUrl,
       mode:      cfg.mode,
     },
