@@ -78,47 +78,86 @@ async function listPayments(req: NextRequest) {
     to:      sp.get('to'),
   })
 
+  // Combined payments view: lead_package_payments + subscription_payments
+  // buildWhere uses lpp. alias — we replicate the same columns from both tables
+  const subWhere = where
+    .replace(/lpp\.status/g, 'sp.status')
+    .replace(/lpp\.gateway/g, 'sp.gateway')
+    .replace(/lpp\.order_id/g, 'sp.order_id')
+    .replace(/lpp\.payment_id/g, 'sp.payment_id')
+    .replace(/lpp\.coupon_code/g, 'sp.coupon_code')
+    .replace(/lpp\.created_at/g, 'sp.created_at')
+    .replace(/s\.name ILIKE/g, 's2.name ILIKE')
+
   const [rows, ct, totals] = await Promise.all([
     db.query(`
-      SELECT
-        lpp.id,
-        lpp.order_id,
-        lpp.payment_id,
-        lpp.gateway,
-        lpp.amount_paise,
-        lpp.discount_paise,
-        lpp.original_amount_paise,
-        lpp.coupon_code,
-        COALESCE(lpp.coupon_code, lpp.meta->>'coupon_code') AS coupon_code_resolved,
-        COALESCE(lpp.discount_paise, (lpp.meta->>'discount_paise')::int, 0) AS discount_resolved,
-        lpp.credits_added,
-        lpp.status,
-        lpp.created_at,
-        s.name AS school_name,
-        lp.name AS package_name
-      FROM lead_package_payments lpp
-      LEFT JOIN schools s  ON s.id  = lpp.school_id
-      LEFT JOIN lead_packages lp ON lp.id = lpp.package_id
-      WHERE ${where}
-      ORDER BY lpp.created_at DESC
+      SELECT * FROM (
+        SELECT
+          lpp.id,
+          lpp.order_id,
+          lpp.payment_id,
+          lpp.gateway,
+          lpp.amount_paise,
+          COALESCE(lpp.discount_paise, (lpp.meta->>'discount_paise')::int, 0) AS discount_resolved,
+          lpp.original_amount_paise,
+          COALESCE(lpp.coupon_code, lpp.meta->>'coupon_code') AS coupon_code_resolved,
+          lpp.credits_added,
+          lpp.status,
+          lpp.created_at,
+          s.name AS school_name,
+          COALESCE(lp.name, 'Lead Package') AS package_name,
+          'lead_credit' AS payment_type
+        FROM lead_package_payments lpp
+        LEFT JOIN schools s  ON s.id  = lpp.school_id
+        LEFT JOIN lead_packages lp ON lp.id = lpp.package_id
+        WHERE ${where}
+        UNION ALL
+        SELECT
+          sp.id,
+          sp.order_id,
+          sp.payment_id,
+          sp.gateway,
+          sp.amount_paise,
+          COALESCE(sp.discount_paise, 0) AS discount_resolved,
+          sp.original_amount_paise,
+          sp.coupon_code AS coupon_code_resolved,
+          0 AS credits_added,
+          sp.status,
+          sp.created_at,
+          s2.name AS school_name,
+          COALESCE(spl.name, sp.plan_key, 'Subscription') AS package_name,
+          'subscription' AS payment_type
+        FROM subscription_payments sp
+        LEFT JOIN schools s2 ON s2.id = sp.school_id
+        LEFT JOIN subscription_plans spl ON spl.plan_key = sp.plan_key
+        WHERE ${subWhere}
+      ) combined
+      ORDER BY created_at DESC
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `, [...vals, limit, offset]),
 
     db.query(`
-      SELECT COUNT(*) FROM lead_package_payments lpp
-      LEFT JOIN schools s ON s.id = lpp.school_id
-      WHERE ${where}
+      SELECT (
+        (SELECT COUNT(*) FROM lead_package_payments lpp LEFT JOIN schools s ON s.id = lpp.school_id WHERE ${where})
+        +
+        (SELECT COUNT(*) FROM subscription_payments sp LEFT JOIN schools s2 ON s2.id = sp.school_id WHERE ${subWhere})
+      ) AS count
     `, vals),
 
     db.query(`
       SELECT
-        COALESCE(SUM(lpp.amount_paise), 0)                                     AS total_amount,
-        COALESCE(SUM(CASE WHEN lpp.status='completed' THEN lpp.amount_paise END), 0) AS completed_amount,
-        COALESCE(SUM(CASE WHEN DATE(lpp.created_at)=CURRENT_DATE THEN lpp.amount_paise END), 0) AS today_amount,
-        COALESCE(SUM(COALESCE(lpp.discount_paise, (lpp.meta->>'discount_paise')::int, 0)), 0) AS total_discount
-      FROM lead_package_payments lpp
-      LEFT JOIN schools s ON s.id = lpp.school_id
-      WHERE ${where}
+        COALESCE(SUM(amount_paise), 0)                                          AS total_amount,
+        COALESCE(SUM(CASE WHEN status='completed' THEN amount_paise END), 0)    AS completed_amount,
+        COALESCE(SUM(CASE WHEN DATE(created_at)=CURRENT_DATE THEN amount_paise END), 0) AS today_amount,
+        COALESCE(SUM(discount_paise), 0)                                        AS total_discount
+      FROM (
+        SELECT lpp.amount_paise, lpp.status, lpp.created_at,
+               COALESCE(lpp.discount_paise,(lpp.meta->>'discount_paise')::int,0) AS discount_paise
+        FROM lead_package_payments lpp LEFT JOIN schools s ON s.id = lpp.school_id WHERE ${where}
+        UNION ALL
+        SELECT sp.amount_paise, sp.status, sp.created_at, COALESCE(sp.discount_paise,0)
+        FROM subscription_payments sp LEFT JOIN schools s2 ON s2.id = sp.school_id WHERE ${subWhere}
+      ) all_pay
     `, vals),
   ])
 
@@ -131,7 +170,7 @@ async function listPayments(req: NextRequest) {
       orderId:         r.order_id,
       schoolName:      r.school_name  || '—',
       packageName:     r.package_name || 'Lead Package',
-      type:            'Lead Purchase',
+      type:            r.payment_type === 'subscription' ? 'Subscription Plan' : 'Lead Purchase',
       amount:          Number(r.amount_paise)   || 0,
       discount:        Number(r.discount_resolved) || 0,
       originalAmount:  Number(r.original_amount_paise) || Number(r.amount_paise) || 0,
@@ -174,7 +213,7 @@ async function getAnalytics(req: NextRequest) {
     hourlyHeatmap,
   ] = await Promise.all([
 
-    // PG-wise transactions + revenue
+    // PG-wise transactions + revenue (lead credits + subscription plans)
     db.query(`
       SELECT
         gateway,
@@ -184,48 +223,66 @@ async function getAnalytics(req: NextRequest) {
         COUNT(CASE WHEN status='completed' THEN 1 END)                     AS completed_count,
         COUNT(CASE WHEN status='pending'   THEN 1 END)                     AS pending_count,
         COUNT(CASE WHEN status='failed'    THEN 1 END)                     AS failed_count,
-        ROUND(
-          100.0 * COUNT(CASE WHEN status='completed' THEN 1 END) / NULLIF(COUNT(*),0), 1
-        ) AS success_rate
-      FROM lead_package_payments
-      WHERE created_at >= NOW() - INTERVAL '${interval}'
+        ROUND(100.0 * COUNT(CASE WHEN status='completed' THEN 1 END) / NULLIF(COUNT(*),0), 1) AS success_rate
+      FROM (
+        SELECT gateway, status, amount_paise FROM lead_package_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+        UNION ALL
+        SELECT gateway, status, amount_paise FROM subscription_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+      ) ap
       GROUP BY gateway
       ORDER BY total_amount DESC
     `).catch(() => ({ rows: [] })),
 
-    // Daily trend (last 30/7 days)
+    // Daily trend
     db.query(`
       SELECT
         DATE(created_at) AS day,
         COUNT(*)         AS txn_count,
         COALESCE(SUM(CASE WHEN status='completed' THEN amount_paise END),0) AS revenue
-      FROM lead_package_payments
-      WHERE created_at >= NOW() - INTERVAL '${interval}'
+      FROM (
+        SELECT created_at, status, amount_paise FROM lead_package_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+        UNION ALL
+        SELECT created_at, status, amount_paise FROM subscription_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+      ) ap
       GROUP BY DATE(created_at)
       ORDER BY day ASC
     `).catch(() => ({ rows: [] })),
 
-    // Weekly trend (last 12 weeks)
+    // Weekly trend
     db.query(`
       SELECT
         DATE_TRUNC('week', created_at)::date AS week_start,
         COUNT(*) AS txn_count,
         COALESCE(SUM(CASE WHEN status='completed' THEN amount_paise END),0) AS revenue
-      FROM lead_package_payments
-      WHERE created_at >= NOW() - INTERVAL '12 weeks'
+      FROM (
+        SELECT created_at, status, amount_paise FROM lead_package_payments
+        WHERE created_at >= NOW() - INTERVAL '12 weeks'
+        UNION ALL
+        SELECT created_at, status, amount_paise FROM subscription_payments
+        WHERE created_at >= NOW() - INTERVAL '12 weeks'
+      ) ap
       GROUP BY DATE_TRUNC('week', created_at)
       ORDER BY week_start ASC
     `).catch(() => ({ rows: [] })),
 
-    // Monthly trend (last 12 months)
+    // Monthly trend
     db.query(`
       SELECT
         TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YY') AS month,
         DATE_TRUNC('month', created_at)                    AS month_date,
         COUNT(*) AS txn_count,
         COALESCE(SUM(CASE WHEN status='completed' THEN amount_paise END),0) AS revenue
-      FROM lead_package_payments
-      WHERE created_at >= NOW() - INTERVAL '12 months'
+      FROM (
+        SELECT created_at, status, amount_paise FROM lead_package_payments
+        WHERE created_at >= NOW() - INTERVAL '12 months'
+        UNION ALL
+        SELECT created_at, status, amount_paise FROM subscription_payments
+        WHERE created_at >= NOW() - INTERVAL '12 months'
+      ) ap
       GROUP BY DATE_TRUNC('month', created_at), TO_CHAR(DATE_TRUNC('month', created_at), 'Mon YY')
       ORDER BY month_date ASC
     `).catch(() => ({ rows: [] })),
@@ -234,51 +291,78 @@ async function getAnalytics(req: NextRequest) {
     db.query(`
       SELECT
         status,
-        COUNT(*)                              AS count,
-        COALESCE(SUM(amount_paise),0)         AS amount
-      FROM lead_package_payments
-      WHERE created_at >= NOW() - INTERVAL '${interval}'
+        COUNT(*)                     AS count,
+        COALESCE(SUM(amount_paise),0) AS amount
+      FROM (
+        SELECT status, amount_paise FROM lead_package_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+        UNION ALL
+        SELECT status, amount_paise FROM subscription_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}'
+      ) ap
       GROUP BY status
     `).catch(() => ({ rows: [] })),
 
-    // Coupon performance
+    // Coupon performance (lead_package_payments + subscription_payments)
     db.query(`
       SELECT
-        COALESCE(coupon_code, meta->>'coupon_code') AS code,
-        COUNT(*)                                    AS usage_count,
-        COALESCE(SUM(COALESCE(discount_paise,(meta->>'discount_paise')::int,0)),0) AS total_discount,
+        code,
+        COUNT(*)                                                           AS usage_count,
+        COALESCE(SUM(discount_paise),0)                                    AS total_discount,
         COALESCE(SUM(CASE WHEN status='completed' THEN amount_paise END),0) AS revenue_after_discount
-      FROM lead_package_payments
-      WHERE COALESCE(coupon_code, meta->>'coupon_code') IS NOT NULL
-        AND created_at >= NOW() - INTERVAL '${interval}'
-      GROUP BY COALESCE(coupon_code, meta->>'coupon_code')
+      FROM (
+        SELECT COALESCE(coupon_code, meta->>'coupon_code') AS code,
+               COALESCE(discount_paise,(meta->>'discount_paise')::int,0) AS discount_paise,
+               amount_paise, status
+        FROM lead_package_payments
+        WHERE COALESCE(coupon_code, meta->>'coupon_code') IS NOT NULL
+          AND created_at >= NOW() - INTERVAL '${interval}'
+        UNION ALL
+        SELECT coupon_code AS code, COALESCE(discount_paise,0), amount_paise, status
+        FROM subscription_payments
+        WHERE coupon_code IS NOT NULL
+          AND created_at >= NOW() - INTERVAL '${interval}'
+      ) cp
+      WHERE code IS NOT NULL
+      GROUP BY code
       ORDER BY usage_count DESC
       LIMIT 10
     `).catch(() => ({ rows: [] })),
 
-    // Top schools by revenue
+    // Top schools by revenue (both payment types)
     db.query(`
       SELECT
-        s.name AS school_name,
-        COUNT(lpp.id)                                                            AS txn_count,
-        COALESCE(SUM(CASE WHEN lpp.status='completed' THEN lpp.amount_paise END),0) AS revenue
-      FROM lead_package_payments lpp
-      LEFT JOIN schools s ON s.id = lpp.school_id
-      WHERE lpp.created_at >= NOW() - INTERVAL '${interval}'
-        AND lpp.status = 'completed'
-      GROUP BY s.name
+        school_name,
+        COUNT(*)  AS txn_count,
+        COALESCE(SUM(amount_paise),0) AS revenue
+      FROM (
+        SELECT s.name AS school_name, lpp.amount_paise
+        FROM lead_package_payments lpp
+        LEFT JOIN schools s ON s.id = lpp.school_id
+        WHERE lpp.created_at >= NOW() - INTERVAL '${interval}' AND lpp.status='completed'
+        UNION ALL
+        SELECT s2.name AS school_name, sp.amount_paise
+        FROM subscription_payments sp
+        LEFT JOIN schools s2 ON s2.id = sp.school_id
+        WHERE sp.created_at >= NOW() - INTERVAL '${interval}' AND sp.status='completed'
+      ) rs
+      GROUP BY school_name
       ORDER BY revenue DESC
       LIMIT 8
     `).catch(() => ({ rows: [] })),
 
-    // Hourly heatmap (avg transactions by hour of day)
+    // Hourly heatmap
     db.query(`
       SELECT
         EXTRACT(HOUR FROM created_at)::int AS hour,
         COUNT(*) AS txn_count
-      FROM lead_package_payments
-      WHERE created_at >= NOW() - INTERVAL '${interval}'
-        AND status = 'completed'
+      FROM (
+        SELECT created_at FROM lead_package_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}' AND status='completed'
+        UNION ALL
+        SELECT created_at FROM subscription_payments
+        WHERE created_at >= NOW() - INTERVAL '${interval}' AND status='completed'
+      ) ap
       GROUP BY EXTRACT(HOUR FROM created_at)
       ORDER BY hour
     `).catch(() => ({ rows: [] })),
@@ -347,24 +431,54 @@ async function exportPayments(req: NextRequest) {
     to:      sp.get('to'),
   })
 
+  const subWhere = where
+    .replace(/lpp\.status/g, 'sp.status')
+    .replace(/lpp\.gateway/g, 'sp.gateway')
+    .replace(/lpp\.order_id/g, 'sp.order_id')
+    .replace(/lpp\.payment_id/g, 'sp.payment_id')
+    .replace(/lpp\.coupon_code/g, 'sp.coupon_code')
+    .replace(/lpp\.created_at/g, 'sp.created_at')
+    .replace(/s\.name ILIKE/g, 's2.name ILIKE')
+
   const rows = await db.query(`
-    SELECT
-      lpp.order_id,
-      lpp.payment_id,
-      s.name AS school_name,
-      lp.name AS package_name,
-      lpp.gateway,
-      lpp.amount_paise,
-      COALESCE(lpp.discount_paise, (lpp.meta->>'discount_paise')::int, 0) AS discount_paise,
-      COALESCE(lpp.coupon_code, lpp.meta->>'coupon_code') AS coupon_code,
-      lpp.credits_added,
-      lpp.status,
-      lpp.created_at
-    FROM lead_package_payments lpp
-    LEFT JOIN schools s  ON s.id  = lpp.school_id
-    LEFT JOIN lead_packages lp ON lp.id = lpp.package_id
-    WHERE ${where}
-    ORDER BY lpp.created_at DESC
+    SELECT * FROM (
+      SELECT
+        lpp.order_id,
+        lpp.payment_id,
+        s.name AS school_name,
+        COALESCE(lp.name, 'Lead Package') AS package_name,
+        lpp.gateway,
+        lpp.amount_paise,
+        COALESCE(lpp.discount_paise, (lpp.meta->>'discount_paise')::int, 0) AS discount_paise,
+        COALESCE(lpp.coupon_code, lpp.meta->>'coupon_code') AS coupon_code,
+        lpp.credits_added,
+        lpp.status,
+        lpp.created_at,
+        'Lead Credit' AS payment_type
+      FROM lead_package_payments lpp
+      LEFT JOIN schools s  ON s.id  = lpp.school_id
+      LEFT JOIN lead_packages lp ON lp.id = lpp.package_id
+      WHERE ${where}
+      UNION ALL
+      SELECT
+        sp.order_id,
+        sp.payment_id,
+        s2.name AS school_name,
+        COALESCE(spl.name, sp.plan_key, 'Subscription') AS package_name,
+        sp.gateway,
+        sp.amount_paise,
+        COALESCE(sp.discount_paise, 0) AS discount_paise,
+        sp.coupon_code,
+        0 AS credits_added,
+        sp.status,
+        sp.created_at,
+        'Subscription Plan' AS payment_type
+      FROM subscription_payments sp
+      LEFT JOIN schools s2 ON s2.id = sp.school_id
+      LEFT JOIN subscription_plans spl ON spl.plan_key = sp.plan_key
+      WHERE ${subWhere}
+    ) combined
+    ORDER BY created_at DESC
     LIMIT 10000
   `, vals)
 

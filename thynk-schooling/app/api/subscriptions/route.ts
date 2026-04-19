@@ -194,6 +194,17 @@ export async function POST(req: NextRequest) {
               updated_at     = NOW()
       `, [schoolId, p.plan_key, p.name, p.leads_per_month])
 
+      // Auto-feature school if plan includes featured listing
+      const featRow = await db.query(
+        `SELECT includes_featured_listing FROM subscription_plans WHERE plan_key=$1`,
+        [p.plan_key]
+      ).catch(() => ({ rows: [] }))
+      const isFeaturedPlan = featRow.rows[0]?.includes_featured_listing ?? false
+      await db.query(
+        `UPDATE schools SET is_featured=$1 WHERE id=$2`,
+        [isFeaturedPlan, schoolId]
+      ).catch(() => {})
+
       // Credit monthly leads if plan gives any
       if (p.leads_per_month > 0) {
         await db.query(`
@@ -299,6 +310,14 @@ export async function POST(req: NextRequest) {
                 updated_at      = NOW()
         `, [schoolId, p.plan_key, p.name, p.leads_per_month])
 
+        // Auto-feature school if plan includes featured listing (demo path)
+        const featRowDemo = await db.query(
+          `SELECT includes_featured_listing FROM subscription_plans WHERE plan_key=$1`,
+          [p.plan_key]
+        ).catch(() => ({ rows: [] }))
+        const isFeaturedDemo = featRowDemo.rows[0]?.includes_featured_listing ?? false
+        await db.query(`UPDATE schools SET is_featured=$1 WHERE id=$2`, [isFeaturedDemo, schoolId]).catch(() => {})
+
         if (p.leads_per_month > 0) {
           await db.query(`
             INSERT INTO lead_credits (school_id, credits, total_credits, used_credits)
@@ -333,7 +352,7 @@ export async function POST(req: NextRequest) {
           finalPricePaise,
           'INR',
           receipt,
-          { buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone }
+          { buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone, callbackType: 'subscription' }
         )
 
         // Record pending payment
@@ -476,6 +495,14 @@ export async function POST(req: NextRequest) {
         ON CONFLICT (school_id) DO UPDATE
           SET plan_key=$2, plan_name=$3, leads_per_month=$4, activated_at=NOW(), payment_id=$5, updated_at=NOW()
       `, [school_id, plan_key, planName, leads_per_month, rec.id])
+
+      // Auto-feature school if plan includes featured listing
+      const featRowVerify = await db.query(
+        `SELECT includes_featured_listing FROM subscription_plans WHERE plan_key=$1`,
+        [plan_key]
+      ).catch(() => ({ rows: [] }))
+      const isFeaturedVerify = featRowVerify.rows[0]?.includes_featured_listing ?? false
+      await db.query(`UPDATE schools SET is_featured=$1 WHERE id=$2`, [isFeaturedVerify, school_id]).catch(() => {})
 
       // Credit leads
       if (leads_per_month > 0) {

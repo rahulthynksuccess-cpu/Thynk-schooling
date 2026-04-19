@@ -212,10 +212,11 @@ export default function SubscriptionPlansPage() {
   const handleSave = (data: PlanForm) => {
     const payload = {
       planKey: data.planKey, name: data.name, description: data.description,
-      price: data.price, leadCredits: data.leadCredits,
+      price: data.price, leadsPerMonth: data.leadCredits, leadCredits: data.leadCredits,
       features: (data as any).features ?? data.featuresRaw.split('\n').map((s: string) => s.trim()).filter(Boolean),
       isHot: data.isHot, cta: data.cta, sortOrder: data.sortOrder, isActive: data.isActive,
       isFeaturedListing: data.isFeaturedListing,
+      includesFeaturedListing: data.isFeaturedListing,  // maps to DB column includes_featured_listing
       featuredListingDays: data.isFeaturedListing ? data.featuredListingDays : 0,
     }
     if (modalPlan) updateMutation.mutate({ id: modalPlan.id, data: payload })

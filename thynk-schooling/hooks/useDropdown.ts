@@ -6,13 +6,10 @@ interface SelectOption { label: string; value: string }
 async function fetchDropdown(category: string, parentValue?: string): Promise<SelectOption[]> {
   const params = new URLSearchParams({ category })
   if (parentValue) params.set('parentValue', parentValue)
-
   params.set('action', 'dropdown')
   const res = await fetch(`/api/settings?${params}`, { cache: 'no-store' })
   if (!res.ok) return []
   const data = await res.json()
-
-  // API returns { options: [...] }
   const raw: any[] = Array.isArray(data) ? data : (data.options ?? data.data ?? [])
   return raw.map((d: any) => ({
     label: d.label ?? d.name ?? String(d.value),
@@ -25,12 +22,49 @@ export function useDropdown(category: string, opts: { parentValue?: string; enab
   const { data = [], isLoading, isError } = useQuery<SelectOption[]>({
     queryKey: ['dropdown', category, parentValue],
     queryFn: () => fetchDropdown(category, parentValue),
-    staleTime: 5 * 60 * 1000,  // cache for 5 min — admin changes still reflect on next visit
+    staleTime: 5 * 60 * 1000,
     gcTime:    10 * 60 * 1000,
     enabled,
     retry: 2,
   })
   return { options: data, isLoading, isError }
+}
+
+/**
+ * useDropdownsBulk — fetch multiple dropdown categories in ONE HTTP request.
+ * Use this instead of calling useDropdown() N times on a single page.
+ * Returns a map: { [category]: SelectOption[] }
+ */
+export function useDropdownsBulk(
+  categories: string[],
+  opts: { enabled?: boolean } = {}
+) {
+  const { enabled = true } = opts
+  const key = categories.slice().sort().join(',')
+
+  const { data, isLoading, isError } = useQuery<Record<string, SelectOption[]>>({
+    queryKey: ['dropdown-bulk', key],
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/settings?action=dropdown-bulk&categories=${encodeURIComponent(categories.join(','))}`,
+        { cache: 'no-store' }
+      )
+      if (!res.ok) return {}
+      return res.json()
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime:    10 * 60 * 1000,
+    enabled: enabled && categories.length > 0,
+    retry: 2,
+  })
+
+  const result = data ?? {}
+  // Ensure every requested category returns an array even if empty
+  const normalized: Record<string, SelectOption[]> = {}
+  for (const cat of categories) {
+    normalized[cat] = result[cat] ?? []
+  }
+  return { dropdowns: normalized, isLoading, isError }
 }
 
 export function useDropdowns(categories: string[]) {

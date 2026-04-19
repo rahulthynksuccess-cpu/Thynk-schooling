@@ -305,7 +305,7 @@ async function createEasebuzzOrder(
   amount: number,
   _currency: string,
   receipt: string,
-  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string }
+  meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; callbackType?: string }
 ): Promise<CreateOrderResult> {
   const salt     = cfg.extra?.salt || ''
   const amountMajor = (amount / 100).toFixed(2)
@@ -330,7 +330,8 @@ async function createEasebuzzOrder(
     firstname,
     email,
     phone,
-    surl:        `${process.env.NEXT_PUBLIC_APP_URL}/api/lead-packages?action=verify-payment`,
+    // surl/furl must be public URLs — Easebuzz POSTs form data without auth headers
+    surl:        `${process.env.NEXT_PUBLIC_APP_URL}/api/easebuzz-callback?type=${meta.callbackType || 'lead'}`,
     furl:        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/school/packages?status=failed`,
     hash,
   })

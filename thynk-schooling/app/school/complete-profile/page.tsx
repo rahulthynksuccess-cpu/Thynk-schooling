@@ -10,7 +10,7 @@ import {
   Upload, MapPin, Phone, Mail, Globe, DollarSign,
   School, CheckCircle2, X, Star,
 } from 'lucide-react'
-import { useDropdown } from '@/hooks/useDropdown'
+import { useDropdown, useDropdownsBulk } from '@/hooks/useDropdown'
 import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 
@@ -575,16 +575,15 @@ function AmenitiesStep({ formData, toggle }: {
 }) {
   const [activeTab, setActiveTab] = useState('facility')
 
-  const { options: facilities,       isLoading: lFac   } = useDropdown('facility')
-  const { options: sports,           isLoading: lSport  } = useDropdown('sport')
-  const { options: languages,        isLoading: lLang   } = useDropdown('language')
-  const { options: extracurriculars, isLoading: lExtra  } = useDropdown('extracurricular')
+  const { dropdowns: amenityDropdowns, isLoading: lAmenities } = useDropdownsBulk(
+    ['facility', 'sport', 'language', 'extracurricular']
+  )
 
   const TAB_DATA: Record<string, { options: { label: string; value: string }[]; isLoading: boolean; fieldKey: string }> = {
-    facility:        { options: facilities,       isLoading: lFac,   fieldKey: 'facilities' },
-    sport:           { options: sports,           isLoading: lSport, fieldKey: 'sports' },
-    language:        { options: languages,        isLoading: lLang,  fieldKey: 'languages' },
-    extracurricular: { options: extracurriculars, isLoading: lExtra, fieldKey: 'extracurriculars' },
+    facility:        { options: amenityDropdowns['facility']        ?? [], isLoading: lAmenities, fieldKey: 'facilities' },
+    sport:           { options: amenityDropdowns['sport']           ?? [], isLoading: lAmenities, fieldKey: 'sports' },
+    language:        { options: amenityDropdowns['language']        ?? [], isLoading: lAmenities, fieldKey: 'languages' },
+    extracurricular: { options: amenityDropdowns['extracurricular'] ?? [], isLoading: lAmenities, fieldKey: 'extracurriculars' },
   }
 
   const current = TAB_DATA[activeTab]
@@ -721,18 +720,28 @@ export default function SchoolCompleteProfilePage() {
     set(k, arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v])
   }
 
-  const { options: boards,         isLoading: lBoards }  = useDropdown('board')
-  const { options: schoolTypes,    isLoading: lTypes }    = useDropdown('school_type')
-  const { options: genderPolicies, isLoading: lGender }   = useDropdown('gender_policy')
-  const { options: mediums,        isLoading: lMedium }   = useDropdown('medium')
-  const { options: recognitions,   isLoading: lRecog }    = useDropdown('recognition')
-  const { options: classLevels,    isLoading: lClass }    = useDropdown('class_level')
-  const { options: states,         isLoading: lStates }   = useDropdown('state')
-  const { options: cities,         isLoading: lCities }   = useDropdown('city', {
+  // Bulk fetch: 8 static dropdowns in ONE request (was 9 separate requests)
+  const { dropdowns: bulkDropdowns, isLoading: lBulk } = useDropdownsBulk(
+    ['board', 'school_type', 'gender_policy', 'medium', 'recognition', 'class_level', 'state', 'academic_year'],
+    { enabled: mounted }
+  )
+  const boards         = bulkDropdowns['board']         ?? []
+  const schoolTypes    = bulkDropdowns['school_type']   ?? []
+  const genderPolicies = bulkDropdowns['gender_policy'] ?? []
+  const mediums        = bulkDropdowns['medium']        ?? []
+  const recognitions   = bulkDropdowns['recognition']   ?? []
+  const classLevels    = bulkDropdowns['class_level']   ?? []
+  const states         = bulkDropdowns['state']         ?? []
+  const academicYears  = bulkDropdowns['academic_year'] ?? []
+  const lBoards = lBulk; const lTypes = lBulk; const lGender = lBulk
+  const lMedium = lBulk; const lRecog = lBulk; const lClass = lBulk
+  const lStates = lBulk; const lAcYear = lBulk
+
+  // Cities still fetched separately (depends on state selection)
+  const { options: cities, isLoading: lCities } = useDropdown('city', {
     parentValue: formData.state as string,
     enabled: !!formData.state,
   })
-  const { options: academicYears,  isLoading: lAcYear }   = useDropdown('academic_year')
 
   const saveMutation = useMutation({
     mutationFn: async () => {

@@ -132,13 +132,42 @@ async function getSeedStatus() {
   return NextResponse.json({ categories: res.rows, totalCategories: res.rows.length, isEmpty: res.rows.length === 0 })
 }
 
+
+// ─── bulk dropdown (single request, multiple categories) ──────────────────────
+// GET /api/settings?action=dropdown-bulk&categories=board,school_type,gender_policy,...
+async function getBulkDropdowns(req: NextRequest) {
+  await ensureDropdownTable()
+  const { searchParams } = new URL(req.url)
+  const raw = searchParams.get('categories') || ''
+  const categories = raw.split(',').map(c => c.trim()).filter(Boolean)
+  if (!categories.length) return NextResponse.json({ error: 'categories param required' }, { status: 400 })
+
+  const placeholders = categories.map((_, i) => `$${i + 1}`).join(',')
+  const result = await db.query(
+    `SELECT category, label, value
+     FROM dropdown_options
+     WHERE category IN (${placeholders}) AND is_active=true
+     ORDER BY category, sort_order ASC, label ASC`,
+    categories
+  )
+
+  const grouped: Record<string, { label: string; value: string }[]> = {}
+  for (const cat of categories) grouped[cat] = []
+  for (const row of result.rows) {
+    if (!grouped[row.category]) grouped[row.category] = []
+    grouped[row.category].push({ label: row.label, value: row.value })
+  }
+  return NextResponse.json(grouped)
+}
+
 // ─── router ───────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
   const action = new URL(req.url).searchParams.get('action')
   try {
-    if (action === 'dropdown') return await getDropdown(req)
-    if (action === 'seed')     return await getSeedStatus()
+    if (action === 'dropdown')      return await getDropdown(req)
+    if (action === 'dropdown-bulk') return await getBulkDropdowns(req)
+    if (action === 'seed')          return await getSeedStatus()
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
   } catch (e: any) { return NextResponse.json({ error: e.message }, { status: 500 }) }
 }

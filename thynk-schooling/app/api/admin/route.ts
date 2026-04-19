@@ -45,30 +45,36 @@ async function getOverview() {
     db.query("SELECT COUNT(*) FROM schools WHERE (is_verified = false OR is_verified IS NULL)").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM users WHERE role != 'super_admin' AND created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM leads WHERE created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
-    // Real revenue from paid package payments — amount_paise, divide by 100 for rupees in UI
-    // No status filter — sum ALL payments for the KPI total
-    // We use original_amount_paise when available (pre-discount), fallback to amount_paise
+    // Real revenue: lead_package_payments (lead credits) + subscription_payments (plans) combined
     db.query(`
       SELECT
         COALESCE(SUM(amount_paise), 0)          AS total_paise,
         COUNT(*)                                 AS total_count,
         COALESCE(SUM(original_amount_paise), 0) AS total_original_paise,
         STRING_AGG(DISTINCT status, ', ')        AS statuses
-      FROM lead_package_payments
+      FROM (
+        SELECT amount_paise, original_amount_paise, status FROM lead_package_payments
+        UNION ALL
+        SELECT amount_paise, original_amount_paise, status FROM subscription_payments
+      ) AS all_payments
     `).catch(() => ({ rows: [{ total_paise: 0, total_count: 0, statuses: '' }] })),
     db.query("SELECT COUNT(*) FROM applications WHERE status = 'pending' OR status IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM reviews WHERE is_approved = false OR is_approved IS NULL").catch(() => ({ rows: [{ count: 0 }] })),
     db.query("SELECT COUNT(*) FROM reviews").catch(() => ({ rows: [{ count: 0 }] })),
-    // Weekly leads + real revenue joined from lead_package_payments
+    // Weekly leads + real revenue (lead packages + subscription plans combined)
     db.query(`
       SELECT
         to_char(DATE(l.created_at), 'Dy')          AS day,
         COUNT(l.id)                                 AS leads,
-        COALESCE(SUM(lpp.amount_paise), 0)          AS revenue_paise
+        COALESCE(SUM(all_pay.amount_paise), 0)      AS revenue_paise
       FROM leads l
-      LEFT JOIN lead_package_payments lpp
-        ON DATE(lpp.created_at) = DATE(l.created_at)
-        AND lpp.status NOT IN ('failed','cancelled','refunded','expired','pending','')
+      LEFT JOIN (
+        SELECT created_at, amount_paise, status FROM lead_package_payments
+        UNION ALL
+        SELECT created_at, amount_paise, status FROM subscription_payments
+      ) all_pay
+        ON DATE(all_pay.created_at) = DATE(l.created_at)
+        AND all_pay.status NOT IN ('failed','cancelled','refunded','expired','pending','')
       WHERE l.created_at >= NOW() - INTERVAL '7 days'
       GROUP BY DATE(l.created_at), to_char(DATE(l.created_at), 'Dy')
       ORDER BY DATE(l.created_at)
@@ -628,6 +634,8 @@ async function ensureSubPlansTable() {
       created_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+  // Add includes_featured_listing column if it doesn't exist (auto-migrate)
+  await db.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS includes_featured_listing BOOLEAN NOT NULL DEFAULT false`).catch(() => {})
   const count = await db.query('SELECT COUNT(*) FROM subscription_plans').catch(() => ({ rows:[{ count:'0' }] }))
   if (parseInt(count.rows[0].count) === 0) {
     for (let i = 0; i < DEFAULT_SUB_PLANS.length; i++) {
@@ -649,6 +657,7 @@ function toSubPlan(row: any) {
     id: row.id, planKey: row.plan_key, name: row.name, description: row.description || '',
     price: row.price_paise, leadsPerMonth: row.leads_per_month,
     features, isHot: row.is_hot, cta: row.cta, sortOrder: row.sort_order, isActive: row.is_active,
+    includesFeaturedListing: row.includes_featured_listing ?? false,
   }
 }
 
@@ -661,16 +670,16 @@ async function getSubPlans() {
 async function saveSubPlan(req: NextRequest) {
   await ensureSubPlansTable()
   const body = await req.json()
-  const { planKey, name, description, price, leadsPerMonth, features, isHot, cta, sortOrder, isActive } = body
+  const { planKey, name, description, price, leadsPerMonth, features, isHot, cta, sortOrder, isActive, includesFeaturedListing } = body
   if (!planKey || !name) return NextResponse.json({ error: 'planKey and name are required' }, { status: 400 })
   const res = await db.query(
-    `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order,is_active)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+    `INSERT INTO subscription_plans (plan_key,name,description,price_paise,leads_per_month,features,is_hot,cta,sort_order,is_active,includes_featured_listing)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
      ON CONFLICT (plan_key) DO UPDATE SET
        name=$2, description=$3, price_paise=$4, leads_per_month=$5,
-       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10
+       features=$6, is_hot=$7, cta=$8, sort_order=$9, is_active=$10, includes_featured_listing=$11
      RETURNING *`,
-    [planKey, name, description||'', price??0, leadsPerMonth??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true]
+    [planKey, name, description||'', price??0, leadsPerMonth??0, JSON.stringify(features??[]), isHot??false, cta||'Get Started', sortOrder??0, isActive??true, includesFeaturedListing??false]
   )
   return NextResponse.json(toSubPlan(res.rows[0]))
 }
@@ -681,7 +690,7 @@ async function updateSubPlan(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
   const body = await req.json()
   const sets: string[] = []; const params: any[] = []
-  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadsPerMonth:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active' }
+  const map: Record<string,string> = { name:'name', description:'description', price:'price_paise', leadsPerMonth:'leads_per_month', isHot:'is_hot', cta:'cta', sortOrder:'sort_order', isActive:'is_active', includesFeaturedListing:'includes_featured_listing' }
   for (const [k, col] of Object.entries(map)) {
     if (body[k] !== undefined) { params.push(body[k]); sets.push(`${col}=$${params.length}`) }
   }

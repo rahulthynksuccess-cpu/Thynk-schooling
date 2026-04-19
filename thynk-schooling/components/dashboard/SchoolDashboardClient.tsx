@@ -30,7 +30,7 @@ import {
   Phone, Flame, ArrowUp, ArrowDown, TrendingUp,
   Bell, AlertTriangle, Target, Activity, Layers,
   PieChart, Globe, BookOpen, Sun, Moon, Palette,
-  Instagram, Youtube, Facebook, Twitter
+  Instagram, Youtube, Facebook, Twitter, Linkedin
 } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar,
@@ -534,6 +534,58 @@ function ThemeController({ themeKey, applyTheme, theme }: {
 // ██  SIDEBAR                                                  ██
 // ═══════════════════════════════════════════════════════════════
 
+// ─── Thynk Schooling Platform Social Links ───────────────────────────────────
+// Fetches from /api/admin/media (same source as public Footer)
+// Always visible in sidebar regardless of school's own social links
+
+interface ThynkMedia {
+  socialFacebook?: string
+  socialInstagram?: string
+  socialYoutube?: string
+  socialTwitter?: string
+  socialLinkedin?: string
+}
+
+function ThynkSocialLinks({ theme }: { theme: Theme }) {
+  const [media, setMedia] = useState<ThynkMedia>({})
+
+  useEffect(() => {
+    fetch('/api/admin/media', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => setMedia(d.data || {}))
+      .catch(() => {})
+  }, [])
+
+  const links = [
+    { href: media.socialInstagram, label: 'Instagram', Icon: Instagram, bg: 'rgba(225,48,108,0.12)',  color: '#E1306C' },
+    { href: media.socialFacebook,  label: 'Facebook',  Icon: Facebook,  bg: 'rgba(24,119,242,0.12)', color: '#4A9FE8' },
+    { href: media.socialYoutube,   label: 'YouTube',   Icon: Youtube,   bg: 'rgba(255,0,0,0.10)',    color: '#FF4444' },
+    { href: media.socialTwitter,   label: 'Twitter',   Icon: Twitter,   bg: 'rgba(29,161,242,0.10)', color: '#1DA1F2' },
+    { href: media.socialLinkedin,  label: 'LinkedIn',  Icon: Linkedin,  bg: 'rgba(10,102,194,0.12)', color: '#0A66C2' },
+  ].filter(l => l.href && l.href !== '#')
+
+  if (!links.length) return null
+
+  return (
+    <div style={{ position: 'relative', zIndex: 1, margin: '0 12px 10px', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 12, border: `1px solid ${theme.sbBorder}` }}>
+      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.sbMuted, marginBottom: 8, fontFamily: theme.bodyFont }}>
+        Follow Us
+      </div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {links.map(({ href, label, Icon, bg, color }) => (
+          <a key={label} href={href} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: bg, color, textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont, transition: 'opacity .15s' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.opacity = '0.75'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.opacity = '1'}
+          >
+            <Icon size={12} /> {label}
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function Sidebar({ active, onClose, credits, theme, themeKey, applyTheme, socialLinks }: {
   active: string
   onClose?: () => void
@@ -625,38 +677,8 @@ function Sidebar({ active, onClose, credits, theme, themeKey, applyTheme, social
       {/* Theme controller */}
       <ThemeController theme={theme} themeKey={themeKey} applyTheme={applyTheme} />
 
-      {/* Social Media Links */}
-      {(socialLinks?.facebook || socialLinks?.instagram || socialLinks?.youtube || socialLinks?.twitter) && (
-        <div style={{ position: 'relative', zIndex: 1, margin: '0 12px 8px', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 12, border: `1px solid ${theme.sbBorder}` }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.sbMuted, marginBottom: 8, fontFamily: theme.bodyFont }}>Social Media</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {socialLinks.facebook && (
-              <a href={socialLinks.facebook} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(24,119,242,0.12)', color: '#4A9FE8', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
-                <Facebook size={12} /> Facebook
-              </a>
-            )}
-            {socialLinks.instagram && (
-              <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(225,48,108,0.12)', color: '#E1306C', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
-                <Instagram size={12} /> Instagram
-              </a>
-            )}
-            {socialLinks.youtube && (
-              <a href={socialLinks.youtube} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(255,0,0,0.10)', color: '#FF4444', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
-                <Youtube size={12} /> YouTube
-              </a>
-            )}
-            {socialLinks.twitter && (
-              <a href={socialLinks.twitter} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 10px', borderRadius: 8, background: 'rgba(29,161,242,0.10)', color: '#1DA1F2', textDecoration: 'none', fontSize: 11, fontWeight: 600, fontFamily: theme.bodyFont }}>
-                <Twitter size={12} /> Twitter
-              </a>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Thynk Schooling Platform Social Links */}
+      <ThynkSocialLinks theme={theme} />
 
       {/* Logout */}
       <button
