@@ -511,7 +511,8 @@ async function getRevenueSection(
         COALESCE(lpp.discount_paise,(lpp.meta->>'discount_paise')::int, 0)  AS discount_paise,
         COALESCE(lpp.coupon_code, lpp.meta->>'coupon_code')                 AS coupon_code,
         lpp.status, lpp.created_at,
-        lp.name AS package_name,
+        lp.name    AS package_name,
+        'Lead Package' AS payment_type,
         s.name  AS school_name,
         s.city  AS school_city,
         s.state AS school_state
@@ -519,7 +520,23 @@ async function getRevenueSection(
       LEFT JOIN lead_packages lp ON lp.id = lpp.package_id
       LEFT JOIN schools       s  ON s.id  = lpp.school_id
       WHERE 1=1 ${schoolFilter} ${dClause}
-      ORDER BY lpp.created_at DESC LIMIT 2000
+      UNION ALL
+      SELECT
+        sp.id, sp.order_id, sp.payment_id, sp.gateway,
+        sp.amount_paise, 0 AS credits_added,
+        COALESCE(sp.discount_paise, 0)  AS discount_paise,
+        NULL AS coupon_code,
+        sp.status, sp.created_at,
+        COALESCE(spl.name, sp.plan_key) AS package_name,
+        'Subscription'  AS payment_type,
+        s.name  AS school_name,
+        s.city  AS school_city,
+        s.state AS school_state
+      FROM subscription_payments sp
+      LEFT JOIN subscription_plans spl ON spl.plan_key = sp.plan_key
+      LEFT JOIN schools            s   ON s.id = sp.school_id
+      WHERE 1=1 ${schoolFilter.replace(/lpp\./g,'sp.')} ${dClause.replace(/lpp\./g,'sp.')}
+      ORDER BY created_at DESC LIMIT 2000
     `, [...baseP]).catch(() => ({ rows: [] })),
   ])
 
@@ -558,10 +575,144 @@ async function getRevenueSection(
       couponCode:    r.coupon_code  || null,
       status:        r.status       || 'pending',
       packageName:   r.package_name || '—',
+      paymentType:   r.payment_type || 'Lead Package',
       schoolName:    r.school_name  || '—',
       schoolCity:    r.school_city  || '—',
       schoolState:   r.school_state || '—',
       createdAt:     r.created_at,
+    })),
+  }
+}
+
+// ─── subscriptions section ────────────────────────────────────────────────────
+
+async function getSubscriptionsSection(
+  schoolIds: string[],
+  from: string | null,
+  to: string | null
+) {
+  const hasSch = schoolIds.length > 0
+  const schoolPH = hasSch ? schoolIds.map((_: any, i: number) => `$${i + 1}`).join(',') : ''
+  const schoolFilterSP  = hasSch ? `AND sp.school_id IN (${schoolPH})` : ''
+  const schoolFilterSS  = hasSch ? `AND ss.school_id IN (${schoolPH})` : ''
+  const baseP: any[] = [...schoolIds]
+  const { clause: dClauseSP } = dateClause('sp', from, to, baseP, schoolIds.length + 1)
+  const baseP2: any[] = [...schoolIds]
+  const { clause: dClauseSS } = dateClause('ss', from, to, baseP2, schoolIds.length + 1)
+
+  const [paymentsStats, activeSubscriptions, byPlan, paymentDetails, activeDetails] = await Promise.all([
+    // Payment totals
+    db.query(`
+      SELECT
+        COUNT(*)                                                            AS total_txns,
+        COUNT(CASE WHEN sp.status IN ('paid','captured','success','completed') THEN 1 END) AS successful_txns,
+        COALESCE(SUM(CASE WHEN sp.status IN ('paid','captured','success','completed') THEN sp.amount_paise END), 0) AS revenue_paise,
+        COUNT(DISTINCT sp.school_id)                                        AS unique_schools
+      FROM subscription_payments sp
+      WHERE 1=1 ${schoolFilterSP} ${dClauseSP}
+    `, [...baseP]).catch(() => ({ rows: [{}] })),
+
+    // Active subscriptions
+    db.query(`
+      SELECT
+        COUNT(*)                                                            AS total_active,
+        COUNT(CASE WHEN ss.expires_at IS NULL OR ss.expires_at > NOW() THEN 1 END) AS currently_active,
+        COUNT(DISTINCT ss.plan_key)                                         AS unique_plans
+      FROM school_subscriptions ss
+      WHERE 1=1 ${schoolFilterSS} ${dClauseSS}
+    `, [...baseP2]).catch(() => ({ rows: [{}] })),
+
+    // By plan breakdown
+    db.query(`
+      SELECT
+        COALESCE(spl.name, sp.plan_key) AS plan_name,
+        COUNT(sp.id)                    AS txn_count,
+        COALESCE(SUM(CASE WHEN sp.status IN ('paid','captured','success','completed') THEN sp.amount_paise END), 0) AS revenue_paise,
+        COUNT(DISTINCT sp.school_id)    AS school_count
+      FROM subscription_payments sp
+      LEFT JOIN subscription_plans spl ON spl.plan_key = sp.plan_key
+      WHERE 1=1 ${schoolFilterSP} ${dClauseSP}
+      GROUP BY spl.name, sp.plan_key
+      ORDER BY revenue_paise DESC
+    `, [...baseP]).catch(() => ({ rows: [] })),
+
+    // Payment detail rows
+    db.query(`
+      SELECT
+        sp.id, sp.order_id, sp.payment_id, sp.gateway,
+        sp.amount_paise, sp.status, sp.created_at, sp.plan_key,
+        COALESCE(spl.name, sp.plan_key) AS plan_name,
+        COALESCE(sp.lead_count, spl.lead_count, 0) AS lead_count,
+        s.name  AS school_name,
+        s.city  AS school_city,
+        s.state AS school_state
+      FROM subscription_payments sp
+      LEFT JOIN subscription_plans spl ON spl.plan_key = sp.plan_key
+      LEFT JOIN schools            s   ON s.id = sp.school_id
+      WHERE 1=1 ${schoolFilterSP} ${dClauseSP}
+      ORDER BY sp.created_at DESC LIMIT 1000
+    `, [...baseP]).catch(() => ({ rows: [] })),
+
+    // Active subscriptions detail
+    db.query(`
+      SELECT
+        ss.id, ss.plan_key, ss.plan_name, ss.lead_count,
+        ss.activated_at, ss.expires_at,
+        s.name  AS school_name,
+        s.city  AS school_city,
+        s.state AS school_state
+      FROM school_subscriptions ss
+      LEFT JOIN schools s ON s.id = ss.school_id
+      WHERE 1=1 ${schoolFilterSS} ${dClauseSS}
+      ORDER BY ss.activated_at DESC LIMIT 1000
+    `, [...baseP2]).catch(() => ({ rows: [] })),
+  ])
+
+  const ps = paymentsStats.rows[0] || {}
+  const as_ = activeSubscriptions.rows[0] || {}
+
+  return {
+    kpis: {
+      totalPayments:    Number(ps.total_txns       || 0),
+      successfulPayments: Number(ps.successful_txns || 0),
+      revenuePaise:     Number(ps.revenue_paise     || 0),
+      uniqueSchools:    Number(ps.unique_schools     || 0),
+      totalActive:      Number(as_.total_active      || 0),
+      currentlyActive:  Number(as_.currently_active  || 0),
+      uniquePlans:      Number(as_.unique_plans       || 0),
+    },
+    byPlan: byPlan.rows.map((r: any) => ({
+      planName:     r.plan_name    || '—',
+      txnCount:     Number(r.txn_count    || 0),
+      revenuePaise: Number(r.revenue_paise || 0),
+      schoolCount:  Number(r.school_count  || 0),
+    })),
+    paymentDetails: paymentDetails.rows.map((r: any) => ({
+      id:          r.id,
+      orderId:     r.order_id  || '—',
+      paymentId:   r.payment_id || '—',
+      gateway:     r.gateway    || '—',
+      amountPaise: Number(r.amount_paise || 0),
+      status:      r.status     || 'pending',
+      planKey:     r.plan_key   || '—',
+      planName:    r.plan_name  || '—',
+      leadCount:   Number(r.lead_count || 0),
+      schoolName:  r.school_name  || '—',
+      schoolCity:  r.school_city  || '—',
+      schoolState: r.school_state || '—',
+      createdAt:   r.created_at,
+    })),
+    activeDetails: activeDetails.rows.map((r: any) => ({
+      id:          r.id,
+      planKey:     r.plan_key   || '—',
+      planName:    r.plan_name  || '—',
+      leadCount:   Number(r.lead_count || 0),
+      activatedAt: r.activated_at,
+      expiresAt:   r.expires_at,
+      isActive:    !r.expires_at || new Date(r.expires_at) > new Date(),
+      schoolName:  r.school_name  || '—',
+      schoolCity:  r.school_city  || '—',
+      schoolState: r.school_state || '—',
     })),
   }
 }
@@ -580,20 +731,22 @@ async function getReport(req: NextRequest) {
   // Resolve final list of school IDs
   const resolvedIds = await resolveSchoolIds(schoolIds, states, cities)
 
-  const [leadsData, appsData, reviewsData, revenueData] = await Promise.all([
+  const [leadsData, appsData, reviewsData, revenueData, subscriptionsData] = await Promise.all([
     getLeadsSection(resolvedIds, from, to),
     getApplicationsSection(resolvedIds, from, to),
     getReviewsSection(resolvedIds, from, to),
     getRevenueSection(resolvedIds, from, to),
+    getSubscriptionsSection(resolvedIds, from, to),
   ])
 
   return NextResponse.json({
     filters: { states, cities, schoolIds, from, to, resolvedSchoolCount: resolvedIds.length },
     generatedAt: new Date().toISOString(),
-    leads:        leadsData,
-    applications: appsData,
-    reviews:      reviewsData,
-    revenue:      revenueData,
+    leads:         leadsData,
+    applications:  appsData,
+    reviews:       reviewsData,
+    revenue:       revenueData,
+    subscriptions: subscriptionsData,
   })
 }
 
