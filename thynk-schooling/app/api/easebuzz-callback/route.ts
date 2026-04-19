@@ -14,9 +14,10 @@ const APP_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''
 
 async function getEasebuzzSalt(): Promise<string> {
   const row = await db.query(
-    `SELECT extra FROM payment_gateways WHERE id='easebuzz' AND enabled=true LIMIT 1`
+    `SELECT key_secret, extra FROM payment_gateways WHERE id='easebuzz' AND enabled=true LIMIT 1`
   ).catch(() => ({ rows: [] }))
-  return (row.rows[0]?.extra as any)?.salt || ''
+  // Salt is stored in key_secret (that's what the integrations UI saves it as)
+  return row.rows[0]?.key_secret || (row.rows[0]?.extra as any)?.salt || ''
 }
 
 function verifyHash(params: Record<string, string>, salt: string): boolean {

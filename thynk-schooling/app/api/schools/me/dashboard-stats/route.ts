@@ -64,7 +64,8 @@ export async function GET(req: NextRequest) {
 
     const school = await db.query(
       `SELECT id, name, logo_url, city, state, board, profile_completed, rating,
-              facebook_url, instagram_url, youtube_url, twitter_url
+              facebook_url, instagram_url, youtube_url, twitter_url,
+              is_featured, featured_until
        FROM schools WHERE admin_user_id = $1`,
       [userId]
     ).catch(() => ({ rows: [] }))
@@ -82,6 +83,7 @@ export async function GET(req: NextRequest) {
       city: schoolCity, state: schoolState, board: schoolBoard,
       profile_completed, rating,
       facebook_url, instagram_url, youtube_url, twitter_url,
+      is_featured, featured_until,
     } = school.rows[0]
 
     // Ensure views table exists before querying
@@ -173,6 +175,11 @@ export async function GET(req: NextRequest) {
       instagramUrl: instagram_url || null,
       youtubeUrl:   youtube_url   || null,
       twitterUrl:   twitter_url   || null,
+      isFeatured:     is_featured === true && (!featured_until || new Date(featured_until) > new Date()),
+      featuredUntil:  featured_until || null,
+      featuredDaysLeft: featured_until
+        ? Math.max(0, Math.ceil((new Date(featured_until).getTime() - Date.now()) / 86400000))
+        : 0,
     })
   } catch (e: any) {
     console.error('[schools/me/dashboard-stats GET]', e)

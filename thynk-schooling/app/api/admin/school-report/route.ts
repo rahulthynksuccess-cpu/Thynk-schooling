@@ -474,6 +474,11 @@ async function getRevenueSection(
                COALESCE(sp.discount_paise,0) AS discount_paise,
                0 AS credits_added
         FROM subscription_payments sp WHERE 1=1 ${schoolFilter.replace(/lpp\./g,'sp.')} ${dClause.replace(/lpp\./g,'sp.')}
+        UNION ALL
+        SELECT flp.amount_paise, flp.status,
+               COALESCE(flp.discount_paise,0) AS discount_paise,
+               0 AS credits_added
+        FROM featured_listing_payments flp WHERE 1=1 ${schoolFilter.replace(/lpp\./g,'flp.')} ${dClause.replace(/lpp\./g,'flp.')}
       ) all_pay
     `, [...baseP]).catch(() => ({ rows: [{}] })),
 

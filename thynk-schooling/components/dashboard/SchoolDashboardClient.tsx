@@ -316,6 +316,9 @@ interface SchoolDashboardStats {
   instagramUrl?: string | null
   youtubeUrl?: string | null
   twitterUrl?: string | null
+  isFeatured?: boolean
+  featuredUntil?: string | null
+  featuredDaysLeft?: number
 }
 
 interface FunnelStage {
@@ -1799,6 +1802,25 @@ export function SchoolDashboardClient() {
 
             {/* Alert strip */}
             {cfg.alertStrip && insights.length > 0 && <AlertStrip insights={insights} theme={theme} />}
+
+            {/* Featured Listing Banner */}
+            {stats?.isFeatured && (
+              <div style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 20px', borderRadius:12, background:'linear-gradient(135deg,rgba(184,134,11,0.12),rgba(212,165,32,0.08))', border:'1px solid rgba(184,134,11,0.3)', marginBottom:16, flexWrap:'wrap' }}>
+                <div style={{ width:40, height:40, borderRadius:10, background:'rgba(184,134,11,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:20 }}>⭐</div>
+                <div style={{ flex:1, minWidth:180 }}>
+                  <div style={{ fontWeight:700, fontSize:14, color:'#92400E' }}>Your school is Featured!</div>
+                  <div style={{ fontSize:12, color:'#B45309', marginTop:2 }}>
+                    {stats.featuredDaysLeft && stats.featuredDaysLeft > 0
+                      ? `${stats.featuredDaysLeft} day${stats.featuredDaysLeft !== 1 ? 's' : ''} remaining · Appearing at the top of search results`
+                      : `Featured until ${stats.featuredUntil ? new Date(stats.featuredUntil).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : ''}`
+                    }
+                  </div>
+                </div>
+                <a href="/dashboard/school/packages?tab=featured" style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'7px 14px', borderRadius:8, background:'#B8860B', color:'#fff', textDecoration:'none', fontSize:12, fontWeight:700, flexShrink:0 }}>
+                  Extend ›
+                </a>
+              </div>
+            )}
 
             {/* Performance score */}
             {cfg.performanceScore && <PerformanceScoreBanner stats={stats} theme={theme} />}

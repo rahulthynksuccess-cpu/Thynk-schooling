@@ -340,7 +340,10 @@ async function createEasebuzzOrder(
   receipt: string,
   meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; callbackType?: string }
 ): Promise<CreateOrderResult> {
-  const salt = cfg.extra?.salt || ''
+  // Easebuzz: Salt is stored in keySecret field (that's what the integrations UI saves it as)
+  // Fallback to extra.salt for backward compatibility
+  const salt = cfg.keySecret || cfg.extra?.salt || ''
+  if (!salt) throw new Error('Easebuzz salt not configured — set Salt in Admin → Integrations → Easebuzz')
 
   // FIX 1: txnid must be alphanumeric only, max 25 chars — strip hyphens from UUID receipts
   const txnid = receipt.replace(/-/g, '').slice(0, 25)
@@ -360,7 +363,8 @@ async function createEasebuzzOrder(
   const phone      = cleanPhone.length === 10 ? cleanPhone : '9999999999'
 
   const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''
-  if (!appUrl) throw new Error('APP_URL env var is not set — Easebuzz requires a full public URL for surl/furl')
+  // Don't throw — use empty string and let surl/furl be relative if no APP_URL set
+  // Easebuzz needs full URL but we'll let it fail with a clear error from Easebuzz itself
 
   // FIX 2: Easebuzz hash requires EXACTLY 16 pipes (17 segments):
   // sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)

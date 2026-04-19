@@ -16,13 +16,16 @@ export async function GET() {
       db.query("SELECT COUNT(*) FROM users WHERE role!='super_admin' AND created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
       db.query("SELECT COUNT(*) FROM leads WHERE created_at >= CURRENT_DATE").catch(() => ({ rows: [{ count: 0 }] })),
 
-      // Revenue: lead credit purchases + subscription plan purchases combined
+      // Revenue: lead credit purchases + subscription plan purchases + featured listing purchases
       db.query(`
         SELECT COALESCE(SUM(amount_paise),0) AS total FROM (
           SELECT amount_paise FROM lead_package_payments
           WHERE status IN ('paid','captured','success','completed')
           UNION ALL
           SELECT amount_paise FROM subscription_payments
+          WHERE status IN ('paid','captured','success','completed')
+          UNION ALL
+          SELECT amount_paise FROM featured_listing_payments
           WHERE status IN ('paid','captured','success','completed')
         ) all_pay
       `).catch(() => ({ rows: [{ total: 0 }] })),
@@ -42,6 +45,9 @@ export async function GET() {
           WHERE status IN ('paid','captured','success','completed')
           UNION ALL
           SELECT created_at, amount_paise FROM subscription_payments
+          WHERE status IN ('paid','captured','success','completed')
+          UNION ALL
+          SELECT created_at, amount_paise FROM featured_listing_payments
           WHERE status IN ('paid','captured','success','completed')
         ) pay ON DATE(pay.created_at) = DATE(l.created_at)
         WHERE l.created_at >= NOW()-INTERVAL '7 days'
