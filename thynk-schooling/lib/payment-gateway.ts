@@ -384,6 +384,8 @@ async function createEasebuzzOrder(
     firstname,
     email,
     phone,
+    // udf1-udf5 MUST be present as empty strings — Easebuzz rejects requests without them
+    udf1: '', udf2: '', udf3: '', udf4: '', udf5: '',
     surl: `${appUrl}/api/easebuzz-callback?type=${meta.callbackType || 'lead'}`,
     furl: `${appUrl}/dashboard/school/packages?status=failed`,
     hash,
@@ -400,7 +402,8 @@ async function createEasebuzzOrder(
     throw new Error(`Easebuzz error (HTTP ${res.status}): ${txt.slice(0, 300)}`)
   }
   const data = await res.json()
-  if (data.status !== 1) throw new Error(data.data || data.error || 'Easebuzz initiation failed')
+  console.log('[Easebuzz initiateLink response]', JSON.stringify(data))
+  if (data.status !== 1) throw new Error(`Easebuzz: ${JSON.stringify(data)}`)
 
   return {
     gateway:  'easebuzz',

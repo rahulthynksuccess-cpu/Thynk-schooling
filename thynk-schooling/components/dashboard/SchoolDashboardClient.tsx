@@ -1682,6 +1682,18 @@ export function SchoolDashboardClient() {
     enabled, staleTime: 5 * 60 * 1000,
   })
 
+  const { data: notifications, refetch: refetchNotifs } = useQuery<any[]>({
+    queryKey: ['school-notifications'],
+    queryFn: () => fetch('/api/notifications', { credentials: 'include', headers: authHeaders() }).then(r => r.ok ? r.json() : []).catch(() => []),
+    enabled, staleTime: 60 * 1000,
+  })
+  const unreadCount = (notifications || []).filter((n: any) => !n.isRead).length
+
+  const markAllRead = async () => {
+    await fetch('/api/notifications?action=mark-all-read', { method: 'POST', credentials: 'include', headers: authHeaders() }).catch(() => {})
+    refetchNotifs()
+  }
+
   const analyticsData: AnalyticsPoint[] = useMemo(() => {
     if (!analyticsRaw) return []
     const map: Record<string, AnalyticsPoint> = {}
@@ -1772,7 +1784,10 @@ export function SchoolDashboardClient() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', background: theme.sb, borderBottom: `1px solid ${theme.sbBorder}` }}>
             <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', color: theme.sbMuted, cursor: 'pointer', display: 'flex', padding: 4 }}><Menu size={18} /></button>
             <span style={{ fontFamily: theme.displayFont, fontSize: 16, fontWeight: 700, color: theme.sbText }}>ThynkSchooling</span>
-            <Bell size={16} color={theme.sbMuted} />
+            <span style={{ position:'relative', display:'inline-flex' }}>
+              <Bell size={16} color={theme.sbMuted} />
+              {unreadCount > 0 && <span style={{ position:'absolute', top:-4, right:-4, width:14, height:14, borderRadius:'50%', background:'#EF4444', color:'#fff', fontSize:8, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            </span>
           </div>
 
           <div style={{ flex: 1, padding: '32px 36px 52px', maxWidth: 1180, margin: '0 auto', width: '100%' }}>
@@ -1824,6 +1839,41 @@ export function SchoolDashboardClient() {
 
             {/* Performance score */}
             {cfg.performanceScore && <PerformanceScoreBanner stats={stats} theme={theme} />}
+
+            {/* Notifications from Admin + Auto events */}
+            {notifications && notifications.length > 0 && (
+              <div style={{ marginBottom: 18 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontWeight:700, fontSize:13, color:theme.text }}>Notifications</span>
+                    {unreadCount > 0 && (
+                      <span style={{ background:'#EF4444', color:'#fff', fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:99 }}>{unreadCount}</span>
+                    )}
+                  </div>
+                  {unreadCount > 0 && (
+                    <button onClick={markAllRead} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:theme.muted, fontWeight:600 }}>Mark all read</button>
+                  )}
+                </div>
+                {notifications.slice(0, 5).map((n: any) => {
+                  const icon = n.type === 'lead' ? '📩' : n.type === 'application' ? '📋' : n.type === 'payment' ? '✅' : n.type === 'featured' ? '⭐' : n.type === 'view' ? '👀' : '🔔'
+                  const bg = n.isRead ? 'rgba(0,0,0,0.02)' : 'rgba(59,130,246,0.06)'
+                  const border = n.isRead ? `0.5px solid ${theme.cardBorder}` : '0.5px solid rgba(59,130,246,0.25)'
+                  return (
+                    <div key={n.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'11px 14px', borderRadius:10, background:bg, border, marginBottom:6, opacity: n.isRead ? 0.7 : 1 }}>
+                      <span style={{ fontSize:16, flexShrink:0 }}>{icon}</span>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight: n.isRead ? 500 : 700, fontSize:13, color:theme.text }}>{n.title}</div>
+                        {n.body && <div style={{ fontSize:12, color:theme.muted, marginTop:2, lineHeight:1.5 }}>{n.body}</div>}
+                        <div style={{ fontSize:10, color:theme.muted, marginTop:3 }}>
+                          {new Date(n.sentAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})} · {new Date(n.sentAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})}
+                        </div>
+                      </div>
+                      {!n.isRead && <div style={{ width:7, height:7, borderRadius:'50%', background:'#3B82F6', flexShrink:0, marginTop:4 }} />}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
 
             {/* KPI Cards */}
             {cfg.kpiCards && (

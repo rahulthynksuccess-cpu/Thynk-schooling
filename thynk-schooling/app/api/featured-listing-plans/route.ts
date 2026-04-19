@@ -191,6 +191,7 @@ export async function POST(req: NextRequest) {
       if (finalAmountPaise === 0) {
         await activateFeatured(schoolId, plan.duration_days)
         await db.query(`UPDATE featured_listing_payments SET status='completed', payment_id=$1 WHERE id=$2`, ['free_' + Date.now(), payId])
+        import('@/lib/notify').then(m => m.notifyFeaturedActivated(schoolId, plan.duration_days)).catch(() => {})
         return NextResponse.json({ success: true })
       }
 
@@ -253,6 +254,7 @@ export async function POST(req: NextRequest) {
 
       // Activate — errors are NOT swallowed so we know if it fails
       await activateFeatured(pay.school_id, pay.duration_days)
+      import('@/lib/notify').then(m => m.notifyFeaturedActivated(pay.school_id, pay.duration_days)).catch(() => {})
 
       return NextResponse.json({ success: true })
     }

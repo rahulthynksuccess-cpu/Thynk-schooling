@@ -99,6 +99,7 @@ export async function POST(req: NextRequest) {
         [mihpayid, rec.id]
       )
       await activateFeatured(rec.school_id, rec.duration_days)
+      import('@/lib/notify').then(m => m.notifyFeaturedActivated(rec.school_id, rec.duration_days)).catch(() => {})
       console.log('[easebuzz-callback] featured activated for school:', rec.school_id, 'days:', rec.duration_days)
       return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?tab=featured&status=success`, 303)
     }
@@ -138,6 +139,7 @@ export async function POST(req: NextRequest) {
         `UPDATE subscription_payments SET status='completed', payment_id=$1, updated_at=NOW() WHERE id=$2`,
         [mihpayid, rec.id]
       )
+      import("@/lib/notify").then(m => m.notifyPaymentDone(rec.school_id, planName, rec.amount_paise)).catch(()=>{})
       return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?tab=leads&status=success`, 303)
     }
 

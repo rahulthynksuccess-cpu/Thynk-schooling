@@ -158,6 +158,9 @@ export async function POST(req: NextRequest) {
       [userId || null, school.id, leadId, childName.trim(), classApplyingFor, parentName.trim(), phone.trim(), email?.trim()||null, message?.trim() || null]
     ).catch(() => {}) // Non-fatal
 
+    // Notify school of new application
+    import('@/lib/notify').then(m => m.notifyNewApplication(school.id, parentName.trim(), childName.trim(), classApplyingFor)).catch(() => {})
+
     return NextResponse.json({ success: true, leadId })
   } catch (e: any) {
     console.error('[apply POST]', e)

@@ -455,6 +455,9 @@ export async function POST(req: NextRequest) {
         [result.paymentId, resolvedOrderId]
       )
 
+      // Notify school of successful payment
+      import('@/lib/notify').then(m => m.notifyPaymentDone(school_id, planName, rec.amount_paise)).catch(() => {})
+
       // Cashfree / Easebuzz form redirect
       const ct = req.headers.get('content-type') || ''
       if (ct.includes('application/x-www-form-urlencoded')) {

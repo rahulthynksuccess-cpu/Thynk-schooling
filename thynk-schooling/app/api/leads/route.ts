@@ -404,6 +404,8 @@ export async function POST(req: NextRequest) {
           childName?.trim() || null, classApplyingFor?.trim() || null, source || action,
         ]
       )
+      // Notify school of new lead
+      if (schoolId) { import("@/lib/notify").then(m => m.notifyNewLead(schoolId, parentName?.trim() || "A parent", childName?.trim(), classApplyingFor?.trim())).catch(()=>{}) }
       return NextResponse.json({ success: true })
     }
 
@@ -483,7 +485,12 @@ export async function POST(req: NextRequest) {
          FROM leads l LEFT JOIN users u ON u.id=l.parent_id WHERE l.id=$1`,
         [leadId]
       )
-      return NextResponse.json({ success: true, lead: unlocked.rows[0] ?? null })
+      // Notify school of lead unlock
+      const unlockedLead = unlocked.rows[0]
+      if (unlockedLead) {
+        import('@/lib/notify').then(m => m.notifyLeadUnlocked(schoolId, unlockedLead.fullName || 'A parent')).catch(() => {})
+      }
+      return NextResponse.json({ success: true, lead: unlockedLead ?? null })
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
