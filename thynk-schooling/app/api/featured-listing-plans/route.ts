@@ -1,11 +1,4 @@
 export const dynamic = 'force-dynamic'
-/**
- * /api/featured-listing-plans
- *
- * GET  — list all active featured listing plans
- * POST ?action=buy&id=X&gateway=Y  — create payment order
- * POST ?action=verify-payment      — verify & activate featured listing
- */
 
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
@@ -17,6 +10,8 @@ import {
   ensureGatewayTable,
   type GatewayId,
 } from '@/lib/payment-gateway'
+
+const BASE_URL = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''
 
 function getUserId(req: NextRequest): string | null {
   try {
@@ -37,58 +32,22 @@ async function parseBody(req: NextRequest): Promise<Record<string, any>> {
   } catch { return {} }
 }
 
-const DEFAULT_FEATURED_PLANS = [
-  {
-    name: 'Spotlight – 7 Days',
-    plan_key: 'featured_7',
-    description: 'Get noticed for a week. Ideal for testing featured placement.',
-    price_paise: 49900,
-    duration_days: 7,
-    features: ['Top-of-search placement', 'Featured badge on listing', 'Priority in city search', 'Analytics dashboard'],
-    is_hot: false,
-    cta: 'Get Featured',
-    sort_order: 1,
-  },
-  {
-    name: 'Spotlight – 30 Days',
-    plan_key: 'featured_30',
-    description: 'Full month of premium visibility during peak admission season.',
-    price_paise: 149900,
-    duration_days: 30,
-    features: ['Top-of-search placement', 'Featured badge on listing', 'Priority in city search', 'Analytics dashboard', 'Homepage carousel slot', 'Email campaign inclusion'],
-    is_hot: true,
-    cta: 'Get Featured',
-    sort_order: 2,
-  },
-  {
-    name: 'Spotlight – 90 Days',
-    plan_key: 'featured_90',
-    description: 'Dominate search for the full admission quarter.',
-    price_paise: 349900,
-    duration_days: 90,
-    features: ['Top-of-search placement', 'Featured badge on listing', 'Priority in city search', 'Analytics dashboard', 'Homepage carousel slot', 'Email campaign inclusion', 'Social media spotlight', 'Dedicated account manager'],
-    is_hot: false,
-    cta: 'Get Featured',
-    sort_order: 3,
-  },
-]
-
 async function ensureTable() {
   await db.query(`
     CREATE TABLE IF NOT EXISTS featured_listing_plans (
-      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      plan_key     VARCHAR(80) NOT NULL UNIQUE,
-      name         VARCHAR(200) NOT NULL,
-      description  TEXT,
-      price_paise  INTEGER NOT NULL DEFAULT 0,
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      plan_key      VARCHAR(80) NOT NULL UNIQUE,
+      name          VARCHAR(200) NOT NULL,
+      description   TEXT,
+      price_paise   INTEGER NOT NULL DEFAULT 0,
       duration_days INTEGER NOT NULL DEFAULT 30,
-      features     JSONB NOT NULL DEFAULT '[]',
-      is_hot       BOOLEAN NOT NULL DEFAULT false,
-      cta          VARCHAR(100) NOT NULL DEFAULT 'Get Featured',
-      sort_order   INTEGER NOT NULL DEFAULT 0,
-      is_active    BOOLEAN NOT NULL DEFAULT true,
-      created_at   TIMESTAMPTZ DEFAULT NOW(),
-      updated_at   TIMESTAMPTZ DEFAULT NOW()
+      features      JSONB NOT NULL DEFAULT '[]',
+      is_hot        BOOLEAN NOT NULL DEFAULT false,
+      cta           VARCHAR(100) NOT NULL DEFAULT 'Get Featured',
+      sort_order    INTEGER NOT NULL DEFAULT 0,
+      is_active     BOOLEAN NOT NULL DEFAULT true,
+      created_at    TIMESTAMPTZ DEFAULT NOW(),
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
 
@@ -113,19 +72,28 @@ async function ensureTable() {
     )
   `).catch(() => {})
 
-  // Seed defaults if empty
-  const count = await db.query('SELECT COUNT(*) FROM featured_listing_plans').catch(() => ({ rows: [{ count: '0' }] }))
-  if (Number(count.rows[0].count) === 0) {
-    for (const p of DEFAULT_FEATURED_PLANS) {
-      await db.query(
-        `INSERT INTO featured_listing_plans (plan_key, name, description, price_paise, duration_days, features, is_hot, cta, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT DO NOTHING`,
-        [p.plan_key, p.name, p.description, p.price_paise, p.duration_days, JSON.stringify(p.features), p.is_hot, p.cta, p.sort_order]
-      ).catch(() => {})
-    }
-  }
+  // CRITICAL: ensure schools has these columns — they may be missing if
+  // subscriptions route has never been called on this DB
+  await db.query(`ALTER TABLE schools ADD COLUMN IF NOT EXISTS is_featured BOOLEAN NOT NULL DEFAULT false`).catch(() => {})
+  await db.query(`ALTER TABLE schools ADD COLUMN IF NOT EXISTS featured_until TIMESTAMPTZ`).catch(() => {})
+
+  // Remove auto-seeded Spotlight defaults
+  await db.query(`DELETE FROM featured_listing_plans WHERE plan_key IN ('featured_7','featured_30','featured_90')`).catch(() => {})
 
   await ensureGatewayTable().catch(() => {})
+}
+
+// Does NOT silently swallow errors — called after every successful payment
+async function activateFeatured(schoolId: string, durationDays: number) {
+  const res = await db.query(
+    `UPDATE schools
+     SET is_featured    = true,
+         featured_until = NOW() + ($1 || ' days')::INTERVAL
+     WHERE id = $2
+     RETURNING id`,
+    [String(durationDays), schoolId]
+  )
+  if (!res.rows.length) throw new Error(`School ${schoolId} not found — cannot activate featured listing`)
 }
 
 function toPlan(row: any) {
@@ -136,7 +104,7 @@ function toPlan(row: any) {
     description:  row.description || '',
     price:        row.price_paise,
     durationDays: row.duration_days,
-    features:     Array.isArray(row.features) ? row.features : (JSON.parse(row.features || '[]')),
+    features:     Array.isArray(row.features) ? row.features : JSON.parse(row.features || '[]'),
     isHot:        row.is_hot ?? false,
     cta:          row.cta || 'Get Featured',
     sortOrder:    row.sort_order ?? 0,
@@ -151,26 +119,23 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const action = searchParams.get('action')
 
-    // Current featured status for a school
     if (action === 'current') {
       const userId = getUserId(req)
       if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-      const school = await db.query('SELECT id, is_featured, featured_until FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
+      const school = await db.query(
+        'SELECT id, is_featured, featured_until FROM schools WHERE admin_user_id=$1', [userId]
+      ).catch(() => ({ rows: [] }))
       if (!school.rows.length) return NextResponse.json({ isFeatured: false })
       const s = school.rows[0]
+      const until = s.featured_until ? new Date(s.featured_until) : null
       return NextResponse.json({
-        isFeatured:    s.is_featured ?? false,
+        isFeatured:    s.is_featured === true && (!until || until > new Date()),
         featuredUntil: s.featured_until ?? null,
       })
     }
 
-    // List active plans + enabled gateways
-    const plans = await db.query(
-      `SELECT * FROM featured_listing_plans WHERE is_active = true ORDER BY sort_order ASC`
-    ).catch(() => ({ rows: [] }))
-
+    const plans    = await db.query(`SELECT * FROM featured_listing_plans WHERE is_active=true ORDER BY sort_order ASC`).catch(() => ({ rows: [] }))
     const gateways = await getEnabledGateways().catch(() => [])
-
     return NextResponse.json({ plans: plans.rows.map(toPlan), gateways })
   } catch (e: any) {
     console.error('[featured-listing-plans GET]', e)
@@ -192,117 +157,102 @@ export async function POST(req: NextRequest) {
     const schoolId   = school.rows[0].id
     const schoolName = school.rows[0].name
 
-    // ── Buy ───────────────────────────────────────────────────────────────────
+    // ── BUY ───────────────────────────────────────────────────────────────────
     if (action === 'buy') {
       const planId    = searchParams.get('id')
       const gatewayId = (searchParams.get('gateway') || 'razorpay') as GatewayId
       const couponId  = searchParams.get('coupon_id')
-
       if (!planId) return NextResponse.json({ error: 'Plan ID required' }, { status: 400 })
 
       const planRow = await db.query('SELECT * FROM featured_listing_plans WHERE id=$1 AND is_active=true', [planId])
       if (!planRow.rows.length) return NextResponse.json({ error: 'Plan not found' }, { status: 404 })
       const plan = planRow.rows[0]
 
-      // Coupon handling
-      let discountPaise = 0
-      let finalAmountPaise = plan.price_paise
-      let couponCode: string | null = null
+      let discountPaise = 0, finalAmountPaise = plan.price_paise, couponCode: string | null = null
       if (couponId) {
-        const couponRes = await db.query(`SELECT * FROM discount_coupons WHERE id=$1`, [couponId]).catch(() => ({ rows: [] }))
-        const coupon = couponRes.rows[0]
-        if (coupon) {
-          couponCode = coupon.code
-          if (coupon.type === 'percent') discountPaise = Math.round(plan.price_paise * coupon.value / 100)
-          else discountPaise = coupon.value ?? 0
+        const cr = await db.query(`SELECT * FROM discount_coupons WHERE id=$1`, [couponId]).catch(() => ({ rows: [] }))
+        const c = cr.rows[0]
+        if (c) {
+          couponCode    = c.code
+          discountPaise = c.type === 'percent' ? Math.round(plan.price_paise * c.value / 100) : (c.value ?? 0)
           finalAmountPaise = Math.max(0, plan.price_paise - discountPaise)
         }
       }
 
-      // Create payment record
       const payRec = await db.query(
         `INSERT INTO featured_listing_payments
-           (school_id, plan_key, plan_name, gateway, amount_paise, discount_paise, original_amount_paise, coupon_code, duration_days, status)
+           (school_id,plan_key,plan_name,gateway,amount_paise,discount_paise,original_amount_paise,coupon_code,duration_days,status)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending') RETURNING id`,
         [schoolId, plan.plan_key, plan.name, gatewayId, finalAmountPaise, discountPaise, plan.price_paise, couponCode, plan.duration_days]
       )
       const payId = payRec.rows[0].id
 
-      // Dev / zero-price
-      if (process.env.NODE_ENV === 'development' || finalAmountPaise === 0) {
-        await db.query(
-          `UPDATE schools SET is_featured=true, featured_until=NOW()+($1||' days')::INTERVAL WHERE id=$2`,
-          [plan.duration_days, schoolId]
-        )
-        await db.query(
-          `UPDATE featured_listing_payments SET status='completed', payment_id=$1 WHERE id=$2`,
-          ['dev_' + Date.now(), payId]
-        )
-        return NextResponse.json({ success: true, _dev: true })
+      // Free plan — activate instantly
+      if (finalAmountPaise === 0) {
+        await activateFeatured(schoolId, plan.duration_days)
+        await db.query(`UPDATE featured_listing_payments SET status='completed', payment_id=$1 WHERE id=$2`, ['free_' + Date.now(), payId])
+        return NextResponse.json({ success: true })
       }
 
       const user = await db.query(
-        `SELECT COALESCE(full_name,name) AS name, email, COALESCE(phone,mobile) AS phone FROM users WHERE id=$1`,
-        [userId]
+        `SELECT COALESCE(full_name,name) AS name, email, COALESCE(phone,mobile) AS phone FROM users WHERE id=$1`, [userId]
       ).catch(() => ({ rows: [] }))
       const u = user.rows[0] || {}
 
       const order = await createOrder({
         gatewayId,
-        amountPaise: finalAmountPaise,
-        currency: 'INR',
-        receiptId: payId,
-        description: `${plan.name} – Featured Listing`,
+        amountPaise:   finalAmountPaise,
+        currency:      'INR',
+        receiptId:     payId,
+        description:   `${plan.name} – Featured Listing`,
         customerName:  u.name  || schoolName || 'School',
         customerEmail: u.email || '',
         customerPhone: u.phone || '',
         callbackType:  'featured',
-        returnUrl: `${process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/school/packages?tab=featured&order_id=${payId}&gateway=${gatewayId}`,
+        returnUrl:     `${BASE_URL}/dashboard/school/packages?tab=featured&order_id=${payId}&gateway=${gatewayId}`,
       })
 
       await db.query(`UPDATE featured_listing_payments SET order_id=$1 WHERE id=$2`, [order.orderId, payId])
       return NextResponse.json({ ...order, paymentRecordId: payId })
     }
 
-    // ── Verify payment ────────────────────────────────────────────────────────
+    // ── VERIFY PAYMENT ────────────────────────────────────────────────────────
     if (action === 'verify-payment') {
       const body = await parseBody(req)
-      const {
-        gateway,
-        orderId,
-        razorpay_payment_id, razorpay_order_id, razorpay_signature,
-        cfOrderId,
-      } = body
+      const { gateway, orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature, cfOrderId } = body
 
       const resolvedOrderId = orderId || razorpay_order_id || cfOrderId
       if (!resolvedOrderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 })
 
       const payRec = await db.query(
-        `SELECT * FROM featured_listing_payments WHERE order_id=$1 AND status='pending'`,
-        [resolvedOrderId]
+        `SELECT * FROM featured_listing_payments WHERE order_id=$1 AND status='pending'`, [resolvedOrderId]
       ).catch(() => ({ rows: [] }))
 
-      if (!payRec.rows.length) return NextResponse.json({ error: 'Payment record not found' }, { status: 404 })
+      if (!payRec.rows.length) {
+        console.error('[featured verify] no pending record for order_id:', resolvedOrderId)
+        return NextResponse.json({ error: 'Payment record not found' }, { status: 404 })
+      }
       const pay = payRec.rows[0]
-
       const gwId = (gateway || pay.gateway) as GatewayId
+
       const result = await verifyPayment({
         gateway:   gwId,
         orderId:   resolvedOrderId,
         paymentId: razorpay_payment_id || cfOrderId,
         signature: razorpay_signature,
       })
-
-      if (!result.success) return NextResponse.json({ error: result.error || 'Payment verification failed' }, { status: 400 })
+      if (!result.success) {
+        console.error('[featured verify] failed:', result.error)
+        return NextResponse.json({ error: result.error || 'Payment verification failed' }, { status: 400 })
+      }
 
       await db.query(
         `UPDATE featured_listing_payments SET status='completed', payment_id=$1, updated_at=NOW() WHERE id=$2`,
         [result.paymentId || razorpay_payment_id || resolvedOrderId, pay.id]
       )
-      await db.query(
-        `UPDATE schools SET is_featured=true, featured_until=NOW()+($1||' days')::INTERVAL WHERE id=$2`,
-        [pay.duration_days, pay.school_id]
-      )
+
+      // Activate — errors are NOT swallowed so we know if it fails
+      await activateFeatured(pay.school_id, pay.duration_days)
 
       return NextResponse.json({ success: true })
     }

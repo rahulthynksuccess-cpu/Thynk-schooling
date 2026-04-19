@@ -341,7 +341,7 @@ async function createEasebuzzOrder(
 ): Promise<CreateOrderResult> {
   const salt     = cfg.extra?.salt || ''
   const amountMajor = (amount / 100).toFixed(2)
-  const productInfo = 'Lead Credits'
+  const productInfo = meta.callbackType === 'featured' ? 'Featured Listing' : meta.callbackType === 'subscription' ? 'Subscription Plan' : 'Lead Credits'
   const firstname   = (meta.buyerName  || 'School').slice(0, 50)
   const email       = meta.buyerEmail || 'admin@school.com'
   // Easebuzz requires exactly 10-digit Indian mobile — strip country code, fallback to valid default
