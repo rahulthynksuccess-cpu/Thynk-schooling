@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       }
 
       const rec = payment.rows[0]
-      const { school_id, credits_added } = rec
+      const { school_id, package_id, credits_added } = rec
 
       await db.query(`
         INSERT INTO lead_credits (school_id, credits, total_credits, used_credits)
@@ -158,6 +158,22 @@ export async function POST(req: NextRequest) {
         `UPDATE lead_package_payments SET status='completed', payment_id=$1 WHERE order_id=$2`,
         [params['mihpayid'] || txnid, txnid]
       ).catch(() => {})
+
+      // FIX: apply featured listing if the purchased package includes it
+      if (package_id) {
+        const pkgRow = await db.query(
+          `SELECT includes_featured_listing, featured_listing_days FROM lead_packages WHERE id=$1`,
+          [package_id]
+        ).catch(() => ({ rows: [] }))
+        const pkgData = pkgRow.rows[0]
+        if (pkgData?.includes_featured_listing) {
+          const days = Number(pkgData.featured_listing_days ?? 30)
+          await db.query(
+            `UPDATE schools SET is_featured=true, featured_until=NOW() + ($1 || ' days')::INTERVAL WHERE id=$2`,
+            [days, school_id]
+          ).catch(() => {})
+        }
+      }
     }
 
     return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?status=success`, 303)
