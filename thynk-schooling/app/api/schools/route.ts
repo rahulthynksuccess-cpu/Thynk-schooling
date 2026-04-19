@@ -303,6 +303,8 @@ async function saveProfile(req: NextRequest) {
     getFloat(fd, 'latitude'), getFloat(fd, 'longitude'),
     getStr(fd, 'phone'), getStr(fd, 'email'), getStr(fd, 'websiteUrl'), getStr(fd, 'principalName'),
     logoUrl, coverUrl,
+    getStr(fd, 'facebookUrl'), getStr(fd, 'instagramUrl'),
+    getStr(fd, 'youtubeUrl'),  getStr(fd, 'twitterUrl'),
   ]
 
   // Check for existing row — NEVER regenerate slug on update (causes UNIQUE constraint crash)
@@ -325,6 +327,7 @@ async function saveProfile(req: NextRequest) {
         phone=$32, email=$33, website_url=$34, principal_name=$35,
         logo_url=COALESCE($36, logo_url),
         cover_url=COALESCE($37, cover_url),
+        facebook_url=$38, instagram_url=$39, youtube_url=$40, twitter_url=$41,
         profile_completed=true
       WHERE admin_user_id=$1`,
       [userId, ...fields]
@@ -341,50 +344,56 @@ async function saveProfile(req: NextRequest) {
         admission_open, admission_academic_year,
         facilities, sports, languages, extracurriculars,
         address_line1, state, city, locality, pincode, latitude, longitude,
-        phone, email, website_url, principal_name, logo_url, cover_url, profile_completed
+        phone, email, website_url, principal_name, logo_url, cover_url,
+        facebook_url, instagram_url, youtube_url, twitter_url, profile_completed
       ) VALUES (
         $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,
-        $20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,true
+        $20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,
+        $38,$39,$40,$41,$42,true
       )`,
       [
-        userId,                          // $1  admin_user_id
-        name,                            // $2  name
-        slug,                            // $3  slug
-        fields[1],                       // $4  tagline
-        fields[2],                       // $5  affiliation_no
-        fields[3],                       // $6  description
-        fields[4],                       // $7  founding_year
-        fields[5],                       // $8  total_students
-        fields[6],                       // $9  student_teacher_ratio
-        fields[7],                       // $10 school_type
-        fields[8],                       // $11 board
-        fields[9],                       // $12 gender_policy
-        fields[10],                      // $13 medium_of_instruction
-        fields[11],                      // $14 recognition
-        fields[12],                      // $15 classes_from
-        fields[13],                      // $16 classes_to
-        fields[14],                      // $17 monthly_fee_min
-        fields[15],                      // $18 monthly_fee_max
-        fields[16],                      // $19 annual_fee
-        fields[17],                      // $20 admission_open
-        fields[18],                      // $21 admission_academic_year
-        fields[19],                      // $22 facilities
-        fields[20],                      // $23 sports
-        fields[21],                      // $24 languages
-        fields[22],                      // $25 extracurriculars
-        fields[23],                      // $26 address_line1
-        fields[24],                      // $27 state
-        fields[25],                      // $28 city
-        fields[26],                      // $29 locality
-        fields[27],                      // $30 pincode
-        fields[28],                      // $31 latitude
-        fields[29],                      // $32 longitude
-        fields[30],                      // $33 phone
-        fields[31],                      // $34 email
-        fields[32],                      // $35 website_url
-        fields[33],                      // $36 principal_name
-        fields[34],                      // $37 logo_url
-        fields[35],                      // $38 cover_url
+        userId,        // $1  admin_user_id
+        name,          // $2  name
+        slug,          // $3  slug
+        fields[1],     // $4  tagline
+        fields[2],     // $5  affiliation_no
+        fields[3],     // $6  description
+        fields[4],     // $7  founding_year
+        fields[5],     // $8  total_students
+        fields[6],     // $9  student_teacher_ratio
+        fields[7],     // $10 school_type
+        fields[8],     // $11 board
+        fields[9],     // $12 gender_policy
+        fields[10],    // $13 medium_of_instruction
+        fields[11],    // $14 recognition
+        fields[12],    // $15 classes_from
+        fields[13],    // $16 classes_to
+        fields[14],    // $17 monthly_fee_min
+        fields[15],    // $18 monthly_fee_max
+        fields[16],    // $19 annual_fee
+        fields[17],    // $20 admission_open
+        fields[18],    // $21 admission_academic_year
+        fields[19],    // $22 facilities
+        fields[20],    // $23 sports
+        fields[21],    // $24 languages
+        fields[22],    // $25 extracurriculars
+        fields[23],    // $26 address_line1
+        fields[24],    // $27 state
+        fields[25],    // $28 city
+        fields[26],    // $29 locality
+        fields[27],    // $30 pincode
+        fields[28],    // $31 latitude
+        fields[29],    // $32 longitude
+        fields[30],    // $33 phone
+        fields[31],    // $34 email
+        fields[32],    // $35 website_url
+        fields[33],    // $36 principal_name
+        fields[34],    // $37 logo_url
+        fields[35],    // $38 cover_url
+        fields[36],    // $39 facebook_url
+        fields[37],    // $40 instagram_url
+        fields[38],    // $41 youtube_url
+        fields[39],    // $42 twitter_url
       ]
     )
   }
