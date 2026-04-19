@@ -50,6 +50,8 @@ function StatusBadge({ s }: { s: string }) {
     completed:   ['rgba(0,229,160,.12)',   '#00E5A0'],
     approved:    ['rgba(0,229,160,.12)',   '#00E5A0'],
     failed:      ['rgba(255,87,87,.12)',   '#FF5757'],
+    active:      ['rgba(0,229,160,.12)',   '#00E5A0'],
+    expired:     ['rgba(255,87,87,.12)',   '#FF5757'],
   }
   const [bg, color] = MAP[s?.toLowerCase()] ?? ['rgba(255,255,255,.07)', T.t2]
   return (
@@ -587,6 +589,7 @@ export default function SchoolReportPage() {
   const apps    = report?.applications
   const reviews = report?.reviews
   const revenue = report?.revenue
+  const subscriptions = report?.subscriptions
 
   // Active filter pill labels
   const activePills = [
@@ -1141,6 +1144,16 @@ export default function SchoolReportPage() {
                     { key: 'schoolName',    label: 'School' },
                     { key: 'schoolCity',    label: 'City' },
                     { key: 'schoolState',   label: 'State' },
+                    {
+                      key: 'paymentType', label: 'Type',
+                      render: (v: string) => (
+                        <span style={{
+                          fontSize: 10, padding: '2px 8px', borderRadius: 99, fontFamily: T.ff,
+                          background: v === 'Subscription' ? `${T.teal}18` : `${T.purple}18`,
+                          color: v === 'Subscription' ? T.teal : T.purple,
+                        }}>{v}</span>
+                      ),
+                    },
                     { key: 'packageName',   label: 'Package' },
                     {
                       key: 'amountPaise', label: 'Amount',
@@ -1165,7 +1178,7 @@ export default function SchoolReportPage() {
                     },
                     {
                       key: 'creditsAdded', label: 'Credits',
-                      render: (v: number) => <span style={{ color: T.blue }}>{v}</span>,
+                      render: (v: number) => v > 0 ? <span style={{ color: T.blue }}>{v}</span> : '—',
                     },
                     { key: 'gateway',   label: 'Gateway' },
                     {
@@ -1177,6 +1190,79 @@ export default function SchoolReportPage() {
                     { key: 'status', label: 'Status', render: v => <StatusBadge s={v} /> },
                   ]}
                 />
+              </>
+            )
+          }
+        </Section>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════════════
+          SECTION 5 — SUBSCRIPTIONS PURCHASED
+      ══════════════════════════════════════════════════════════════════════ */}
+      {runKey > 0 && (
+        <Section num="5" title="Subscriptions Purchased" color={T.teal}>
+          {loading
+            ? <KpiSkelRow n={4} />
+            : subscriptions && (
+              <>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                  gap: 10, marginBottom: 18,
+                }}>
+                  <KPI label="Subscription payments"  value={fmt(subscriptions.kpis.totalPayments)}     sub={`${fmt(subscriptions.kpis.successfulPayments)} successful`} color={T.teal} />
+                  <KPI label="Subscription revenue"   value={fmtR(subscriptions.kpis.revenuePaise)}     sub="From subscriptions only"                                   color={T.green} />
+                  <KPI label="Schools subscribed"     value={fmt(subscriptions.kpis.uniqueSchools)}     sub={`${fmt(subscriptions.kpis.currentlyActive)} currently active`} color={T.blue} />
+                  <KPI label="Active subscriptions"   value={fmt(subscriptions.kpis.totalActive)}       sub={`${fmt(subscriptions.kpis.uniquePlans)} unique plans`}     color={T.purple} />
+                </div>
+
+                {subscriptions.byPlan.length > 0 && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 10, marginBottom: 16 }}>
+                    <div style={{ ...CARD, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.t2, fontFamily: T.ff, textTransform: 'uppercase', letterSpacing: '.09em', marginBottom: 12 }}>Revenue by plan</div>
+                      <HBars data={subscriptions.byPlan.map((r: any) => ({ label: r.planName, count: Math.round(r.revenuePaise / 100) }))} color={T.teal} />
+                    </div>
+                    <div style={{ ...CARD, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.t2, fontFamily: T.ff, textTransform: 'uppercase', letterSpacing: '.09em', marginBottom: 12 }}>Schools per plan</div>
+                      <HBars data={subscriptions.byPlan.map((r: any) => ({ label: r.planName, count: r.schoolCount }))} color={T.blue} />
+                    </div>
+                  </div>
+                )}
+
+                <SubHead title="Active subscriptions" rows={subscriptions.activeDetails} filename="active-subscriptions.csv" />
+                <DrillTable
+                  rows={subscriptions.activeDetails}
+                  emptyMsg="No active subscriptions in this period"
+                  cols={[
+                    { key: 'activatedAt', label: 'Activated', width: '88px', render: (v: any) => fmtD(v) },
+                    { key: 'schoolName',  label: 'School' },
+                    { key: 'schoolCity',  label: 'City' },
+                    { key: 'schoolState', label: 'State' },
+                    { key: 'planName',    label: 'Plan' },
+                    { key: 'leadCount',   label: 'Leads Included', render: (v: number) => <span style={{ color: T.blue, fontWeight: 700 }}>{v}</span> },
+                    { key: 'expiresAt',   label: 'Expires', render: (v: string | null) => v ? fmtD(v) : <span style={{ color: T.green, fontSize: 10 }}>No expiry</span> },
+                    { key: 'isActive',    label: 'Status', render: (v: boolean) => <StatusBadge s={v ? 'active' : 'expired'} /> },
+                  ]}
+                />
+
+                <div style={{ marginTop: 20 }}>
+                  <SubHead title="Subscription payment transactions" rows={subscriptions.paymentDetails} filename="subscription-payments.csv" />
+                  <DrillTable
+                    rows={subscriptions.paymentDetails}
+                    emptyMsg="No subscription payments in this period"
+                    cols={[
+                      { key: 'createdAt',  label: 'Date',    width: '88px', render: (v: any) => fmtD(v) },
+                      { key: 'schoolName', label: 'School' },
+                      { key: 'schoolCity', label: 'City' },
+                      { key: 'planName',   label: 'Plan' },
+                      { key: 'amountPaise', label: 'Amount', render: (v: number) => <span style={{ color: T.green, fontWeight: 700 }}>{fmtR(v)}</span> },
+                      { key: 'leadCount',  label: 'Leads', render: (v: number) => v > 0 ? <span style={{ color: T.blue }}>{v}</span> : '—' },
+                      { key: 'gateway',    label: 'Gateway' },
+                      { key: 'orderId',    label: 'Order ID', render: (v: string) => <span style={{ fontFamily: 'monospace', fontSize: 10, color: T.t3 }}>{v}</span> },
+                      { key: 'status',     label: 'Status', render: (v: any) => <StatusBadge s={v} /> },
+                    ]}
+                  />
+                </div>
               </>
             )
           }
