@@ -118,6 +118,23 @@ async function handleRegister(req: NextRequest) {
   )
   const user = ins.rows[0]
   await logActivity(user.id, 'register', `New ${role || 'parent'} account`, ip, ua).catch(() => {})
+  // Fire welcome email triggers
+  if (email) {
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
+    const triggerKey = (role === 'school_admin' || role === 'school') ? 'welcome_school' : 'welcome_parent'
+    const profile    = (role === 'school_admin' || role === 'school') ? 'school' : 'parent'
+    import('@/lib/email').then(m => m.fireEmailTrigger(triggerKey, profile as any, {
+      parent_email: profile === 'parent' ? email : undefined,
+      variables: {
+        '{{parent_name}}': displayName,
+        '{{admin_name}}':  displayName,
+        '{{school_name}}': '',
+        '{{login_url}}':   `${baseUrl}/login`,
+        '{{search_url}}':  `${baseUrl}/schools`,
+        '{{profile_url}}': `${baseUrl}/school/profile`,
+      },
+    })).catch(() => {})
+  }
   const accessToken = signAccessToken({ id: user.id, role: user.role })
   const refreshToken = signRefreshToken({ id: user.id })
   const resp = Response.json({

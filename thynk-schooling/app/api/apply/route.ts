@@ -189,6 +189,23 @@ export async function POST(req: NextRequest) {
 
     // Notify school of new application
     import('@/lib/notify').then(m => m.notifyNewApplication(school.id, parentName.trim(), childName.trim(), classApplyingFor)).catch(() => {})
+    // Fire email triggers
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || ''
+    const emailVars = {
+      '{{school_name}}':    school.name || '',
+      '{{admin_name}}':     school.name || '',
+      '{{parent_name}}':    parentName.trim(),
+      '{{child_name}}':     childName.trim(),
+      '{{class_applying}}': classApplyingFor || '',
+      '{{dashboard_url}}':  `${baseUrl}/school/dashboard`,
+      '{{applications_url}}': `${baseUrl}/school/applications`,
+    }
+    import('@/lib/email').then(m => {
+      m.fireEmailTrigger('application_confirmation', 'school', { school_id: school.id, variables: emailVars }).catch(() => {})
+      if (email?.trim()) {
+        m.fireEmailTrigger('application_confirmation', 'parent', { parent_email: email.trim(), variables: emailVars }).catch(() => {})
+      }
+    }).catch(() => {})
 
     return NextResponse.json({ success: true, leadId })
   } catch (e: any) {

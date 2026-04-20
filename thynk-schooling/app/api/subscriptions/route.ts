@@ -465,6 +465,19 @@ export async function POST(req: NextRequest) {
 
       // Notify school of successful payment
       import('@/lib/notify').then(m => m.notifyPaymentDone(school_id, planName, rec.amount_paise)).catch(() => {})
+      // Fire subscription_activated email trigger
+      import('@/lib/email').then(m => m.fireEmailTrigger('subscription_activated', 'school', {
+        school_id,
+        variables: {
+          '{{plan_name}}':      planName || '',
+          '{{credits_added}}':  String(lead_count ?? 0),
+          '{{amount_paid}}':    `₹${Math.round((rec.amount_paise || 0) / 100).toLocaleString('en-IN')}`,
+          '{{admin_name}}':     '',
+          '{{school_name}}':    '',
+          '{{next_billing}}':   '',
+          '{{dashboard_url}}':  `${process.env.NEXT_PUBLIC_BASE_URL || ''}/school/dashboard`,
+        },
+      })).catch(() => {})
 
       // Cashfree / Easebuzz form redirect
       const ct = req.headers.get('content-type') || ''

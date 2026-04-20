@@ -7,8 +7,12 @@ import db from '@/lib/db'
 const PAID_SQL = `lpp.status IN ('paid','captured','success','completed')`
 const PAID_ONLY = `status IN ('paid','captured','success','completed')`
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const url   = new URL(req.url)
+    const range = url.searchParams.get('range') || '30d'
+    const intv  = ({ '7d':'7 days','15d':'15 days','30d':'30 days','3m':'3 months','6m':'6 months','1y':'1 year' } as any)[range] || '30 days'
+    const PAID  = PAID_ONLY
     const [
       signups30,
       schools30,
@@ -29,21 +33,21 @@ export async function GET() {
 
       db.query(`
         SELECT gs.day::date AS day, COALESCE(COUNT(u.id), 0) AS count
-        FROM generate_series(NOW() - INTERVAL '29 days', NOW(), INTERVAL '1 day') AS gs(day)
+        FROM generate_series(NOW() - INTERVAL '${intv}', NOW(), INTERVAL '1 day') AS gs(day)
         LEFT JOIN users u ON DATE(u.created_at) = gs.day::date AND u.role = 'parent'
         GROUP BY gs.day ORDER BY gs.day
       `).catch(() => ({ rows: [] })),
 
       db.query(`
         SELECT gs.day::date AS day, COALESCE(COUNT(s.id), 0) AS count
-        FROM generate_series(NOW() - INTERVAL '29 days', NOW(), INTERVAL '1 day') AS gs(day)
+        FROM generate_series(NOW() - INTERVAL '${intv}', NOW(), INTERVAL '1 day') AS gs(day)
         LEFT JOIN schools s ON DATE(s.created_at) = gs.day::date
         GROUP BY gs.day ORDER BY gs.day
       `).catch(() => ({ rows: [] })),
 
       db.query(`
         SELECT gs.day::date AS day, COALESCE(COUNT(l.id), 0) AS count
-        FROM generate_series(NOW() - INTERVAL '29 days', NOW(), INTERVAL '1 day') AS gs(day)
+        FROM generate_series(NOW() - INTERVAL '${intv}', NOW(), INTERVAL '1 day') AS gs(day)
         LEFT JOIN leads l ON DATE(l.created_at) = gs.day::date
         GROUP BY gs.day ORDER BY gs.day
       `).catch(() => ({ rows: [] })),
@@ -52,7 +56,7 @@ export async function GET() {
       db.query(`
         SELECT gs.day::date AS day,
                COALESCE(SUM(pay.amount_paise), 0) AS revenue_paise
-        FROM generate_series(NOW() - INTERVAL '29 days', NOW(), INTERVAL '1 day') AS gs(day)
+        FROM generate_series(NOW() - INTERVAL '${intv}', NOW(), INTERVAL '1 day') AS gs(day)
         LEFT JOIN (
           SELECT created_at, amount_paise FROM lead_package_payments
           WHERE status IN ('paid','captured','success','completed')
@@ -202,10 +206,19 @@ export async function GET() {
       return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'UTC' })
     }
 
-    // Both arrays are gap-filled with same 30 days → safe to zip by index
+    // Both arrays are gap-filled with same period → safe to zip by index
     const dailyLeads30 = leads30.rows.map((r: any, i: number) => ({
       day:     fmtDay(r.day),
       leads:   Number(r.count),
+      revenue: Math.round(Number(revenue30.rows[i]?.revenue_paise || 0) / 100),
+    }))
+
+    // dailySeries: unified series used by new analytics page
+    const dailySeries = leads30.rows.map((r: any, i: number) => ({
+      label:   fmtDay(r.day),
+      leads:   Number(r.count),
+      users:   Number(signups30.rows[i]?.count || 0),
+      schools: Number(schools30.rows[i]?.count || 0),
       revenue: Math.round(Number(revenue30.rows[i]?.revenue_paise || 0) / 100),
     }))
 
@@ -229,18 +242,38 @@ export async function GET() {
     }))
 
     return NextResponse.json({
+      // legacy fields (kept for backward compat)
       signups:     signups30.rows.map((r: any) => ({ day: fmtDay(r.day), count: Number(r.count) })),
       schools:     schools30.rows.map((r: any) => ({ day: fmtDay(r.day), count: Number(r.count) })),
       dailyLeads30,
+      // new unified series
+      dailySeries,
+      range,
       topCities:   topCities.rows.map((r: any) => ({ city: r.city, leads: Number(r.leads), schools: Number(r.schools) })),
       boardData:   boardDist.rows.map((r: any, i: number) => ({ name: r.name, value: Number(r.value), color: BOARD_COLORS[i] || '#888' })),
+      boardDist:   boardDist.rows.map((r: any, i: number) => ({
+        name:  r.name,
+        value: Math.round(Number(r.value) / (boardDist.rows.reduce((s: number, x: any) => s + Number(x.value), 0) || 1) * 100),
+        count: Number(r.value),
+        color: BOARD_COLORS[i] || '#888',
+      })),
       funnelData: [
         { name: 'Registered parents', value: Number(f.registered_parents || 0) },
         { name: 'Registered schools', value: Number(f.registered_schools || 0) },
         { name: 'Leads purchased',    value: Number(f.leads_purchased    || 0) },
         { name: 'Applications',       value: Number(f.applications       || 0) },
       ],
+      funnel: {
+        registeredParents: Number(f.registered_parents || 0),
+        leads:             Number(f.leads_purchased    || 0),
+        purchased:         Number(f.leads_purchased    || 0),
+        applications:      Number(f.applications       || 0),
+      },
       priorPeriod: {
+        leads:   Number(pp.leads_cur   || 0),
+        revenue: Math.round(Number(pp.rev_cur     || 0) / 100),
+        users:   Number(pp.signups_cur || 0),
+        schools: Number(pp.schools_cur || 0),
         leadsChange:   pctChange(Number(pp.leads_cur || 0),   Number(pp.leads_prev || 0)),
         revenueChange: pctChange(Number(pp.rev_cur || 0),     Number(pp.rev_prev || 0)),
         signupsChange: pctChange(Number(pp.signups_cur || 0), Number(pp.signups_prev || 0)),
@@ -257,6 +290,7 @@ export async function GET() {
         avgLeads:       Number(p.avg_leads   || 0),
       },
       schoolStatsByType: schoolStatsByType.rows.map((r: any) => ({
+        name: r.type, value: Number(r.school_count),
         type: r.type, count: Number(r.school_count), leads: Number(r.leads),
         applications: Number(r.applications), conversionPct: Number(r.conversion_pct),
       })),

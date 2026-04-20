@@ -459,6 +459,22 @@ export async function POST(req: NextRequest) {
       )
       if (schoolId) {
         import('@/lib/notify').then(m => m.notifyNewLead(schoolId, parentName?.trim() || 'A parent', childName?.trim(), classApplyingFor?.trim())).catch(() => {})
+        // Fire email trigger — get school name for variable substitution
+        db.query('SELECT name FROM schools WHERE id=$1', [schoolId]).then(sr => {
+          const schoolName = sr.rows[0]?.name || ''
+          import('@/lib/email').then(m => m.fireEmailTrigger('new_lead_school', 'school', {
+            school_id: schoolId,
+            variables: {
+              '{{school_name}}':    schoolName,
+              '{{admin_name}}':     schoolName,
+              '{{child_name}}':     childName?.trim() || '',
+              '{{class_applying}}': classApplyingFor?.trim() || '',
+              '{{city}}':           '',
+              '{{lead_count}}':     '',
+              '{{dashboard_url}}':  `${process.env.NEXT_PUBLIC_BASE_URL || ''}/school/dashboard`,
+            },
+          })).catch(() => {})
+        }).catch(() => {})
       }
       return NextResponse.json({ success: true })
     }
@@ -587,6 +603,17 @@ export async function POST(req: NextRequest) {
       const unlockedLead = unlocked.rows[0]
       if (unlockedLead) {
         import('@/lib/notify').then(m => m.notifyLeadUnlocked(schoolId, unlockedLead.fullName || 'A parent')).catch(() => {})
+        import('@/lib/email').then(m => m.fireEmailTrigger('lead_unlocked', 'school', {
+          school_id: schoolId,
+          variables: {
+            '{{parent_name}}':    unlockedLead.fullName || '',
+            '{{parent_phone}}':   unlockedLead.fullPhone || '',
+            '{{parent_email}}':   unlockedLead.fullEmail || '',
+            '{{child_name}}':     unlockedLead.childName || '',
+            '{{class_applying}}': unlockedLead.classApplyingFor || '',
+            '{{dashboard_url}}':  `${process.env.NEXT_PUBLIC_BASE_URL || ''}/school/dashboard`,
+          },
+        })).catch(() => {})
       }
       return NextResponse.json({ success: true, lead: unlockedLead ?? null })
     }
