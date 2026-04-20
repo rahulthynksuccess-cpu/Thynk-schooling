@@ -21,10 +21,7 @@ async function getEasebuzzKeys() {
   }
 }
 
-async function checkEasebuzzTxn(key: string, salt: string, txnid: string): Promise<string | null> {
-  // Easebuzz Transaction API v1
-  // POST https://pay.easebuzz.in/transaction/v1/retrieve
-  // hash = sha512(key|txnid|salt)
+async function checkEasebuzzTxn(key: string, salt: string, txnid: string): Promise<{ status: string | null, raw: any }> {
   const hash = crypto.createHash('sha512').update(`${key}|${txnid}|${salt}`).digest('hex')
   try {
     const res = await fetch('https://pay.easebuzz.in/transaction/v1/retrieve', {
@@ -33,12 +30,12 @@ async function checkEasebuzzTxn(key: string, salt: string, txnid: string): Promi
       body: new URLSearchParams({ key, txnid, hash }).toString(),
     })
     const data = await res.json()
-    // Returns status=1 with data.status field
-    if (data.status === 1 && data.data?.status) return data.data.status  // 'success', 'failed', etc
-    if (data.status === 1 && Array.isArray(data.data) && data.data[0]?.status) return data.data[0].status
-    return null
-  } catch {
-    return null
+    let status = null
+    if (data.status === 1 && data.data?.status) status = data.data.status
+    else if (data.status === 1 && Array.isArray(data.data) && data.data[0]?.status) status = data.data[0].status
+    return { status, raw: data }
+  } catch (e: any) {
+    return { status: null, raw: { error: e.message } }
   }
 }
 
@@ -103,13 +100,13 @@ export async function POST(req: NextRequest) {
       const txnid = rec.order_id
       if (!txnid) continue
 
-      const ebStatus = await checkEasebuzzTxn(key, salt, txnid)
+      const { status: ebStatus, raw } = await checkEasebuzzTxn(key, salt, txnid)
 
       if (ebStatus === 'success') {
         const activated = await activateSubscription(rec)
-        results.push({ txnid, status: 'FIXED', ...activated })
+        results.push({ txnid, status: 'FIXED', ...activated, raw })
       } else {
-        results.push({ txnid, status: 'SKIPPED', easebuzzStatus: ebStatus || 'unknown' })
+        results.push({ txnid, status: 'SKIPPED', easebuzzStatus: ebStatus || 'unknown', raw })
       }
     }
 
@@ -124,7 +121,7 @@ export async function POST(req: NextRequest) {
       const txnid = rec.order_id
       if (!txnid) continue
 
-      const ebStatus = await checkEasebuzzTxn(key, salt, txnid)
+      const { status: ebStatus, raw } = await checkEasebuzzTxn(key, salt, txnid)
 
       if (ebStatus === 'success') {
         await db.query(
@@ -136,9 +133,9 @@ export async function POST(req: NextRequest) {
           [String(rec.duration_days || 30), rec.school_id]
         ).catch(() => {})
         import('@/lib/notify').then(m => m.notifyFeaturedActivated(rec.school_id, rec.duration_days || 30)).catch(() => {})
-        results.push({ txnid, type: 'featured', status: 'FIXED', days: rec.duration_days })
+        results.push({ txnid, type: 'featured', status: 'FIXED', days: rec.duration_days, raw })
       } else {
-        results.push({ txnid, type: 'featured', status: 'SKIPPED', easebuzzStatus: ebStatus || 'unknown' })
+        results.push({ txnid, type: 'featured', status: 'SKIPPED', easebuzzStatus: ebStatus || 'unknown', raw })
       }
     }
 
