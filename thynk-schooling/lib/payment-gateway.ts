@@ -341,9 +341,12 @@ async function createEasebuzzOrder(
   meta: { buyerName?: string; buyerEmail?: string; buyerPhone?: string; callbackType?: string }
 ): Promise<CreateOrderResult> {
   // Easebuzz: Salt is stored in keySecret field (that's what the integrations UI saves it as)
-  // Fallback to extra.salt for backward compatibility
-  const salt = cfg.keySecret || cfg.extra?.salt || ''
-  if (!salt) throw new Error('Easebuzz salt not configured — set Salt in Admin → Integrations → Easebuzz')
+  // Trim to remove any accidental spaces/newlines from copy-paste
+  const merchantKey = cfg.keyId.trim()
+  const salt        = (cfg.keySecret || cfg.extra?.salt || '').trim()
+
+  if (!merchantKey) throw new Error('Easebuzz Merchant Key is empty — check Admin → Integrations → Easebuzz')
+  if (!salt)        throw new Error('Easebuzz Salt is empty — check Admin → Integrations → Easebuzz')
 
   // FIX 1: txnid must be alphanumeric only, max 25 chars — strip hyphens from UUID receipts
   const txnid = receipt.replace(/-/g, '').slice(0, 25)
@@ -369,15 +372,17 @@ async function createEasebuzzOrder(
   // FIX 2: Easebuzz hash requires EXACTLY 16 pipes (17 segments):
   // sha512(key|txnid|amount|productinfo|firstname|email|udf1|udf2|udf3|udf4|udf5||||||SALT)
   // = 6 named fields + udf1-5 (empty) + udf6-10 (5 empty) + SALT = 16 pipes total
-  const hashStr = `${cfg.keyId}|${txnid}|${amountMajor}|${productInfo}|${firstname}|${email}|||||||||||${salt}`
+  const hashStr = `${merchantKey}|${txnid}|${amountMajor}|${productInfo}|${firstname}|${email}|||||||||||${salt}`
   const hash    = crypto.createHash('sha512').update(hashStr).digest('hex')
+
+  console.log('[Easebuzz] initiating payment:', { merchantKey: merchantKey.slice(0,4)+'***', txnid, amountMajor, productInfo, mode: cfg.mode })
 
   const baseUrl = cfg.mode === 'live'
     ? 'https://pay.easebuzz.in'
     : 'https://testpay.easebuzz.in'
 
   const formData = new URLSearchParams({
-    key:         cfg.keyId,
+    key:         merchantKey,
     txnid,
     amount:      amountMajor,
     productinfo: productInfo,

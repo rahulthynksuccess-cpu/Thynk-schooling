@@ -1688,10 +1688,16 @@ export function SchoolDashboardClient() {
     enabled, staleTime: 60 * 1000,
   })
   const unreadCount = (notifications || []).filter((n: any) => !n.isRead).length
+  const [showNotifPanel, setShowNotifPanel] = useState(false)
 
   const markAllRead = async () => {
     await fetch('/api/notifications?action=mark-all-read', { method: 'POST', credentials: 'include', headers: authHeaders() }).catch(() => {})
-    refetchNotifs()
+    refetchNotifs()  // refresh so UI updates immediately
+  }
+
+  const closeNotifPanel = () => {
+    setShowNotifPanel(false)
+    markAllRead()  // mark read when panel is closed, not when opened
   }
 
   const analyticsData: AnalyticsPoint[] = useMemo(() => {
@@ -1785,8 +1791,40 @@ export function SchoolDashboardClient() {
             <button onClick={() => setSidebarOpen(true)} style={{ background: 'none', border: 'none', color: theme.sbMuted, cursor: 'pointer', display: 'flex', padding: 4 }}><Menu size={18} /></button>
             <span style={{ fontFamily: theme.displayFont, fontSize: 16, fontWeight: 700, color: theme.sbText }}>ThynkSchooling</span>
             <span style={{ position:'relative', display:'inline-flex' }}>
-              <Bell size={16} color={theme.sbMuted} />
-              {unreadCount > 0 && <span style={{ position:'absolute', top:-4, right:-4, width:14, height:14, borderRadius:'50%', background:'#EF4444', color:'#fff', fontSize:8, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+              <button onClick={() => showNotifPanel ? closeNotifPanel() : setShowNotifPanel(true)}
+                style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center', padding:4, position:'relative' }}>
+                <Bell size={16} color={theme.sbMuted} />
+                {unreadCount > 0 && <span style={{ position:'absolute', top:-2, right:-2, width:14, height:14, borderRadius:'50%', background:'#EF4444', color:'#fff', fontSize:8, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center' }}>{unreadCount > 9 ? '9+' : unreadCount}</span>}
+              </button>
+              {showNotifPanel && (
+                <div style={{ position:'fixed', top:56, right:16, width:340, maxHeight:480, overflowY:'auto', background:'#fff', borderRadius:14, boxShadow:'0 8px 40px rgba(0,0,0,0.18)', border:'1px solid rgba(0,0,0,0.08)', zIndex:999 }}>
+                  <div style={{ padding:'14px 16px 10px', borderBottom:'1px solid rgba(0,0,0,0.06)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <span style={{ fontWeight:700, fontSize:14, color:'#0D1117' }}>Notifications</span>
+                    <button onClick={closeNotifPanel} style={{ background:'none', border:'none', cursor:'pointer', color:'#9CA3AF', fontSize:18, lineHeight:1 }}>×</button>
+                  </div>
+                  {(!notifications || notifications.length === 0) ? (
+                    <div style={{ padding:'40px 20px', textAlign:'center', color:'#9CA3AF', fontSize:13 }}>No notifications yet</div>
+                  ) : (
+                    notifications.slice(0, 20).map((n: any) => {
+                      const icon = n.type === 'lead' ? '📩' : n.type === 'application' ? '📋' : n.type === 'payment' ? '✅' : n.type === 'featured' ? '⭐' : n.type === 'view' ? '👀' : '🔔'
+                      return (
+                        <div key={n.id} style={{ padding:'12px 16px', borderBottom:'1px solid rgba(0,0,0,0.05)', background: n.isRead ? '#fff' : '#F0F7FF' }}>
+                          <div style={{ display:'flex', gap:10, alignItems:'flex-start' }}>
+                            <span style={{ fontSize:18, flexShrink:0 }}>{icon}</span>
+                            <div style={{ flex:1 }}>
+                              <div style={{ fontWeight: n.isRead ? 500 : 700, fontSize:13, color:'#0D1117', marginBottom:2 }}>{n.title}</div>
+                              {n.body && <div style={{ fontSize:12, color:'#6B7280', lineHeight:1.5 }}>{n.body}</div>}
+                              <div style={{ fontSize:11, color:'#9CA3AF', marginTop:4 }}>
+                                {new Date(n.sentAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})} · {new Date(n.sentAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              )}
             </span>
           </div>
 
@@ -1840,35 +1878,29 @@ export function SchoolDashboardClient() {
             {/* Performance score */}
             {cfg.performanceScore && <PerformanceScoreBanner stats={stats} theme={theme} />}
 
-            {/* Notifications from Admin + Auto events */}
-            {notifications && notifications.length > 0 && (
+            {/* Notifications from Admin + Auto events — only show UNREAD inline */}
+            {notifications && notifications.filter((n: any) => !n.isRead).length > 0 && (
               <div style={{ marginBottom: 18 }}>
                 <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ fontWeight:700, fontSize:13, color:theme.text }}>Notifications</span>
-                    {unreadCount > 0 && (
-                      <span style={{ background:'#EF4444', color:'#fff', fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:99 }}>{unreadCount}</span>
-                    )}
+                    <span style={{ background:'#EF4444', color:'#fff', fontSize:10, fontWeight:700, padding:'1px 7px', borderRadius:99 }}>{notifications.filter((n: any) => !n.isRead).length}</span>
                   </div>
-                  {unreadCount > 0 && (
-                    <button onClick={markAllRead} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:theme.muted, fontWeight:600 }}>Mark all read</button>
-                  )}
+                  <button onClick={markAllRead} style={{ background:'none', border:'none', cursor:'pointer', fontSize:11, color:theme.muted, fontWeight:600 }}>Mark all read</button>
                 </div>
-                {notifications.slice(0, 5).map((n: any) => {
+                {notifications.filter((n: any) => !n.isRead).slice(0, 5).map((n: any) => {
                   const icon = n.type === 'lead' ? '📩' : n.type === 'application' ? '📋' : n.type === 'payment' ? '✅' : n.type === 'featured' ? '⭐' : n.type === 'view' ? '👀' : '🔔'
-                  const bg = n.isRead ? 'rgba(0,0,0,0.02)' : 'rgba(59,130,246,0.06)'
-                  const border = n.isRead ? `0.5px solid ${theme.cardBorder}` : '0.5px solid rgba(59,130,246,0.25)'
                   return (
-                    <div key={n.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'11px 14px', borderRadius:10, background:bg, border, marginBottom:6, opacity: n.isRead ? 0.7 : 1 }}>
+                    <div key={n.id} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'11px 14px', borderRadius:10, background:'rgba(59,130,246,0.06)', border:'0.5px solid rgba(59,130,246,0.25)', marginBottom:6 }}>
                       <span style={{ fontSize:16, flexShrink:0 }}>{icon}</span>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontWeight: n.isRead ? 500 : 700, fontSize:13, color:theme.text }}>{n.title}</div>
+                        <div style={{ fontWeight:700, fontSize:13, color:theme.text }}>{n.title}</div>
                         {n.body && <div style={{ fontSize:12, color:theme.muted, marginTop:2, lineHeight:1.5 }}>{n.body}</div>}
                         <div style={{ fontSize:10, color:theme.muted, marginTop:3 }}>
                           {new Date(n.sentAt).toLocaleDateString('en-IN',{day:'numeric',month:'short'})} · {new Date(n.sentAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})}
                         </div>
                       </div>
-                      {!n.isRead && <div style={{ width:7, height:7, borderRadius:'50%', background:'#3B82F6', flexShrink:0, marginTop:4 }} />}
+                      <div style={{ width:7, height:7, borderRadius:'50%', background:'#3B82F6', flexShrink:0, marginTop:4 }} />
                     </div>
                   )
                 })}
