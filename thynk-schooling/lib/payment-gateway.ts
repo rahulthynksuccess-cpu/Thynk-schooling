@@ -348,8 +348,8 @@ async function createEasebuzzOrder(
   if (!merchantKey) throw new Error('Easebuzz Merchant Key is empty — check Admin → Integrations → Easebuzz')
   if (!salt)        throw new Error('Easebuzz Salt is empty — check Admin → Integrations → Easebuzz')
 
-  // FIX 1: txnid must be alphanumeric only, max 25 chars — strip hyphens from UUID receipts
-  const txnid = receipt.replace(/-/g, '').slice(0, 25)
+  // txnid must be alphanumeric only, max 25 chars — strip ALL non-alphanumeric chars
+  const txnid = receipt.replace(/[^a-zA-Z0-9]/g, '').slice(0, 25)
 
   const amountMajor = (amount / 100).toFixed(2)
   const productInfo = meta.callbackType === 'featured'
