@@ -196,6 +196,184 @@ function CheckoutModal({ planName, price, gateways, onClose, onPay }: {
   )
 }
 
+// ─── Leads Plan Comparison Table ──────────────────────────────────────────────
+const LEADS_FEATURES = [
+  { key: 'lead_count',    label: 'Lead Credits',         render: (p: SubPlan) => p.leadCount === -1 ? '∞ Unlimited' : `${p.leadCount} credits` },
+  { key: 'price',         label: 'Price',                render: (p: SubPlan) => p.price === 0 ? 'Free' : `₹${Math.round(p.price/100).toLocaleString('en-IN')}` },
+  { key: 'cost_per_lead', label: 'Cost per Lead',        render: (p: SubPlan) => p.leadCount > 0 && p.price > 0 ? `₹${Math.round(p.price/100/p.leadCount)}` : p.leadCount === -1 ? 'Unlimited' : '₹0' },
+  { key: 'verified',      label: 'Verified Badge',       render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('verified')) ? '✓' : '—' },
+  { key: 'analytics',     label: 'Analytics Dashboard',  render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('analytic')) ? '✓' : '—' },
+  { key: 'photos',        label: 'Unlimited Photos',     render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('unlimited photo')) ? '✓' : '—' },
+  { key: 'whatsapp',      label: 'WhatsApp Support',     render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('whatsapp')) ? '✓' : '—' },
+  { key: 'account_mgr',   label: 'Account Manager',      render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('account manager')) ? '✓' : '—' },
+  { key: 'featured_badge', label: 'Featured Badge',      render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('featured')) ? '✓' : '—' },
+  { key: 'placement',     label: 'Search Placement',     render: (p: SubPlan) => {
+    if (p.features?.some(f => f.toLowerCase().includes('top-of-search') || f.toLowerCase().includes('top placement'))) return 'Top of Search'
+    if (p.features?.some(f => f.toLowerCase().includes('enhanced'))) return 'Enhanced'
+    return 'Standard'
+  }},
+]
+
+function LeadsComparisonTable({ plans, currentPlanKey, onSelect, payingId }: {
+  plans: SubPlan[]; currentPlanKey?: string
+  onSelect: (p: SubPlan) => void; payingId: string | null
+}) {
+  const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
+  return (
+    <div style={{ maxWidth: 1100, margin: '40px auto 0', background: '#FDFAF5', border: '1px solid #E8DCC8', borderRadius: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid #E8DCC8', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#0D1117', margin: 0 }}>Plan Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#9B8860' }}>Side-by-side feature breakdown</span>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #E8DCC8' }}>
+              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9B8860', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+              {sorted.map(p => (
+                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 130 }}>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#D4A520)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Most Popular</div>}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: '#0D1117', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
+                    {currentPlanKey === p.planKey && <div style={{ fontSize: 10, color: '#16A34A', fontWeight: 700, marginTop: 2 }}>✓ Current</div>}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {LEADS_FEATURES.map((feat, ri) => (
+              <tr key={feat.key} style={{ borderBottom: '1px solid #F0E8D8', background: ri % 2 === 0 ? '#FDFAF5' : '#FAF5EE' }}>
+                <td style={{ padding: '12px 20px', color: '#6B5744', fontWeight: 500, fontSize: 12 }}>{feat.label}</td>
+                {sorted.map(p => {
+                  const val = feat.render(p)
+                  const isCheck = val === '✓'
+                  const isCross = val === '—'
+                  const isHighlight = feat.key === 'lead_count' || feat.key === 'price'
+                  return (
+                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.04)' : undefined }}>
+                      <span style={{
+                        fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
+                        fontSize: isHighlight ? 17 : 13,
+                        fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
+                        color: isCheck ? '#16A34A' : isCross ? '#D1B89A' : isHighlight ? '#B8860B' : '#4A3728',
+                      }}>{val}</span>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+            {/* CTA row */}
+            <tr style={{ background: '#F5EDD8', borderTop: '2px solid #E8DCC8' }}>
+              <td style={{ padding: '16px 20px', color: '#9B8860', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Started</td>
+              {sorted.map(p => {
+                const isCurrent = currentPlanKey === p.planKey
+                return (
+                  <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
+                    <button onClick={() => onSelect(p)} disabled={payingId === p.id || isCurrent}
+                      style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: isCurrent ? 'default' : 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: isCurrent ? '#16A34A' : p.isHot ? 'linear-gradient(135deg,#B8860B,#D4A520)' : '#0D1117', color: '#fff', transition: 'all .15s', opacity: payingId === p.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                      {isCurrent ? '✓ Active' : p.price === 0 ? 'Activate Free' : p.cta || 'Choose Plan'}
+                    </button>
+                  </td>
+                )
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ─── Featured Plan Comparison Table ───────────────────────────────────────────
+const FEATURED_FEATURES = [
+  { key: 'duration',       label: 'Duration',              render: (p: FeaturedPlan) => { const d = p.durationDays; return d >= 30 ? `${Math.round(d/30)} Month${Math.round(d/30)>1?'s':''}` : `${d} Days` }},
+  { key: 'price',          label: 'Price',                 render: (p: FeaturedPlan) => `₹${Math.round(p.price/100).toLocaleString('en-IN')}` },
+  { key: 'per_day',        label: 'Cost per Day',          render: (p: FeaturedPlan) => p.durationDays > 0 ? `₹${Math.round(p.price/100/p.durationDays)}` : '—' },
+  { key: 'top_placement',  label: 'Top of Search',         render: (p: FeaturedPlan) => p.features?.some(f => f.toLowerCase().includes('top') || f.toLowerCase().includes('search')) ? '✓' : '✓' },
+  { key: 'badge',          label: 'Featured Badge',        render: (p: FeaturedPlan) => '✓' },
+  { key: 'boost',          label: 'Visibility Boost',      render: (p: FeaturedPlan) => {
+    const days = p.durationDays
+    if (days >= 90) return 'Maximum'
+    if (days >= 30) return 'High'
+    return 'Standard'
+  }},
+  { key: 'best_for',       label: 'Best For',              render: (p: FeaturedPlan) => {
+    const days = p.durationDays
+    if (days <= 15) return 'Trial / Events'
+    if (days <= 45) return 'Admission Season'
+    return 'Year-round Growth'
+  }},
+]
+
+function FeaturedComparisonTable({ plans, onSelect, payingId }: {
+  plans: FeaturedPlan[]
+  onSelect: (p: FeaturedPlan) => void; payingId: string | null
+}) {
+  const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
+  const fmtDays = (d: number) => d >= 30 ? `${Math.round(d/30)} month${Math.round(d/30)>1?'s':''}` : `${d} days`
+  return (
+    <div style={{ maxWidth: 1000, margin: '40px auto 0', background: '#FDFAF5', border: '1px solid #E8DCC8', borderRadius: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid #E8DCC8', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#0D1117', margin: 0 }}>Featured Package Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#9B8860' }}>Choose the right spotlight period</span>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid #E8DCC8' }}>
+              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9B8860', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+              {sorted.map(p => (
+                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 140 }}>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#D4A520)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Best Value</div>}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: '#0D1117', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
+                    <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#B8860B', fontWeight: 600 }}>⏱ {fmtDays(p.durationDays)}</div>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {FEATURED_FEATURES.map((feat, ri) => (
+              <tr key={feat.key} style={{ borderBottom: '1px solid #F0E8D8', background: ri % 2 === 0 ? '#FDFAF5' : '#FAF5EE' }}>
+                <td style={{ padding: '12px 20px', color: '#6B5744', fontWeight: 500, fontSize: 12 }}>{feat.label}</td>
+                {sorted.map(p => {
+                  const val = feat.render(p)
+                  const isCheck = val === '✓'
+                  const isHighlight = feat.key === 'duration' || feat.key === 'price'
+                  return (
+                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.04)' : undefined }}>
+                      <span style={{
+                        fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
+                        fontSize: isHighlight ? 16 : 13,
+                        fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
+                        color: isCheck ? '#16A34A' : isHighlight ? '#B8860B' : feat.key === 'boost' && val === 'Maximum' ? '#B8860B' : '#4A3728',
+                      }}>{val}</span>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+            {/* CTA row */}
+            <tr style={{ background: '#F5EDD8', borderTop: '2px solid #E8DCC8' }}>
+              <td style={{ padding: '16px 20px', color: '#9B8860', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Featured</td>
+              {sorted.map(p => (
+                <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
+                  <button onClick={() => onSelect(p)} disabled={payingId === p.id}
+                    style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#D4A520)' : '#0D1117', color: '#fff', opacity: payingId === p.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                    {p.cta || 'Get Featured'}
+                  </button>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 // ─── Tab Bar ──────────────────────────────────────────────────────────────────
 function TabBar({ active, onChange }: { active: 'leads' | 'featured'; onChange: (t: 'leads' | 'featured') => void }) {
   return (
@@ -475,6 +653,11 @@ function PackagesInner() {
                   {' '}— pay only for what you unlock, no subscription needed.
                 </p>
               </div>
+
+              {/* ── LEADS PLAN COMPARISON TABLE ── */}
+              {!leadsLoading && activeLeadPlans.length > 0 && (
+                <LeadsComparisonTable plans={activeLeadPlans} currentPlanKey={currentSub?.planKey} onSelect={(p) => { if(!accessToken){toast.error('Please log in first');router.push('/login');return} if(currentSub?.planKey === p.planKey){toast('You are already on this plan');return} setSelectedLeadPlan(p) }} payingId={payingId} />
+              )}
             </motion.div>
           )}
 
@@ -555,6 +738,11 @@ function PackagesInner() {
                   Featured schools appear at the <strong>top of search results</strong> with a special badge, getting significantly more visibility and enquiries from parents.
                 </p>
               </div>
+
+              {/* ── FEATURED PLAN COMPARISON TABLE ── */}
+              {!featLoading && activeFeatPlans.length > 0 && (
+                <FeaturedComparisonTable plans={activeFeatPlans} onSelect={(p) => { if(!accessToken){toast.error('Please log in first');router.push('/login');return} setSelectedFeatPlan(p) }} payingId={payingId} />
+              )}
             </motion.div>
           )}
         </AnimatePresence>

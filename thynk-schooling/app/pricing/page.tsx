@@ -38,6 +38,172 @@ interface CouponResult {
 
 const ease = [0.22, 1, 0.36, 1] as const
 
+// ─── Shared feature row helpers ───────────────────────────────────────────────
+const PRICING_LEADS_FEATURES = [
+  { key: 'lead_count',    label: 'Lead Credits',         render: (p: SubPlan) => p.leadCount === -1 ? '∞ Unlimited' : `${p.leadCount} credits` },
+  { key: 'price',         label: 'Price',                render: (p: SubPlan) => p.price === 0 ? 'Free' : `₹${Math.round(p.price/100).toLocaleString('en-IN')}` },
+  { key: 'cost_per_lead', label: 'Cost per Lead',        render: (p: SubPlan) => p.leadCount > 0 && p.price > 0 ? `₹${Math.round(p.price/100/p.leadCount)}` : p.leadCount === -1 ? 'Unlimited' : '₹0' },
+  { key: 'verified',      label: 'Verified Badge',       render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('verified')) ? '✓' : '—' },
+  { key: 'analytics',     label: 'Analytics Dashboard',  render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('analytic')) ? '✓' : '—' },
+  { key: 'photos',        label: 'Unlimited Photos',     render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('unlimited photo')) ? '✓' : '—' },
+  { key: 'whatsapp',      label: 'WhatsApp Support',     render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('whatsapp')) ? '✓' : '—' },
+  { key: 'account_mgr',   label: 'Account Manager',      render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('account manager')) ? '✓' : '—' },
+  { key: 'featured_badge', label: 'Featured Badge',      render: (p: SubPlan) => p.features?.some(f => f.toLowerCase().includes('featured')) ? '✓' : '—' },
+  { key: 'placement',     label: 'Search Placement',     render: (p: SubPlan) => {
+    if (p.features?.some(f => f.toLowerCase().includes('top-of-search') || f.toLowerCase().includes('top placement'))) return 'Top of Search'
+    if (p.features?.some(f => f.toLowerCase().includes('enhanced'))) return 'Enhanced'
+    return 'Standard'
+  }},
+]
+
+function PricingLeadsComparisonTable({ plans, isSchoolUser, onSelect }: {
+  plans: SubPlan[]; isSchoolUser: boolean; onSelect: (p: SubPlan) => void
+}) {
+  const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
+  return (
+    <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ duration:0.55, ease }}
+      style={{ marginTop: 40, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#FAF7F2', margin: 0 }}>Plan Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: 'rgba(250,247,242,0.4)' }}>Full feature breakdown side by side</span>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'rgba(250,247,242,0.3)', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+              {sorted.map(p => (
+                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 130 }}>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#E8C547)', color: '#0D1117', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Most Popular</div>}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: p.isHot ? '#E8C547' : '#FAF7F2', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PRICING_LEADS_FEATURES.map((feat, ri) => (
+              <tr key={feat.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                <td style={{ padding: '12px 20px', color: 'rgba(250,247,242,0.5)', fontWeight: 400, fontSize: 12 }}>{feat.label}</td>
+                {sorted.map(p => {
+                  const val = feat.render(p)
+                  const isCheck = val === '✓'
+                  const isCross = val === '—'
+                  const isHighlight = feat.key === 'lead_count' || feat.key === 'price'
+                  return (
+                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
+                      <span style={{
+                        fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
+                        fontSize: isHighlight ? 17 : 13,
+                        fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
+                        color: isCheck ? '#4ADE80' : isCross ? 'rgba(250,247,242,0.2)' : isHighlight ? '#E8C547' : 'rgba(250,247,242,0.7)',
+                      }}>{val}</span>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+            <tr style={{ background: 'rgba(184,134,11,0.06)', borderTop: '1px solid rgba(184,134,11,0.2)' }}>
+              <td style={{ padding: '16px 20px', color: 'rgba(250,247,242,0.3)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Started</td>
+              {sorted.map(p => (
+                <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
+                  {isSchoolUser ? (
+                    <button onClick={() => onSelect(p)}
+                      style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', whiteSpace: 'nowrap' }}>
+                      {p.price === 0 ? 'Activate Free' : p.cta || 'Choose Plan'}
+                    </button>
+                  ) : (
+                    <Link href={`/register?role=school&plan=${p.planKey}`}
+                      style={{ display: 'inline-block', padding: '9px 20px', borderRadius: 10, fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                      {p.cta || 'Get Started'}
+                    </Link>
+                  )}
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </motion.div>
+  )
+}
+
+const PRICING_FEATURED_FEATURES = [
+  { key: 'duration',    label: 'Duration',       render: (p: FeaturedPlan) => { const d = p.durationDays; return d >= 30 ? `${Math.round(d/30)} Month${Math.round(d/30)>1?'s':''}` : `${d} Days` }},
+  { key: 'price',       label: 'Price',          render: (p: FeaturedPlan) => `₹${Math.round(p.price/100).toLocaleString('en-IN')}` },
+  { key: 'per_day',     label: 'Cost per Day',   render: (p: FeaturedPlan) => p.durationDays > 0 ? `₹${Math.round(p.price/100/p.durationDays)}` : '—' },
+  { key: 'placement',   label: 'Top of Search',  render: () => '✓' },
+  { key: 'badge',       label: 'Featured Badge', render: () => '✓' },
+  { key: 'boost',       label: 'Visibility',     render: (p: FeaturedPlan) => { const d = p.durationDays; if(d>=90) return 'Maximum'; if(d>=30) return 'High'; return 'Standard' }},
+  { key: 'best_for',    label: 'Best For',       render: (p: FeaturedPlan) => { const d = p.durationDays; if(d<=15) return 'Trial / Events'; if(d<=45) return 'Admission Season'; return 'Year-round' }},
+]
+
+function PricingFeaturedComparisonTable({ plans, isSchoolUser }: { plans: FeaturedPlan[]; isSchoolUser: boolean }) {
+  const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
+  const fmtDays = (d: number) => d >= 30 ? `${Math.round(d/30)} month${Math.round(d/30)>1?'s':''}` : `${d} days`
+  return (
+    <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ duration:0.55, ease }}
+      style={{ marginTop: 40, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#FAF7F2', margin: 0 }}>Featured Package Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: 'rgba(250,247,242,0.4)' }}>Choose the right spotlight duration</span>
+      </div>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'rgba(250,247,242,0.3)', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+              {sorted.map(p => (
+                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 140 }}>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#E8C547)', color: '#0D1117', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Best Value</div>}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: p.isHot ? '#E8C547' : '#FAF7F2', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
+                    <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#B8860B', fontWeight: 600, marginTop: 2 }}>⏱ {fmtDays(p.durationDays)}</div>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PRICING_FEATURED_FEATURES.map((feat, ri) => (
+              <tr key={feat.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                <td style={{ padding: '12px 20px', color: 'rgba(250,247,242,0.5)', fontWeight: 400, fontSize: 12 }}>{feat.label}</td>
+                {sorted.map(p => {
+                  const val = feat.render(p)
+                  const isCheck = val === '✓'
+                  const isHighlight = feat.key === 'duration' || feat.key === 'price'
+                  return (
+                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
+                      <span style={{
+                        fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
+                        fontSize: isHighlight ? 16 : 13,
+                        fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
+                        color: isCheck ? '#4ADE80' : isHighlight ? '#E8C547' : feat.key === 'boost' && val === 'Maximum' ? '#E8C547' : 'rgba(250,247,242,0.7)',
+                      }}>{val}</span>
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+            <tr style={{ background: 'rgba(184,134,11,0.06)', borderTop: '1px solid rgba(184,134,11,0.2)' }}>
+              <td style={{ padding: '16px 20px', color: 'rgba(250,247,242,0.3)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Featured</td>
+              {sorted.map(p => (
+                <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
+                  <Link href={isSchoolUser ? '/dashboard/school/packages?tab=featured' : '/register?role=school'}
+                    style={{ display: 'inline-block', padding: '9px 20px', borderRadius: 10, fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    {p.cta || 'Get Featured'}
+                  </Link>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </motion.div>
+  )
+}
+
 // ─── Checkout Modal (dark theme for pricing page) ─────────────────────────────
 function CheckoutModal({ plan, onClose }: { plan: SubPlan; onClose: () => void }) {
   const [gateway, setGateway]         = useState<'razorpay' | 'cashfree'>('razorpay')
@@ -411,6 +577,11 @@ function PricingInner() {
                     style={{ textAlign:'center',marginTop:28,fontFamily:'Inter,sans-serif',fontSize:12,color:'#A0ADB8',fontWeight:300 }}>
                     All prices in INR · Cancel anytime · No credit card needed for Free plan · Buy single leads from your Leads page
                   </motion.p>
+
+                  {/* ── LEADS COMPARISON TABLE ── */}
+                  {!plansLoading && activeLeadPlans.length > 0 && (
+                    <PricingLeadsComparisonTable plans={activeLeadPlans} isSchoolUser={isSchoolUser} onSelect={setCheckoutPlan} />
+                  )}
                 </motion.div>
               )}
 
@@ -481,6 +652,11 @@ function PricingInner() {
                     style={{ textAlign:'center',marginTop:28,fontFamily:'Inter,sans-serif',fontSize:12,color:'#A0ADB8',fontWeight:300 }}>
                     All prices in INR · Featured listing activates immediately after payment
                   </motion.p>
+
+                  {/* ── FEATURED COMPARISON TABLE ── */}
+                  {!featLoading && activeFeatPlans.length > 0 && (
+                    <PricingFeaturedComparisonTable plans={activeFeatPlans} isSchoolUser={isSchoolUser} />
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
