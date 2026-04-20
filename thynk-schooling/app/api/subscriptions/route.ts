@@ -266,13 +266,14 @@ export async function POST(req: NextRequest) {
         const couponRes = await db.query(`SELECT * FROM discount_coupons WHERE id=$1`, [couponIdParam]).catch(() => ({ rows: [] }))
         const c = couponRes.rows[0]
         if (c) {
+          const gatewayOk  = !c.applicable_gateways?.length || c.applicable_gateways.includes(gatewayId)
           const isValid =
             c.active &&
             (!c.valid_until || new Date(c.valid_until) >= new Date()) &&
             (!c.valid_from  || new Date(c.valid_from)  <= new Date()) &&
             (c.max_uses === null || c.used_count < c.max_uses) &&
             (p.price_paise / 100 >= Number(c.min_amount || 0)) &&
-            (!c.applicable_gateways?.length || c.applicable_gateways.includes(gatewayId))
+            gatewayOk
           if (isValid) {
             discountPaise   = c.type === 'percent'
               ? Math.round((p.price_paise * Number(c.value)) / 100)
@@ -281,6 +282,13 @@ export async function POST(req: NextRequest) {
             finalPricePaise = p.price_paise - discountPaise
             couponId        = c.id
             couponCodeStr   = c.code
+          } else if (!gatewayOk) {
+            // Coupon exists but not valid for this gateway — return error so user knows
+            const validGwNames = c.applicable_gateways?.join(', ') || 'all'
+            return NextResponse.json({
+              error: `Coupon "${c.code}" is not valid for ${gatewayId}. Valid for: ${validGwNames}`,
+              coupon_gateway_mismatch: true,
+            }, { status: 400 })
           }
         }
       }

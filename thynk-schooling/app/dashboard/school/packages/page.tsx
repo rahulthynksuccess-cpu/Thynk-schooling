@@ -27,6 +27,7 @@ interface FeaturedPlan {
 interface CouponResult {
   valid: boolean; coupon_id?: string; code?: string
   discount_paise?: number; final_amount_paise?: number; message: string
+  applicable_gateways?: string[]
 }
 
 const GW: Record<string, { emoji: string; color: string; desc: string }> = {
@@ -158,7 +159,13 @@ function CheckoutModal({ planName, price, gateways, onClose, onPay }: {
                 const d = GW[gw.id]; if (!d) return null
                 const active = selectedGw === gw.id
                 return (
-                  <button key={gw.id} onClick={() => { setSelectedGw(gw.id as GatewayId); setCouponResult(null) }}
+                  <button key={gw.id} onClick={() => {
+                    setSelectedGw(gw.id as GatewayId)
+                    // Only reset coupon if it's restricted to specific gateways that don't include new selection
+                    if (couponResult?.valid && couponResult.applicable_gateways?.length && !couponResult.applicable_gateways.includes(gw.id)) {
+                      setCouponResult(null)
+                    }
+                  }}
                     style={{ display:'flex',alignItems:'center',gap:14,padding:'12px 16px',borderRadius:12,border:`1.5px solid ${active?d.color:'rgba(13,17,23,0.1)'}`,background:active?`${d.color}10`:`${d.color}04`,cursor:'pointer',textAlign:'left',width:'100%',transition:'all .15s' }}>
                     <span style={{ fontSize:24,flexShrink:0 }}>{d.emoji}</span>
                     <div style={{ flex:1 }}>

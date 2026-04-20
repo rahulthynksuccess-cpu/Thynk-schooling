@@ -98,6 +98,7 @@ export async function POST(req: NextRequest) {
       value: Number(c.value),
       discount_paise,
       final_amount_paise,
+      applicable_gateways: c.applicable_gateways || [],
       message: c.type === 'percent'
         ? `${c.value}% discount applied — you save ₹${(discount_paise / 100).toFixed(2)}`
         : `₹${c.value} flat discount applied`,
