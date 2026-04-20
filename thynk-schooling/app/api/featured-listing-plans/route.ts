@@ -220,9 +220,9 @@ export async function POST(req: NextRequest) {
     // ── VERIFY PAYMENT ────────────────────────────────────────────────────────
     if (action === 'verify-payment') {
       const body = await parseBody(req)
-      const { gateway, orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature, cfOrderId } = body
+      const { gateway, orderId, razorpay_payment_id, razorpay_order_id, razorpay_signature, cfOrderId, txnid, status: txnStatus, mihpayid } = body
 
-      const resolvedOrderId = orderId || razorpay_order_id || cfOrderId
+      const resolvedOrderId = orderId || razorpay_order_id || cfOrderId || txnid
       if (!resolvedOrderId) return NextResponse.json({ error: 'orderId required' }, { status: 400 })
 
       const payRec = await db.query(
@@ -239,8 +239,9 @@ export async function POST(req: NextRequest) {
       const result = await verifyPayment({
         gateway:   gwId,
         orderId:   resolvedOrderId,
-        paymentId: razorpay_payment_id || cfOrderId,
+        paymentId: razorpay_payment_id || cfOrderId || mihpayid,
         signature: razorpay_signature,
+        status:    txnStatus,
       })
       if (!result.success) {
         console.error('[featured verify] failed:', result.error)

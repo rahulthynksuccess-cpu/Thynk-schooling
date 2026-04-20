@@ -333,8 +333,10 @@ function PackagesInner() {
         if (!sessionId) throw new Error('Cashfree session ID missing')
         window.Cashfree({mode:mode==='live'?'production':'sandbox'}).checkout({paymentSessionId:sessionId,returnUrl:`${window.location.origin}/dashboard/school/packages?tab=leads&order_id=${orderId}&gateway=cashfree`})
       } else if (gatewayId === 'easebuzz') {
-        const {accessKey,baseUrl,mode} = order.clientPayload
-        const s=document.createElement("script");s.src="https://ebz-static.s3.ap-south-1.amazonaws.com/easecheckout/v2.0.0/easebuzz-checkout-v2.min.js";s.onload=()=>{const eb=new (window as any).EasebuzzCheckout(accessKey,mode==="live"?"prod":"test");eb.initiatePayment({access_key:accessKey,onResponse:(r:any)=>{window.location.href=`/dashboard/school/packages?status=${r.status==="success"?"success":"failed"}`}})};document.head.appendChild(s)
+        const {accessKey,baseUrl,mode,orderId:ebOrderId} = order.clientPayload
+        const ebHeaders: Record<string,string> = { 'Content-Type':'application/json' }
+        if (accessToken) ebHeaders['Authorization'] = `Bearer ${accessToken}`
+        const s=document.createElement("script");s.src="https://ebz-static.s3.ap-south-1.amazonaws.com/easecheckout/v2.0.0/easebuzz-checkout-v2.min.js";s.onload=()=>{const eb=new (window as any).EasebuzzCheckout(accessKey,mode==="live"?"prod":"test");eb.initiatePayment({access_key:accessKey,onResponse:async(r:any)=>{if(r.status==="success"){await fetch("/api/subscriptions?action=verify-payment",{method:"POST",credentials:"include",headers:ebHeaders,body:JSON.stringify({gateway:"easebuzz",orderId:ebOrderId||r.txnid,txnid:r.txnid,status:r.status,mihpayid:r.mihpayid||r.txnid})}).catch(()=>{});window.location.href="/dashboard/school/packages?tab=leads&status=success"}else{window.location.href="/dashboard/school/packages?tab=leads&status=failed"}}})};document.head.appendChild(s)
       } else if (gatewayId === 'paypal') {
         if (order.clientPayload?.approveUrl) window.location.href = order.clientPayload.approveUrl
       }
@@ -366,8 +368,10 @@ function PackagesInner() {
         if (!sessionId) throw new Error('Cashfree session ID missing')
         window.Cashfree({mode:mode==='live'?'production':'sandbox'}).checkout({paymentSessionId:sessionId,returnUrl:`${window.location.origin}/dashboard/school/packages?tab=featured&order_id=${orderId}&gateway=cashfree`})
       } else if (gatewayId === 'easebuzz') {
-        const {accessKey,baseUrl,mode} = order.clientPayload
-        const s=document.createElement("script");s.src="https://ebz-static.s3.ap-south-1.amazonaws.com/easecheckout/v2.0.0/easebuzz-checkout-v2.min.js";s.onload=()=>{const eb=new (window as any).EasebuzzCheckout(accessKey,mode==="live"?"prod":"test");eb.initiatePayment({access_key:accessKey,onResponse:(r:any)=>{window.location.href=`/dashboard/school/packages?status=${r.status==="success"?"success":"failed"}`}})};document.head.appendChild(s)
+        const {accessKey,baseUrl,mode,orderId:ebOrderId2} = order.clientPayload
+        const ebHeaders2: Record<string,string> = { 'Content-Type':'application/json' }
+        if (accessToken) ebHeaders2['Authorization'] = `Bearer ${accessToken}`
+        const s=document.createElement("script");s.src="https://ebz-static.s3.ap-south-1.amazonaws.com/easecheckout/v2.0.0/easebuzz-checkout-v2.min.js";s.onload=()=>{const eb=new (window as any).EasebuzzCheckout(accessKey,mode==="live"?"prod":"test");eb.initiatePayment({access_key:accessKey,onResponse:async(r:any)=>{if(r.status==="success"){await fetch("/api/featured-listing-plans?action=verify-payment",{method:"POST",credentials:"include",headers:ebHeaders2,body:JSON.stringify({gateway:"easebuzz",orderId:ebOrderId2||r.txnid,txnid:r.txnid,status:r.status,mihpayid:r.mihpayid||r.txnid})}).catch(()=>{});window.location.href="/dashboard/school/packages?tab=featured&status=success"}else{window.location.href="/dashboard/school/packages?tab=featured&status=failed"}}})};document.head.appendChild(s)
       }
     } catch (err: any) {
       if (err?.message !== 'Payment cancelled') toast.error(err?.message || 'Payment failed')
