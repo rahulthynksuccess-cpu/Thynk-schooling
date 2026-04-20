@@ -31,6 +31,13 @@ export default function AdminLeadsPage() {
 
   return (
     <AdminLayout pageClass="admin-page-leads" title="Leads" subtitle="All parent leads generated across all schools">
+      {/* Analytics link */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <a href="/admin/leads/analytics"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 9, background: 'rgba(0,229,160,0.1)', border: '1px solid rgba(0,229,160,0.22)', color: '#00E5A0', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+          📊 Lead Analytics Report →
+        </a>
+      </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '12px', marginBottom: '20px' }}>

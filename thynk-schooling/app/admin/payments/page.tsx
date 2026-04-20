@@ -373,6 +373,13 @@ export default function AdminPaymentsPage() {
 
   return (
     <AdminLayout pageClass="admin-page-payments" title="Payments" subtitle="Transactions, gateway analytics, coupon performance">
+      {/* Analytics link */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <a href="/admin/payments/analytics"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 9, background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.22)', color: '#F5A623', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+          📊 Payment Analytics Report →
+        </a>
+      </div>
 
       {/* ── stat cards ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 10, marginBottom: 18 }}>

@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { Search, CheckCircle2, XCircle, Eye, MapPin, Star, Shield, Zap, Building2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Search, CheckCircle2, XCircle, Eye, MapPin, Star, Shield, Zap, Building2, ToggleLeft, ToggleRight, BarChart2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Link from 'next/link'
 
@@ -49,6 +49,13 @@ export default function AdminSchoolsPage() {
   return (
     <AdminLayout pageClass="admin-page-schools" title="Schools Manager" subtitle="Verify, feature and manage all schools on the platform">
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
+      {/* Analytics link */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <Link href="/admin/schools/analytics"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 9, background: 'rgba(245,166,35,0.12)', border: '1px solid rgba(245,166,35,0.25)', color: '#F5A623', fontFamily: 'DM Sans,sans-serif', fontSize: 12, fontWeight: 700, textDecoration: 'none', transition: 'all .15s' }}>
+          <BarChart2 style={{ width: 14, height: 14 }} /> School Analytics Report →
+        </Link>
+      </div>
 
       {/* Summary */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 20 }}>
