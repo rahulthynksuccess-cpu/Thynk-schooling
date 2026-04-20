@@ -38,7 +38,7 @@ async function create(schoolId: string, title: string, body: string, type: strin
   try {
     await ensureNotifTable()
     await db.query(
-      `INSERT INTO notifications (school_id, audience, title, body, type) VALUES ($1, 'school', $2, $3, $4)`,
+      `INSERT INTO notifications (school_id, audience, title, body, type, is_read) VALUES ($1, 'school', $2, $3, $4, false)`,
       [schoolId, title, body, type]
     )
   } catch (e) {

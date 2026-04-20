@@ -1,9 +1,4 @@
 export const dynamic = 'force-dynamic'
-/**
- * GET  /api/notifications        — fetch notifications for current user
- * POST /api/notifications?action=mark-read&id=X
- * POST /api/notifications?action=mark-all-read
- */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
 import jwt from 'jsonwebtoken'
@@ -20,6 +15,7 @@ function getUser(req: NextRequest): { userId: string; role: string } | null {
 }
 
 async function ensureTable() {
+  // Create with all columns from the start
   await db.query(`
     CREATE TABLE IF NOT EXISTS notifications (
       id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -27,27 +23,36 @@ async function ensureTable() {
       school_id UUID,
       title     TEXT NOT NULL,
       body      TEXT,
-      type      VARCHAR(50) NOT NULL DEFAULT 'info',
-      is_read   BOOLEAN NOT NULL DEFAULT false,
+      type      VARCHAR(50) DEFAULT 'info',
+      is_read   BOOLEAN DEFAULT false,
       sent_at   TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+
+  // Safe column additions — split NOT NULL from DEFAULT to avoid Postgres version issues
   await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS school_id UUID`).catch(() => {})
-  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'info'`).catch(() => {})
-  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT false`).catch(() => {})
+  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50)`).catch(() => {})
+  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN`).catch(() => {})
+  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ DEFAULT NOW()`).catch(() => {})
+
+  // Set defaults for any NULL values from old rows
+  await db.query(`UPDATE notifications SET type = 'info' WHERE type IS NULL`).catch(() => {})
+  await db.query(`UPDATE notifications SET is_read = false WHERE is_read IS NULL`).catch(() => {})
+
   await db.query(`CREATE INDEX IF NOT EXISTS idx_notif_school_id ON notifications(school_id)`).catch(() => {})
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_notif_audience ON notifications(audience)`).catch(() => {})
 }
 
 function toNotif(r: any) {
   return {
     id:         r.id,
-    title:      r.title,
+    title:      r.title || '',
     body:       r.body || '',
     type:       r.type || 'info',
-    isRead:     r.is_read || false,
-    read:       r.is_read || false,      // alias for parent dashboard
+    isRead:     r.is_read === true,
+    read:       r.is_read === true,       // alias for parent dashboard
     sentAt:     r.sent_at,
-    created_at: r.sent_at,              // alias for parent dashboard
+    created_at: r.sent_at,               // alias for parent dashboard
   }
 }
 
@@ -58,50 +63,55 @@ export async function GET(req: NextRequest) {
     if (!user) return NextResponse.json([])
 
     const isParent = user.role === 'parent'
-    const audience = isParent ? 'parent' : 'school'
 
     if (!isParent) {
-      // School: get school-specific notifications + broadcast to 'school' or 'all'
+      // School admin — get school-specific + broadcast notifications
       const schoolRes = await db.query(
         'SELECT id FROM schools WHERE admin_user_id=$1', [user.userId]
       ).catch(() => ({ rows: [] }))
       const schoolId = schoolRes.rows[0]?.id || null
 
-      let rows: any[] = []
-      if (schoolId) {
-        const res = await db.query(`
-          SELECT id, audience, title, body, type, is_read, sent_at
-          FROM notifications
-          WHERE school_id = $1
-             OR (school_id IS NULL AND audience IN ('school', 'all'))
-          ORDER BY sent_at DESC
-          LIMIT 30
-        `, [schoolId]).catch(() => ({ rows: [] }))
-        rows = res.rows
-      } else {
-        // No school found — just return broadcast notifications
-        const res = await db.query(`
-          SELECT id, audience, title, body, type, is_read, sent_at
-          FROM notifications
-          WHERE school_id IS NULL AND audience IN ('school', 'all')
-          ORDER BY sent_at DESC LIMIT 30
-        `).catch(() => ({ rows: [] }))
-        rows = res.rows
-      }
-      return NextResponse.json(rows.map(toNotif))
+      const res = schoolId
+        ? await db.query(`
+            SELECT id, audience, title, body,
+                   COALESCE(type,'info') AS type,
+                   COALESCE(is_read,false) AS is_read,
+                   sent_at
+            FROM notifications
+            WHERE school_id = $1
+               OR (school_id IS NULL AND audience IN ('school','schools','all'))
+            ORDER BY sent_at DESC
+            LIMIT 30
+          `, [schoolId]).catch(() => ({ rows: [] }))
+        : await db.query(`
+            SELECT id, audience, title, body,
+                   COALESCE(type,'info') AS type,
+                   COALESCE(is_read,false) AS is_read,
+                   sent_at
+            FROM notifications
+            WHERE school_id IS NULL
+              AND audience IN ('school','schools','all')
+            ORDER BY sent_at DESC
+            LIMIT 30
+          `).catch(() => ({ rows: [] }))
+
+      return NextResponse.json(res.rows.map(toNotif))
     }
 
-    // Parent: get parent-targeted + all-audience notifications
+    // Parent
     const res = await db.query(`
-      SELECT id, audience, title, body, type, is_read, sent_at
+      SELECT id, audience, title, body,
+             COALESCE(type,'info') AS type,
+             COALESCE(is_read,false) AS is_read,
+             sent_at
       FROM notifications
-      WHERE audience IN ('parent', 'all')
-        AND school_id IS NULL
+      WHERE school_id IS NULL
+        AND audience IN ('parent','parents','all')
       ORDER BY sent_at DESC
       LIMIT 30
     `).catch(() => ({ rows: [] }))
-    return NextResponse.json(res.rows.map(toNotif))
 
+    return NextResponse.json(res.rows.map(toNotif))
   } catch (e: any) {
     console.error('[notifications GET]', e)
     return NextResponse.json([])
@@ -133,7 +143,7 @@ export async function POST(req: NextRequest) {
         await db.query(
           `UPDATE notifications SET is_read=true
            WHERE school_id=$1
-              OR (school_id IS NULL AND audience IN ('school','all'))`,
+              OR (school_id IS NULL AND audience IN ('school','schools','all'))`,
           [schoolId]
         )
       }

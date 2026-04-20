@@ -1422,15 +1422,17 @@ async function savePaymentGateways(req: NextRequest) {
   const { gateways } = await req.json()
   if (!Array.isArray(gateways)) return NextResponse.json({ error: 'gateways array required' }, { status: 400 })
   for (const g of gateways) {
+    const keyId = (g.keyId || '').trim()
     if (g.keySecret && !g.keySecret.startsWith('••')) {
+      const keySecret = (g.keySecret || '').trim()
       await db.query(
         `UPDATE payment_gateways SET enabled=$1, priority=$2, key_id=$3, extra=$4, mode=$5, key_secret=$6, updated_at=NOW() WHERE id=$7`,
-        [g.enabled, g.priority, g.keyId, JSON.stringify(g.extra || {}), g.mode, g.keySecret, g.id]
+        [g.enabled, g.priority, keyId, JSON.stringify(g.extra || {}), g.mode, keySecret, g.id]
       ).catch(() => {})
     } else {
       await db.query(
         `UPDATE payment_gateways SET enabled=$1, priority=$2, key_id=$3, extra=$4, mode=$5, updated_at=NOW() WHERE id=$6`,
-        [g.enabled, g.priority, g.keyId, JSON.stringify(g.extra || {}), g.mode, g.id]
+        [g.enabled, g.priority, keyId, JSON.stringify(g.extra || {}), g.mode, g.id]
       ).catch(() => {})
     }
   }
