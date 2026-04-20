@@ -327,7 +327,7 @@ function PackagesInner() {
         window.Cashfree({mode:mode==='live'?'production':'sandbox'}).checkout({paymentSessionId:sessionId,returnUrl:`${window.location.origin}/dashboard/school/packages?tab=leads&order_id=${orderId}&gateway=cashfree`})
       } else if (gatewayId === 'easebuzz') {
         const {accessKey,baseUrl} = order.clientPayload
-        window.location.href = `${baseUrl}/pay/?access_key=${accessKey}`
+        window.location.href = `${baseUrl}/pay/v2/?access_key=${accessKey}`
       } else if (gatewayId === 'paypal') {
         if (order.clientPayload?.approveUrl) window.location.href = order.clientPayload.approveUrl
       }
@@ -360,7 +360,7 @@ function PackagesInner() {
         window.Cashfree({mode:mode==='live'?'production':'sandbox'}).checkout({paymentSessionId:sessionId,returnUrl:`${window.location.origin}/dashboard/school/packages?tab=featured&order_id=${orderId}&gateway=cashfree`})
       } else if (gatewayId === 'easebuzz') {
         const {accessKey,baseUrl} = order.clientPayload
-        window.location.href = `${baseUrl}/pay/?access_key=${accessKey}`
+        window.location.href = `${baseUrl}/pay/v2/?access_key=${accessKey}`
       }
     } catch (err: any) {
       if (err?.message !== 'Payment cancelled') toast.error(err?.message || 'Payment failed')
