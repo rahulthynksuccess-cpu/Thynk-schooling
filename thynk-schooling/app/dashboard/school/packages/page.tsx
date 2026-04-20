@@ -326,8 +326,8 @@ function PackagesInner() {
         if (!sessionId) throw new Error('Cashfree session ID missing')
         window.Cashfree({mode:mode==='live'?'production':'sandbox'}).checkout({paymentSessionId:sessionId,returnUrl:`${window.location.origin}/dashboard/school/packages?tab=leads&order_id=${orderId}&gateway=cashfree`})
       } else if (gatewayId === 'easebuzz') {
-        const {accessKey,baseUrl} = order.clientPayload
-        window.location.href = `${baseUrl}/pay/v2/?access_key=${accessKey}`
+        const {accessKey,baseUrl,mode} = order.clientPayload
+        const s=document.createElement("script");s.src="https://ebz-static.s3.ap-south-1.amazonaws.com/easecheckout/v2.0.0/easebuzz-checkout-v2.min.js";s.onload=()=>{const eb=new (window as any).EasebuzzCheckout(accessKey,mode==="live"?"prod":"test");eb.initiatePayment({access_key:accessKey,onResponse:(r:any)=>{window.location.href=`/dashboard/school/packages?status=${r.status==="success"?"success":"failed"}`}})};document.head.appendChild(s)
       } else if (gatewayId === 'paypal') {
         if (order.clientPayload?.approveUrl) window.location.href = order.clientPayload.approveUrl
       }
@@ -359,8 +359,8 @@ function PackagesInner() {
         if (!sessionId) throw new Error('Cashfree session ID missing')
         window.Cashfree({mode:mode==='live'?'production':'sandbox'}).checkout({paymentSessionId:sessionId,returnUrl:`${window.location.origin}/dashboard/school/packages?tab=featured&order_id=${orderId}&gateway=cashfree`})
       } else if (gatewayId === 'easebuzz') {
-        const {accessKey,baseUrl} = order.clientPayload
-        window.location.href = `${baseUrl}/pay/v2/?access_key=${accessKey}`
+        const {accessKey,baseUrl,mode} = order.clientPayload
+        const s=document.createElement("script");s.src="https://ebz-static.s3.ap-south-1.amazonaws.com/easecheckout/v2.0.0/easebuzz-checkout-v2.min.js";s.onload=()=>{const eb=new (window as any).EasebuzzCheckout(accessKey,mode==="live"?"prod":"test");eb.initiatePayment({access_key:accessKey,onResponse:(r:any)=>{window.location.href=`/dashboard/school/packages?status=${r.status==="success"?"success":"failed"}`}})};document.head.appendChild(s)
       }
     } catch (err: any) {
       if (err?.message !== 'Payment cancelled') toast.error(err?.message || 'Payment failed')
