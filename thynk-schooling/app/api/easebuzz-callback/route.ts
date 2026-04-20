@@ -178,3 +178,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.redirect(`${APP_URL}/dashboard/school/packages?status=failed`, 303)
   }
 }
+
+// ── DEBUG GET — remove after fixing ──────────────────────────────────────────
+export async function GET(req: NextRequest) {
+  try {
+    const row = await db.query(
+      `SELECT key_id, key_secret, extra, mode, enabled FROM payment_gateways WHERE id='easebuzz'`
+    ).catch(() => ({ rows: [] }))
+
+    if (!row.rows.length) return NextResponse.json({ error: 'Easebuzz not found in DB' })
+    const r = row.rows[0]
+
+    const merchantKey = (r.key_id || '').trim()
+    const salt        = (r.key_secret || '').trim()
+    const txnid       = 'debugTXN' + Date.now().toString().slice(-8)
+    const amount      = '10.00'
+    const hashStr     = `${merchantKey}|${txnid}|${amount}|Lead Credits|School|test@test.com|||||||||||${salt}`
+    const hash        = require('crypto').createHash('sha512').update(hashStr).digest('hex')
+    const baseUrl     = r.mode === 'live' ? 'https://pay.easebuzz.in' : 'https://testpay.easebuzz.in'
+
+    const formData = new URLSearchParams({
+      key: merchantKey, txnid, amount,
+      productinfo: 'Lead Credits', firstname: 'School',
+      email: 'test@test.com', phone: '9999999999',
+      udf1: '', udf2: '', udf3: '', udf4: '', udf5: '',
+      surl: 'https://thynk-schooling-sigma.vercel.app/api/easebuzz-callback',
+      furl: 'https://thynk-schooling-sigma.vercel.app/dashboard/school/packages',
+      hash,
+    })
+
+    const res  = await fetch(`${baseUrl}/payment/initiateLink/`, {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString(),
+    })
+    const txt = await res.text()
+    let json: any = null
+    try { json = JSON.parse(txt) } catch { json = txt }
+
+    return NextResponse.json({
+      config: { enabled: r.enabled, mode: r.mode, url: baseUrl,
+        keyIdLen: merchantKey.length, keyIdFirst4: merchantKey.slice(0,4), keyIdLast4: merchantKey.slice(-4),
+        saltLen: salt.length, saltFirst4: salt.slice(0,4), hadSpaces: r.key_id !== merchantKey || r.key_secret !== salt,
+        hashPipes: hashStr.split('|').length - 1 },
+      easebuzzResponse: json, httpStatus: res.status,
+    })
+  } catch (e: any) { return NextResponse.json({ error: e.message }) }
+}
