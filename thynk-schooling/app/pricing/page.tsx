@@ -61,22 +61,40 @@ function PricingLeadsComparisonTable({ plans, isSchoolUser, onSelect }: {
 }) {
   const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
   return (
-    <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ duration:0.55, ease }}
-      style={{ marginTop: 40, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: 20, overflow: 'hidden' }}>
-      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'baseline', gap: 12 }}>
-        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#FAF7F2', margin: 0 }}>Plan Comparison</h3>
-        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: 'rgba(250,247,242,0.4)' }}>Full feature breakdown side by side</span>
+    <motion.div
+      initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ duration:0.55, ease }}
+      style={{
+        marginTop: 32,
+        background: '#0D1117',
+        border: '1px solid rgba(232,197,71,0.2)',
+        borderRadius: 16,
+        overflow: 'hidden',
+      }}
+    >
+      {/* Table header */}
+      <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 18, color: '#FAF7F2', margin: 0 }}>Plan Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: 'rgba(250,247,242,0.4)' }}>Full feature breakdown side by side</span>
       </div>
+
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 12, tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: 160 }} />
+            {sorted.map(p => <col key={p.id} />)}
+          </colgroup>
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'rgba(250,247,242,0.3)', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 9, fontWeight: 700, color: 'rgba(250,247,242,0.35)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Feature</th>
               {sorted.map(p => (
-                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 130 }}>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#E8C547)', color: '#0D1117', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Most Popular</div>}
-                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: p.isHot ? '#E8C547' : '#FAF7F2', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
+                <th key={p.id} style={{ padding: '10px 10px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.1)' : undefined }}>
+                  <div style={{ position: 'relative', paddingTop: p.isHot ? 16 : 0 }}>
+                    {p.isHot && (
+                      <div style={{ position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#E8C547)', color: '#0D1117', fontSize: 8, fontWeight: 800, padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', letterSpacing: '.06em' }}>
+                        POPULAR
+                      </div>
+                    )}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 15, color: p.isHot ? '#E8C547' : '#FAF7F2' }}>{p.name}</div>
                   </div>
                 </th>
               ))}
@@ -85,37 +103,42 @@ function PricingLeadsComparisonTable({ plans, isSchoolUser, onSelect }: {
           <tbody>
             {PRICING_LEADS_FEATURES.map((feat, ri) => (
               <tr key={feat.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                <td style={{ padding: '12px 20px', color: 'rgba(250,247,242,0.5)', fontWeight: 400, fontSize: 12 }}>{feat.label}</td>
+                <td style={{ padding: '9px 14px', color: 'rgba(250,247,242,0.65)', fontWeight: 500, fontSize: 11, whiteSpace: 'nowrap' }}>{feat.label}</td>
                 {sorted.map(p => {
                   const val = feat.render(p)
                   const isCheck = val === '✓'
                   const isCross = val === '—'
                   const isHighlight = feat.key === 'lead_count' || feat.key === 'price'
                   return (
-                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
-                      <span style={{
-                        fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
-                        fontSize: isHighlight ? 17 : 13,
-                        fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
-                        color: isCheck ? '#4ADE80' : isCross ? 'rgba(250,247,242,0.2)' : isHighlight ? '#E8C547' : 'rgba(250,247,242,0.7)',
-                      }}>{val}</span>
+                    <td key={p.id} style={{ padding: '9px 10px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
+                      {isCheck ? (
+                        <span style={{ color: '#4ADE80', fontSize: 14, fontWeight: 700 }}>✓</span>
+                      ) : isCross ? (
+                        <span style={{ color: 'rgba(250,247,242,0.2)', fontSize: 13 }}>—</span>
+                      ) : (
+                        <span style={{
+                          fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
+                          fontSize: isHighlight ? 15 : 11,
+                          fontWeight: isHighlight ? 700 : 500,
+                          color: isHighlight ? '#E8C547' : 'rgba(250,247,242,0.8)',
+                        }}>{val}</span>
+                      )}
                     </td>
                   )
                 })}
               </tr>
             ))}
-            <tr style={{ background: 'rgba(184,134,11,0.06)', borderTop: '1px solid rgba(184,134,11,0.2)' }}>
-              <td style={{ padding: '16px 20px', color: 'rgba(250,247,242,0.3)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Started</td>
+            {/* CTA row */}
+            <tr style={{ background: 'rgba(184,134,11,0.07)', borderTop: '1px solid rgba(184,134,11,0.2)' }}>
+              <td style={{ padding: '12px 14px', color: 'rgba(250,247,242,0.3)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Started</td>
               {sorted.map(p => (
-                <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
+                <td key={p.id} style={{ padding: '12px 8px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.07)' : undefined }}>
                   {isSchoolUser ? (
-                    <button onClick={() => onSelect(p)}
-                      style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', whiteSpace: 'nowrap' }}>
+                    <button onClick={() => onSelect(p)} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 11, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', whiteSpace: 'nowrap' }}>
                       {p.price === 0 ? 'Activate Free' : p.cta || 'Choose Plan'}
                     </button>
                   ) : (
-                    <Link href={`/register?role=school&plan=${p.planKey}`}
-                      style={{ display: 'inline-block', padding: '9px 20px', borderRadius: 10, fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    <Link href={`/register?role=school&plan=${p.planKey}`} style={{ display: 'inline-block', padding: '8px 14px', borderRadius: 8, fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 11, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                       {p.cta || 'Get Started'}
                     </Link>
                   )}
@@ -143,23 +166,40 @@ function PricingFeaturedComparisonTable({ plans, isSchoolUser }: { plans: Featur
   const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
   const fmtDays = (d: number) => d >= 30 ? `${Math.round(d/30)} month${Math.round(d/30)>1?'s':''}` : `${d} days`
   return (
-    <motion.div initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ duration:0.55, ease }}
-      style={{ marginTop: 40, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(232,197,71,0.15)', borderRadius: 20, overflow: 'hidden' }}>
-      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'baseline', gap: 12 }}>
-        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#FAF7F2', margin: 0 }}>Featured Package Comparison</h3>
-        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: 'rgba(250,247,242,0.4)' }}>Choose the right spotlight duration</span>
+    <motion.div
+      initial={{ opacity:0, y:24 }} whileInView={{ opacity:1, y:0 }} viewport={{ once:true }} transition={{ duration:0.55, ease }}
+      style={{
+        marginTop: 32,
+        background: '#0D1117',
+        border: '1px solid rgba(232,197,71,0.2)',
+        borderRadius: 16,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'baseline', gap: 10 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 18, color: '#FAF7F2', margin: 0 }}>Featured Package Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: 'rgba(250,247,242,0.4)' }}>Choose the right spotlight duration</span>
       </div>
+
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 12, tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: 160 }} />
+            {sorted.map(p => <col key={p.id} />)}
+          </colgroup>
           <thead>
-            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'rgba(250,247,242,0.3)', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 9, fontWeight: 700, color: 'rgba(250,247,242,0.35)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Feature</th>
               {sorted.map(p => (
-                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 140 }}>
-                  <div style={{ position: 'relative', display: 'inline-block' }}>
-                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#E8C547)', color: '#0D1117', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Best Value</div>}
-                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: p.isHot ? '#E8C547' : '#FAF7F2', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
-                    <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#B8860B', fontWeight: 600, marginTop: 2 }}>⏱ {fmtDays(p.durationDays)}</div>
+                <th key={p.id} style={{ padding: '10px 10px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.1)' : undefined }}>
+                  <div style={{ position: 'relative', paddingTop: p.isHot ? 16 : 0 }}>
+                    {p.isHot && (
+                      <div style={{ position: 'absolute', top: -2, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#E8C547)', color: '#0D1117', fontSize: 8, fontWeight: 800, padding: '2px 7px', borderRadius: 20, whiteSpace: 'nowrap', letterSpacing: '.06em' }}>
+                        BEST VALUE
+                      </div>
+                    )}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 15, color: p.isHot ? '#E8C547' : '#FAF7F2' }}>{p.name}</div>
+                    <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: '#B8860B', fontWeight: 600, marginTop: 2 }}>⏱ {fmtDays(p.durationDays)}</div>
                   </div>
                 </th>
               ))}
@@ -168,30 +208,33 @@ function PricingFeaturedComparisonTable({ plans, isSchoolUser }: { plans: Featur
           <tbody>
             {PRICING_FEATURED_FEATURES.map((feat, ri) => (
               <tr key={feat.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
-                <td style={{ padding: '12px 20px', color: 'rgba(250,247,242,0.5)', fontWeight: 400, fontSize: 12 }}>{feat.label}</td>
+                <td style={{ padding: '9px 14px', color: 'rgba(250,247,242,0.65)', fontWeight: 500, fontSize: 11, whiteSpace: 'nowrap' }}>{feat.label}</td>
                 {sorted.map(p => {
                   const val = feat.render(p)
                   const isCheck = val === '✓'
                   const isHighlight = feat.key === 'duration' || feat.key === 'price'
                   return (
-                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
-                      <span style={{
-                        fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
-                        fontSize: isHighlight ? 16 : 13,
-                        fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
-                        color: isCheck ? '#4ADE80' : isHighlight ? '#E8C547' : feat.key === 'boost' && val === 'Maximum' ? '#E8C547' : 'rgba(250,247,242,0.7)',
-                      }}>{val}</span>
+                    <td key={p.id} style={{ padding: '9px 10px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
+                      {isCheck ? (
+                        <span style={{ color: '#4ADE80', fontSize: 14, fontWeight: 700 }}>✓</span>
+                      ) : (
+                        <span style={{
+                          fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
+                          fontSize: isHighlight ? 15 : 11,
+                          fontWeight: isHighlight ? 700 : 500,
+                          color: isHighlight ? '#E8C547' : feat.key === 'boost' && val === 'Maximum' ? '#E8C547' : 'rgba(250,247,242,0.8)',
+                        }}>{val}</span>
+                      )}
                     </td>
                   )
                 })}
               </tr>
             ))}
-            <tr style={{ background: 'rgba(184,134,11,0.06)', borderTop: '1px solid rgba(184,134,11,0.2)' }}>
-              <td style={{ padding: '16px 20px', color: 'rgba(250,247,242,0.3)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Featured</td>
+            <tr style={{ background: 'rgba(184,134,11,0.07)', borderTop: '1px solid rgba(184,134,11,0.2)' }}>
+              <td style={{ padding: '12px 14px', color: 'rgba(250,247,242,0.3)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Featured</td>
               {sorted.map(p => (
-                <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
-                  <Link href={isSchoolUser ? '/dashboard/school/packages?tab=featured' : '/register?role=school'}
-                    style={{ display: 'inline-block', padding: '9px 20px', borderRadius: 10, fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                <td key={p.id} style={{ padding: '12px 8px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.07)' : undefined }}>
+                  <Link href={isSchoolUser ? '/dashboard/school/packages?tab=featured' : '/register?role=school'} style={{ display: 'inline-block', padding: '8px 14px', borderRadius: 8, fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 11, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#E8C547)' : 'rgba(255,255,255,0.1)', color: p.isHot ? '#0D1117' : '#FAF7F2', textDecoration: 'none', whiteSpace: 'nowrap' }}>
                     {p.cta || 'Get Featured'}
                   </Link>
                 </td>
@@ -204,7 +247,7 @@ function PricingFeaturedComparisonTable({ plans, isSchoolUser }: { plans: Featur
   )
 }
 
-// ─── Checkout Modal (dark theme for pricing page) ─────────────────────────────
+// ─── Checkout Modal ───────────────────────────────────────────────────────────
 function CheckoutModal({ plan, onClose }: { plan: SubPlan; onClose: () => void }) {
   const [gateway, setGateway]         = useState<'razorpay' | 'cashfree'>('razorpay')
   const [couponCode, setCouponCode]   = useState('')
@@ -314,34 +357,7 @@ function CheckoutModal({ plan, onClose }: { plan: SubPlan; onClose: () => void }
   )
 }
 
-// ─── Pricing Tab Bar ──────────────────────────────────────────────────────────
-function PricingTabBar({ active, onChange }: { active: 'leads' | 'featured'; onChange: (t: 'leads' | 'featured') => void }) {
-  return (
-    <div style={{ display:'flex',justifyContent:'center',marginBottom:40 }}>
-      <div style={{ display:'flex',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:14,padding:4 }}>
-        {([
-          { key:'leads',    label:'📋 Leads Package',           sub:'Get lead credits' },
-          { key:'featured', label:'⭐ Feature Listing Package', sub:'Boost your visibility' },
-        ] as const).map(tab=>(
-          <button key={tab.key} onClick={()=>onChange(tab.key)}
-            style={{
-              padding:'12px 28px', borderRadius:11, border:'none', cursor:'pointer',
-              fontFamily:'Inter,sans-serif', fontWeight:700, fontSize:14, transition:'all .2s',
-              background: active===tab.key ? 'rgba(255,255,255,0.1)' : 'transparent',
-              color: active===tab.key ? '#FAF7F2' : 'rgba(250,247,242,0.45)',
-              boxShadow: active===tab.key ? '0 2px 12px rgba(0,0,0,0.3)' : 'none',
-              display:'flex', flexDirection:'column', alignItems:'center', gap:2,
-            }}>
-            <span>{tab.label}</span>
-            <span style={{ fontSize:10,fontWeight:400,color:active===tab.key?'rgba(250,247,242,0.5)':'rgba(250,247,242,0.3)' }}>{tab.sub}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Inner pricing page (needs useSearchParams) ───────────────────────────────
+// ─── Inner pricing page ───────────────────────────────────────────────────────
 function PricingInner() {
   const [openFaq, setOpenFaq]           = useState<number | null>(null)
   const [checkoutPlan, setCheckoutPlan] = useState<SubPlan | null>(null)
@@ -389,8 +405,10 @@ function PricingInner() {
 
   const fmt     = (p: number) => p === 0 ? { label: '₹0', period: 'forever' } : { label: `₹${Math.round(p/100).toLocaleString('en-IN')}`, period: '' }
   const fmtDays = (d: number) => d >= 30 ? `${Math.round(d/30)} month${Math.round(d/30)>1?'s':''}` : `${d} days`
-  const leadCols   = Math.min(Math.max(activeLeadPlans.length, 1), 4)
-  const featCols   = Math.min(Math.max(activeFeatPlans.length, 1), 3)
+
+  // ── Allow up to 5 cards for both tabs ──
+  const leadCols = Math.min(Math.max(activeLeadPlans.length, 1), 5)
+  const featCols = Math.min(Math.max(activeFeatPlans.length, 1), 5)
 
   return (
     <>
@@ -402,29 +420,38 @@ function PricingInner() {
         .pricing-orb-1 { width:400px;height:400px;background:rgba(184,134,11,0.10);top:-80px;left:10%;animation-delay:0s; }
         .pricing-orb-2 { width:280px;height:280px;background:rgba(45,212,191,0.06);top:60px;right:8%;animation-delay:-7s; }
         @keyframes orbFloat { 0%,100%{transform:translateY(0px) scale(1)} 50%{transform:translateY(-28px) scale(1.06)} }
-        .pc-card { background:#F5F0E8;border:1px solid rgba(13,17,23,0.08);border-radius:18px;padding:28px 24px 24px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:transform 0.22s cubic-bezier(.22,1,.36,1),box-shadow 0.22s cubic-bezier(.22,1,.36,1); }
-        .pc-card:hover { transform:translateY(-6px);box-shadow:0 24px 56px rgba(13,17,23,0.13); }
+
+        /* ── Plan cards ── */
+        .pc-card { background:#F5F0E8;border:1px solid rgba(13,17,23,0.08);border-radius:14px;padding:20px 16px 18px;display:flex;flex-direction:column;position:relative;overflow:hidden;transition:transform 0.22s cubic-bezier(.22,1,.36,1),box-shadow 0.22s cubic-bezier(.22,1,.36,1); }
+        .pc-card:hover { transform:translateY(-5px);box-shadow:0 20px 48px rgba(13,17,23,0.12); }
         .pc-card.hot { background:#0D1117;border-color:rgba(184,134,11,0.35);box-shadow:0 0 0 1px rgba(184,134,11,0.18),0 8px 40px rgba(184,134,11,0.12); }
-        .pc-card.hot:hover { transform:translateY(-8px);box-shadow:0 0 0 1px rgba(184,134,11,0.35),0 28px 64px rgba(184,134,11,0.2); }
+        .pc-card.hot:hover { transform:translateY(-7px);box-shadow:0 0 0 1px rgba(184,134,11,0.35),0 24px 56px rgba(184,134,11,0.2); }
         .pc-card.hot::before { content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;background:linear-gradient(105deg,transparent 40%,rgba(232,197,71,0.07) 50%,transparent 60%);animation:cardShimmer 4s ease-in-out infinite;pointer-events:none; }
         @keyframes cardShimmer { 0%{left:-100%} 40%{left:140%} 100%{left:140%} }
-        .pc-hot-badge { position:absolute;top:14px;right:14px;background:linear-gradient(135deg,#B8860B,#E8C547);color:#0D1117;font-family:Inter,sans-serif;font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:4px 9px;border-radius:20px;display:flex;align-items:center;gap:4px; }
-        .pc-check { width:16px;height:16px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center; }
+        .pc-hot-badge { position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#B8860B,#E8C547);color:#0D1117;font-family:Inter,sans-serif;font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:20px;display:flex;align-items:center;gap:4px; }
+        .pc-check { width:15px;height:15px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center; }
         .pc-check.light { background:rgba(13,17,23,0.06);border:1px solid rgba(13,17,23,0.1); }
         .pc-check.gold  { background:rgba(184,134,11,0.15);border:1px solid rgba(184,134,11,0.3); }
-        .plans-watermark { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Cormorant Garamond',serif;font-size:clamp(140px,20vw,260px);font-weight:700;color:rgba(13,17,23,0.025);white-space:nowrap;pointer-events:none;user-select:none;letter-spacing:-8px; }
+
+        .plans-watermark { position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Cormorant Garamond',serif;font-size:clamp(120px,18vw,220px);font-weight:700;color:rgba(13,17,23,0.022);white-space:nowrap;pointer-events:none;user-select:none;letter-spacing:-8px; }
+
         .faq-item { background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;transition:border-color 0.2s; }
         .faq-item.open { border-color:rgba(184,134,11,0.4); }
-        .faq-trigger { width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;border:none;background:transparent;cursor:pointer;text-align:left; }
-        .faq-icon { width:22px;height:22px;border-radius:50%;flex-shrink:0;background:rgba(184,134,11,0.12);border:1px solid rgba(184,134,11,0.25);display:flex;align-items:center;justify-content:center;transition:transform 0.25s cubic-bezier(.22,1,.36,1),background 0.2s; }
+        .faq-trigger { width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 20px;border:none;background:transparent;cursor:pointer;text-align:left; }
+        .faq-icon { width:20px;height:20px;border-radius:50%;flex-shrink:0;background:rgba(184,134,11,0.12);border:1px solid rgba(184,134,11,0.25);display:flex;align-items:center;justify-content:center;transition:transform 0.25s cubic-bezier(.22,1,.36,1),background 0.2s; }
         .faq-item.open .faq-icon { transform:rotate(45deg);background:rgba(184,134,11,0.2); }
+
         @keyframes shimmer { 0%{background-position:-200% center} 100%{background-position:200% center} }
         .shimmer-text { background:linear-gradient(90deg,#B8860B 0%,#E8C547 40%,#F5D67A 50%,#E8C547 60%,#B8860B 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 4s linear infinite; }
-        .pricing-stat { display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 clamp(16px,2.5vw,32px); }
+        .pricing-stat { display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 clamp(12px,2vw,28px); }
         .pricing-stat + .pricing-stat { border-left:1px solid rgba(250,247,242,0.1); }
-        @media (max-width:900px) { .plans-grid { grid-template-columns:repeat(2,1fr) !important; } }
-        @media (max-width:560px)  { .plans-grid { grid-template-columns:1fr !important; } }
-        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive: 5 → 3 → 2 → 1 */
+        @media (max-width:1100px) { .plans-grid-5 { grid-template-columns:repeat(3,1fr) !important; } }
+        @media (max-width:760px)  { .plans-grid-5 { grid-template-columns:repeat(2,1fr) !important; } .plans-grid-4 { grid-template-columns:repeat(2,1fr) !important; } }
+        @media (max-width:520px)  { .plans-grid-5,.plans-grid-4,.plans-grid-3 { grid-template-columns:1fr !important; } }
+
+        @keyframes spin  { to { transform: rotate(360deg); } }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
       `}</style>
 
@@ -432,34 +459,34 @@ function PricingInner() {
       <main className="pricing-page-root" style={{ paddingTop: 72 }}>
 
         {/* ── HERO ── */}
-        <section style={{ position:'relative',padding:'clamp(72px,10vw,120px) 0 clamp(56px,8vw,96px)',display:'flex',alignItems:'center',overflow:'hidden' }}>
+        <section style={{ position:'relative',padding:'clamp(56px,8vw,96px) 0 clamp(40px,6vw,72px)',display:'flex',alignItems:'center',overflow:'hidden' }}>
           <div className="pricing-hero-grid" />
           <div className="pricing-orb pricing-orb-1" />
           <div className="pricing-orb pricing-orb-2" />
 
           <div style={{ maxWidth:1200,margin:'0 auto',padding:'0 clamp(20px,5vw,72px)',width:'100%',position:'relative',zIndex:1 }}>
             <motion.div initial={{ opacity:0,y:12 }} animate={{ opacity:1,y:0 }} transition={{ duration:0.55,ease }}
-              style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:20 }}>
-              <span style={{ width:28,height:1,background:'linear-gradient(90deg,transparent,#B8860B)' }} />
+              style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:10,marginBottom:16 }}>
+              <span style={{ width:24,height:1,background:'linear-gradient(90deg,transparent,#B8860B)' }} />
               <span style={{ fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:700,letterSpacing:'.2em',textTransform:'uppercase',color:'#E8C547' }}>For Schools</span>
-              <span style={{ width:28,height:1,background:'linear-gradient(90deg,#B8860B,transparent)' }} />
+              <span style={{ width:24,height:1,background:'linear-gradient(90deg,#B8860B,transparent)' }} />
             </motion.div>
 
             <motion.h1 initial={{ opacity:0,y:28 }} animate={{ opacity:1,y:0 }} transition={{ duration:0.7,delay:0.08,ease }}
-              style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.8rem,7vw,6rem)',color:'#FAF7F2',lineHeight:0.9,letterSpacing:'-2.5px',textAlign:'center',marginBottom:20 }}>
+              style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2.6rem,6.5vw,5.5rem)',color:'#FAF7F2',lineHeight:0.92,letterSpacing:'-2px',textAlign:'center',marginBottom:16 }}>
               Simple Pricing,
               <em className="shimmer-text" style={{ display:'block',fontStyle:'italic' }}>Powerful Results</em>
             </motion.h1>
 
             <motion.p initial={{ opacity:0,y:14 }} animate={{ opacity:1,y:0 }} transition={{ duration:0.6,delay:0.18,ease }}
-              style={{ fontFamily:'Inter,sans-serif',fontSize:'clamp(14px,1.6vw,16px)',color:'rgba(250,247,242,0.5)',lineHeight:1.75,fontWeight:300,maxWidth:500,margin:'0 auto 28px',textAlign:'center' }}>
+              style={{ fontFamily:'Inter,sans-serif',fontSize:'clamp(13px,1.5vw,15px)',color:'rgba(250,247,242,0.5)',lineHeight:1.7,fontWeight:300,maxWidth:460,margin:'0 auto 22px',textAlign:'center' }}>
               List free. Get lead credits with a subscription. Boost visibility with a Featured Listing. No lock-in.
             </motion.p>
 
             <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.32,duration:0.55 }}
-              style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginBottom:44 }}>
+              style={{ display:'flex',alignItems:'center',justifyContent:'center',gap:6,marginBottom:32 }}>
               <div style={{ display:'flex',gap:2 }}>
-                {[1,2,3,4,5].map(s=><Star key={s} style={{ width:13,height:13,fill:'#E8C547',color:'#E8C547' }}/>)}
+                {[1,2,3,4,5].map(s=><Star key={s} style={{ width:12,height:12,fill:'#E8C547',color:'#E8C547' }}/>)}
               </div>
               <span style={{ fontFamily:'Inter,sans-serif',fontSize:12,color:'rgba(250,247,242,0.4)',fontWeight:300 }}>
                 Trusted by <strong style={{ color:'rgba(250,247,242,0.7)',fontWeight:600 }}>8,000+ schools</strong> across India
@@ -467,11 +494,11 @@ function PricingInner() {
             </motion.div>
 
             <motion.div initial={{ opacity:0,y:16 }} animate={{ opacity:1,y:0 }} transition={{ delay:0.42,duration:0.6,ease }}
-              style={{ display:'flex',alignItems:'center',justifyContent:'center',flexWrap:'wrap',gap:0,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:14,padding:'clamp(16px,2vw,24px) clamp(12px,2vw,24px)',maxWidth:680,margin:'0 auto' }}>
+              style={{ display:'flex',alignItems:'center',justifyContent:'center',flexWrap:'wrap',gap:0,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'clamp(14px,1.8vw,20px) clamp(10px,1.5vw,20px)',maxWidth:640,margin:'0 auto' }}>
               {[{ n:'12,000+',l:'Schools Listed' },{ n:'8,000+',l:'Subscribers' },{ n:'350+',l:'Cities' },{ n:'₹0',l:'Setup Fee' }].map((s,i)=>(
                 <div key={i} className="pricing-stat">
-                  <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(22px,2.5vw,28px)',color:'#E8C547',letterSpacing:'-1px',lineHeight:1 }}>{s.n}</span>
-                  <span style={{ fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(250,247,242,0.4)',marginTop:2 }}>{s.l}</span>
+                  <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(20px,2.2vw,26px)',color:'#E8C547',letterSpacing:'-1px',lineHeight:1 }}>{s.n}</span>
+                  <span style={{ fontFamily:'Inter,sans-serif',fontSize:9,fontWeight:600,letterSpacing:'.12em',textTransform:'uppercase',color:'rgba(250,247,242,0.4)',marginTop:2 }}>{s.l}</span>
                 </div>
               ))}
             </motion.div>
@@ -479,92 +506,98 @@ function PricingInner() {
         </section>
 
         {/* ── PLANS ── */}
-        <section ref={plansRef} style={{ background:'#F5F0E8',padding:'clamp(60px,8vw,96px) 0',position:'relative',overflow:'hidden' }}>
+        <section ref={plansRef} style={{ background:'#F5F0E8',padding:'clamp(48px,6vw,72px) 0',position:'relative',overflow:'hidden' }}>
           <div className="plans-watermark">PLANS</div>
 
-          <div style={{ maxWidth:1200,margin:'0 auto',padding:'0 clamp(20px,5vw,72px)',position:'relative' }}>
+          <div style={{ maxWidth:1320,margin:'0 auto',padding:'0 clamp(16px,4vw,56px)',position:'relative' }}>
+
+            {/* Section heading */}
             <motion.div initial={{ opacity:0,y:12 }} whileInView={{ opacity:1,y:0 }} viewport={{ once:true }} transition={{ duration:0.5,ease }}
-              style={{ textAlign:'center',marginBottom:36 }}>
-              <div style={{ display:'inline-flex',alignItems:'center',gap:8,marginBottom:10 }}>
-                <span style={{ width:20,height:1,background:'#B8860B' }} />
-                <span style={{ fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:700,letterSpacing:'.18em',textTransform:'uppercase',color:'#B8860B' }}>Choose a Plan</span>
-                <span style={{ width:20,height:1,background:'#B8860B' }} />
+              style={{ textAlign:'center',marginBottom:28 }}>
+              <div style={{ display:'inline-flex',alignItems:'center',gap:8,marginBottom:8 }}>
+                <span style={{ width:18,height:1,background:'#B8860B' }} />
+                <span style={{ fontFamily:'Inter,sans-serif',fontSize:9,fontWeight:700,letterSpacing:'.18em',textTransform:'uppercase',color:'#B8860B' }}>Choose a Plan</span>
+                <span style={{ width:18,height:1,background:'#B8860B' }} />
               </div>
-              <h2 style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2rem,4vw,3.4rem)',color:'#0D1117',letterSpacing:'-1.5px',lineHeight:0.95 }}>
+              <h2 style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(1.9rem,3.5vw,3rem)',color:'#0D1117',letterSpacing:'-1.5px',lineHeight:0.95 }}>
                 Plans that grow<br /><em style={{ fontStyle:'italic',color:'#B8860B' }}>with your school</em>
               </h2>
             </motion.div>
 
-            {/* Tab switcher (dark tabs on light section) */}
-            <div style={{ display:'flex',justifyContent:'center',marginBottom:36 }}>
-              <div style={{ display:'flex',background:'rgba(13,17,23,0.07)',border:'1px solid rgba(13,17,23,0.1)',borderRadius:14,padding:4 }}>
+            {/* Tab switcher */}
+            <div style={{ display:'flex',justifyContent:'center',marginBottom:28 }}>
+              <div style={{ display:'flex',background:'rgba(13,17,23,0.07)',border:'1px solid rgba(13,17,23,0.1)',borderRadius:12,padding:3 }}>
                 {([
                   { key:'leads',    label:'📋 Leads Package',           sub:'Get lead credits' },
                   { key:'featured', label:'⭐ Feature Listing Package', sub:'Boost your visibility' },
                 ] as const).map(tab=>(
                   <button key={tab.key} onClick={()=>handleTabChange(tab.key)}
                     style={{
-                      padding:'12px 24px', borderRadius:11, border:'none', cursor:'pointer',
+                      padding:'10px 20px', borderRadius:10, border:'none', cursor:'pointer',
                       fontFamily:'Inter,sans-serif', fontWeight:700, fontSize:13, transition:'all .2s',
                       background: activeTab===tab.key ? '#fff' : 'transparent',
                       color: activeTab===tab.key ? '#0D1117' : '#9B8860',
-                      boxShadow: activeTab===tab.key ? '0 2px 12px rgba(13,17,23,0.12)' : 'none',
-                      display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                      boxShadow: activeTab===tab.key ? '0 2px 10px rgba(13,17,23,0.1)' : 'none',
+                      display:'flex', flexDirection:'column', alignItems:'center', gap:1,
                     }}>
                     <span>{tab.label}</span>
-                    <span style={{ fontSize:10,fontWeight:400,color:activeTab===tab.key?'#9B8860':'#B8A898' }}>{tab.sub}</span>
+                    <span style={{ fontSize:9,fontWeight:400,color:activeTab===tab.key?'#9B8860':'#B8A898' }}>{tab.sub}</span>
                   </button>
                 ))}
               </div>
             </div>
 
             <AnimatePresence mode="wait">
+
               {/* ── LEADS PLANS ── */}
               {activeTab === 'leads' && (
-                <motion.div key="leads" initial={{ opacity:0,y:12 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-8 }} transition={{ duration:.22 }}>
+                <motion.div key="leads" initial={{ opacity:0,y:10 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-6 }} transition={{ duration:.2 }}>
                   {plansLoading ? (
-                    <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16 }}>
-                      {Array.from({length:4}).map((_,i)=><div key={i} style={{ height:420,borderRadius:18,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s infinite' }}/>)}
+                    <div style={{ display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:12 }}>
+                      {Array.from({length:5}).map((_,i)=><div key={i} style={{ height:380,borderRadius:14,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s infinite' }}/>)}
                     </div>
                   ) : (
-                    <div className="plans-grid" style={{ display:'grid',gridTemplateColumns:`repeat(${leadCols},1fr)`,gap:'clamp(10px,1.5vw,16px)',alignItems:'start' }}>
+                    <div
+                      className={`plans-grid plans-grid-${leadCols}`}
+                      style={{ display:'grid',gridTemplateColumns:`repeat(${leadCols},1fr)`,gap:'clamp(8px,1.2vw,14px)',alignItems:'start' }}
+                    >
                       {activeLeadPlans.map((plan,i)=>{
                         const { label, period } = fmt(plan.price)
                         return (
-                          <motion.div key={plan.id} initial={{ opacity:0,y:32,scale:0.96 }} animate={plansInView?{opacity:1,y:0,scale:1}:{}} transition={{ delay:i*0.09,duration:0.6,ease }}>
+                          <motion.div key={plan.id} initial={{ opacity:0,y:28,scale:0.97 }} animate={plansInView?{opacity:1,y:0,scale:1}:{}} transition={{ delay:i*0.07,duration:0.55,ease }}>
                             <div className={`pc-card${plan.isHot?' hot':''}`}>
-                              {plan.isHot && <div className="pc-hot-badge"><Zap style={{ width:9,height:9 }}/> Most Popular</div>}
-                              <div style={{ marginBottom:16 }}>
-                                <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:20,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:3 }}>{plan.name}</div>
-                                <div style={{ fontFamily:'Inter,sans-serif',fontSize:11,color:plan.isHot?'rgba(250,247,242,0.45)':'#8A9AB0',fontWeight:300,lineHeight:1.5 }}>{plan.description}</div>
+                              {plan.isHot && <div className="pc-hot-badge"><Zap style={{ width:8,height:8 }}/> Most Popular</div>}
+                              <div style={{ marginBottom:12 }}>
+                                <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:18,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:2 }}>{plan.name}</div>
+                                <div style={{ fontFamily:'Inter,sans-serif',fontSize:10,color:plan.isHot?'rgba(250,247,242,0.45)':'#8A9AB0',fontWeight:300,lineHeight:1.5 }}>{plan.description}</div>
                               </div>
-                              <div style={{ marginBottom:plan.leadCount!==0?6:20,display:'flex',alignItems:'baseline',gap:4 }}>
-                                <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2rem,3.5vw,2.8rem)',color:plan.isHot?'#E8C547':'#0D1117',letterSpacing:'-1.5px',lineHeight:1 }}>{label}</span>
-                                <span style={{ fontFamily:'Inter,sans-serif',fontSize:12,color:plan.isHot?'rgba(250,247,242,0.4)':'#A0ADB8',fontWeight:300 }}>{period}</span>
+                              <div style={{ marginBottom:plan.leadCount!==0?5:16,display:'flex',alignItems:'baseline',gap:4 }}>
+                                <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(1.7rem,3vw,2.4rem)',color:plan.isHot?'#E8C547':'#0D1117',letterSpacing:'-1.5px',lineHeight:1 }}>{label}</span>
+                                <span style={{ fontFamily:'Inter,sans-serif',fontSize:11,color:plan.isHot?'rgba(250,247,242,0.4)':'#A0ADB8',fontWeight:300 }}>{period}</span>
                               </div>
                               {plan.leadCount !== 0 && (
-                                <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginBottom:16,padding:'4px 10px',borderRadius:8,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
-                                  <span style={{ fontSize:11,fontWeight:700,color:'#B8860B' }}>{plan.leadCount===-1?'∞ Unlimited':`${plan.leadCount}`} lead credits</span>
+                                <div style={{ display:'inline-flex',alignItems:'center',gap:4,marginBottom:12,padding:'3px 8px',borderRadius:6,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
+                                  <span style={{ fontSize:10,fontWeight:700,color:'#B8860B' }}>{plan.leadCount===-1?'∞ Unlimited':`${plan.leadCount}`} lead credits</span>
                                 </div>
                               )}
-                              <div style={{ height:1,background:plan.isHot?'rgba(255,255,255,0.07)':'rgba(13,17,23,0.07)',marginBottom:16 }} />
-                              <div style={{ display:'flex',flexDirection:'column',gap:9,flex:1,marginBottom:22 }}>
+                              <div style={{ height:1,background:plan.isHot?'rgba(255,255,255,0.07)':'rgba(13,17,23,0.07)',marginBottom:12 }} />
+                              <div style={{ display:'flex',flexDirection:'column',gap:7,flex:1,marginBottom:16 }}>
                                 {plan.features.map(f=>(
-                                  <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:9,fontFamily:'Inter,sans-serif',fontSize:12,color:plan.isHot?'rgba(250,247,242,0.7)':'#4A5568',fontWeight:300,lineHeight:1.45 }}>
-                                    <div className={`pc-check ${plan.isHot?'gold':'light'}`}><Check style={{ width:9,height:9,color:plan.isHot?'#E8C547':'#6B7280' }}/></div>
+                                  <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:7,fontFamily:'Inter,sans-serif',fontSize:11,color:plan.isHot?'rgba(250,247,242,0.7)':'#4A5568',fontWeight:300,lineHeight:1.4 }}>
+                                    <div className={`pc-check ${plan.isHot?'gold':'light'}`}><Check style={{ width:8,height:8,color:plan.isHot?'#E8C547':'#6B7280' }}/></div>
                                     {f}
                                   </div>
                                 ))}
                               </div>
                               {isSchoolUser ? (
-                                <button onClick={()=>setCheckoutPlan(plan)} className={plan.isHot?'btn btn-gold':'btn btn-dark'}
-                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',fontSize:13,width:'100%',cursor:'pointer',padding:'12px',borderRadius:10,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700 }}>
-                                  {plan.cta} <ArrowRight style={{ width:13,height:13 }}/>
+                                <button onClick={()=>setCheckoutPlan(plan)}
+                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',alignItems:'center',gap:5,fontSize:12,width:'100%',cursor:'pointer',padding:'11px',borderRadius:9,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700 }}>
+                                  {plan.cta} <ArrowRight style={{ width:12,height:12 }}/>
                                 </button>
                               ) : (
                                 <Link href={`/register?role=school&plan=${plan.planKey}`}
-                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',fontSize:13,padding:'12px',borderRadius:10,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none',alignItems:'center',gap:6 }}>
-                                  {plan.cta} <ArrowRight style={{ width:13,height:13 }}/>
+                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',alignItems:'center',gap:5,fontSize:12,padding:'11px',borderRadius:9,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none' }}>
+                                  {plan.cta} <ArrowRight style={{ width:12,height:12 }}/>
                                 </Link>
                               )}
                             </div>
@@ -573,12 +606,13 @@ function PricingInner() {
                       })}
                     </div>
                   )}
+
                   <motion.p initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }} transition={{ delay:0.3,duration:0.5 }}
-                    style={{ textAlign:'center',marginTop:28,fontFamily:'Inter,sans-serif',fontSize:12,color:'#A0ADB8',fontWeight:300 }}>
+                    style={{ textAlign:'center',marginTop:20,fontFamily:'Inter,sans-serif',fontSize:11,color:'#A0ADB8',fontWeight:300 }}>
                     All prices in INR · Cancel anytime · No credit card needed for Free plan · Buy single leads from your Leads page
                   </motion.p>
 
-                  {/* ── LEADS COMPARISON TABLE ── */}
+                  {/* Comparison table — dark bg on light section is rendered correctly */}
                   {!plansLoading && activeLeadPlans.length > 0 && (
                     <PricingLeadsComparisonTable plans={activeLeadPlans} isSchoolUser={isSchoolUser} onSelect={setCheckoutPlan} />
                   )}
@@ -587,59 +621,55 @@ function PricingInner() {
 
               {/* ── FEATURED PLANS ── */}
               {activeTab === 'featured' && (
-                <motion.div key="featured" initial={{ opacity:0,y:12 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-8 }} transition={{ duration:.22 }}>
+                <motion.div key="featured" initial={{ opacity:0,y:10 }} animate={{ opacity:1,y:0 }} exit={{ opacity:0,y:-6 }} transition={{ duration:.2 }}>
                   {featLoading ? (
-                    <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,maxWidth:960,margin:'0 auto' }}>
-                      {[1,2,3].map(i=><div key={i} style={{ height:460,borderRadius:18,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s infinite' }}/>)}
+                    <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14,maxWidth:900,margin:'0 auto' }}>
+                      {[1,2,3].map(i=><div key={i} style={{ height:420,borderRadius:14,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s infinite' }}/>)}
                     </div>
                   ) : activeFeatPlans.length === 0 ? (
-                    <div style={{ textAlign:'center',padding:'60px 24px',color:'#9B8860' }}>
-                      <Zap style={{ width:32,height:32,margin:'0 auto 12px',opacity:.4 }} />
+                    <div style={{ textAlign:'center',padding:'48px 24px',color:'#9B8860' }}>
+                      <Zap style={{ width:28,height:28,margin:'0 auto 10px',opacity:.4 }} />
                       <p>No featured listing packages available right now.</p>
                     </div>
                   ) : (
-                    <div className="plans-grid" style={{ display:'grid',gridTemplateColumns:`repeat(${featCols},1fr)`,gap:'clamp(10px,1.5vw,16px)',alignItems:'start',maxWidth:960,margin:'0 auto' }}>
+                    <div
+                      className={`plans-grid plans-grid-${featCols}`}
+                      style={{ display:'grid',gridTemplateColumns:`repeat(${featCols},1fr)`,gap:'clamp(8px,1.2vw,14px)',alignItems:'start',maxWidth: featCols <= 3 ? 900 : '100%',margin:'0 auto' }}
+                    >
                       {activeFeatPlans.map((plan,i)=>{
                         const { label } = fmt(plan.price)
                         return (
-                          <motion.div key={plan.id} initial={{ opacity:0,y:32,scale:0.96 }} animate={plansInView?{opacity:1,y:0,scale:1}:{}} transition={{ delay:i*0.09,duration:0.6,ease }}>
+                          <motion.div key={plan.id} initial={{ opacity:0,y:28,scale:0.97 }} animate={plansInView?{opacity:1,y:0,scale:1}:{}} transition={{ delay:i*0.07,duration:0.55,ease }}>
                             <div className={`pc-card${plan.isHot?' hot':''}`}>
-                              {plan.isHot && <div className="pc-hot-badge"><Star style={{ width:9,height:9 }}/> Best Value</div>}
-
-                              {/* Duration pill */}
-                              <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginBottom:14,padding:'4px 12px',borderRadius:8,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
-                                <span style={{ fontSize:12,fontWeight:700,color:'#B8860B' }}>⏱ {fmtDays(plan.durationDays)}</span>
+                              {plan.isHot && <div className="pc-hot-badge"><Star style={{ width:8,height:8 }}/> Best Value</div>}
+                              <div style={{ display:'inline-flex',alignItems:'center',gap:4,marginBottom:10,padding:'3px 9px',borderRadius:6,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
+                                <span style={{ fontSize:11,fontWeight:700,color:'#B8860B' }}>⏱ {fmtDays(plan.durationDays)}</span>
                               </div>
-
-                              <div style={{ marginBottom:16 }}>
-                                <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:20,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:3 }}>{plan.name}</div>
-                                <div style={{ fontFamily:'Inter,sans-serif',fontSize:11,color:plan.isHot?'rgba(250,247,242,0.45)':'#8A9AB0',fontWeight:300,lineHeight:1.5 }}>{plan.description}</div>
+                              <div style={{ marginBottom:12 }}>
+                                <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:18,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:2 }}>{plan.name}</div>
+                                <div style={{ fontFamily:'Inter,sans-serif',fontSize:10,color:plan.isHot?'rgba(250,247,242,0.45)':'#8A9AB0',fontWeight:300,lineHeight:1.5 }}>{plan.description}</div>
                               </div>
-
-                              <div style={{ marginBottom:20,display:'flex',alignItems:'baseline',gap:4 }}>
-                                <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2rem,3.5vw,2.8rem)',color:plan.isHot?'#E8C547':'#0D1117',letterSpacing:'-1.5px',lineHeight:1 }}>{label}</span>
+                              <div style={{ marginBottom:16,display:'flex',alignItems:'baseline',gap:4 }}>
+                                <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(1.7rem,3vw,2.4rem)',color:plan.isHot?'#E8C547':'#0D1117',letterSpacing:'-1.5px',lineHeight:1 }}>{label}</span>
                               </div>
-
-                              <div style={{ height:1,background:plan.isHot?'rgba(255,255,255,0.07)':'rgba(13,17,23,0.07)',marginBottom:16 }} />
-
-                              <div style={{ display:'flex',flexDirection:'column',gap:9,flex:1,marginBottom:22 }}>
+                              <div style={{ height:1,background:plan.isHot?'rgba(255,255,255,0.07)':'rgba(13,17,23,0.07)',marginBottom:12 }} />
+                              <div style={{ display:'flex',flexDirection:'column',gap:7,flex:1,marginBottom:16 }}>
                                 {plan.features.map(f=>(
-                                  <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:9,fontFamily:'Inter,sans-serif',fontSize:12,color:plan.isHot?'rgba(250,247,242,0.7)':'#4A5568',fontWeight:300,lineHeight:1.45 }}>
-                                    <div className={`pc-check ${plan.isHot?'gold':'light'}`}><Check style={{ width:9,height:9,color:plan.isHot?'#E8C547':'#6B7280' }}/></div>
+                                  <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:7,fontFamily:'Inter,sans-serif',fontSize:11,color:plan.isHot?'rgba(250,247,242,0.7)':'#4A5568',fontWeight:300,lineHeight:1.4 }}>
+                                    <div className={`pc-check ${plan.isHot?'gold':'light'}`}><Check style={{ width:8,height:8,color:plan.isHot?'#E8C547':'#6B7280' }}/></div>
                                     {f}
                                   </div>
                                 ))}
                               </div>
-
                               {isSchoolUser ? (
                                 <Link href="/dashboard/school/packages?tab=featured"
-                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',fontSize:13,padding:'12px',borderRadius:10,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none',alignItems:'center',gap:6 }}>
-                                  {plan.cta || 'Get Featured'} <ArrowRight style={{ width:13,height:13 }}/>
+                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',alignItems:'center',gap:5,fontSize:12,padding:'11px',borderRadius:9,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none' }}>
+                                  {plan.cta || 'Get Featured'} <ArrowRight style={{ width:12,height:12 }}/>
                                 </Link>
                               ) : (
-                                <Link href={`/register?role=school`}
-                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',fontSize:13,padding:'12px',borderRadius:10,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none',alignItems:'center',gap:6 }}>
-                                  {plan.cta || 'Get Featured'} <ArrowRight style={{ width:13,height:13 }}/>
+                                <Link href="/register?role=school"
+                                  style={{ textAlign:'center',justifyContent:'center',display:'flex',alignItems:'center',gap:5,fontSize:12,padding:'11px',borderRadius:9,border:'none',background:plan.isHot?'linear-gradient(135deg,#B8860B,#E8C547)':'#0D1117',color:plan.isHot?'#0D1117':'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none' }}>
+                                  {plan.cta || 'Get Featured'} <ArrowRight style={{ width:12,height:12 }}/>
                                 </Link>
                               )}
                             </div>
@@ -648,12 +678,12 @@ function PricingInner() {
                       })}
                     </div>
                   )}
+
                   <motion.p initial={{ opacity:0 }} whileInView={{ opacity:1 }} viewport={{ once:true }} transition={{ delay:0.3,duration:0.5 }}
-                    style={{ textAlign:'center',marginTop:28,fontFamily:'Inter,sans-serif',fontSize:12,color:'#A0ADB8',fontWeight:300 }}>
+                    style={{ textAlign:'center',marginTop:20,fontFamily:'Inter,sans-serif',fontSize:11,color:'#A0ADB8',fontWeight:300 }}>
                     All prices in INR · Featured listing activates immediately after payment
                   </motion.p>
 
-                  {/* ── FEATURED COMPARISON TABLE ── */}
                   {!featLoading && activeFeatPlans.length > 0 && (
                     <PricingFeaturedComparisonTable plans={activeFeatPlans} isSchoolUser={isSchoolUser} />
                   )}
@@ -664,32 +694,32 @@ function PricingInner() {
         </section>
 
         {/* ── FAQ ── */}
-        <section ref={faqRef} style={{ background:'#0A0E17',padding:'clamp(60px,8vw,96px) 0',position:'relative' }}>
+        <section ref={faqRef} style={{ background:'#0A0E17',padding:'clamp(48px,7vw,80px) 0',position:'relative' }}>
           <div style={{ position:'absolute',inset:0,background:'radial-gradient(ellipse 60% 50% at 50% 100%,rgba(184,134,11,0.06) 0%,transparent 60%)',pointerEvents:'none' }} />
-          <div style={{ maxWidth:740,margin:'0 auto',padding:'0 clamp(20px,5vw,40px)',position:'relative',zIndex:1 }}>
+          <div style={{ maxWidth:720,margin:'0 auto',padding:'0 clamp(20px,5vw,40px)',position:'relative',zIndex:1 }}>
             <motion.div initial={{ opacity:0,y:16 }} animate={faqInView?{opacity:1,y:0}:{}} transition={{ duration:0.55,ease }}
-              style={{ textAlign:'center',marginBottom:36 }}>
-              <div style={{ display:'inline-flex',alignItems:'center',gap:8,marginBottom:12 }}>
-                <span style={{ width:20,height:1,background:'#B8860B' }} />
-                <span style={{ fontFamily:'Inter,sans-serif',fontSize:10,fontWeight:700,letterSpacing:'.18em',textTransform:'uppercase',color:'#E8C547' }}>FAQ</span>
-                <span style={{ width:20,height:1,background:'#B8860B' }} />
+              style={{ textAlign:'center',marginBottom:28 }}>
+              <div style={{ display:'inline-flex',alignItems:'center',gap:8,marginBottom:10 }}>
+                <span style={{ width:18,height:1,background:'#B8860B' }} />
+                <span style={{ fontFamily:'Inter,sans-serif',fontSize:9,fontWeight:700,letterSpacing:'.18em',textTransform:'uppercase',color:'#E8C547' }}>FAQ</span>
+                <span style={{ width:18,height:1,background:'#B8860B' }} />
               </div>
-              <h2 style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2rem,4vw,3.2rem)',color:'#FAF7F2',letterSpacing:'-1.5px',lineHeight:0.92 }}>
+              <h2 style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(1.8rem,3.5vw,3rem)',color:'#FAF7F2',letterSpacing:'-1.5px',lineHeight:0.92 }}>
                 Common <em style={{ fontStyle:'italic',color:'#E8C547' }}>Questions</em>
               </h2>
             </motion.div>
-            <div style={{ display:'flex',flexDirection:'column',gap:8 }}>
+            <div style={{ display:'flex',flexDirection:'column',gap:7 }}>
               {FAQ.map((f,i)=>(
-                <motion.div key={i} initial={{ opacity:0,x:-16 }} animate={faqInView?{opacity:1,x:0}:{}} transition={{ delay:i*0.07,duration:0.5,ease }}>
+                <motion.div key={i} initial={{ opacity:0,x:-14 }} animate={faqInView?{opacity:1,x:0}:{}} transition={{ delay:i*0.06,duration:0.45,ease }}>
                   <div className={`faq-item${openFaq===i?' open':''}`}>
                     <button className="faq-trigger" onClick={()=>setOpenFaq(openFaq===i?null:i)}>
-                      <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:600,fontSize:'clamp(15px,1.8vw,18px)',color:'#FAF7F2',lineHeight:1.3 }}>{f.q}</span>
-                      <div className="faq-icon"><span style={{ color:'#E8C547',fontSize:15,lineHeight:1,fontWeight:300 }}>+</span></div>
+                      <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:600,fontSize:'clamp(14px,1.7vw,17px)',color:'#FAF7F2',lineHeight:1.3 }}>{f.q}</span>
+                      <div className="faq-icon"><span style={{ color:'#E8C547',fontSize:14,lineHeight:1,fontWeight:300 }}>+</span></div>
                     </button>
                     <AnimatePresence initial={false}>
                       {openFaq===i&&(
-                        <motion.div key="a" initial={{ height:0,opacity:0 }} animate={{ height:'auto',opacity:1 }} exit={{ height:0,opacity:0 }} transition={{ duration:0.32,ease:[0.22,1,0.36,1] }} style={{ overflow:'hidden' }}>
-                          <p style={{ fontFamily:'Inter,sans-serif',fontSize:'clamp(13px,1.4vw,14px)',color:'rgba(250,247,242,0.5)',lineHeight:1.75,fontWeight:300,margin:0,padding:'0 22px 18px' }}>{f.a}</p>
+                        <motion.div key="a" initial={{ height:0,opacity:0 }} animate={{ height:'auto',opacity:1 }} exit={{ height:0,opacity:0 }} transition={{ duration:0.3,ease:[0.22,1,0.36,1] }} style={{ overflow:'hidden' }}>
+                          <p style={{ fontFamily:'Inter,sans-serif',fontSize:'clamp(12px,1.3vw,13px)',color:'rgba(250,247,242,0.55)',lineHeight:1.7,fontWeight:300,margin:0,padding:'0 20px 16px' }}>{f.a}</p>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -701,18 +731,18 @@ function PricingInner() {
         </section>
 
         {/* ── BOTTOM CTA ── */}
-        <section style={{ background:'#F5F0E8',padding:'clamp(48px,6vw,72px) 0' }}>
-          <motion.div initial={{ opacity:0,y:20 }} whileInView={{ opacity:1,y:0 }} viewport={{ once:true }} transition={{ duration:0.6,ease }}
-            style={{ maxWidth:600,margin:'0 auto',padding:'0 24px',textAlign:'center' }}>
-            <h2 style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(2rem,4vw,3rem)',color:'#0D1117',letterSpacing:'-1.5px',lineHeight:0.95,marginBottom:14 }}>
+        <section style={{ background:'#F5F0E8',padding:'clamp(40px,5vw,60px) 0' }}>
+          <motion.div initial={{ opacity:0,y:16 }} whileInView={{ opacity:1,y:0 }} viewport={{ once:true }} transition={{ duration:0.6,ease }}
+            style={{ maxWidth:560,margin:'0 auto',padding:'0 24px',textAlign:'center' }}>
+            <h2 style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:'clamp(1.8rem,3.5vw,2.8rem)',color:'#0D1117',letterSpacing:'-1.5px',lineHeight:0.95,marginBottom:12 }}>
               Ready to grow<br /><em style={{ fontStyle:'italic',color:'#B8860B' }}>admissions?</em>
             </h2>
-            <p style={{ fontFamily:'Inter,sans-serif',fontSize:14,color:'#718096',fontWeight:300,lineHeight:1.7,marginBottom:24 }}>
+            <p style={{ fontFamily:'Inter,sans-serif',fontSize:13,color:'#718096',fontWeight:300,lineHeight:1.65,marginBottom:20 }}>
               Start free — no credit card needed. Upgrade when you're ready.
             </p>
             <Link href={isSchoolUser?'/dashboard/school/packages':'/register?role=school'}
-              style={{ display:'inline-flex',alignItems:'center',gap:8,fontSize:14,padding:'14px 28px',borderRadius:12,background:'linear-gradient(135deg,#B8860B,#D4A520)',color:'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none' }}>
-              List Your School Free <ArrowRight style={{ width:14,height:14 }}/>
+              style={{ display:'inline-flex',alignItems:'center',gap:8,fontSize:13,padding:'13px 26px',borderRadius:11,background:'linear-gradient(135deg,#B8860B,#D4A520)',color:'#fff',fontFamily:'Inter,sans-serif',fontWeight:700,textDecoration:'none' }}>
+              List Your School Free <ArrowRight style={{ width:13,height:13 }}/>
             </Link>
           </motion.div>
         </section>
