@@ -44,7 +44,7 @@ export default function AdminLeadsPage() {
         {[
           { label: 'Total Leads',    value: total,                                         color: '#60A5FA' },
           { label: 'New / Unlocked', value: leads.filter(l=>l.status==='new').length,      color: '#FBBF24' },
-          { label: 'Purchased',      value: leads.filter(l=>l.isPurchased).length,         color: '#4ADE80' },
+          { label: 'Purchased',      value: leads.filter(l=>l.is_purchased).length,         color: '#4ADE80' },
           { label: 'Revenue',        value: `₹${(totalRevenue/100).toLocaleString('en-IN')}`, color: '#FF5C00' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.06 }}
@@ -97,14 +97,14 @@ export default function AdminLeadsPage() {
                         onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'rgba(255,255,255,.02)'}
                         onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
                         <td style={cell}>
-                          <div style={{ fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{l.isPurchased ? l.parentName : `${(l.parentName||'Parent')[0]}***`}</div>
-                          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{l.isPurchased ? l.parentPhone : '***** masked'}</div>
+                          <div style={{ fontWeight: 600, color: 'var(--admin-text,rgba(255,255,255,0.9))' }}>{l.parent_name || '—'}</div>
+                          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{l.phone || l.email || '—'}</div>
                         </td>
-                        <td style={cell}><div style={{ fontWeight: 500 }}>{l.schoolName}</div><div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{l.city}</div></td>
-                        <td style={{ ...cell, color: 'rgba(255,255,255,.5)' }}>{l.childName} · Class {l.classApplied}</td>
+                        <td style={cell}><div style={{ fontWeight: 500 }}>{l.school_name}</div><div style={{ fontSize: '11px', color: 'rgba(255,255,255,.3)' }}>{l.city}</div></td>
+                        <td style={{ ...cell, color: 'rgba(255,255,255,.5)' }}>{l.child_name} · Class {l.class_applying_for}</td>
                         <td style={{ ...cell, color: '#4ADE80', fontWeight: 600, fontFamily: 'Syne,sans-serif' }}>₹{((l.price||0)/100).toLocaleString('en-IN')}</td>
                         <td style={cell}>
-                          {l.isPurchased
+                          {l.is_purchased
                             ? <span style={{ fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '100px', background: 'rgba(74,222,128,.12)', color: '#4ADE80' }}>Purchased</span>
                             : <span style={{ fontSize: '10px', fontWeight: 600, padding: '3px 9px', borderRadius: '100px', background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.4)' }}>Not yet</span>
                           }
@@ -117,7 +117,7 @@ export default function AdminLeadsPage() {
                           </span>
                         </td>
                         <td style={{ ...cell, fontSize: '11px', color: 'rgba(255,255,255,.35)', whiteSpace: 'nowrap' }}>
-                          {l.createdAt ? new Date(l.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'2-digit' }) : '—'}
+                          {l.created_at ? new Date(l.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'2-digit' }) : '—'}
                         </td>
                       </tr>
                     ))
