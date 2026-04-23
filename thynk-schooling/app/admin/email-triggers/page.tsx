@@ -13,7 +13,7 @@ import toast from 'react-hot-toast'
 type Profile  = 'school' | 'parent'
 type Channel  = 'email' | 'whatsapp'
 
-interface ChannelTemplate { subject?: string; body: string; enabled: boolean }
+interface ChannelTemplate { subject?: string; body: string; enabled: boolean; whatsapp_template_name?: string; whatsapp_template_lang?: string }
 interface Trigger {
   id: string; triggerKey: string; category: string; event: string
   description: string; recipients: Profile[]; variables: string[]
@@ -290,6 +290,45 @@ function Editor({ trigger, channel, profile, onSave, saving }: {
                 .replace(/\*(.+?)\*/g, '<strong>$1</strong>')
                 .replace(/_(.+?)_/g, '<em>$1</em>') }} />
             <div style={{ fontSize: 10, color: '#8696A0', marginTop: 4, textAlign: 'right', fontFamily: 'Inter,sans-serif' }}>12:34 ✓✓</div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp approved template fields */}
+      {channel === 'whatsapp' && (
+        <div style={{ marginTop: 14, padding: 14, borderRadius: 12, background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)' }}>
+          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, fontWeight: 700, color: '#25D366', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+            💬 Meta Approved Template
+            <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>(required for first-contact messages)</span>
+          </div>
+          <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: 'rgba(255,255,255,0.38)', marginBottom: 12, lineHeight: 1.5 }}>
+            Enter the <strong style={{ color: 'rgba(255,255,255,0.6)' }}>exact template name</strong> from your Meta Business Manager (e.g. <code style={{ fontFamily: 'JetBrains Mono,monospace', color: '#E8C547', fontSize: 10 }}>payment_confirmation</code>). Variables in the Body above map positionally to {'{{1}}'}, {'{{2}}'}, … in your approved template. Leave blank to send a plain-text session message (only works within 24 hrs of user reply).
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+            <div>
+              <label style={{ ...lbl, color: 'rgba(37,211,102,0.7)' }}>Template Name (Meta approved)</label>
+              <input
+                value={tmpl.whatsapp_template_name ?? ''}
+                onChange={e => update('whatsapp_template_name', e.target.value)}
+                placeholder="e.g. payment_confirmation"
+                style={{ ...inp, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}
+              />
+              <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.28)', margin: '4px 0 0' }}>
+                Meta Business Manager → WhatsApp → Message Templates
+              </p>
+            </div>
+            <div>
+              <label style={{ ...lbl, color: 'rgba(37,211,102,0.7)' }}>Language Code</label>
+              <input
+                value={tmpl.whatsapp_template_lang ?? 'en'}
+                onChange={e => update('whatsapp_template_lang', e.target.value)}
+                placeholder="en"
+                style={{ ...inp, fontFamily: 'JetBrains Mono, monospace', fontSize: 12 }}
+              />
+              <p style={{ fontFamily: 'Inter,sans-serif', fontSize: 10, color: 'rgba(255,255,255,0.28)', margin: '4px 0 0' }}>
+                BCP-47 code e.g. en, en_US, hi, mr
+              </p>
+            </div>
           </div>
         </div>
       )}
