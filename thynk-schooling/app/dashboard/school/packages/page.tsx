@@ -220,22 +220,22 @@ function LeadsComparisonTable({ plans, currentPlanKey, onSelect, payingId }: {
 }) {
   const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
   return (
-    <div style={{ maxWidth: 1100, margin: '40px auto 0', background: '#FDFAF5', border: '1px solid #E8DCC8', borderRadius: 20, overflow: 'hidden' }}>
-      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid #E8DCC8', display: 'flex', alignItems: 'baseline', gap: 12 }}>
-        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#0D1117', margin: 0 }}>Plan Comparison</h3>
-        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#9B8860' }}>Side-by-side feature breakdown</span>
+    <div style={{ maxWidth: 1100, margin: '40px auto 0', background: '#0D1117', border: '1px solid rgba(232,197,71,0.2)', borderRadius: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#FAF7F2', margin: 0 }}>Plan Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: 'rgba(250,247,242,0.4)' }}>Side-by-side feature breakdown</span>
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 14 }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #E8DCC8' }}>
-              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9B8860', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+            <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'rgba(250,247,242,0.35)', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
               {sorted.map(p => (
-                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 130 }}>
+                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 130, background: p.isHot ? 'rgba(184,134,11,0.1)' : undefined }}>
                   <div style={{ position: 'relative', display: 'inline-block' }}>
-                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#D4A520)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Most Popular</div>}
-                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: '#0D1117', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
-                    {currentPlanKey === p.planKey && <div style={{ fontSize: 10, color: '#16A34A', fontWeight: 700, marginTop: 2 }}>✓ Current</div>}
+                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#D4A520)', color: '#0D1117', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Most Popular</div>}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 18, color: p.isHot ? '#E8C547' : '#FAF7F2', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
+                    {currentPlanKey === p.planKey && <div style={{ fontSize: 11, color: '#4ADE80', fontWeight: 700, marginTop: 2 }}>✓ Current</div>}
                   </div>
                 </th>
               ))}
@@ -243,20 +243,20 @@ function LeadsComparisonTable({ plans, currentPlanKey, onSelect, payingId }: {
           </thead>
           <tbody>
             {LEADS_FEATURES.map((feat, ri) => (
-              <tr key={feat.key} style={{ borderBottom: '1px solid #F0E8D8', background: ri % 2 === 0 ? '#FDFAF5' : '#FAF5EE' }}>
-                <td style={{ padding: '12px 20px', color: '#6B5744', fontWeight: 500, fontSize: 12 }}>{feat.label}</td>
+              <tr key={feat.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                <td style={{ padding: '12px 20px', color: 'rgba(250,247,242,0.75)', fontWeight: 500, fontSize: 13 }}>{feat.label}</td>
                 {sorted.map(p => {
                   const val = feat.render(p)
                   const isCheck = val === '✓'
                   const isCross = val === '—'
                   const isHighlight = feat.key === 'lead_count' || feat.key === 'price'
                   return (
-                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.04)' : undefined }}>
+                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
                       <span style={{
                         fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
-                        fontSize: isHighlight ? 17 : 13,
+                        fontSize: isHighlight ? 18 : 13,
                         fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
-                        color: isCheck ? '#16A34A' : isCross ? '#D1B89A' : isHighlight ? '#B8860B' : '#4A3728',
+                        color: isCheck ? '#4ADE80' : isCross ? 'rgba(250,247,242,0.2)' : isHighlight ? '#E8C547' : 'rgba(250,247,242,0.85)',
                       }}>{val}</span>
                     </td>
                   )
@@ -264,14 +264,14 @@ function LeadsComparisonTable({ plans, currentPlanKey, onSelect, payingId }: {
               </tr>
             ))}
             {/* CTA row */}
-            <tr style={{ background: '#F5EDD8', borderTop: '2px solid #E8DCC8' }}>
-              <td style={{ padding: '16px 20px', color: '#9B8860', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Started</td>
+            <tr style={{ background: 'rgba(184,134,11,0.07)', borderTop: '2px solid rgba(184,134,11,0.2)' }}>
+              <td style={{ padding: '16px 20px', color: 'rgba(250,247,242,0.3)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Started</td>
               {sorted.map(p => {
                 const isCurrent = currentPlanKey === p.planKey
                 return (
                   <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
                     <button onClick={() => onSelect(p)} disabled={payingId === p.id || isCurrent}
-                      style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: isCurrent ? 'default' : 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: isCurrent ? '#16A34A' : p.isHot ? 'linear-gradient(135deg,#B8860B,#D4A520)' : '#0D1117', color: '#fff', transition: 'all .15s', opacity: payingId === p.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                      style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: isCurrent ? 'default' : 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 13, background: isCurrent ? '#16A34A' : p.isHot ? 'linear-gradient(135deg,#B8860B,#D4A520)' : 'rgba(255,255,255,0.12)', color: isCurrent ? '#fff' : p.isHot ? '#0D1117' : '#FAF7F2', transition: 'all .15s', opacity: payingId === p.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
                       {isCurrent ? '✓ Active' : p.price === 0 ? 'Activate Free' : p.cta || 'Choose Plan'}
                     </button>
                   </td>
@@ -313,22 +313,22 @@ function FeaturedComparisonTable({ plans, onSelect, payingId }: {
   const sorted = [...plans].sort((a, b) => a.sortOrder - b.sortOrder)
   const fmtDays = (d: number) => d >= 30 ? `${Math.round(d/30)} month${Math.round(d/30)>1?'s':''}` : `${d} days`
   return (
-    <div style={{ maxWidth: 1000, margin: '40px auto 0', background: '#FDFAF5', border: '1px solid #E8DCC8', borderRadius: 20, overflow: 'hidden' }}>
-      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid #E8DCC8', display: 'flex', alignItems: 'baseline', gap: 12 }}>
-        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#0D1117', margin: 0 }}>Featured Package Comparison</h3>
-        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#9B8860' }}>Choose the right spotlight period</span>
+    <div style={{ maxWidth: 1000, margin: '40px auto 0', background: '#0D1117', border: '1px solid rgba(232,197,71,0.2)', borderRadius: 20, overflow: 'hidden' }}>
+      <div style={{ padding: '22px 28px 18px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <h3 style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 22, color: '#FAF7F2', margin: 0 }}>Featured Package Comparison</h3>
+        <span style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: 'rgba(250,247,242,0.4)' }}>Choose the right spotlight period</span>
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 13 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'Inter,sans-serif', fontSize: 14 }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid #E8DCC8' }}>
-              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9B8860', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
+            <tr style={{ borderBottom: '2px solid rgba(255,255,255,0.1)' }}>
+              <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'rgba(250,247,242,0.35)', textTransform: 'uppercase', letterSpacing: '.1em', width: 200 }}>Feature</th>
               {sorted.map(p => (
-                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 140 }}>
+                <th key={p.id} style={{ padding: '14px 16px', textAlign: 'center', minWidth: 140, background: p.isHot ? 'rgba(184,134,11,0.1)' : undefined }}>
                   <div style={{ position: 'relative', display: 'inline-block' }}>
-                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#D4A520)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Best Value</div>}
-                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 17, color: '#0D1117', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
-                    <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 11, color: '#B8860B', fontWeight: 600 }}>⏱ {fmtDays(p.durationDays)}</div>
+                    {p.isHot && <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg,#B8860B,#D4A520)', color: '#0D1117', fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 20, whiteSpace: 'nowrap' }}>Best Value</div>}
+                    <div style={{ fontFamily: '"Cormorant Garamond",serif', fontWeight: 700, fontSize: 18, color: p.isHot ? '#E8C547' : '#FAF7F2', marginTop: p.isHot ? 8 : 0 }}>{p.name}</div>
+                    <div style={{ fontFamily: 'Inter,sans-serif', fontSize: 12, color: '#B8860B', fontWeight: 600 }}>⏱ {fmtDays(p.durationDays)}</div>
                   </div>
                 </th>
               ))}
@@ -336,19 +336,19 @@ function FeaturedComparisonTable({ plans, onSelect, payingId }: {
           </thead>
           <tbody>
             {FEATURED_FEATURES.map((feat, ri) => (
-              <tr key={feat.key} style={{ borderBottom: '1px solid #F0E8D8', background: ri % 2 === 0 ? '#FDFAF5' : '#FAF5EE' }}>
-                <td style={{ padding: '12px 20px', color: '#6B5744', fontWeight: 500, fontSize: 12 }}>{feat.label}</td>
+              <tr key={feat.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                <td style={{ padding: '12px 20px', color: 'rgba(250,247,242,0.75)', fontWeight: 500, fontSize: 13 }}>{feat.label}</td>
                 {sorted.map(p => {
                   const val = feat.render(p)
                   const isCheck = val === '✓'
                   const isHighlight = feat.key === 'duration' || feat.key === 'price'
                   return (
-                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.04)' : undefined }}>
+                    <td key={p.id} style={{ padding: '12px 16px', textAlign: 'center', background: p.isHot ? 'rgba(184,134,11,0.05)' : undefined }}>
                       <span style={{
                         fontFamily: isHighlight ? '"Cormorant Garamond",serif' : 'Inter,sans-serif',
-                        fontSize: isHighlight ? 16 : 13,
+                        fontSize: isHighlight ? 18 : 13,
                         fontWeight: isHighlight ? 700 : isCheck ? 600 : 400,
-                        color: isCheck ? '#16A34A' : isHighlight ? '#B8860B' : feat.key === 'boost' && val === 'Maximum' ? '#B8860B' : '#4A3728',
+                        color: isCheck ? '#4ADE80' : isHighlight ? '#E8C547' : feat.key === 'boost' && val === 'Maximum' ? '#E8C547' : 'rgba(250,247,242,0.85)',
                       }}>{val}</span>
                     </td>
                   )
@@ -356,12 +356,12 @@ function FeaturedComparisonTable({ plans, onSelect, payingId }: {
               </tr>
             ))}
             {/* CTA row */}
-            <tr style={{ background: '#F5EDD8', borderTop: '2px solid #E8DCC8' }}>
-              <td style={{ padding: '16px 20px', color: '#9B8860', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Featured</td>
+            <tr style={{ background: 'rgba(184,134,11,0.07)', borderTop: '2px solid rgba(184,134,11,0.2)' }}>
+              <td style={{ padding: '16px 20px', color: 'rgba(250,247,242,0.3)', fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.1em' }}>Get Featured</td>
               {sorted.map(p => (
                 <td key={p.id} style={{ padding: '16px 12px', textAlign: 'center' }}>
                   <button onClick={() => onSelect(p)} disabled={payingId === p.id}
-                    style={{ padding: '9px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 12, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#D4A520)' : '#0D1117', color: '#fff', opacity: payingId === p.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
+                    style={{ padding: '10px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'Inter,sans-serif', fontWeight: 700, fontSize: 13, background: p.isHot ? 'linear-gradient(135deg,#B8860B,#D4A520)' : 'rgba(255,255,255,0.12)', color: p.isHot ? '#0D1117' : '#FAF7F2', opacity: payingId === p.id ? 0.6 : 1, whiteSpace: 'nowrap' }}>
                     {p.cta || 'Get Featured'}
                   </button>
                 </td>
@@ -597,46 +597,46 @@ function PackagesInner() {
               </div>
 
               {leadsLoading ? (
-                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:20,maxWidth:1100,margin:'0 auto 40px' }}>
-                  {[1,2,3,4].map(i => <div key={i} style={{ height:420,borderRadius:20,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s ease-in-out infinite' }} />)}
+                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:20,maxWidth:1100,margin:'0 auto 40px' }}>
+                  {[1,2,3,4].map(i => <div key={i} style={{ height:460,borderRadius:20,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s ease-in-out infinite' }} />)}
                 </div>
               ) : (
-                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))',gap:20,maxWidth:1100,margin:'0 auto 40px' }}>
+                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:20,maxWidth:1100,margin:'0 auto 40px' }}>
                   {activeLeadPlans.map((plan, i) => {
                     const isCurrent = currentSub?.planKey === plan.planKey
                     return (
                       <motion.div key={plan.id} initial={{ opacity:0,y:24 }} animate={{ opacity:1,y:0 }} transition={{ delay:i*0.07 }}
-                        style={{ background:plan.isHot?'#0D1117':'#FFFFFF', border:plan.isHot?'2px solid #B8860B':'1px solid #E8DCC8', borderRadius:20, padding:'28px 24px', display:'flex', flexDirection:'column', position:'relative', boxShadow:plan.isHot?'0 20px 60px rgba(13,17,23,0.25)':'0 2px 16px rgba(13,17,23,0.06)', transition:'transform .2s,box-shadow .2s' }}
+                        style={{ background:plan.isHot?'#0D1117':'#FFFFFF', border:plan.isHot?'2px solid #B8860B':'1px solid #E8DCC8', borderRadius:20, padding:'32px 26px', display:'flex', flexDirection:'column', position:'relative', boxShadow:plan.isHot?'0 20px 60px rgba(13,17,23,0.25)':'0 2px 16px rgba(13,17,23,0.06)', transition:'transform .2s,box-shadow .2s', minHeight:480 }}
                         onMouseEnter={e=>{ if(!plan.isHot){(e.currentTarget as HTMLElement).style.transform='translateY(-4px)';(e.currentTarget as HTMLElement).style.boxShadow='0 12px 40px rgba(13,17,23,0.12)'} }}
                         onMouseLeave={e=>{ if(!plan.isHot){(e.currentTarget as HTMLElement).style.transform='';(e.currentTarget as HTMLElement).style.boxShadow='0 2px 16px rgba(13,17,23,0.06)'} }}>
 
                         {plan.isHot && <div style={{ position:'absolute',top:-13,left:'50%',transform:'translateX(-50%)',background:'#B8860B',color:'#fff',fontSize:11,fontWeight:700,padding:'4px 14px',borderRadius:99,whiteSpace:'nowrap' }}>⭐ Most Popular</div>}
                         {isCurrent && <div style={{ position:'absolute',top:14,left:14,background:'#16A34A',color:'#fff',fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:99 }}>✓ Current Plan</div>}
 
-                        <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:4,marginTop:plan.isHot||isCurrent?16:0 }}>{plan.name}</div>
-                        <div style={{ fontSize:12,color:plan.isHot?'rgba(250,247,242,0.5)':'#9B8860',marginBottom:20,lineHeight:1.5 }}>{plan.description}</div>
+                        <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:26,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:6,marginTop:plan.isHot||isCurrent?16:0 }}>{plan.name}</div>
+                        <div style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.5)':'#9B8860',marginBottom:22,lineHeight:1.6 }}>{plan.description}</div>
 
-                        <div style={{ display:'flex',alignItems:'baseline',gap:4,marginBottom:plan.leadCount!==0?6:20 }}>
-                          <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:800,fontSize:42,color:plan.isHot?'#FAF7F2':'#0D1117',letterSpacing:'-2px',lineHeight:1 }}>{fmt(plan.price)}</span>
+                        <div style={{ display:'flex',alignItems:'baseline',gap:4,marginBottom:plan.leadCount!==0?8:22 }}>
+                          <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:800,fontSize:48,color:plan.isHot?'#FAF7F2':'#0D1117',letterSpacing:'-2px',lineHeight:1 }}>{fmt(plan.price)}</span>
                         </div>
 
                         {plan.leadCount !== 0 && (
-                          <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginBottom:20,padding:'5px 12px',borderRadius:8,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
-                            <span style={{ fontSize:13,fontWeight:700,color:'#B8860B' }}>{plan.leadCount===-1?'∞ Unlimited':`${plan.leadCount}`} lead credits</span>
+                          <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginBottom:22,padding:'6px 14px',borderRadius:8,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
+                            <span style={{ fontSize:14,fontWeight:700,color:'#B8860B' }}>{plan.leadCount===-1?'∞ Unlimited':`${plan.leadCount}`} lead credits</span>
                           </div>
                         )}
 
-                        <div style={{ flex:1,marginBottom:24 }}>
+                        <div style={{ flex:1,marginBottom:26 }}>
                           {(plan.features??[]).map(f=>(
-                            <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:9,marginBottom:10 }}>
-                              <CheckCircle style={{ width:15,height:15,color:'#22C55E',flexShrink:0,marginTop:1 }} />
-                              <span style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.75)':'#4A3728',lineHeight:1.4 }}>{f}</span>
+                            <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:10,marginBottom:12 }}>
+                              <CheckCircle style={{ width:16,height:16,color:'#22C55E',flexShrink:0,marginTop:2 }} />
+                              <span style={{ fontSize:14,color:plan.isHot?'rgba(250,247,242,0.8)':'#4A3728',lineHeight:1.5 }}>{f}</span>
                             </div>
                           ))}
                         </div>
 
                         <button onClick={()=>{ if(!accessToken){toast.error('Please log in first');router.push('/login');return} if(isCurrent){toast('You are already on this plan');return} setSelectedLeadPlan(plan) }} disabled={payingId===plan.id}
-                          style={{ width:'100%',padding:'13px',borderRadius:12,border:'none',cursor:isCurrent?'default':'pointer',fontFamily:'Inter,sans-serif',fontWeight:700,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:isCurrent?'#16A34A':plan.isHot?'linear-gradient(135deg,#B8860B,#D4A520)':'#0D1117',color:'#fff',boxShadow:plan.isHot?'0 8px 24px rgba(184,134,11,0.4)':'0 4px 12px rgba(13,17,23,0.2)',opacity:payingId===plan.id?0.7:1 }}>
+                          style={{ width:'100%',padding:'15px',borderRadius:12,border:'none',cursor:isCurrent?'default':'pointer',fontFamily:'Inter,sans-serif',fontWeight:700,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:isCurrent?'#16A34A':plan.isHot?'linear-gradient(135deg,#B8860B,#D4A520)':'#0D1117',color:'#fff',boxShadow:plan.isHot?'0 8px 24px rgba(184,134,11,0.4)':'0 4px 12px rgba(13,17,23,0.2)',opacity:payingId===plan.id?0.7:1 }}>
                           {payingId===plan.id?<Loader2 style={{width:16,height:16,animation:'spin 1s linear infinite'}}/>:isCurrent?'✓ Active Plan':<><CreditCard style={{width:15,height:15}}/>{plan.cta||'Subscribe'} →</>}
                         </button>
                       </motion.div>
@@ -684,8 +684,8 @@ function PackagesInner() {
               )}
 
               {featLoading ? (
-                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:20,maxWidth:1000,margin:'0 auto 40px' }}>
-                  {[1,2,3].map(i=><div key={i} style={{ height:460,borderRadius:20,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s ease-in-out infinite' }}/>)}
+                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:20,maxWidth:1000,margin:'0 auto 40px' }}>
+                  {[1,2,3].map(i=><div key={i} style={{ height:500,borderRadius:20,background:'rgba(13,17,23,0.06)',animation:'pulse 1.5s ease-in-out infinite' }}/>)}
                 </div>
               ) : activeFeatPlans.length === 0 ? (
                 <div style={{ textAlign:'center',padding:'60px 24px',color:'#9B8860' }}>
@@ -693,38 +693,38 @@ function PackagesInner() {
                   <p>No featured listing packages available right now.</p>
                 </div>
               ) : (
-                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:20,maxWidth:1000,margin:'0 auto 40px' }}>
+                <div style={{ display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:20,maxWidth:1000,margin:'0 auto 40px' }}>
                   {activeFeatPlans.map((plan,i)=>(
                     <motion.div key={plan.id} initial={{ opacity:0,y:24 }} animate={{ opacity:1,y:0 }} transition={{ delay:i*0.08 }}
-                      style={{ background:plan.isHot?'#0D1117':'#FFFFFF', border:plan.isHot?'2px solid #B8860B':'1px solid #E8DCC8', borderRadius:20, padding:'28px 24px', display:'flex', flexDirection:'column', position:'relative', boxShadow:plan.isHot?'0 20px 60px rgba(13,17,23,0.25)':'0 2px 16px rgba(13,17,23,0.06)', transition:'transform .2s,box-shadow .2s' }}
+                      style={{ background:plan.isHot?'#0D1117':'#FFFFFF', border:plan.isHot?'2px solid #B8860B':'1px solid #E8DCC8', borderRadius:20, padding:'32px 26px', display:'flex', flexDirection:'column', position:'relative', boxShadow:plan.isHot?'0 20px 60px rgba(13,17,23,0.25)':'0 2px 16px rgba(13,17,23,0.06)', transition:'transform .2s,box-shadow .2s', minHeight:480 }}
                       onMouseEnter={e=>{ if(!plan.isHot){(e.currentTarget as HTMLElement).style.transform='translateY(-4px)';(e.currentTarget as HTMLElement).style.boxShadow='0 12px 40px rgba(13,17,23,0.12)'} }}
                       onMouseLeave={e=>{ if(!plan.isHot){(e.currentTarget as HTMLElement).style.transform='';(e.currentTarget as HTMLElement).style.boxShadow='0 2px 16px rgba(13,17,23,0.06)'} }}>
 
                       {plan.isHot && <div style={{ position:'absolute',top:-13,left:'50%',transform:'translateX(-50%)',background:'linear-gradient(135deg,#B8860B,#D4A520)',color:'#fff',fontSize:11,fontWeight:700,padding:'4px 14px',borderRadius:99,whiteSpace:'nowrap' }}>⭐ Best Value</div>}
 
                       {/* Duration pill */}
-                      <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginBottom:14,marginTop:plan.isHot?16:0,padding:'4px 12px',borderRadius:8,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
-                        <span style={{ fontSize:12,fontWeight:700,color:'#B8860B' }}>⏱ {fmtDays(plan.durationDays)}</span>
+                      <div style={{ display:'inline-flex',alignItems:'center',gap:6,marginBottom:16,marginTop:plan.isHot?16:0,padding:'5px 14px',borderRadius:8,background:plan.isHot?'rgba(184,134,11,0.2)':'rgba(184,134,11,0.08)',border:`1px solid ${plan.isHot?'rgba(184,134,11,0.4)':'rgba(184,134,11,0.2)'}`,alignSelf:'flex-start' }}>
+                        <span style={{ fontSize:14,fontWeight:700,color:'#B8860B' }}>⏱ {fmtDays(plan.durationDays)}</span>
                       </div>
 
-                      <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:22,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:4 }}>{plan.name}</div>
-                      <div style={{ fontSize:12,color:plan.isHot?'rgba(250,247,242,0.5)':'#9B8860',marginBottom:20,lineHeight:1.5 }}>{plan.description}</div>
+                      <div style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:700,fontSize:26,color:plan.isHot?'#FAF7F2':'#0D1117',marginBottom:6 }}>{plan.name}</div>
+                      <div style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.5)':'#9B8860',marginBottom:22,lineHeight:1.6 }}>{plan.description}</div>
 
-                      <div style={{ display:'flex',alignItems:'baseline',gap:4,marginBottom:20 }}>
-                        <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:800,fontSize:42,color:plan.isHot?'#E8C547':'#0D1117',letterSpacing:'-2px',lineHeight:1 }}>{fmt(plan.price)}</span>
+                      <div style={{ display:'flex',alignItems:'baseline',gap:4,marginBottom:22 }}>
+                        <span style={{ fontFamily:'"Cormorant Garamond",serif',fontWeight:800,fontSize:48,color:plan.isHot?'#E8C547':'#0D1117',letterSpacing:'-2px',lineHeight:1 }}>{fmt(plan.price)}</span>
                       </div>
 
-                      <div style={{ flex:1,marginBottom:24 }}>
+                      <div style={{ flex:1,marginBottom:26 }}>
                         {(plan.features??[]).map(f=>(
-                          <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:9,marginBottom:10 }}>
-                            <CheckCircle style={{ width:15,height:15,color:'#22C55E',flexShrink:0,marginTop:1 }} />
-                            <span style={{ fontSize:13,color:plan.isHot?'rgba(250,247,242,0.75)':'#4A3728',lineHeight:1.4 }}>{f}</span>
+                          <div key={f} style={{ display:'flex',alignItems:'flex-start',gap:10,marginBottom:12 }}>
+                            <CheckCircle style={{ width:16,height:16,color:'#22C55E',flexShrink:0,marginTop:2 }} />
+                            <span style={{ fontSize:14,color:plan.isHot?'rgba(250,247,242,0.8)':'#4A3728',lineHeight:1.5 }}>{f}</span>
                           </div>
                         ))}
                       </div>
 
                       <button onClick={()=>{ if(!accessToken){toast.error('Please log in first');router.push('/login');return} setSelectedFeatPlan(plan) }} disabled={payingId===plan.id}
-                        style={{ width:'100%',padding:'13px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'Inter,sans-serif',fontWeight:700,fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:plan.isHot?'linear-gradient(135deg,#B8860B,#D4A520)':'#0D1117',color:'#fff',boxShadow:plan.isHot?'0 8px 24px rgba(184,134,11,0.4)':'0 4px 12px rgba(13,17,23,0.2)',opacity:payingId===plan.id?0.7:1 }}>
+                        style={{ width:'100%',padding:'15px',borderRadius:12,border:'none',cursor:'pointer',fontFamily:'Inter,sans-serif',fontWeight:700,fontSize:15,display:'flex',alignItems:'center',justifyContent:'center',gap:8,background:plan.isHot?'linear-gradient(135deg,#B8860B,#D4A520)':'#0D1117',color:'#fff',boxShadow:plan.isHot?'0 8px 24px rgba(184,134,11,0.4)':'0 4px 12px rgba(13,17,23,0.2)',opacity:payingId===plan.id?0.7:1 }}>
                         {payingId===plan.id?<Loader2 style={{width:16,height:16,animation:'spin 1s linear infinite'}}/>:<><Star style={{width:15,height:15}}/>{plan.cta||'Get Featured'} →</>}
                       </button>
                     </motion.div>
