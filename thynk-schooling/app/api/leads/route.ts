@@ -16,6 +16,10 @@ export const dynamic = 'force-dynamic'
  *   → Applied school: if NO credits → show MASKED, prompt to buy credit/package
  *   → Other matching schools → show MASKED (same criteria as Scenario A)
  *   → Any school can unlock by spending 1 credit OR buying single lead
+ *
+ * PERF FIX: ensureTables() now runs only once per server process lifetime via
+ *   a module-level flag. Previously it fired 17 ALTER TABLE / CREATE TABLE
+ *   statements on every single GET and POST request, adding ~200-500ms latency.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -33,7 +37,11 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null }
 }
 
+// ✅ FIX: module-level flag so ensureTables only runs once per server process
+let tablesEnsured = false
+
 async function ensureTables() {
+  if (tablesEnsured) return
   await db.query(`
     CREATE TABLE IF NOT EXISTS leads (
       id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -115,6 +123,8 @@ async function ensureTables() {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `).catch(() => {})
+
+  tablesEnsured = true
 }
 
 function maskName(name: string): string {
@@ -222,7 +232,6 @@ export async function GET(req: NextRequest) {
      .catch(() => {})
 
     // ── Branch 2: CRITERIA MATCH — same gender_policy OR overlapping class range
-    //    Shows leads from other schools where the parent's child criteria matches this school
     if (schoolGender || (schoolClassFrom && schoolClassTo)) {
       const classFromNum = classToNum(schoolClassFrom)
       const classToNum_  = classToNum(schoolClassTo)
@@ -233,14 +242,12 @@ export async function GET(req: NextRequest) {
          WHERE l.school_id IS DISTINCT FROM $1
            AND l.created_at >= NOW() - INTERVAL '${win} days'
            AND (
-             -- Gender policy match: school accepts this gender
              ($2::text IS NOT NULL AND (
                l.parent_id IN (
                  SELECT pp.user_id FROM parent_profiles pp WHERE pp.user_id IS NOT NULL
                )
              ))
              OR
-             -- Class range overlap: parent's desired class falls within school's range
              ($3::int > -99 AND $4::int > -99 AND
                CASE
                  WHEN l.class_applying_for ILIKE '%nursery%' OR l.class_applying_for ILIKE '%nur%' THEN -3
@@ -256,7 +263,7 @@ export async function GET(req: NextRequest) {
       })).catch(() => {})
     }
 
-    // ── Branch 3: GEO — leads from parents within 20km of this school
+    // ── Branch 3: GEO — leads from parents within radiusKm of this school
     if (schoolLat && schoolLon) {
       await db.query(
         `SELECT l.id AS lead_id
@@ -282,7 +289,6 @@ export async function GET(req: NextRequest) {
 
     // ── Branch 4: PINCODE — leads from same or nearby pincodes
     if (schoolPincode) {
-      // Get nearby pincodes from other schools in DB as proxy for adjacent pincodes
       const nearbyPincodes = await db.query(
         `SELECT DISTINCT pincode FROM schools
          WHERE pincode IS NOT NULL AND pincode <> $1 AND pincode <> ''
@@ -301,7 +307,6 @@ export async function GET(req: NextRequest) {
 
       const pincodes = [schoolPincode, ...nearbyPincodes.rows.map((r: any) => r.pincode)]
 
-      // Leads where parent's profile pincode matches
       await db.query(
         `SELECT l.id AS lead_id
          FROM leads l
@@ -314,7 +319,6 @@ export async function GET(req: NextRequest) {
         if (!allLeadIds.has(row.lead_id)) allLeadIds.set(row.lead_id, 'pincode')
       })).catch(() => {})
 
-      // Also leads from user_searches in same pincodes
       await db.query(
         `SELECT l.id AS lead_id
          FROM leads l
@@ -379,10 +383,7 @@ export async function GET(req: NextRequest) {
     )
 
     const data = dataRes.rows.map(row => {
-      // A lead is unlocked for THIS school if:
-      // 1. It's a direct lead AND is_purchased = true AND purchased_by = this school
-      // 2. OR it's a direct lead AND purchased_by IS NULL (legacy — auto-unlocked for direct school)
-      const isDirect   = allLeadIds.get(row.id) === 'direct'
+      const isDirect      = allLeadIds.get(row.id) === 'direct'
       const unlockedForMe = row.isPurchased && (row.purchasedBy === schoolId || (isDirect && !row.purchasedBy))
 
       return {
@@ -397,11 +398,9 @@ export async function GET(req: NextRequest) {
         schoolRemarks:   row.schoolRemarks,
         discoverySource: allLeadIds.get(row.id) ?? 'direct',
         isPurchased:     unlockedForMe,
-        // Full details only if unlocked for THIS school
         fullName:        unlockedForMe ? row.fullName  : undefined,
         fullPhone:       unlockedForMe ? row.fullPhone : undefined,
         fullEmail:       unlockedForMe ? row.fullEmail : undefined,
-        // Masked details always visible
         maskedName:      maskName(row.fullName  || 'Parent'),
         maskedPhone:     maskPhone(row.fullPhone || ''),
         singleLeadPricePaise,
@@ -441,7 +440,6 @@ export async function POST(req: NextRequest) {
       const schoolRow = await db.query('SELECT id FROM schools WHERE id=$1', [schoolId])
       if (!schoolRow.rows.length) return NextResponse.json({ error: 'School not found' }, { status: 404 })
 
-      // Dedup: same phone to same school within 24h
       if (phone) {
         const dup = await db.query(
           `SELECT id FROM leads WHERE school_id=$1 AND phone=$2 AND source=$3 AND created_at > NOW() - INTERVAL '24 hours'`,
@@ -459,7 +457,6 @@ export async function POST(req: NextRequest) {
       )
       if (schoolId) {
         import('@/lib/notify').then(m => m.notifyNewLead(schoolId, parentName?.trim() || 'A parent', childName?.trim(), classApplyingFor?.trim())).catch(() => {})
-        // Fire email trigger — get school name for variable substitution
         db.query('SELECT name FROM schools WHERE id=$1', [schoolId]).then(sr => {
           const schoolName = sr.rows[0]?.name || ''
           import('@/lib/email').then(m => m.fireEmailTrigger('new_lead_school', 'school', {
@@ -482,17 +479,15 @@ export async function POST(req: NextRequest) {
     // ── Public: record_search — parent searched for schools ───────────────────
     if (action === 'record_search') {
       const userId = getUserId(req)
-      if (!userId) return NextResponse.json({ success: true }) // guests: nothing to record
+      if (!userId) return NextResponse.json({ success: true })
       const { city, pincode, lat, lon, schoolId } = body
 
-      // Record the search for discovery
       await db.query(
         `INSERT INTO user_searches (user_id, search_city, search_pincode, search_lat, search_lon)
          VALUES ($1,$2,$3,$4,$5)`,
         [userId, city || null, pincode || null, lat || null, lon || null]
       ).catch(() => {})
 
-      // If parent viewed a specific school, create a search lead for that school
       if (schoolId) {
         const dup = await db.query(
           `SELECT id FROM leads WHERE school_id=$1 AND parent_id=$2 AND source='search' AND created_at > NOW() - INTERVAL '24 hours'`,
@@ -500,7 +495,6 @@ export async function POST(req: NextRequest) {
         ).catch(() => ({ rows: [] }))
 
         if (!dup.rows.length) {
-          // Get parent profile for name/phone
           const profile = await db.query(
             `SELECT u.full_name, u.phone, pp.pincode FROM users u
              LEFT JOIN parent_profiles pp ON pp.user_id = u.id
@@ -548,7 +542,6 @@ export async function POST(req: NextRequest) {
       )
       if (!lead.rows.length) return NextResponse.json({ error: 'Lead not found' }, { status: 404 })
 
-      // Already unlocked by THIS school
       const row = lead.rows[0]
       if (row.is_purchased && row.purchased_by === schoolId) {
         const unlocked = await db.query(
@@ -566,7 +559,6 @@ export async function POST(req: NextRequest) {
 
       if (available < 1) {
         const cfg = await getDiscoveryCfg()
-        // NO CREDITS: return masked lead info + prompt to buy
         return NextResponse.json({
           error:                'NO_CREDITS',
           message:              'You have no lead credits. Buy a package or single lead to unlock.',
@@ -575,14 +567,12 @@ export async function POST(req: NextRequest) {
         }, { status: 402 })
       }
 
-      // Has credits: deduct 1 and unlock
       await db.query('BEGIN')
       try {
         await db.query(
           `UPDATE lead_credits SET credits=credits-1, used_credits=COALESCE(used_credits,0)+1, updated_at=NOW()
            WHERE school_id=$1`, [schoolId]
         )
-        // Mark purchased_by this school (not global is_purchased — other schools can still buy)
         await db.query(
           `UPDATE leads SET is_purchased=true, purchased_by=$2, updated_at=NOW() WHERE id=$1`,
           [leadId, schoolId]
