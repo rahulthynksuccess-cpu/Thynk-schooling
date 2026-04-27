@@ -7,24 +7,26 @@ export const dynamic = 'force-dynamic'
  * BUG 1 — totalLeads count didn't match Leads page:
  *   Dashboard was counting ALL leads WHERE school_id = schoolId (only direct
  *   leads). The Leads page discovery engine ALSO shows nearby/pincode/search
- *   leads. To avoid confusion, dashboard now shows the same "direct leads"
- *   count AND also exposes a `discoveredLeads` count (leads visible to school
- *   via discovery but not yet attributed). This makes the numbers transparent.
+ *   leads. Worse, when a school unlocks a discovered lead, purchased_by = schoolId
+ *   but school_id still points to the original school — so those unlocked leads
+ *   were completely invisible to the dashboard counter.
+ *   FIX: count leads WHERE school_id = $1 OR (is_purchased = true AND purchased_by = $1)
  *
  * BUG 2 — newLeadsToday sometimes 0 even when there are leads:
  *   Was using `created_at >= CURRENT_DATE` which compares with local midnight,
- *   not UTC. Fixed to use `created_at >= NOW()::date` consistently, same as
- *   analytics route.
+ *   not UTC. Fixed to use `created_at >= NOW()::date` consistently.
  *
  * BUG 3 — profileViews always 0:
  *   school_views table may not exist. Added ensureViewsTable() + fallback to
- *   school_profile_views. Same fix as analytics route.
+ *   school_profile_views.
  *
  * BUG 4 — avgRating mismatch:
  *   Was using two different sources (reviews table AVG vs schools.rating column).
  *   Now always uses the live AVG from reviews table, only falls back to
- *   schools.rating if no reviews exist. Also added totalReviews count so
- *   Analytics KPI card stays in sync.
+ *   schools.rating if no reviews exist.
+ *
+ * PERF FIX: ensureViewsTable() now runs only once per server process via a
+ *   module-level flag instead of on every request.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -43,7 +45,11 @@ function getUserId(req: NextRequest): string | null {
   } catch { return null }
 }
 
+// ✅ FIX: module-level flag so ensureViewsTable only runs once per server process
+let viewsTableEnsured = false
+
 async function ensureViewsTable() {
+  if (viewsTableEnsured) return
   await db.query(`
     CREATE TABLE IF NOT EXISTS school_views (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -55,6 +61,7 @@ async function ensureViewsTable() {
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_school_views_school_id ON school_views(school_id)
   `).catch(() => {})
+  viewsTableEnsured = true
 }
 
 export async function GET(req: NextRequest) {
@@ -90,19 +97,28 @@ export async function GET(req: NextRequest) {
     await ensureViewsTable()
 
     const [leads, newLeads, newLeadsMonth, apps, credits, reviews, reviewCount, profileViews] = await Promise.all([
-      // Total direct leads
-      db.query('SELECT COUNT(*) FROM leads WHERE school_id = $1', [schoolId])
-        .catch(() => ({ rows: [{ count: 0 }] })),
+      // ✅ FIX: count direct leads PLUS leads this school has unlocked via discovery
+      // (discovered leads have a different school_id but purchased_by = this school)
+      db.query(
+        `SELECT COUNT(*) FROM leads
+         WHERE school_id = $1
+            OR (is_purchased = true AND purchased_by = $1)`,
+        [schoolId]
+      ).catch(() => ({ rows: [{ count: 0 }] })),
 
       // FIX: use NOW()::date for consistent UTC-based "today"
       db.query(
-        `SELECT COUNT(*) FROM leads WHERE school_id = $1 AND created_at >= NOW()::date`,
+        `SELECT COUNT(*) FROM leads
+         WHERE (school_id = $1 OR (is_purchased = true AND purchased_by = $1))
+           AND created_at >= NOW()::date`,
         [schoolId]
       ).catch(() => ({ rows: [{ count: 0 }] })),
 
       // New leads this calendar month
       db.query(
-        `SELECT COUNT(*) FROM leads WHERE school_id = $1 AND created_at >= DATE_TRUNC('month', NOW())`,
+        `SELECT COUNT(*) FROM leads
+         WHERE (school_id = $1 OR (is_purchased = true AND purchased_by = $1))
+           AND created_at >= DATE_TRUNC('month', NOW())`,
         [schoolId]
       ).catch(() => ({ rows: [{ count: 0 }] })),
 
@@ -116,7 +132,6 @@ export async function GET(req: NextRequest) {
       db.query('SELECT AVG(rating) AS avg FROM reviews WHERE school_id = $1', [schoolId])
         .catch(() => ({ rows: [{ avg: null }] })),
 
-      // FIX: include totalReviews in dashboard stats so Analytics KPIs match
       db.query('SELECT COUNT(*) AS total FROM reviews WHERE school_id = $1', [schoolId])
         .catch(() => ({ rows: [{ total: 0 }] })),
 
