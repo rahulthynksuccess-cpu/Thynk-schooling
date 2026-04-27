@@ -8,16 +8,14 @@ export const dynamic = 'force-dynamic'
  *   The analytics query counts ALL leads WHERE school_id = $1.
  *   The Leads page counts leads via the discovery engine which includes
  *   DIRECT leads (school_id = $1) PLUS discovered leads (school_id != $1 but
- *   nearby/pincode/search). Analytics was only counting direct leads — consistent
- *   with dashboard-stats. The real fix is: analytics totals must match
- *   dashboard-stats (both count direct leads only). The discrepancy was that
- *   the interval interpolation was broken — see BUG FIX 1 below.
+ *   nearby/pincode/search). When a school unlocks a discovered lead,
+ *   purchased_by = schoolId but school_id still points to the original school.
+ *   FIX: totalLeadsRow and the daily timeline now also count
+ *   leads WHERE is_purchased = true AND purchased_by = $1
  *
  * BUG 2 — Profile views always 0:
  *   school_views table query was failing silently because the table likely
- *   doesn't exist. Fixed: also try recording views via a dedicated ensure block,
- *   AND fall back gracefully. Also added a school_profile_views table approach
- *   as an alternative lookup.
+ *   doesn't exist. Fixed: ensureViewsTable() + fallback to school_profile_views.
  *
  * BUG 3 — classWise always empty:
  *   Column name was assumed to be `class_grade` but leads table uses
@@ -41,6 +39,9 @@ export const dynamic = 'force-dynamic'
  *   PostgreSQL binds $2 as a value, not a string fragment before casting.
  *   All queries that used `$2` for the interval were silently returning 0 rows.
  *   Fix: interpolate `days` as a numeric literal (safe: already clamped to int).
+ *
+ * PERF FIX: ensureViewsTable() now runs only once per server process via a
+ *   module-level flag instead of on every request.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -66,8 +67,11 @@ const EMPTY_RESPONSE = {
   totals: { leads: 0, applications: 0, profileViews: 0, conversion: 0 },
 }
 
-// Ensure school_views table exists so views can actually be tracked
+// ✅ FIX: module-level flag so ensureViewsTable only runs once per server process
+let viewsTableEnsured = false
+
 async function ensureViewsTable() {
+  if (viewsTableEnsured) return
   await db.query(`
     CREATE TABLE IF NOT EXISTS school_views (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -79,6 +83,7 @@ async function ensureViewsTable() {
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_school_views_school_id ON school_views(school_id)
   `).catch(() => {})
+  viewsTableEnsured = true
 }
 
 export async function GET(req: NextRequest) {
@@ -116,7 +121,7 @@ export async function GET(req: NextRequest) {
     ] = await Promise.all([
 
       // ── Daily leads timeline — gap-filled ──────────────────────────────────
-      // FIX: days interpolated directly (not as $2 parameter) so INTERVAL works
+      // ✅ FIX: include discovered leads unlocked by this school (purchased_by = $1)
       db.query(`
         SELECT
           gs.day::date AS day,
@@ -128,7 +133,7 @@ export async function GET(req: NextRequest) {
         ) AS gs(day)
         LEFT JOIN leads l
           ON DATE(l.created_at) = gs.day
-          AND l.school_id = $1
+          AND (l.school_id = $1 OR (l.is_purchased = true AND l.purchased_by = $1))
         GROUP BY gs.day
         ORDER BY gs.day
       `, [schoolId]).catch(() => ({ rows: [] })),
@@ -152,12 +157,13 @@ export async function GET(req: NextRequest) {
 
       // ── Class-wise lead breakdown ──────────────────────────────────────────
       // FIX: was using `class_grade` — correct column is `class_applying_for`
+      // ✅ FIX: include discovered leads
       db.query(`
         SELECT
           COALESCE(NULLIF(TRIM(class_applying_for), ''), 'Unknown') AS class_group,
           COUNT(*) AS count
         FROM leads
-        WHERE school_id = $1
+        WHERE (school_id = $1 OR (is_purchased = true AND purchased_by = $1))
           AND created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY class_group
         ORDER BY count DESC
@@ -165,6 +171,7 @@ export async function GET(req: NextRequest) {
       `, [schoolId]).catch(() => ({ rows: [] })),
 
       // ── Monthly lead + application counts — last 6 months ─────────────────
+      // ✅ FIX: include discovered leads in the monthly leads subquery
       db.query(`
         SELECT
           TO_CHAR(DATE_TRUNC('month', gs.m), 'Mon YY') AS month,
@@ -177,7 +184,9 @@ export async function GET(req: NextRequest) {
         ) AS gs(m)
         LEFT JOIN (
           SELECT DATE_TRUNC('month', created_at) AS m, COUNT(*) AS leads
-          FROM leads WHERE school_id = $1 GROUP BY m
+          FROM leads
+          WHERE school_id = $1 OR (is_purchased = true AND purchased_by = $1)
+          GROUP BY m
         ) l ON l.m = gs.m
         LEFT JOIN (
           SELECT DATE_TRUNC('month', created_at) AS m, COUNT(*) AS apps
@@ -187,25 +196,26 @@ export async function GET(req: NextRequest) {
       `, [schoolId]).catch(() => ({ rows: [] })),
 
       // ── Day-of-week activity ───────────────────────────────────────────────
+      // ✅ FIX: include discovered leads
       db.query(`
         SELECT
           EXTRACT(DOW FROM created_at)::int AS dow,
           COUNT(*) AS count
         FROM leads
-        WHERE school_id = $1
+        WHERE (school_id = $1 OR (is_purchased = true AND purchased_by = $1))
           AND created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY dow
         ORDER BY dow
       `, [schoolId]).catch(() => ({ rows: [] })),
 
       // ── Lead source breakdown ──────────────────────────────────────────────
-      // `source` column exists in leads — was broken only due to interval bug
+      // ✅ FIX: include discovered leads
       db.query(`
         SELECT
           COALESCE(NULLIF(TRIM(source), ''), 'Unknown') AS source,
           COUNT(*) AS count
         FROM leads
-        WHERE school_id = $1
+        WHERE (school_id = $1 OR (is_purchased = true AND purchased_by = $1))
           AND created_at >= NOW() - INTERVAL '${days} days'
         GROUP BY source
         ORDER BY count DESC
@@ -225,10 +235,11 @@ export async function GET(req: NextRequest) {
       `, [schoolId]).catch(() => ({ rows: [] })),
 
       // ── Total leads in window ──────────────────────────────────────────────
+      // ✅ FIX: count direct leads + discovered leads unlocked by this school
       db.query(`
         SELECT COUNT(*) AS total
         FROM leads
-        WHERE school_id = $1
+        WHERE (school_id = $1 OR (is_purchased = true AND purchased_by = $1))
           AND created_at >= NOW() - INTERVAL '${days} days'
       `, [schoolId]).catch(() => ({ rows: [{ total: 0 }] })),
 
@@ -242,14 +253,12 @@ export async function GET(req: NextRequest) {
 
       // ── Profile views ──────────────────────────────────────────────────────
       // FIX: ensureViewsTable() called above so this no longer silently fails.
-      // Also try school_profile_views as an alternative table name.
       db.query(`
         SELECT COUNT(*) AS total
         FROM school_views
         WHERE school_id = $1
           AND created_at >= NOW() - INTERVAL '${days} days'
       `, [schoolId]).catch(() =>
-        // Fallback: try alternate table name
         db.query(`
           SELECT COUNT(*) AS total
           FROM school_profile_views
