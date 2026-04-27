@@ -258,7 +258,6 @@ function EditStatusModal({ lead, onClose, onSaved }: {
   const [remarks, setRemarks] = useState<string>(lead.schoolRemarks || '')
   const [saving,  setSaving]  = useState(false)
 
-  // Fetch dynamic statuses from admin dropdown; fall back to hardcoded STATUS_COLORS
   const { data: dropdownData } = useQuery<any>({
     queryKey: ['dropdown-lead_status'],
     queryFn:  () => fetch('/api/settings/dropdown?category=lead_status').then(r => r.json()),
@@ -300,7 +299,6 @@ function EditStatusModal({ lead, onClose, onSaved }: {
         border: '0.5px solid rgba(0,0,0,0.1)', boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
         animation: 'modalIn 0.18s ease' }}>
 
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
           <div>
             <h2 style={{ fontWeight: 600, fontSize: 16, color: '#111827', margin: 0, lineHeight: 1.3 }}>
@@ -318,7 +316,6 @@ function EditStatusModal({ lead, onClose, onSaved }: {
           </button>
         </div>
 
-        {/* Status selector */}
         <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9CA3AF',
           letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
           Status
@@ -353,7 +350,6 @@ function EditStatusModal({ lead, onClose, onSaved }: {
           })}
         </div>
 
-        {/* Current status preview */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 12px',
           borderRadius: 7, background: currentSt.bg, marginBottom: 18,
           border: `0.5px solid ${currentSt.color}30` }}>
@@ -363,7 +359,6 @@ function EditStatusModal({ lead, onClose, onSaved }: {
           </span>
         </div>
 
-        {/* Remarks */}
         <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#9CA3AF',
           letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
           Remarks <span style={{ fontWeight: 400, textTransform: 'none' as const, letterSpacing: 0 }}>(optional)</span>
@@ -379,7 +374,6 @@ function EditStatusModal({ lead, onClose, onSaved }: {
             boxSizing: 'border-box', marginBottom: 20, lineHeight: 1.5 }}
         />
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={onClose} disabled={saving}
             style={{ flex: 1, padding: '9px', borderRadius: 8, background: '#F3F4F6',
@@ -432,13 +426,14 @@ function LeadsContent() {
   const credits = creditsData?.availableCredits ?? 0
 
   // ── Leads query ──
+  // FIX: staleTime: 0 ensures invalidateQueries always triggers a real refetch
   const { data, isLoading } = useQuery<{
     data?: any[]; total?: number; error?: string; message?: string;
     singleLeadPricePaise?: number; discoveryWindowDays?: number;
   }>({
     queryKey: ['school-leads-full'],
     queryFn: () => fetch('/api/leads?limit=50', { credentials: 'include', headers: authHeaders() }).then(r => r.json()),
-    staleTime:          30_000,
+    staleTime: 0,           // ✅ FIX: always stale so cache invalidation forces a real network request
     gcTime:             5 * 60_000,
     refetchOnWindowFocus: false,
     placeholderData:    (prev) => prev,
@@ -465,7 +460,33 @@ function LeadsContent() {
       if (res.error === 'NO_CREDITS') { toast.error('No credits.'); setBuyingId(null); return }
       if (res.error) { toast.error(res.error); setBuyingId(null); return }
       toast.success('Lead unlocked!')
-      queryClient.invalidateQueries({ queryKey: ['school-leads-full'] })
+
+      // ✅ FIX: Optimistically patch the lead in cache immediately from the
+      // purchase response — no page refresh or wait for refetch needed.
+      if (res.lead) {
+        queryClient.setQueryData(['school-leads-full'], (old: any) => {
+          if (!old?.data) return old
+          return {
+            ...old,
+            data: old.data.map((l: any) =>
+              l.id === res.lead.id
+                ? {
+                    ...l,
+                    isPurchased: true,
+                    fullName:    res.lead.fullName  ?? l.fullName,
+                    fullPhone:   res.lead.fullPhone ?? l.fullPhone,
+                    fullEmail:   res.lead.fullEmail ?? l.fullEmail,
+                  }
+                : l
+            ),
+          }
+        })
+      } else {
+        // Fallback: no lead data in response — force a fresh fetch
+        queryClient.invalidateQueries({ queryKey: ['school-leads-full'] })
+      }
+
+      // Always refresh credits count
       queryClient.invalidateQueries({ queryKey: ['lead-credits'] })
       setBuyingId(null)
     },
@@ -678,7 +699,6 @@ function LeadsContent() {
                             </button>
                           )}
                         </div>
-                        {/* Remarks preview */}
                         {lead.isPurchased && lead.schoolRemarks && (
                           <div
                             title={lead.schoolRemarks}
