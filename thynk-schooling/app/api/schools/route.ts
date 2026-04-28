@@ -8,6 +8,16 @@ export const dynamic = 'force-dynamic'
  * POST /api/schools?action=profile         — school admin: create/update profile
  * GET  /api/schools?action=analytics       — school admin: analytics chart data
  * GET  /api/schools?action=dashboard-stats — school admin: stats counts
+ *
+ * PERF FIX: ensureSchoolsTable() now runs only once per server process via a
+ *   module-level flag. Previously it ran 30+ ALTER TABLE statements on every
+ *   request, adding significant latency.
+ *
+ * REPORTING FIX: getAnalytics() and getDashboardStats() now count discovered
+ *   leads that this school has unlocked (purchased_by = schoolId) in addition
+ *   to direct leads (school_id = schoolId). Without this fix, any lead unlocked
+ *   via the discovery engine was invisible to the dashboard and analytics charts
+ *   because those leads have a different school_id.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import db from '@/lib/db'
@@ -15,9 +25,6 @@ import jwt from 'jsonwebtoken'
 
 function getUserId(req: NextRequest): string | null {
   try {
-    // 1. Authorization header (may be stripped by Vercel rewrites — kept as fallback)
-    // 2. ts_access_token cookie (never set by this app's auth routes — kept for future use)
-    // 3. __token query param — frontend appends this so it survives Vercel rewrites
     const url = new URL(req.url)
     const token =
       req.headers.get('authorization')?.replace('Bearer ', '') ||
@@ -34,7 +41,11 @@ function toSlug(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+// ✅ FIX: module-level flag so ensureSchoolsTable only runs once per server process
+let schoolsTableEnsured = false
+
 async function ensureSchoolsTable() {
+  if (schoolsTableEnsured) return
   await db.query(`
     CREATE TABLE IF NOT EXISTS schools (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -87,12 +98,12 @@ async function ensureSchoolsTable() {
   await db.query('ALTER TABLE schools ALTER COLUMN logo_url TYPE TEXT').catch(() => {})
   await db.query('ALTER TABLE schools ALTER COLUMN cover_url TYPE TEXT').catch(() => {})
   await db.query('ALTER TABLE schools ALTER COLUMN website_url TYPE TEXT').catch(() => {})
-  // Widen URL columns that may already exist as VARCHAR(500)
   await db.query(`ALTER TABLE schools ALTER COLUMN logo_url TYPE TEXT`).catch(() => {})
   await db.query(`ALTER TABLE schools ALTER COLUMN cover_url TYPE TEXT`).catch(() => {})
   await db.query(`ALTER TABLE schools ALTER COLUMN website_url TYPE TEXT`).catch(() => {})
   await db.query(`ALTER TABLE schools ALTER COLUMN name TYPE VARCHAR(500)`).catch(() => {})
   await db.query(`ALTER TABLE schools ALTER COLUMN slug TYPE VARCHAR(500)`).catch(() => {})
+  schoolsTableEnsured = true
 }
 
 // FormData helpers
@@ -144,14 +155,12 @@ async function listSchools(req: NextRequest) {
   const useGPS     = !isNaN(userLat) && !isNaN(userLng)
   const usePincode = !!pincode && /^\d{6}$/.test(pincode)
 
-  // ── VISIBILITY RULE: only profile_completed schools, not suspended ──────────
   const conditions: string[] = [
     'profile_completed = true',
     '(is_active = true OR is_active IS NULL)',
   ]
   const params: any[] = []
 
-  // ── GPS proximity (Haversine bounding box + exact formula) ─────────────────
   if (useGPS) {
     const latDelta = radiusKm / 111.0
     const lngDelta = radiusKm / (111.0 * Math.cos(userLat * Math.PI / 180))
@@ -166,13 +175,11 @@ async function listSchools(req: NextRequest) {
     )
   }
 
-  // ── Exact pincode match (takes priority over city when no GPS) ─────────────
   if (usePincode && !useGPS) {
     params.push(pincode)
     conditions.push(`pincode = $${params.length}`)
   }
 
-  // ── Standard filters ───────────────────────────────────────────────────────
   if (city  && !usePincode && !useGPS) { params.push(city);  conditions.push(`city ILIKE $${params.length}`) }
   if (state && !useGPS)                { params.push(state); conditions.push(`state ILIKE $${params.length}`) }
   if (board)  { params.push(`%${board}%`);  conditions.push(`board::text ILIKE $${params.length}`) }
@@ -200,7 +207,6 @@ async function listSchools(req: NextRequest) {
 
   const where = conditions.join(' AND ')
 
-  // ── Distance column for GPS sort ───────────────────────────────────────────
   let distCol = ''
   let distParams: any[] = []
   if (useGPS) {
@@ -209,7 +215,6 @@ async function listSchools(req: NextRequest) {
     distCol = `, ROUND((6371 * acos(LEAST(1.0, cos(radians($${pBase+1})) * cos(radians(latitude)) * cos(radians(longitude) - radians($${pBase+2})) + sin(radians($${pBase+1})) * sin(radians(latitude)))))::numeric, 1) AS distance_km`
   }
 
-  // ── Sort order ─────────────────────────────────────────────────────────────
   let orderBy = '(is_featured AND (featured_until IS NULL OR featured_until > NOW())) DESC NULLS LAST, rating DESC NULLS LAST, created_at DESC'
   if (useGPS)                   orderBy = 'distance_km ASC NULLS LAST, (is_featured AND (featured_until IS NULL OR featured_until > NOW())) DESC NULLS LAST'
   else if (sortBy === 'fee_asc')  orderBy = 'monthly_fee_min ASC NULLS LAST'
@@ -274,7 +279,6 @@ async function saveProfile(req: NextRequest) {
   const fd = await req.formData()
   const name = getStr(fd, 'name') || 'School'
 
-  // Image handling
   let logoUrl: string | null = getStr(fd, 'logo_url')
   let coverUrl: string | null = getStr(fd, 'cover_url')
   const logoFile = fd.get('logo') as File | null
@@ -305,11 +309,9 @@ async function saveProfile(req: NextRequest) {
     logoUrl, coverUrl,
   ]
 
-  // Check for existing row — NEVER regenerate slug on update (causes UNIQUE constraint crash)
   const existing = await db.query('SELECT slug FROM schools WHERE admin_user_id=$1', [userId])
 
   if (existing.rows.length > 0) {
-    // UPDATE — leave slug alone
     await db.query(
       `UPDATE schools SET
         name=$2, tagline=$3, affiliation_no=$4, description=$5,
@@ -330,7 +332,6 @@ async function saveProfile(req: NextRequest) {
       [userId, ...fields]
     )
   } else {
-    // INSERT — generate slug only once, ever
     const slug = toSlug(name) + '-' + Date.now()
     await db.query(
       `INSERT INTO schools (
@@ -347,44 +348,44 @@ async function saveProfile(req: NextRequest) {
         $20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,true
       )`,
       [
-        userId,                          // $1  admin_user_id
-        name,                            // $2  name
-        slug,                            // $3  slug
-        fields[1],                       // $4  tagline
-        fields[2],                       // $5  affiliation_no
-        fields[3],                       // $6  description
-        fields[4],                       // $7  founding_year
-        fields[5],                       // $8  total_students
-        fields[6],                       // $9  student_teacher_ratio
-        fields[7],                       // $10 school_type
-        fields[8],                       // $11 board
-        fields[9],                       // $12 gender_policy
-        fields[10],                      // $13 medium_of_instruction
-        fields[11],                      // $14 recognition
-        fields[12],                      // $15 classes_from
-        fields[13],                      // $16 classes_to
-        fields[14],                      // $17 monthly_fee_min
-        fields[15],                      // $18 monthly_fee_max
-        fields[16],                      // $19 annual_fee
-        fields[17],                      // $20 admission_open
-        fields[18],                      // $21 admission_academic_year
-        fields[19],                      // $22 facilities
-        fields[20],                      // $23 sports
-        fields[21],                      // $24 languages
-        fields[22],                      // $25 extracurriculars
-        fields[23],                      // $26 address_line1
-        fields[24],                      // $27 state
-        fields[25],                      // $28 city
-        fields[26],                      // $29 locality
-        fields[27],                      // $30 pincode
-        fields[28],                      // $31 latitude
-        fields[29],                      // $32 longitude
-        fields[30],                      // $33 phone
-        fields[31],                      // $34 email
-        fields[32],                      // $35 website_url
-        fields[33],                      // $36 principal_name
-        fields[34],                      // $37 logo_url
-        fields[35],                      // $38 cover_url
+        userId,    // $1  admin_user_id
+        name,      // $2  name
+        slug,      // $3  slug
+        fields[1], // $4  tagline
+        fields[2], // $5  affiliation_no
+        fields[3], // $6  description
+        fields[4], // $7  founding_year
+        fields[5], // $8  total_students
+        fields[6], // $9  student_teacher_ratio
+        fields[7], // $10 school_type
+        fields[8], // $11 board
+        fields[9], // $12 gender_policy
+        fields[10],// $13 medium_of_instruction
+        fields[11],// $14 recognition
+        fields[12],// $15 classes_from
+        fields[13],// $16 classes_to
+        fields[14],// $17 monthly_fee_min
+        fields[15],// $18 monthly_fee_max
+        fields[16],// $19 annual_fee
+        fields[17],// $20 admission_open
+        fields[18],// $21 admission_academic_year
+        fields[19],// $22 facilities
+        fields[20],// $23 sports
+        fields[21],// $24 languages
+        fields[22],// $25 extracurriculars
+        fields[23],// $26 address_line1
+        fields[24],// $27 state
+        fields[25],// $28 city
+        fields[26],// $29 locality
+        fields[27],// $30 pincode
+        fields[28],// $31 latitude
+        fields[29],// $32 longitude
+        fields[30],// $33 phone
+        fields[31],// $34 email
+        fields[32],// $35 website_url
+        fields[33],// $36 principal_name
+        fields[34],// $37 logo_url
+        fields[35],// $38 cover_url
       ]
     )
   }
@@ -395,52 +396,68 @@ async function saveProfile(req: NextRequest) {
 async function getAnalytics(req: NextRequest) {
   const userId = getUserId(req)
   if (!userId) return NextResponse.json({ leads: [], applications: [] })
-  const days = Number(new URL(req.url).searchParams.get('days') || 30)
+  const days = Math.min(365, Math.max(1, Number(new URL(req.url).searchParams.get('days') || 30)))
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
   if (!school.rows.length) return NextResponse.json({ leads: [], applications: [] })
   const sid = school.rows[0].id
 
   const [leads, apps, sourceBreakdown, cityBreakdown, classBreakdown, recentActivity] = await Promise.all([
-    db.query(`SELECT DATE(created_at) AS day, COUNT(*) AS count FROM leads WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '${days} days' GROUP BY day ORDER BY day`, [sid]).catch(() => ({ rows: [] })),
-    db.query(`SELECT DATE(created_at) AS day, COUNT(*) AS count FROM applications WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '${days} days' GROUP BY day ORDER BY day`, [sid]).catch(() => ({ rows: [] })),
+    // ✅ FIX: include discovered leads this school has unlocked (purchased_by = sid)
+    db.query(
+      `SELECT DATE(created_at) AS day, COUNT(*) AS count
+       FROM leads
+       WHERE (school_id=$1 OR (is_purchased=true AND purchased_by=$1))
+         AND created_at >= NOW() - INTERVAL '${days} days'
+       GROUP BY day ORDER BY day`,
+      [sid]
+    ).catch(() => ({ rows: [] })),
 
-    // Lead source breakdown — uses leads.source column
+    db.query(
+      `SELECT DATE(created_at) AS day, COUNT(*) AS count
+       FROM applications
+       WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '${days} days'
+       GROUP BY day ORDER BY day`,
+      [sid]
+    ).catch(() => ({ rows: [] })),
+
+    // ✅ FIX: include discovered leads in source breakdown
     db.query(`
       SELECT
         COALESCE(NULLIF(TRIM(source), ''), 'Direct / Unknown') AS source,
         COUNT(*) AS count
       FROM leads
-      WHERE school_id=$1
+      WHERE school_id=$1 OR (is_purchased=true AND purchased_by=$1)
       GROUP BY source
       ORDER BY count DESC
       LIMIT 10
     `, [sid]).catch(() => ({ rows: [] })),
 
-    // City breakdown
+    // ✅ FIX: include discovered leads in city breakdown
     db.query(`
       SELECT
         COALESCE(NULLIF(TRIM(city), ''), 'Unknown') AS city,
         COUNT(*) AS count
       FROM leads
-      WHERE school_id=$1
+      WHERE school_id=$1 OR (is_purchased=true AND purchased_by=$1)
       GROUP BY city
       ORDER BY count DESC
       LIMIT 8
     `, [sid]).catch(() => ({ rows: [] })),
 
-    // Class breakdown
+    // ✅ FIX: include discovered leads in class breakdown
     db.query(`
       SELECT
         COALESCE(NULLIF(TRIM(class_applying_for), ''), 'Not specified') AS class,
         COUNT(*) AS count
       FROM leads
-      WHERE school_id=$1
+      WHERE school_id=$1 OR (is_purchased=true AND purchased_by=$1)
       GROUP BY class_applying_for
       ORDER BY count DESC
       LIMIT 8
     `, [sid]).catch(() => ({ rows: [] })),
 
     // Recent activity feed — leads, applications, reviews
+    // ✅ FIX: show unlocked discovered leads in activity feed too
     db.query(`
       SELECT * FROM (
         SELECT
@@ -451,7 +468,8 @@ async function getAnalytics(req: NextRequest) {
           COALESCE(l.city, '') AS city,
           l.created_at
         FROM leads l
-        WHERE l.school_id=$1 AND l.is_purchased=true
+        WHERE (l.school_id=$1 OR (l.is_purchased=true AND l.purchased_by=$1))
+          AND l.is_purchased=true
         ORDER BY l.created_at DESC LIMIT 4
       ) t1
       UNION ALL
@@ -518,7 +536,6 @@ async function getDashboardStats(req: NextRequest) {
 
   const { id: sid, name: schoolName, logo_url: schoolLogo, city: schoolCity, state: schoolState, board: schoolBoard } = school.rows[0]
 
-  // Self-heal: if school has a name saved but profile_completed is still false, fix it in DB now
   let profileCompleteness = school.rows[0].profile_completed === true ? 100 : 0
   if (profileCompleteness === 0 && schoolName && schoolName !== 'School') {
     await db.query('UPDATE schools SET profile_completed=true WHERE id=$1', [sid]).catch(() => {})
@@ -526,20 +543,36 @@ async function getDashboardStats(req: NextRequest) {
   }
 
   const [leads, newLeads, apps, credits] = await Promise.all([
-    db.query('SELECT COUNT(*) FROM leads WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
-    db.query(`SELECT COUNT(*) FROM leads WHERE school_id=$1 AND created_at >= NOW() - INTERVAL '30 days'`, [sid]).catch(() => ({ rows: [{ count: 0 }] })),
-    db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ count: 0 }] })),
-    db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid]).catch(() => ({ rows: [{ credits: 0 }] })),
+    // ✅ FIX: count direct leads + discovered leads unlocked by this school
+    db.query(
+      `SELECT COUNT(*) FROM leads
+       WHERE school_id=$1 OR (is_purchased=true AND purchased_by=$1)`,
+      [sid]
+    ).catch(() => ({ rows: [{ count: 0 }] })),
+
+    // ✅ FIX: same for the "this month" count
+    db.query(
+      `SELECT COUNT(*) FROM leads
+       WHERE (school_id=$1 OR (is_purchased=true AND purchased_by=$1))
+         AND created_at >= NOW() - INTERVAL '30 days'`,
+      [sid]
+    ).catch(() => ({ rows: [{ count: 0 }] })),
+
+    db.query('SELECT COUNT(*) FROM applications WHERE school_id=$1', [sid])
+      .catch(() => ({ rows: [{ count: 0 }] })),
+
+    db.query('SELECT credits FROM lead_credits WHERE school_id=$1', [sid])
+      .catch(() => ({ rows: [{ credits: 0 }] })),
   ])
 
   return NextResponse.json({
-    totalLeads: Number(leads.rows[0].count),
+    totalLeads:        Number(leads.rows[0].count),
     newLeadsThisMonth: Number(newLeads.rows[0].count),
     totalApplications: Number(apps.rows[0].count),
-    profileViews: 0,
-    totalReviews: 0,
-    avgRating: 0,
-    credits: credits.rows[0]?.credits ?? 0,
+    profileViews:      0,
+    totalReviews:      0,
+    avgRating:         0,
+    credits:           credits.rows[0]?.credits ?? 0,
     profileCompleteness,
     schoolName:  schoolName  || null,
     schoolLogo:  schoolLogo  || null,
@@ -555,7 +588,6 @@ async function getSchoolApplications(req: NextRequest) {
   const school = await db.query('SELECT id FROM schools WHERE admin_user_id=$1', [userId]).catch(() => ({ rows: [] }))
   if (!school.rows.length) return NextResponse.json([])
   const sid = school.rows[0].id
-  // Ensure columns exist before querying
   await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS parent_name VARCHAR(200)').catch(()=>{})
   await db.query('ALTER TABLE applications ADD COLUMN IF NOT EXISTS phone VARCHAR(30)').catch(()=>{})
   const rows = await db.query(
