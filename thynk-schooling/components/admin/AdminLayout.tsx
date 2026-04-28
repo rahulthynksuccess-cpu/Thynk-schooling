@@ -10,7 +10,7 @@ import {
   LogOut, GraduationCap, Menu, X, Bell, PhoneCall,
   BarChart3, FileText, ChevronRight, ExternalLink, Mail,
   AlertTriangle, Image as ImageIcon, MapPin, Zap, BookOpen,
-  LayoutList, MessageCircle, ClipboardList
+  LayoutList, MessageCircle, ClipboardList, Clock
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -48,6 +48,7 @@ const NAV_GROUPS = [
     { icon:LayoutList, label:'Menu Manager',     href:'/admin/menu' },
     { icon:Bell,       label:'Notifications',    href:'/admin/notifications' },
     { icon:Zap,        label:'Message Triggers', href:'/admin/email-triggers' },
+    { icon:Clock,      label:'Reminders',        href:'/admin/reminders' },
     { icon:BarChart3,  label:'SEO Manager',      href:'/admin/seo' },
     { icon:ImageIcon,  label:'Media & Brand',    href:'/admin/media' },
     { icon:MapPin,     label:'SEO Cities',       href:'/admin/cities' },
