@@ -564,8 +564,8 @@ async function getSchoolApplications(req: NextRequest) {
     `SELECT a.id, a.status, a.created_at,
             a.child_name         AS "childName",
             a.class_applying_for AS "classApplyingFor",
-            COALESCE(u.full_name, a.parent_name) AS "parentName",
-            COALESCE(u.phone,     a.phone)        AS "phone"
+            COALESCE(u.full_name, 'Unknown Parent') AS "parentName",
+            u.phone AS "phone"
      FROM applications a
      LEFT JOIN users u ON u.id = a.parent_id
      WHERE a.school_id = $1
