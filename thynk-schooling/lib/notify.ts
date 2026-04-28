@@ -14,30 +14,10 @@
 
 import db from './db'
 
-async function ensureNotifTable() {
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS notifications (
-      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      audience    VARCHAR(50)  NOT NULL DEFAULT 'all',
-      school_id   UUID,
-      title       TEXT NOT NULL,
-      body        TEXT,
-      type        VARCHAR(50)  NOT NULL DEFAULT 'info',
-      is_read     BOOLEAN NOT NULL DEFAULT false,
-      sent_at     TIMESTAMPTZ DEFAULT NOW()
-    )
-  `).catch(() => {})
-  // Add school_id + type + is_read columns if they don't exist yet (existing installs)
-  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS school_id UUID`).catch(() => {})
-  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type VARCHAR(50) NOT NULL DEFAULT 'info'`).catch(() => {})
-  await db.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT false`).catch(() => {})
-  await db.query(`CREATE INDEX IF NOT EXISTS idx_notif_school_id ON notifications(school_id)`).catch(() => {})
-}
 
 async function create(schoolId: string, title: string, body: string, type: string = 'info') {
   try {
-    await ensureNotifTable()
-    await db.query(
+      await db.query(
       `INSERT INTO notifications (school_id, audience, title, body, type, is_read) VALUES ($1, 'school', $2, $3, $4, false)`,
       [schoolId, title, body, type]
     )
@@ -68,8 +48,7 @@ export async function notifyNewApplication(schoolId: string, parentName: string,
 export async function notifyProfileView(schoolId: string) {
   // Batch into one notification per day to avoid spam
   try {
-    await ensureNotifTable()
-    const today = new Date().toISOString().slice(0, 10)
+      const today = new Date().toISOString().slice(0, 10)
     const existing = await db.query(
       `SELECT id FROM notifications WHERE school_id=$1 AND type='view' AND sent_at::date = $2::date LIMIT 1`,
       [schoolId, today]
