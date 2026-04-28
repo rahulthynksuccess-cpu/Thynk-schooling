@@ -51,7 +51,6 @@ const nextConfig = {
       { source: '/api/lead-credits',    destination: '/api/parent?action=lead-credits' },
 
       // ── School portal ────────────────────────────────────────────────────────
-      { source: '/api/leads',         destination: '/api/school-portal?action=leads' },
 
       // ── Settings / dropdowns ─────────────────────────────────────────────────
       { source: '/api/settings/dropdown/seed', destination: '/api/settings?action=seed' },
