@@ -145,19 +145,71 @@ interface DiscoveryCfg {
   nearbyPincodeCount:  number
   singleLeadPricePaise: number
 }
-async function getDiscoveryCfg(): Promise<DiscoveryCfg> {
+/**
+ * Load discovery config + resolve per-lead price using the cascade:
+ *   city_lead_pricing (active) → state_lead_pricing (active) → admin_settings global default
+ *
+ * @param schoolCity  The school's city field (e.g. "Noida")
+ * @param schoolState The school's state field (e.g. "Uttar Pradesh")
+ */
+async function getDiscoveryCfg(
+  schoolCity?: string | null,
+  schoolState?: string | null,
+): Promise<DiscoveryCfg> {
+  const FALLBACK: DiscoveryCfg = {
+    discoveryWindowDays:  90,
+    radiusKm:             20,
+    nearbyPincodeCount:   3,
+    singleLeadPricePaise: 29900,
+  }
   try {
+    // Load global defaults (window, radius, base price)
     const row = await db.query("SELECT value FROM admin_settings WHERE key='lead_pricing_defaults'")
-    if (!row.rows.length) return { discoveryWindowDays: 90, radiusKm: 20, nearbyPincodeCount: 3, singleLeadPricePaise: 29900 }
-    const cfg = JSON.parse(row.rows[0].value)
-    return {
-      singleLeadPricePaise: Number(cfg.defaultPricePaise ?? 29900) || 29900,
-      radiusKm:             Number(cfg.radiusKm ?? 20) || 20,
-      nearbyPincodeCount:   Number(cfg.nearbyPincodeCount ?? 3) || 3,
-      discoveryWindowDays:  Number(cfg.discoveryWindowDays ?? 90) || 90,
+    let globalDefaultPaise = 29900
+    let radiusKm = 20
+    let nearbyPincodeCount = 3
+    let discoveryWindowDays = 90
+
+    if (row.rows.length) {
+      const cfg = JSON.parse(row.rows[0].value)
+      globalDefaultPaise  = Number(cfg.defaultPricePaise  ?? 29900) || 29900
+      radiusKm            = Number(cfg.radiusKm           ?? 20)    || 20
+      nearbyPincodeCount  = Number(cfg.nearbyPincodeCount ?? 3)     || 3
+      discoveryWindowDays = Number(cfg.discoveryWindowDays ?? 90)   || 90
     }
+
+    // ── Price cascade: city → state → global ──────────────────────────────────
+    let singleLeadPricePaise = globalDefaultPaise
+
+    // 1. City-level override
+    if (schoolCity) {
+      const cityRow = await db.query(
+        `SELECT default_price_paise FROM city_lead_pricing
+          WHERE LOWER(city_name) = LOWER($1) AND is_active = true LIMIT 1`,
+        [schoolCity.trim()]
+      ).catch(() => ({ rows: [] }))
+      if (cityRow.rows.length) {
+        singleLeadPricePaise = Number(cityRow.rows[0].default_price_paise) || globalDefaultPaise
+        return { singleLeadPricePaise, radiusKm, nearbyPincodeCount, discoveryWindowDays }
+      }
+    }
+
+    // 2. State-level override
+    if (schoolState) {
+      const stateRow = await db.query(
+        `SELECT default_price_paise FROM state_lead_pricing
+          WHERE LOWER(state) = LOWER($1) AND is_active = true LIMIT 1`,
+        [schoolState.trim()]
+      ).catch(() => ({ rows: [] }))
+      if (stateRow.rows.length) {
+        singleLeadPricePaise = Number(stateRow.rows[0].default_price_paise) || globalDefaultPaise
+      }
+    }
+
+    // 3. Global default (already set)
+    return { singleLeadPricePaise, radiusKm, nearbyPincodeCount, discoveryWindowDays }
   } catch {
-    return { discoveryWindowDays: 90, radiusKm: 20, nearbyPincodeCount: 3, singleLeadPricePaise: 29900 }
+    return FALLBACK
   }
 }
 
@@ -185,10 +237,10 @@ export async function GET(req: NextRequest) {
     const page   = Math.max(1, Number(url.searchParams.get('page') || 1))
     const offset = (page - 1) * limit
 
-    // Load school profile — we need lat/lon, pincode, city, gender_policy, classes_from/to
+    // Load school profile — we need lat/lon, pincode, city, state, gender_policy, classes_from/to
     const schoolRes = await db.query(
       `SELECT id, name, profile_completed, is_active,
-              city, pincode, latitude, longitude,
+              city, state, pincode, latitude, longitude,
               gender_policy, classes_from, classes_to
        FROM schools WHERE admin_user_id = $1`,
       [userId]
@@ -198,7 +250,7 @@ export async function GET(req: NextRequest) {
     const s = schoolRes.rows[0]
     const {
       id: schoolId,
-      city: schoolCity, pincode: schoolPincode,
+      city: schoolCity, state: schoolState, pincode: schoolPincode,
       latitude: schoolLat, longitude: schoolLon,
       gender_policy: schoolGender,
       classes_from: schoolClassFrom, classes_to: schoolClassTo,
@@ -217,7 +269,7 @@ export async function GET(req: NextRequest) {
     const creditRow = await db.query('SELECT credits, total_credits, used_credits FROM lead_credits WHERE school_id=$1', [schoolId])
     const creditBalance = creditRow.rows[0] ?? { credits: 0, total_credits: 0, used_credits: 0 }
 
-    const cfg = await getDiscoveryCfg()
+    const cfg = await getDiscoveryCfg(schoolCity, schoolState)
     const { discoveryWindowDays, radiusKm, nearbyPincodeCount, singleLeadPricePaise } = cfg
     const win = Math.max(1, Math.floor(discoveryWindowDays))
 
@@ -522,7 +574,7 @@ export async function POST(req: NextRequest) {
       if (!leadId) return NextResponse.json({ error: 'Lead id required' }, { status: 400 })
 
       const schoolRes = await db.query(
-        'SELECT id, name, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId]
+        'SELECT id, name, city, state, profile_completed, is_active FROM schools WHERE admin_user_id=$1', [userId]
       )
       if (!schoolRes.rows.length) return NextResponse.json({ error: 'School not found' }, { status: 403 })
 
@@ -536,6 +588,8 @@ export async function POST(req: NextRequest) {
       if (sc.is_active === false) return NextResponse.json({ error: 'ACCOUNT_SUSPENDED' }, { status: 403 })
 
       const schoolId = sc.id
+      const schoolCity2 = sc.city || null
+      const schoolState2 = sc.state || null
 
       const lead = await db.query(
         'SELECT id, is_purchased, purchased_by FROM leads WHERE id=$1', [leadId]
@@ -558,7 +612,7 @@ export async function POST(req: NextRequest) {
       const available = credRow.rows[0]?.credits ?? 0
 
       if (available < 1) {
-        const cfg = await getDiscoveryCfg()
+        const cfg = await getDiscoveryCfg(schoolCity2, schoolState2)
         return NextResponse.json({
           error:                'NO_CREDITS',
           message:              'You have no lead credits. Buy a package or single lead to unlock.',

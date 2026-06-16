@@ -1,11 +1,14 @@
 'use client'
 export const dynamic = 'force-dynamic'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { AdminLayout } from '@/components/admin/AdminLayout'
-import { Save, Loader2, DollarSign, Info, MapPin, ChevronDown, Trash2, ToggleLeft, ToggleRight, Clock, Radio } from 'lucide-react'
+import {
+  Save, Loader2, DollarSign, Info, MapPin, ChevronDown,
+  Trash2, ToggleLeft, ToggleRight, Clock, Radio,
+  Building2, ChevronRight, Plus, RefreshCw,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const INDIAN_STATES = [
@@ -27,15 +30,26 @@ interface StatePricing {
   isActive: boolean
 }
 
+interface CityPricing {
+  id?: string
+  cityName: string
+  state: string
+  defaultPricePaise: number
+  minPricePaise: number
+  maxPricePaise: number
+  isActive: boolean
+}
+
 interface PricingConfig {
-  defaultPricePaise:  number
-  minPricePaise:      number
-  maxPricePaise:      number
-  maskBlurMeters:     number
-  leadExpiryDays:     number
-  discoveryWindowDays: number
-  radiusKm:           number
-  statePricing:       StatePricing[]
+  defaultPricePaise:    number
+  minPricePaise:        number
+  maxPricePaise:        number
+  maskBlurMeters:       number
+  leadExpiryDays:       number
+  discoveryWindowDays:  number
+  radiusKm:             number
+  statePricing:         StatePricing[]
+  cityPricing:          CityPricing[]
 }
 
 const DEFAULTS: PricingConfig = {
@@ -47,6 +61,7 @@ const DEFAULTS: PricingConfig = {
   discoveryWindowDays:    90,
   radiusKm:               10,
   statePricing:           [],
+  cityPricing:            [],
 }
 
 const WINDOW_PRESETS = [
@@ -64,7 +79,7 @@ const RADIUS_PRESETS = [
   { label: '25 km', value: 25 },
 ]
 
-// ── styles ────────────────────────────────────────────────────────────────────
+// ── styles ─────────────────────────────────────────────────────────────────────
 const card: React.CSSProperties = {
   background: 'var(--admin-card-bg,#0F1623)',
   border: '1px solid var(--admin-border,rgba(255,255,255,0.07))',
@@ -88,7 +103,7 @@ const hint: React.CSSProperties = {
   marginTop: 5, fontFamily: 'DM Sans,sans-serif',
 }
 
-// ── components ────────────────────────────────────────────────────────────────
+// ── small components ──────────────────────────────────────────────────────────
 function PresetPills({ presets, value, onChange }: {
   presets: { label: string; value: number }[]
   value: number
@@ -170,14 +185,198 @@ function StateDropdown({ selected, onAdd }: {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── City Overrides Panel (inside a State card) ────────────────────────────────
+function CityOverridesPanel({
+  state,
+  statePricing,
+  cityPricing,
+  allCities,          // from seo_cities for this state
+  onAddCity,
+  onUpdateCity,
+  onRemoveCity,
+}: {
+  state: string
+  statePricing: StatePricing
+  cityPricing: CityPricing[]
+  allCities: { name: string; slug: string }[]
+  onAddCity: (city: string, state: string, prices: { default: number; min: number; max: number }) => void
+  onUpdateCity: (cityName: string, state: string, key: keyof CityPricing, val: any) => void
+  onRemoveCity: (cityName: string, state: string) => void
+}) {
+  const [expanded, setExpanded]     = useState(false)
+  const [search, setSearch]         = useState('')
+  const [addDropOpen, setAddDropOpen] = useState(false)
+  const dropRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (dropRef.current && !dropRef.current.contains(e.target as Node)) setAddDropOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const citiesInState   = cityPricing.filter(c => c.state === state)
+  const addedCityNames  = citiesInState.map(c => c.cityName.toLowerCase())
+  const availableCities = allCities.filter(c =>
+    !addedCityNames.includes(c.name.toLowerCase()) &&
+    c.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {/* Toggle row */}
+      <button
+        type="button"
+        onClick={() => setExpanded(x => !x)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0', color: 'rgba(255,255,255,0.5)', fontSize: 12, fontFamily: 'DM Sans,sans-serif', fontWeight: 600 }}
+      >
+        <ChevronRight size={13} style={{ transform: expanded ? 'rotate(90deg)' : 'none', transition: '.15s' }} />
+        <Building2 size={13} />
+        City Overrides
+        {citiesInState.length > 0 && (
+          <span style={{ marginLeft: 4, padding: '1px 7px', borderRadius: 99, background: 'rgba(99,102,241,0.2)', color: '#818CF8', fontSize: 11 }}>
+            {citiesInState.length}
+          </span>
+        )}
+        <span style={{ marginLeft: 4, fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 400 }}>
+          — cities without override inherit this state's price
+        </span>
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: .2 }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div style={{ paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+
+              {/* Add city dropdown */}
+              <div ref={dropRef} style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setAddDropOpen(o => !o)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 8, background: 'rgba(99,102,241,0.08)', border: '1px dashed rgba(99,102,241,0.3)', color: '#818CF8', cursor: 'pointer', fontSize: 12, fontWeight: 600, fontFamily: 'DM Sans,sans-serif' }}
+                >
+                  <Plus size={12} />
+                  Add city override…
+                  {allCities.length === 0 && (
+                    <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400, marginLeft: 4 }}>(no cities configured for this state — add them in Cities Manager)</span>
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {addDropOpen && allCities.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: .12 }}
+                      style={{ position: 'absolute', top: '110%', left: 0, zIndex: 60, minWidth: 260, background: '#0F1623', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}
+                    >
+                      <div style={{ padding: 8 }}>
+                        <input
+                          autoFocus
+                          value={search}
+                          onChange={e => setSearch(e.target.value)}
+                          placeholder={`Search cities in ${state}…`}
+                          style={{ ...inp, padding: '7px 11px', fontSize: 12 }}
+                        />
+                      </div>
+                      <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                        {availableCities.length === 0 ? (
+                          <div style={{ padding: '12px 16px', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+                            {addedCityNames.length >= allCities.length ? 'All cities already have overrides' : 'No matches'}
+                          </div>
+                        ) : availableCities.map(c => (
+                          <button key={c.slug} type="button"
+                            onClick={() => {
+                              onAddCity(c.name, state, {
+                                default: statePricing.defaultPricePaise,
+                                min: statePricing.minPricePaise,
+                                max: statePricing.maxPricePaise,
+                              })
+                              setAddDropOpen(false)
+                              setSearch('')
+                            }}
+                            style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 16px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.75)', fontSize: 12, cursor: 'pointer', fontFamily: 'DM Sans,sans-serif' }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.08)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* City rows */}
+              {citiesInState.length === 0 ? (
+                <div style={{ padding: '10px 0', fontSize: 12, color: 'rgba(255,255,255,0.25)', fontFamily: 'DM Sans,sans-serif' }}>
+                  No city overrides — all cities in {state} use the state price above.
+                </div>
+              ) : (
+                citiesInState.map(cp => (
+                  <div key={cp.cityName} style={{ background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: 9, padding: '12px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Building2 size={13} color="#818CF8" />
+                        <span style={{ fontWeight: 600, fontSize: 13, color: '#fff' }}>{cp.cityName}</span>
+                        <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 99, background: cp.isActive ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: cp.isActive ? '#10B981' : '#EF4444' }}>
+                          {cp.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'DM Sans,sans-serif' }}>
+                          city override
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button type="button" onClick={() => onUpdateCity(cp.cityName, state, 'isActive', !cp.isActive)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: cp.isActive ? '#10B981' : 'rgba(255,255,255,0.3)', padding: 3 }}>
+                          {cp.isActive ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+                        </button>
+                        <button type="button" onClick={() => onRemoveCity(cp.cityName, state)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(239,68,68,0.5)', padding: 3 }}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+                      {([
+                        { label: 'Default (paise)', key: 'defaultPricePaise' as keyof CityPricing },
+                        { label: 'Min (paise)',     key: 'minPricePaise'     as keyof CityPricing },
+                        { label: 'Max (paise)',     key: 'maxPricePaise'     as keyof CityPricing },
+                      ]).map(f => (
+                        <div key={f.key}>
+                          <label style={{ ...lbl, marginBottom: 3, fontSize: 10 }}>{f.label}</label>
+                          <input type="number" min={0}
+                            value={cp[f.key] as number}
+                            onChange={e => onUpdateCity(cp.cityName, state, f.key, Number(e.target.value))}
+                            style={{ ...inp, padding: '7px 10px', fontSize: 12 }} />
+                          <div style={{ ...hint, marginTop: 3 }}>= ₹{Math.round((cp[f.key] as number) / 100)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function LeadPricingPage() {
   const queryClient = useQueryClient()
-  const [cfg, setCfg] = useState<PricingConfig>(DEFAULTS)
+  const [cfg, setCfg]             = useState<PricingConfig>(DEFAULTS)
+  const [seoCities, setSeoCities] = useState<{ name: string; slug: string; state: string }[]>([])
 
-  // FIX: use dedicated /api/admin/lead-pricing endpoint (not the broken action switch)
-  // FIX: don't use onSuccess on useQuery (removed in TanStack Query v5) — use useEffect instead
-  const { data, isLoading } = useQuery<PricingConfig & { statePricing: StatePricing[] }>({
+  const { data, isLoading } = useQuery<PricingConfig & { statePricing: StatePricing[]; cityPricing: CityPricing[] }>({
     queryKey: ['lead-pricing-cfg'],
     queryFn: () => fetch('/api/admin/lead-pricing', { cache: 'no-store' }).then(r => r.json()),
     staleTime: 60_000,
@@ -191,10 +390,27 @@ export default function LeadPricingPage() {
       discoveryWindowDays: data.discoveryWindowDays ?? DEFAULTS.discoveryWindowDays,
       radiusKm:            data.radiusKm            ?? DEFAULTS.radiusKm,
       statePricing:        data.statePricing         ?? [],
+      cityPricing:         data.cityPricing          ?? [],
     })
   }, [data])
 
-  // FIX: POST to dedicated endpoint — no action param needed
+  // Load seo_cities so we know which cities exist per state
+  useEffect(() => {
+    fetch('/api/admin?action=cities', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { if (d.cities) setSeoCities(d.cities) })
+      .catch(() => {})
+  }, [])
+
+  // Re-sync city overrides when new cities are added in seo_cities
+  // (cities that get removed from seo_cities are just hidden from Add dropdown, not deleted)
+  const refreshCities = () => {
+    fetch('/api/admin?action=cities', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { if (d.cities) { setSeoCities(d.cities); toast.success('City list refreshed') } })
+      .catch(() => toast.error('Failed to refresh cities'))
+  }
+
   const saveMutation = useMutation({
     mutationFn: (payload: PricingConfig) =>
       fetch('/api/admin/lead-pricing', {
@@ -213,6 +429,7 @@ export default function LeadPricingPage() {
   const set = <K extends keyof PricingConfig>(key: K, val: PricingConfig[K]) =>
     setCfg(c => ({ ...c, [key]: val }))
 
+  // ── State helpers ────────────────────────────────────────────────────────────
   const addState = (state: string) => {
     if (cfg.statePricing.find(s => s.state === state)) return
     setCfg(c => ({
@@ -233,8 +450,52 @@ export default function LeadPricingPage() {
       statePricing: c.statePricing.map(s => s.state === state ? { ...s, [key]: val } : s),
     }))
 
-  const removeState = (state: string) =>
-    setCfg(c => ({ ...c, statePricing: c.statePricing.filter(s => s.state !== state) }))
+  const removeState = (state: string) => {
+    // Also remove all city overrides for this state
+    setCfg(c => ({
+      ...c,
+      statePricing: c.statePricing.filter(s => s.state !== state),
+      cityPricing:  c.cityPricing.filter(cp => cp.state !== state),
+    }))
+  }
+
+  // ── City helpers ─────────────────────────────────────────────────────────────
+  const addCity = (
+    cityName: string,
+    state: string,
+    prices: { default: number; min: number; max: number }
+  ) => {
+    if (cfg.cityPricing.find(c => c.cityName.toLowerCase() === cityName.toLowerCase() && c.state === state)) return
+    setCfg(c => ({
+      ...c,
+      cityPricing: [...c.cityPricing, {
+        cityName,
+        state,
+        defaultPricePaise: prices.default,
+        minPricePaise:     prices.min,
+        maxPricePaise:     prices.max,
+        isActive:          true,
+      }],
+    }))
+  }
+
+  const updateCity = (cityName: string, state: string, key: keyof CityPricing, val: any) =>
+    setCfg(c => ({
+      ...c,
+      cityPricing: c.cityPricing.map(cp =>
+        cp.cityName.toLowerCase() === cityName.toLowerCase() && cp.state === state
+          ? { ...cp, [key]: val }
+          : cp
+      ),
+    }))
+
+  const removeCity = (cityName: string, state: string) =>
+    setCfg(c => ({
+      ...c,
+      cityPricing: c.cityPricing.filter(
+        cp => !(cp.cityName.toLowerCase() === cityName.toLowerCase() && cp.state === state)
+      ),
+    }))
 
   if (isLoading) return (
     <AdminLayout>
@@ -246,17 +507,18 @@ export default function LeadPricingPage() {
   )
 
   const rupeesPreview = `₹${Math.round(cfg.defaultPricePaise / 100).toLocaleString('en-IN')}`
+  const totalCityOverrides = cfg.cityPricing.length
 
   return (
     <AdminLayout>
-      <div style={{ maxWidth: 860, margin: '0 auto', fontFamily: 'DM Sans,sans-serif' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto', fontFamily: 'DM Sans,sans-serif' }}>
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28, gap: 16, flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 700, color: '#fff', margin: 0, letterSpacing: '-0.5px' }}>Lead Pricing &amp; Discovery</h1>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4 }}>
-              All prices shown to schools are pulled live from these settings — no hardcoded values.
+              Prices cascade: <strong style={{ color: '#818CF8' }}>City</strong> → <strong style={{ color: '#F59E0B' }}>State</strong> → <strong style={{ color: 'rgba(255,255,255,0.5)' }}>Global</strong>. Override at any level.
             </p>
           </div>
           <button onClick={() => saveMutation.mutate(cfg)} disabled={saveMutation.isLoading}
@@ -268,15 +530,15 @@ export default function LeadPricingPage() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-          {/* ── Pricing ──────────────────────────────────────────────────────── */}
+          {/* ── Global Pricing ──────────────────────────────────────────────── */}
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <DollarSign size={18} color="#F59E0B" />
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>Single-Lead Pricing</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Charged when a school buys a lead individually (no credits)</div>
+                <div style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>Global Default Pricing</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Applies to all cities/states with no override</div>
               </div>
             </div>
 
@@ -297,9 +559,8 @@ export default function LeadPricingPage() {
               ))}
             </div>
 
-            {/* Live rupee preview */}
             <div style={{ marginTop: 16, padding: '10px 14px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 8, fontSize: 13, color: '#F59E0B' }}>
-              💡 Schools will see single-lead price as <strong>{rupeesPreview}</strong> — this updates live as you type.
+              💡 Default per-lead price: <strong>{rupeesPreview}</strong>. State &amp; city overrides take priority when set.
             </div>
           </div>
 
@@ -350,15 +611,14 @@ export default function LeadPricingPage() {
               </div>
             </div>
 
-            {/* Live summary */}
             <div style={{ marginTop: 20, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexWrap: 'wrap', gap: 20 }}>
               <span style={{ fontSize: 13, color: '#fff' }}>📅 Last <strong style={{ color: '#F59E0B' }}>{cfg.discoveryWindowDays} days</strong></span>
               <span style={{ fontSize: 13, color: '#fff' }}>📡 Within <strong style={{ color: '#F59E0B' }}>{cfg.radiusKm} km</strong></span>
-              <span style={{ fontSize: 13, color: '#fff' }}>💵 Single-lead: <strong style={{ color: '#F59E0B' }}>{rupeesPreview}</strong></span>
+              <span style={{ fontSize: 13, color: '#fff' }}>💵 Default: <strong style={{ color: '#F59E0B' }}>{rupeesPreview}</strong></span>
             </div>
           </div>
 
-          {/* ── Display & Expiry ──────────────────────────────────────────────── */}
+          {/* ── Display & Expiry ────────────────────────────────────────────── */}
           <div style={card}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
               <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -385,65 +645,116 @@ export default function LeadPricingPage() {
             </div>
           </div>
 
-          {/* ── State Overrides ───────────────────────────────────────────────── */}
+          {/* ── State & City Overrides ───────────────────────────────────────── */}
           <div style={card}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <MapPin size={18} color="#F59E0B" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(245,158,11,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <MapPin size={18} color="#F59E0B" />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>State &amp; City Overrides</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                    {cfg.statePricing.length} state override{cfg.statePricing.length !== 1 ? 's' : ''}
+                    {totalCityOverrides > 0 && <span> · <span style={{ color: '#818CF8' }}>{totalCityOverrides} city override{totalCityOverrides !== 1 ? 's' : ''}</span></span>}
+                  </div>
+                </div>
               </div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>State-Level Overrides</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>Override default pricing for specific states</div>
-              </div>
+              <button
+                type="button"
+                onClick={refreshCities}
+                title="Refresh city list from Cities Manager"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 12, fontFamily: 'DM Sans,sans-serif' }}
+              >
+                <RefreshCw size={12} />
+                Refresh Cities
+              </button>
+            </div>
+
+            {/* Cascade info banner */}
+            <div style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 10, padding: '10px 14px', marginBottom: 18, fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 1.7 }}>
+              <strong style={{ color: '#F59E0B' }}>Price cascade logic:</strong>{' '}
+              When a school buys a lead, the per-lead cost shown is resolved as:
+              {' '}<span style={{ color: '#818CF8' }}>City override</span> →{' '}
+              <span style={{ color: '#F59E0B' }}>State override</span> →{' '}
+              <span style={{ color: 'rgba(255,255,255,0.6)' }}>Global default</span>.{' '}
+              New cities added in the Cities Manager automatically appear in the city dropdown below.
             </div>
 
             <StateDropdown selected={cfg.statePricing.map(s => s.state)} onAdd={addState} />
 
             {cfg.statePricing.length === 0 && (
               <div style={{ textAlign: 'center', padding: '24px 0', fontSize: 13, color: 'rgba(255,255,255,0.3)' }}>
-                No state overrides. Add a state above to set custom pricing.
+                No state overrides. Add a state above to set custom pricing, then optionally add city-level overrides within it.
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: cfg.statePricing.length ? 16 : 0 }}>
-              {cfg.statePricing.map(sp => (
-                <div key={sp.state} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '14px 16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 600, fontSize: 14, color: '#fff' }}>{sp.state}</span>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: sp.isActive ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: sp.isActive ? '#10B981' : '#EF4444' }}>
-                        {sp.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button type="button" onClick={() => updateState(sp.state, 'isActive', !sp.isActive)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: sp.isActive ? '#10B981' : 'rgba(255,255,255,0.3)', padding: 4 }}>
-                        {sp.isActive ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
-                      </button>
-                      <button type="button" onClick={() => removeState(sp.state)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(239,68,68,0.6)', padding: 4 }}>
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-                    {([
-                      { label: 'Default (paise)', key: 'defaultPricePaise' as keyof StatePricing },
-                      { label: 'Min (paise)',     key: 'minPricePaise'     as keyof StatePricing },
-                      { label: 'Max (paise)',     key: 'maxPricePaise'     as keyof StatePricing },
-                    ]).map(f => (
-                      <div key={f.key}>
-                        <label style={{ ...lbl, marginBottom: 4 }}>{f.label}</label>
-                        <input type="number" min={0}
-                          value={sp[f.key] as number}
-                          onChange={e => updateState(sp.state, f.key, Number(e.target.value))}
-                          style={{ ...inp, padding: '8px 12px' }} />
-                        <div style={hint}>= ₹{Math.round((sp[f.key] as number) / 100)}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: cfg.statePricing.length ? 16 : 0 }}>
+              {cfg.statePricing.map(sp => {
+                const citiesForState = seoCities
+                  .filter(c => c.state?.toLowerCase() === sp.state.toLowerCase())
+                  .map(c => ({ name: c.name, slug: c.slug }))
+                const cityOverridesForState = cfg.cityPricing.filter(c => c.state === sp.state)
+
+                return (
+                  <div key={sp.state} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '16px 18px' }}>
+                    {/* State header row */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <MapPin size={14} color="#F59E0B" />
+                        <span style={{ fontWeight: 700, fontSize: 15, color: '#fff' }}>{sp.state}</span>
+                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: sp.isActive ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: sp.isActive ? '#10B981' : '#EF4444' }}>
+                          {sp.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        {citiesForState.length > 0 && (
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                            {citiesForState.length} cit{citiesForState.length === 1 ? 'y' : 'ies'} · {cityOverridesForState.length} overrid{cityOverridesForState.length === 1 ? 'e' : 'es'}
+                          </span>
+                        )}
                       </div>
-                    ))}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button type="button" onClick={() => updateState(sp.state, 'isActive', !sp.isActive)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: sp.isActive ? '#10B981' : 'rgba(255,255,255,0.3)', padding: 4 }}>
+                          {sp.isActive ? <ToggleRight size={20} /> : <ToggleLeft size={20} />}
+                        </button>
+                        <button type="button" onClick={() => removeState(sp.state)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(239,68,68,0.6)', padding: 4 }}>
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* State prices */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+                      {([
+                        { label: 'Default (paise)', key: 'defaultPricePaise' as keyof StatePricing },
+                        { label: 'Min (paise)',     key: 'minPricePaise'     as keyof StatePricing },
+                        { label: 'Max (paise)',     key: 'maxPricePaise'     as keyof StatePricing },
+                      ]).map(f => (
+                        <div key={f.key}>
+                          <label style={{ ...lbl, marginBottom: 4 }}>{f.label}</label>
+                          <input type="number" min={0}
+                            value={sp[f.key] as number}
+                            onChange={e => updateState(sp.state, f.key, Number(e.target.value))}
+                            style={{ ...inp, padding: '8px 12px' }} />
+                          <div style={hint}>= ₹{Math.round((sp[f.key] as number) / 100)}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* City Overrides sub-panel */}
+                    <CityOverridesPanel
+                      state={sp.state}
+                      statePricing={sp}
+                      cityPricing={cfg.cityPricing}
+                      allCities={citiesForState}
+                      onAddCity={addCity}
+                      onUpdateCity={updateCity}
+                      onRemoveCity={removeCity}
+                    />
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
